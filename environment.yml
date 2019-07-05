@@ -1,0 +1,24 @@
+name: metamers
+channels:
+  - conda-forge
+  - defaults
+  - bioconda
+dependencies:
+  - python==3.6
+  - anaconda
+  - pip
+  - ipykernel
+  - numpy
+  - matplotlib
+  - scipy
+  - seaborn
+  - statsmodels
+  - pandas
+  - snakemake>=5.4
+  - pyosf
+  - pip:
+      - pytest
+      - torchvision
+      - torch>=1.0.1
+      - pyrtools>=0.9
+      # - plenoptic
