@@ -3,8 +3,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python==3.6
-  - anaconda
+  - python==3.7
   - pip
   - numpy
   - matplotlib
@@ -14,7 +13,6 @@ dependencies:
   - pillow
   - lxml
   - openpyxl
-  - seaborn
   - xlrd
   - configobj
   - pyyaml
