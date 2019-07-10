@@ -60,14 +60,14 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     initial_image = torch.nn.Parameter(torch.rand_like(image, requires_grad=True, device=device,
                                                        dtype=torch.float32))
     metamer = po.synth.Metamer(image, model)
-    matched_im, matched_rep = metamer.synthesize(clamper=clamper, save_representation=True,
-                                                 save_image=True, learning_rate=learning_rate,
+    matched_im, matched_rep = metamer.synthesize(clamper=clamper, save_representation=10,
+                                                 save_image=10, learning_rate=learning_rate,
                                                  max_iter=max_iter, loss_thresh=loss_thresh,
                                                  initial_image=initial_image)
     # add back the center of the image. This class of models will do nothing to the center of the
     # image (they don't see the fovea) and so we do this to add the fovea back in. for some reason
     # ~ (invert) is not implemented for booleans in pytorch yet, so we do this instead.
-    metamer_image = (model.windows[0].sum(0) * matched_im) + (1 - model.windows[0].sum(0) * image)
+    metamer_image = (model.windows[0].sum(0) * matched_im) + ((1 - model.windows[0].sum(0)) * image)
     if save_path is not None:
         logger.info("Saving at %s" % save_path)
         metamer.save(save_path)
