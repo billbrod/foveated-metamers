@@ -12,6 +12,23 @@ if os.system("module list") == 0:
 else:
     ON_CLUSTER = False
 
+MODELS = ['RGC', 'V1']
+IMAGES = ['nuts', 'einstein']
+
+def initial_metamer_inputs(wildcards):
+    path_template = op.join(config["DATA_DIR"], 'metamers', '{model_name}', '{image_name}',
+                            'scaling-{scaling}', 'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-'
+                            '{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}.pt')
+    return [path_template.format(model_name=m, image_name=i, scaling=s, seed=0, learning_rate=lr,
+                                 min_ecc=.5, max_ecc=15, max_iter=1000, loss_thresh=1e-4) for
+            m in MODELS for i in IMAGES for s in [.1, .2, .3, .4, .5, .6, .7, .8, .9] for lr in
+            [.001, .1, 1, 10, 100]]
+
+
+rule initial_metamers:
+    input:
+        initial_metamer_inputs,
+
 
 rule create_metamers:
     input:
@@ -23,7 +40,7 @@ rule create_metamers:
     log:
         op.join(config["DATA_DIR"], 'logs', 'metamers', '{model_name}', '{image_name}',
                 'scaling-{scaling}', 'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_'
-                'iter-{max_iter}_thresh-{loss_thresh}.log')
+                'iter-{max_iter}_thresh-{loss_thresh}-%j.log')
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'metamers', '{model_name}', '{image_name}',
                 'scaling-{scaling}', 'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_'
