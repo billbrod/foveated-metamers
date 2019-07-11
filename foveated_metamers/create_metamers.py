@@ -70,7 +70,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     metamer_image = (model.windows[0].sum(0) * matched_im) + ((1 - model.windows[0].sum(0)) * image)
     if save_path is not None:
         logger.info("Saving at %s" % save_path)
-        metamer.save(save_path)
+        metamer.save(save_path, True)
         # save png of metamer
         metamer_path = op.splitext(save_path)[0] + "_metamer.png"
         logger.info("Saving metamer image at %s" % metamer_path)
