@@ -8,21 +8,49 @@ if not os.path.isdir(config["DATA_DIR"]):
 if os.system("module list") == 0:
     # then we're on the cluster
     ON_CLUSTER = True
-    shell.prefix(". /share/apps/anaconda3/5.3.1/etc/profile.d/conda.sh; conda activate metamers; ")
+    # need ffmpeg and our conda environment
+    shell.prefix(". /share/apps/anaconda3/5.3.1/etc/profile.d/conda.sh; conda activate metamers; "
+                 "module load ffmpeg/intel/3.2.2; ")
 else:
     ON_CLUSTER = False
 
 MODELS = ['RGC', 'V1']
-IMAGES = ['nuts', 'einstein']
+IMAGES = ['nuts', 'nuts_symmetric', 'nuts_constant', 'einstein', 'einstein_symmetric',
+          'einstein_constant']
 
 def initial_metamer_inputs(wildcards):
     path_template = op.join(config["DATA_DIR"], 'metamers', '{model_name}', '{image_name}',
                             'scaling-{scaling}', 'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-'
                             '{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}.pt')
     return [path_template.format(model_name=m, image_name=i, scaling=s, seed=0, learning_rate=lr,
-                                 min_ecc=.5, max_ecc=15, max_iter=20000, loss_thresh=1e-4) for
+                                 min_ecc=.5, max_ecc=15, max_iter=20000, loss_thresh=1e-6) for
             m in MODELS for i in IMAGES for s in [.1, .2, .3, .4, .5, .6, .7, .8, .9] for lr in
             [.001, .1, 1, 10, 100]]
+
+
+rule pad_image:
+    input:
+        op.join(config["DATA_DIR"], 'seed_images', '{image_name}.{ext}')
+    output:
+        op.join(config["DATA_DIR"], 'seed_images', '{image_name}_{pad_mode}.{ext}')
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'seed_images', '{image_name}_{pad_mode}-{ext}-%j.log')
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'seed_images', '{image_name}_{pad_mode}-{ext}_benchmark.txt')
+    run:
+        import imageio
+        import warnings
+        from skimage import util
+
+        im = imageio.imread(input[0], as_gray=True)
+        if im.max() > 1:
+            warnings.warn("Assuming image range is (0, 255)")
+            im /= 255
+        pad_kwargs = {}
+        if wildcards.pad_mode == 'constant':
+            pad_kwargs['constant_values'] = .5
+        im = util.pad(im, int(im.shape[0]/2), wildcards.pad_mode, **pad_kwargs)
+        imageio.imwrite(output[0], im)
 
 
 rule initial_metamers:

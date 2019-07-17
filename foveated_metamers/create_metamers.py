@@ -52,10 +52,16 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         model = po.simul.RetinalGanglionCells(scaling, image.shape, min_eccentricity=min_ecc,
                                               max_eccentricity=max_ecc)
         figsize = (17, 5)
+        # default figsize arguments work for an image that is 256x256,
+        # may need to expand
+        figsize = tuple([s*max(1, image.shape[i]/256) for i, s in enumerate(figsize)])
     elif model_name == 'V1':
         model = po.simul.PrimaryVisualCortex(scaling, image.shape, min_eccentricity=min_ecc,
                                              max_eccentricity=max_ecc)
         figsize = (35, 11)
+        # default figsize arguments work for an image that is 512x512,
+        # may need to expand
+        figsize = tuple([s*max(1, image.shape[i]/512) for i, s in enumerate(figsize)])
     else:
         raise Exception("Don't know how to handle model_name %s" % model_name)
     logger.info("Using model %s from %.02f degrees to %.02f degrees" % (model_name, min_ecc,

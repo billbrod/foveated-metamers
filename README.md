@@ -19,6 +19,16 @@ won't need to do this. At that time, make sure to replace
 `foveated-metamers/environment.yml` with `environment.yml` and remove
 the plenoptic bit.
 
+# Requirements
+
+Need to make sure you have ffmpeg on your path when creating the
+metamers, so make sure it's installed.
+
+When running on NYU's prince cluster, can use `module load
+ffmpeg/intel/3.2.2` or, if `module` isn't working (like when using the
+`fish` shell), just add it to your path manually (e.g., on fish: `set
+-x PATH /share/apps/ffmpeg/3.2.2/intel/bin $PATH`)
+
 # References
 
 - Freeman, J., & Simoncelli, E. P. (2011). Metamers of the ventral
