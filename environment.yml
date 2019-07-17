@@ -14,6 +14,7 @@ dependencies:
   - snakemake-minimal>=5.4
   - pyosf
   - imageio
+  - scikit-image
   - pip:
       - pytest
       - torchvision
