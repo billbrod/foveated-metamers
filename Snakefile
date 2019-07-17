@@ -15,19 +15,17 @@ else:
     ON_CLUSTER = False
 
 MODELS = ['RGC', 'V1']
-IMAGES = ['nuts', 'einstein', 'einstein_symmetric', 'einstein_constant']
+IMAGES = ['nuts', 'nuts_symmetric', 'nuts_constant', 'einstein', 'einstein_symmetric',
+          'einstein_constant']
 
 def initial_metamer_inputs(wildcards):
     path_template = op.join(config["DATA_DIR"], 'metamers', '{model_name}', '{image_name}',
                             'scaling-{scaling}', 'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-'
                             '{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}.pt')
-    # return [path_template.format(model_name=m, image_name=i, scaling=s, seed=0, learning_rate=lr,
-    #                              min_ecc=.5, max_ecc=15, max_iter=20000, loss_thresh=1e-6) for
-    #         m in MODELS for i in IMAGES for s in [.1, .2, .3, .4, .5, .6, .7, .8, .9] for lr in
-    #         [.001, .1, 1, 10, 100]]
     return [path_template.format(model_name=m, image_name=i, scaling=s, seed=0, learning_rate=lr,
-                                 min_ecc=.5, max_ecc=15, max_iter=100, loss_thresh=1e-6) for
-            m in MODELS for i in IMAGES for s in [.5] for lr in [10]]
+                                 min_ecc=.5, max_ecc=15, max_iter=20000, loss_thresh=1e-6) for
+            m in MODELS for i in IMAGES for s in [.1, .2, .3, .4, .5, .6, .7, .8, .9] for lr in
+            [.001, .1, 1, 10, 100]]
 
 
 rule pad_image:
