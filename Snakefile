@@ -32,11 +32,18 @@ rule initial_metamers:
 
 rule create_metamers:
     input:
+        # we use glob like this so we don't need to know what the extension is
         lambda wildcards: glob(op.join(config["DATA_DIR"], 'seed_images', wildcards.image_name+'.*'))[0]
     output:
         op.join(config["DATA_DIR"], 'metamers', '{model_name}', '{image_name}', 'scaling-{scaling}',
                 'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_thresh-'
-                '{loss_thresh}.pt')
+                '{loss_thresh}.pt'),
+        op.join(config["DATA_DIR"], 'metamers', '{model_name}', '{image_name}', 'scaling-{scaling}',
+                'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_thresh-'
+                '{loss_thresh}_metamer.png'),
+        op.join(config["DATA_DIR"], 'metamers', '{model_name}', '{image_name}', 'scaling-{scaling}',
+                'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_thresh-'
+                '{loss_thresh}_synthesis.mp4')
     log:
         op.join(config["DATA_DIR"], 'logs', 'metamers', '{model_name}', '{image_name}',
                 'scaling-{scaling}', 'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_'
