@@ -25,7 +25,12 @@ def initial_metamer_inputs(wildcards):
     return [path_template.format(model_name=m, image_name=i, scaling=s, seed=0, learning_rate=lr,
                                  min_ecc=.5, max_ecc=15, max_iter=20000, loss_thresh=1e-6) for
             m in MODELS for i in IMAGES for s in [.1, .2, .3, .4, .5, .6, .7, .8, .9] for lr in
-            [.001, .1, 1, 10, 100]]
+            [.1, 1, 10]]
+
+
+rule initial_metamers:
+    input:
+        initial_metamer_inputs,
 
 
 rule pad_image:
@@ -51,11 +56,6 @@ rule pad_image:
             pad_kwargs['constant_values'] = .5
         im = util.pad(im, int(im.shape[0]/2), wildcards.pad_mode, **pad_kwargs)
         imageio.imwrite(output[0], im)
-
-
-rule initial_metamers:
-    input:
-        initial_metamer_inputs,
 
 
 rule create_metamers:
