@@ -90,3 +90,35 @@ rule create_metamers:
                                  float(wildcards.max_ecc), float(wildcards.learning_rate),
                                  int(wildcards.max_iter), float(wildcards.loss_thresh), log_file,
                                  output[0])
+
+
+rule collect_metamers:
+    input:
+        # need to come up with a clever way to do this: either delete
+        # the ones we don't want or make this a function that only takes
+        # the ones we want or maybe grabs one each for max_iter,
+        # loss_thresh, learning_rate
+        op.join(config["DATA_DIR"], 'metamers', '{model_name}', '{image_name}', 'scaling-{scaling}',
+                'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_thresh-'
+                '{loss_thresh}_metamer.png'),
+    output:
+        # we collect across image_name and scaling, and don't care about
+        # learning_rate, max_iter, loss_thresh
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'seed-{seed}_e0-{min_ecc}_em-'
+                '{max_ecc}_stimuli.npy'),
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'seed-{seed}_e0-{min_ecc}_'
+                'em-{max_ecc}_stimuli-%j.log'),
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'seed-{seed}_e0-{min_ecc}_'
+                'em-{max_ecc}_stimuli_benchmark.txt'),
+    run:
+        import imageio
+        import numpy as np
+
+        images = []
+        for i in input:
+            images.append(imageio.imread(i, as_gray=True))
+        # want our images to be indexed along the first dimension
+        images = np.einsum('ijk -> kij', np.dstack(images))
+        imageio.imwrite(output[0], images)
