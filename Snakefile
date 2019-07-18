@@ -60,8 +60,7 @@ rule initial_metamers:
 
 rule create_metamers:
     input:
-        # we use glob like this so we don't need to know what the extension is
-        lambda wildcards: glob(op.join(config["DATA_DIR"], 'seed_images', wildcards.image_name+'.*'))[0]
+        op.join(config["DATA_DIR"], 'seed_images', '{image_name}.pgm')
     output:
         op.join(config["DATA_DIR"], 'metamers', '{model_name}', '{image_name}', 'scaling-{scaling}',
                 'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_thresh-'
