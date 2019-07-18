@@ -22,10 +22,27 @@ def initial_metamer_inputs(wildcards):
     path_template = op.join(config["DATA_DIR"], 'metamers', '{model_name}', '{image_name}',
                             'scaling-{scaling}', 'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-'
                             '{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}.pt')
-    return [path_template.format(model_name=m, image_name=i, scaling=s, seed=0, learning_rate=lr,
-                                 min_ecc=.5, max_ecc=15, max_iter=20000, loss_thresh=1e-6) for
-            m in MODELS for i in IMAGES for s in [.1, .2, .3, .4, .5, .6, .7, .8, .9] for lr in
-            [.1, 1, 10]]
+    # return [path_template.format(model_name=m, image_name=i, scaling=s, seed=0, learning_rate=lr,
+    #                              min_ecc=.5, max_ecc=15, max_iter=20000, loss_thresh=1e-6) for
+    #         m in MODELS for i in IMAGES for s in [.1, .2, .3, .4, .5, .6, .7, .8, .9] for lr in
+    #         [.1, 1, 10]]
+    metamers = [path_template.format(model_name='V1', image_name=i, scaling=s, seed=0,
+                                     learning_rate=lr,min_ecc=.5, max_iter=5000, loss_thresh=1e-6,
+                                     # want different max eccentricity
+                                     # based on whether we've padded the
+                                     # image (and thus doubled its
+                                     # width) or not
+                                     max_ecc={True: 30, False: 15}['_' in i])
+                for i in IMAGES for s in [.4, .5, .6] for lr in [1, 10]]
+    metamers.extend([path_template.format(model_name='RGC', image_name=i, scaling=s, seed=0,
+                                     learning_rate=lr,min_ecc=.5, max_iter=5000, loss_thresh=1e-6,
+                                     # want different max eccentricity
+                                     # based on whether we've padded the
+                                     # image (and thus doubled its
+                                     # width) or not
+                                     max_ecc={True: 30, False: 15}['_' in i])
+                for i in IMAGES for s in [.2, .3, .4] for lr in [1, 10]])
+    return metamers
 
 
 rule initial_metamers:
