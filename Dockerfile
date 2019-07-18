@@ -34,6 +34,6 @@ RUN mkdir -p /data/metamers
 RUN echo "DATA_DIR: \"/data/metamers\"" > /src/foveated-metamers/config.yml
 
 # download the seed images and place them in the correct location
-RUN wget -O- https://osf.io/5t4ju/download | tar xvz -C /data/metamers/
+RUN wget -qO- https://osf.io/5t4ju/download | tar xvz -C /data/metamers/
 
 CMD snakemake -prk /data/metamers/seed_images/nuts_constant.pgm
