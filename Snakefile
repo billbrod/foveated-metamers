@@ -109,15 +109,22 @@ rule create_metamers:
                                  output[0])
 
 
+# need to come up with a clever way to do this: either delete the ones
+# we don't want or make this a function that only takes the ones we want
+# or maybe grabs one each for max_iter, loss_thresh, learning_rate.
+# Also need to thinka bout how to handle max_ecc; it will be different
+# if the images we use as inputs are different sizes
+def get_metamers_for_expt(wildcards):
+    base_path = op.join(config["DATA_DIR"], 'metamers', '{model_name}', '{image_name}',
+                        'scaling-{scaling}', 'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-'
+                        '{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_metamer.png')
+    return [base_path.format(scaling=s, image_name=i, max_iter=1000, loss_thresh=1e-4,
+                             learning_rate=10, **wildcards) for i in ['nuts', 'einstein']
+            for s in [.4, .5, .6]]
+
 rule collect_metamers:
     input:
-        # need to come up with a clever way to do this: either delete
-        # the ones we don't want or make this a function that only takes
-        # the ones we want or maybe grabs one each for max_iter,
-        # loss_thresh, learning_rate
-        op.join(config["DATA_DIR"], 'metamers', '{model_name}', '{image_name}', 'scaling-{scaling}',
-                'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_thresh-'
-                '{loss_thresh}_metamer.png'),
+        get_metamers_for_expt,
     output:
         # we collect across image_name and scaling, and don't care about
         # learning_rate, max_iter, loss_thresh
@@ -138,4 +145,4 @@ rule collect_metamers:
             images.append(imageio.imread(i, as_gray=True))
         # want our images to be indexed along the first dimension
         images = np.einsum('ijk -> kij', np.dstack(images))
-        imageio.imwrite(output[0], images)
+        np.save(output[0], images)
