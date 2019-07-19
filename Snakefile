@@ -113,7 +113,7 @@ rule create_metamers:
 # we don't want or make this a function that only takes the ones we want
 # or maybe grabs one each for max_iter, loss_thresh, learning_rate.
 # Also need to thinka bout how to handle max_ecc; it will be different
-# if the images we use as inputs are different sizes
+# if the images we use as inputs are different sizes.
 def get_metamers_for_expt(wildcards):
     base_path = op.join(config["DATA_DIR"], 'metamers', '{model_name}', '{image_name}',
                         'scaling-{scaling}', 'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-'
@@ -145,4 +145,4 @@ rule collect_metamers:
             images.append(imageio.imread(i, as_gray=True))
         # want our images to be indexed along the first dimension
         images = np.einsum('ijk -> kij', np.dstack(images))
-        np.save(output[0], images)
+        np.save(output[0], images.astype(np.uint8))
