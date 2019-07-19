@@ -33,7 +33,12 @@ dependencies:
   - greenlet==0.4.15
   - h5py
   - pip:
-      - pyglet
+      # pyglet 1.4 isn't supported for psychopy yet
+      # (https://github.com/psychopy/psychopy/issues/2518), and 1.3.2
+      # is required for python 3.7 support
+      # (https://bitbucket.org/pyglet/pyglet/issues/168/pyglettextdocument-fails-in-python-37-b1)
+      - pyglet == 1.3.2
+      - glfw
       - zmq
       - json-tricks
       - pyparallel
@@ -41,4 +46,4 @@ dependencies:
       - pygame
       - pysoundcard
       - psychopy_ext
-      - psychopy
+      - psychopy == 3.1.5

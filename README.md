@@ -29,6 +29,9 @@ ffmpeg/intel/3.2.2` or, if `module` isn't working (like when using the
 `fish` shell), just add it to your path manually (e.g., on fish: `set
 -x PATH /share/apps/ffmpeg/3.2.2/intel/bin $PATH`)
 
+For running the experiment, need to install `glfw` from your package
+manager.
+
 # References
 
 - Freeman, J., & Simoncelli, E. P. (2011). Metamers of the ventral
