@@ -196,7 +196,7 @@ def save(save_path, metamer, figsize):
     """
     logger = logging.getLogger('create_metamers')
     logger.info("Saving at %s" % save_path)
-    metamer.save(save_path, save_model_sparse=True)
+    metamer.save(save_path, save_model_reduced=True)
     # save png of metamer
     metamer_path = op.splitext(save_path)[0] + "_metamer.png"
     logger.info("Saving metamer image at %s" % metamer_path)
