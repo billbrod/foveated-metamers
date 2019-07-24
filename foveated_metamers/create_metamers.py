@@ -274,10 +274,10 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         save_progress = True
     else:
         save_progress = False
-    matched_im, matched_rep = metamer.synthesize(clamper=clamper, save_representation=10,
-                                                 save_image=10, learning_rate=learning_rate,
-                                                 max_iter=max_iter, loss_thresh=loss_thresh,
-                                                 initial_image=initial_image, seed=seed,
+    matched_im, matched_rep = metamer.synthesize(clamper=clamper, store_progress=10,
+                                                 learning_rate=learning_rate, max_iter=max_iter,
+                                                 loss_thresh=loss_thresh, seed=seed,
+                                                 initial_image=initial_image,
                                                  save_progress=save_progress, save_path=save_path)
     if save_path is not None:
         save(save_path, metamer, figsize)
