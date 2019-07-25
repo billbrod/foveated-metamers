@@ -60,19 +60,8 @@ rule pad_image:
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'seed_images', '{image_name}_{pad_mode}-{ext}_benchmark.txt')
     run:
-        import imageio
-        import warnings
-        from skimage import util
-
-        im = imageio.imread(input[0], as_gray=True)
-        if im.max() > 1:
-            warnings.warn("Assuming image range is (0, 255)")
-            im /= 255
-        pad_kwargs = {}
-        if wildcards.pad_mode == 'constant':
-            pad_kwargs['constant_values'] = .5
-        im = util.pad(im, int(im.shape[0]/2), wildcards.pad_mode, **pad_kwargs)
-        imageio.imwrite(output[0], im)
+        import foveated_metamers as met
+        met.stimuli.pad_image(input[0], wildcards.pad_mode, output[0])
 
 
 rule create_metamers:
@@ -137,12 +126,5 @@ rule collect_metamers:
         op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'seed-{seed}_e0-{min_ecc}_'
                 'em-{max_ecc}_stimuli_benchmark.txt'),
     run:
-        import imageio
-        import numpy as np
-
-        images = []
-        for i in input:
-            images.append(imageio.imread(i, as_gray=True))
-        # want our images to be indexed along the first dimension
-        images = np.einsum('ijk -> kij', np.dstack(images))
-        np.save(output[0], images.astype(np.uint8))
+        import foveated_metamers as met
+        met.stimuli.colect_metamers(input, output[0])
