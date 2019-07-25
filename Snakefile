@@ -127,4 +127,4 @@ rule collect_metamers:
                 'em-{max_ecc}_stimuli_benchmark.txt'),
     run:
         import foveated_metamers as met
-        met.stimuli.colect_metamers(input, output[0])
+        met.stimuli.colect_images(input, output[0])
