@@ -17,11 +17,13 @@ else:
 MODELS = ['RGC', 'V1']
 IMAGES = ['nuts', 'nuts_symmetric', 'nuts_constant', 'einstein', 'einstein_symmetric',
           'einstein_constant']
+METAMER_TEMPLATE_PATH = op.join('metamers', '{model_name}', '{image_name}',
+                                'scaling-{scaling}', 'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_'
+                                'em-{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_metamer.png')
 
 def initial_metamer_inputs(wildcards):
-    path_template = op.join(config["DATA_DIR"], 'metamers', '{model_name}', '{image_name}',
-                            'scaling-{scaling}', 'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-'
-                            '{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}.pt')
+    path_template = op.join(config["DATA_DIR"], METAMER_TEMPLATE_PATH.replace('_metamer.png',
+                                                                              '.pt'))
     # return [path_template.format(model_name=m, image_name=i, scaling=s, seed=0, learning_rate=lr,
     #                              min_ecc=.5, max_ecc=15, max_iter=20000, loss_thresh=1e-6) for
     #         m in MODELS for i in IMAGES for s in [.1, .2, .3, .4, .5, .6, .7, .8, .9] for lr in
@@ -68,15 +70,9 @@ rule create_metamers:
     input:
         op.join(config["DATA_DIR"], 'seed_images', '{image_name}.pgm')
     output:
-        op.join(config["DATA_DIR"], 'metamers', '{model_name}', '{image_name}', 'scaling-{scaling}',
-                'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_thresh-'
-                '{loss_thresh}.pt'),
-        op.join(config["DATA_DIR"], 'metamers', '{model_name}', '{image_name}', 'scaling-{scaling}',
-                'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_thresh-'
-                '{loss_thresh}_metamer.png'),
-        op.join(config["DATA_DIR"], 'metamers', '{model_name}', '{image_name}', 'scaling-{scaling}',
-                'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_thresh-'
-                '{loss_thresh}_synthesis.mp4')
+        op.join(config["DATA_DIR"], METAMER_TEMPLATE_PATH.replace('_metamer.png', '.pt')),
+        op.join(config["DATA_DIR"], METAMER_TEMPLATE_PATH.replace('metamer.png', 'synthesis.mp4')),
+        op.join(config["DATA_DIR"], METAMER_TEMPLATE_PATH)
     log:
         op.join(config["DATA_DIR"], 'logs', 'metamers', '{model_name}', '{image_name}',
                 'scaling-{scaling}', 'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_'
@@ -101,14 +97,12 @@ rule create_metamers:
 # need to come up with a clever way to do this: either delete the ones
 # we don't want or make this a function that only takes the ones we want
 # or maybe grabs one each for max_iter, loss_thresh, learning_rate.
-# Also need to thinka bout how to handle max_ecc; it will be different
+# Also need to think about how to handle max_ecc; it will be different
 # if the images we use as inputs are different sizes.
 def get_metamers_for_expt(wildcards):
-    base_path = op.join(config["DATA_DIR"], 'metamers', '{model_name}', '{image_name}',
-                        'scaling-{scaling}', 'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-'
-                        '{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_metamer.png')
+    base_path = op.join(config["DATA_DIR"], METAMER_TEMPLATE_PATH)
     return [base_path.format(scaling=s, image_name=i, max_iter=1000, loss_thresh=1e-4,
-                             learning_rate=10, **wildcards) for i in ['nuts', 'einstein']
+                             learning_rate=10, min_ecc=.5, **wildcards) for i in ['nuts', 'einstein']
             for s in [.4, .5, .6]]
 
 rule collect_metamers:
