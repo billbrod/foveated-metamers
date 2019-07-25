@@ -20,4 +20,5 @@ dependencies:
       - torchvision
       - torch>=1.1
       - pyrtools>=0.9
+      - parse
       # - plenoptic

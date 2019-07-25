@@ -113,6 +113,8 @@ rule collect_metamers:
         # learning_rate, max_iter, loss_thresh
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'seed-{seed}_e0-{min_ecc}_em-'
                 '{max_ecc}_stimuli.npy'),
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'seed-{seed}_e0-{min_ecc}_em-'
+                '{max_ecc}_stimuli_description.csv'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'seed-{seed}_e0-{min_ecc}_'
                 'em-{max_ecc}_stimuli-%j.log'),
@@ -122,3 +124,5 @@ rule collect_metamers:
     run:
         import foveated_metamers as met
         met.stimuli.colect_images(input, output[0])
+        met.stimuli.create_metamer_df(input, op.join(config['DATA_DIR'], METAMER_TEMPLATE_PATH),
+                                      output[1])

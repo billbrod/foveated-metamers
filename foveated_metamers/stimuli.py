@@ -2,7 +2,9 @@
 """
 import imageio
 import warnings
+import parse
 import numpy as np
+import pandas as pd
 from skimage import util
 
 
@@ -83,3 +85,46 @@ def collect_images(image_paths, save_path=None):
     if save_path is not None:
         np.save(save_path, images)
     return images
+
+
+def create_metamer_df(metamer_paths, metamer_template_path, save_path=None):
+    r"""Create dataframe summarizing metamer information
+
+    We do this by parsing ``metamer_template_path``, which should
+    therefore look like a python 3-style format string, e.g.,
+    'image-{image}_seed-{seed}'.
+
+    Each of the named fields will be a column in the created dataframe
+    and each path will be a row.
+
+    Note that, in order for this to work properly, all of the fields in
+    ``metamer_template_path`` must be named, i.e., we don't handle
+    'image-{image}_seed-{}'. This is because we then don't know how to
+    name that column in the dataframe
+
+    Parameters
+    ----------
+    metamer_paths : list
+        A list of strings to metamer paths
+    metamer_template_path : str
+        A python 3 format string. See above for examples
+    save_path : str or None
+        If a str, must end in csv, and we save the dataframe here as a
+        csv. If None, we don't save the dataframe
+
+    Returns
+    -------
+    df : pd.DataFrame
+        The metamer information dataframe
+
+    """
+    metamer_info = []
+    for p in metamer_paths:
+        info = parse.parse(metamer_template_path, p)
+        if len(info.fixed) > 0:
+            raise Exception("All fields in metamer_template_path must be named!")
+        metamer_info.append(info.named)
+    df = pd.DataFrame(metamer_info)
+    if save_path is not None:
+        df.to_csv(save_path)
+    return df
