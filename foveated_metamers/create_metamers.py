@@ -83,6 +83,8 @@ def setup_image(image, device):
     else:
         logger.warning("Assuming image range is (0, 1)")
     image = torch.tensor(image, dtype=torch.float32, device=device)
+    while image.ndimension() < 4:
+        image = image.unsqueeze(0)
     return image
 
 
@@ -118,14 +120,14 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc):
 
     """
     if model_name == 'RGC':
-        model = po.simul.RetinalGanglionCells(scaling, image.shape, min_eccentricity=min_ecc,
+        model = po.simul.RetinalGanglionCells(scaling, image.shape[-2:], min_eccentricity=min_ecc,
                                               max_eccentricity=max_ecc)
         figsize = (17, 5)
         # default figsize arguments work for an image that is 256x256,
         # may need to expand
         figsize = tuple([s*max(1, image.shape[i]/256) for i, s in enumerate(figsize)])
     elif model_name == 'V1':
-        model = po.simul.PrimaryVisualCortex(scaling, image.shape, min_eccentricity=min_ecc,
+        model = po.simul.PrimaryVisualCortex(scaling, image.shape[-2:], min_eccentricity=min_ecc,
                                              max_eccentricity=max_ecc)
         figsize = (35, 11)
         # default figsize arguments work for an image that is 512x512,
@@ -162,9 +164,12 @@ def finalize_metamer_image(model, metamer_image, image):
         The metamer image with the center added back in
 
     """
+    metamer_image = metamer_image.squeeze()
+    image = image.squeeze()
+    windows = model.PoolingWindows.windows[0].flatten(0, -3)
     # for some reason ~ (invert) is not implemented for booleans in
     # pytorch yet, so we do this instead.
-    return ((model.windows[0].sum(0) * metamer_image) + ((1 - model.windows[0].sum(0)) * image))
+    return ((windows.sum(0) * metamer_image) + ((1 - windows.sum(0)) * image))
 
 
 def save(save_path, metamer, figsize):
@@ -202,10 +207,10 @@ def save(save_path, metamer, figsize):
     logger.info("Saving metamer image at %s" % metamer_path)
     metamer_image = finalize_metamer_image(metamer.model, metamer.matched_image,
                                            metamer.target_image)
-    imageio.imwrite(metamer_path, metamer_image)
+    imageio.imwrite(metamer_path, metamer_image.squeeze().detach())
     video_path = op.splitext(save_path)[0] + "_synthesis.mp4"
     logger.info("Saving synthesis video at %s" % video_path)
-    anim = metamer.animate(figsize)
+    anim = metamer.animate(figsize=figsize)
     anim.save(video_path)
 
 
