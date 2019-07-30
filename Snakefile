@@ -20,6 +20,7 @@ IMAGES = ['nuts', 'nuts_symmetric', 'nuts_constant', 'einstein', 'einstein_symme
 METAMER_TEMPLATE_PATH = op.join('metamers', '{model_name}', '{image_name}',
                                 'scaling-{scaling}', 'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_'
                                 'em-{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_metamer.png')
+SEED_IMAGE_TEMPLATE_PATH = op.join('seed_images', '{image_name}.pgm')
 
 def initial_metamer_inputs(wildcards):
     path_template = op.join(config["DATA_DIR"], METAMER_TEMPLATE_PATH.replace('_metamer.png',
@@ -68,7 +69,7 @@ rule pad_image:
 
 rule create_metamers:
     input:
-        op.join(config["DATA_DIR"], 'seed_images', '{image_name}.pgm')
+        op.join(config["DATA_DIR"], SEED_IMAGE_TEMPLATE_PATH)
     output:
         op.join(config["DATA_DIR"], METAMER_TEMPLATE_PATH.replace('_metamer.png', '.pt')),
         op.join(config["DATA_DIR"], METAMER_TEMPLATE_PATH.replace('metamer.png', 'synthesis.mp4')),
@@ -100,10 +101,13 @@ rule create_metamers:
 # Also need to think about how to handle max_ecc; it will be different
 # if the images we use as inputs are different sizes.
 def get_metamers_for_expt(wildcards):
+    ims = ['nuts', 'einstein']
     base_path = op.join(config["DATA_DIR"], METAMER_TEMPLATE_PATH)
-    return [base_path.format(scaling=s, image_name=i, max_iter=1000, loss_thresh=1e-4,
-                             learning_rate=10, min_ecc=.5, **wildcards) for i in ['nuts', 'einstein']
-            for s in [.4, .5, .6]]
+    seed_im_path = op.join(config['DATA_DIR'], SEED_IMAGE_TEMPLATE_PATH)
+    images = [seed_im_path.format(image_name=i) for i in ims]
+    return images+[base_path.format(scaling=s, image_name=i, max_iter=1000, loss_thresh=1e-4,
+                                    learning_rate=10, **wildcards) for i in ims
+                   for s in [.4, .5, .6]]
 
 rule collect_metamers:
     input:
@@ -123,6 +127,7 @@ rule collect_metamers:
                 'em-{max_ecc}_stimuli_benchmark.txt'),
     run:
         import foveated_metamers as met
-        met.stimuli.colect_images(input, output[0])
-        met.stimuli.create_metamer_df(input, op.join(config['DATA_DIR'], METAMER_TEMPLATE_PATH),
-                                      output[1])
+        met.stimuli.collect_images(input, output[0])
+        template_paths = [op.join(config["DATA_DIR"], p) for p in [METAMER_TEMPLATE_PATH,
+                                                                   SEED_IMAGE_TEMPLATE_PATH]]
+        met.stimuli.create_metamer_df(input, template_paths, output[1])
