@@ -121,14 +121,14 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc):
     """
     if model_name == 'RGC':
         model = po.simul.RetinalGanglionCells(scaling, image.shape[-2:], min_eccentricity=min_ecc,
-                                              max_eccentricity=max_ecc)
+                                              max_eccentricity=max_ecc, transition_region_width=1)
         figsize = (17, 5)
         # default figsize arguments work for an image that is 256x256,
         # may need to expand
         figsize = tuple([s*max(1, image.shape[i]/256) for i, s in enumerate(figsize)])
     elif model_name == 'V1':
         model = po.simul.PrimaryVisualCortex(scaling, image.shape[-2:], min_eccentricity=min_ecc,
-                                             max_eccentricity=max_ecc)
+                                             max_eccentricity=max_ecc, transition_region_width=1)
         figsize = (35, 11)
         # default figsize arguments work for an image that is 512x512,
         # may need to expand
