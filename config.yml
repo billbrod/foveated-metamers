@@ -1,1 +1,4 @@
 DATA_DIR: "/home/billbrod/Desktop/metamers/"
+# the directory where you've placed the LIVE-NFLX-II dataset, with all
+# of its folders extracted
+NFLX_DIR: "/home/billbrod/Downloads/LIVE-NFLX-II"

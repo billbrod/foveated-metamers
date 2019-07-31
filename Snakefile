@@ -16,15 +16,15 @@ else:
 
 MODELS = ['RGC', 'V1']
 IMAGES = ['nuts', 'nuts_symmetric', 'nuts_constant', 'einstein', 'einstein_symmetric',
-          'einstein_constant']
-METAMER_TEMPLATE_PATH = op.join('metamers', '{model_name}', '{image_name}',
+          'einstein_constant', 'AsianFusion-08', 'AirShow-12', 'ElFuenteDance-11',
+          'Chimera1102347-03', 'CosmosLaundromat-08']
+METAMER_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers', '{model_name}', '{image_name}',
                                 'scaling-{scaling}', 'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_'
                                 'em-{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_metamer.png')
-SEED_IMAGE_TEMPLATE_PATH = op.join('seed_images', '{image_name}.pgm')
+SEED_IMAGE_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'seed_images', '{image_name}.pgm')
 
 def initial_metamer_inputs(wildcards):
-    path_template = op.join(config["DATA_DIR"], METAMER_TEMPLATE_PATH.replace('_metamer.png',
-                                                                              '.pt'))
+    path_template = METAMER_TEMPLATE_PATH.replace('_metamer.png', '.pt')
     # return [path_template.format(model_name=m, image_name=i, scaling=s, seed=0, learning_rate=lr,
     #                              min_ecc=.5, max_ecc=15, max_iter=20000, loss_thresh=1e-6) for
     #         m in MODELS for i in IMAGES for s in [.1, .2, .3, .4, .5, .6, .7, .8, .9] for lr in
@@ -53,6 +53,48 @@ rule initial_metamers:
         initial_metamer_inputs,
 
 
+rule all_seeds:
+    input:
+        [SEED_IMAGE_TEMPLATE_PATH.format(image_name=i) for i in IMAGES]
+
+
+rule yuv_to_mp4:
+    input:
+        op.join(config['NFLX_DIR'], 'contents_org_yuv', '{video_name}.yuv')
+    output:
+        op.join(config['NFLX_DIR'], 'contents_org_yuv', '{video_name}.mp4')
+    shell:
+        # following this stackoverflow comment: https://stackoverflow.com/a/15780960/4659293
+        "ffmpeg -f rawvideo -vcodec rawvideo -framerate 60 -s 1920x1080 -pixel_format yuv420p "
+        "-i {input} -c:v libx264 -preset ultrafast -qp 0 {output}"
+
+
+rule mp4_to_pngs:
+    input:
+        op.join(config['NFLX_DIR'], 'contents_org_yuv', '{video_name}.mp4')
+    output:
+        [op.join(config['NFLX_DIR'], 'contents_org_yuv', '{{video_name}}', '{{video_name}}-{:02d}.png').format(i) for i in range(1, 13)]
+    params:
+        out_name = lambda wildcards, output: output[0].replace('01', '%02d')
+    shell:
+        # following this stackoverlow: https://stackoverflow.com/a/10962408/4659293
+        "ffmpeg -i {input} -r 1 {params.out_name}"
+
+
+rule png_to_pgm:
+    input:
+        op.join(config['NFLX_DIR'], 'contents_org_yuv', '{video_name}', '{video_name}-{num}.png')
+    output:
+        op.join(config['DATA_DIR'], 'seed_images', '{video_name}-{num}.pgm')
+    run:
+        import imageio
+        im = imageio.imread(input[0], as_gray=True)
+        # these are 1920 x 1080, but we want square images. this grabs
+        # the center 1024x1024 (note that in python, the shope is (1080,
+        # 1920))
+        imageio.imwrite(output[0], im[28:-28, 448:-448])
+
+
 rule pad_image:
     input:
         op.join(config["DATA_DIR"], 'seed_images', '{image_name}.{ext}')
@@ -69,11 +111,11 @@ rule pad_image:
 
 rule create_metamers:
     input:
-        op.join(config["DATA_DIR"], SEED_IMAGE_TEMPLATE_PATH)
+        SEED_IMAGE_TEMPLATE_PATH
     output:
-        op.join(config["DATA_DIR"], METAMER_TEMPLATE_PATH.replace('_metamer.png', '.pt')),
-        op.join(config["DATA_DIR"], METAMER_TEMPLATE_PATH.replace('metamer.png', 'synthesis.mp4')),
-        op.join(config["DATA_DIR"], METAMER_TEMPLATE_PATH)
+        METAMER_TEMPLATE_PATH.replace('_metamer.png', '.pt'),
+        METAMER_TEMPLATE_PATH.replace('metamer.png', 'synthesis.mp4'),
+        METAMER_TEMPLATE_PATH
     log:
         op.join(config["DATA_DIR"], 'logs', 'metamers', '{model_name}', '{image_name}',
                 'scaling-{scaling}', 'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_'
@@ -102,12 +144,10 @@ rule create_metamers:
 # if the images we use as inputs are different sizes.
 def get_metamers_for_expt(wildcards):
     ims = ['nuts', 'einstein']
-    base_path = op.join(config["DATA_DIR"], METAMER_TEMPLATE_PATH)
-    seed_im_path = op.join(config['DATA_DIR'], SEED_IMAGE_TEMPLATE_PATH)
-    images = [seed_im_path.format(image_name=i) for i in ims]
-    return images+[base_path.format(scaling=s, image_name=i, max_iter=1000, loss_thresh=1e-4,
-                                    learning_rate=10, **wildcards) for i in ims
-                   for s in [.4, .5, .6]]
+    images = [SEED_IMAGE_TEMPLATE_PATH.format(image_name=i) for i in ims]
+    return images+[METAMER_TEMPLATE_PATH.format(scaling=s, image_name=i, max_iter=1000,
+                                                loss_thresh=1e-4, learning_rate=10, **wildcards)
+                   for i in ims for s in [.4, .5, .6]]
 
 rule collect_metamers:
     input:
@@ -128,6 +168,5 @@ rule collect_metamers:
     run:
         import foveated_metamers as met
         met.stimuli.collect_images(input, output[0])
-        template_paths = [op.join(config["DATA_DIR"], p) for p in [METAMER_TEMPLATE_PATH,
-                                                                   SEED_IMAGE_TEMPLATE_PATH]]
-        met.stimuli.create_metamer_df(input, template_paths, output[1])
+        met.stimuli.create_metamer_df(input, [METAMER_TEMPLATE_PATH, SEED_IMAGE_TEMPLATE_PATH],
+                                      output[1])

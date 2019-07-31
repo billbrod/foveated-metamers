@@ -38,6 +38,12 @@ ffmpeg/intel/3.2.2` or, if `module` isn't working (like when using the
 For running the experiment, need to install `glfw` from your package
 manager.
 
+we use the
+[LIVE-NFLX-II](http://live.ece.utexas.edu/research/LIVE_NFLX_II/live_nflx_plus.html)
+data set to get some input images. We provide those in our
+[seed_images](https://osf.io/5t4ju) tarball, but the link is presented
+here if you wish to examine the rest of the data set.
+
 # References
 
 - Freeman, J., & Simoncelli, E. P. (2011). Metamers of the ventral
