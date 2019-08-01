@@ -13,6 +13,8 @@ if os.system("module list") == 0:
                  "module load ffmpeg/intel/3.2.2; ")
 else:
     ON_CLUSTER = False
+wildcard_constraints:
+    num="[0-9]+"
 
 MODELS = ['RGC', 'V1']
 IMAGES = ['nuts', 'nuts_symmetric', 'nuts_constant', 'einstein', 'einstein_symmetric',
