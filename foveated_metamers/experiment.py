@@ -1,31 +1,5 @@
 #!/usr/bin/python
-"""example psychopy script, based on my spatial_frequency_preferences experiment
-
-Run from the command line. Type `python psychopy_example.py -h` to see the help string.
-
-You must first create your stimuli (as 2d arrays) and save them as a 3d numpy array (e.g.,
-stimuli.npy). We also assume you've created and saved separate numpy arrays that give the indices
-into your stimulus array, specifying the order you want to present them in.
-
-For example, let's assume stimuli.npy contains 10 stimuli, each 1080 by 1080 pixels. Then
-stimuli.shape is (10, 1080, 1080). You have 5 runs in your experiment and your subject name is
-sub-01, so you've created sub-01_run00.npy, sub-01_run01.npy, sub-01_run02.npy, sub-01_run03.npy,
-sub-01_run04.npy, each of which contains an array with a permutation of the numbers 0 through
-9. This script will load in the stimuli and each of those run indices, then present them to the
-subject in 5 runs, presenting all stimuli in each run, in the order specified by the run indices.
-
-We also add some blank stimuli to the beginning and end of each run.
-
-As an example task, we'll present a digit stream at fixation (alternating black and white), where
-the subject must perform a one-back task.
-
-This will then save out the results as an hdf5 file.
-
-A lot of this script wrapper stuff for the purpose of making your life easier (e.g., so you don't
-have to start this many times during one scanning session, so you don't accidentally save over some
-output). If you want to see the core of this, how to display things using pscyhopy, update them
-correctly, and record any button presses, look into the `run` function.
-
+"""psychopy script for ABX experiment, run from the command line
 """
 
 import argparse
@@ -151,9 +125,10 @@ def run(stim_path, idx_path, on_msec_length=200, off_msec_length=(500, 1000, 200
     """
     stimuli, idx, expt_params, monitor_kwargs = _set_params(stim_path, idx_path, **monitor_kwargs)
 
+    win = visual.Window(winType='glfw', **monitor_kwargs)
+    win.mouseVisible = False
     # linear gamma ramp
-    win = visual.Window(winType='glfw', gammaRamp=np.tile(np.linspace(0, 1, 256), (3, 1)),
-                        mouseVisible=False, **monitor_kwargs)
+    win.gammaRamp = np.tile(np.linspace(0, 1, 256), (3, 1))
 
     fix_pix_size = fix_deg_size * (monitor_kwargs['size'][0] / screen_size_deg)
     fixation = visual.GratingStim(win, size=fix_pix_size, pos=[0, 0], sf=0, color='red',
@@ -170,8 +145,7 @@ def run(stim_path, idx_path, on_msec_length=200, off_msec_length=(500, 1000, 200
         eyetracker.startRecording(1, 1, 1, 1)
 
     clock = core.Clock()
-    wait_text = visual.TextStim(win, ("Press 5 to start\nq will quit this run\nescape will quit "
-                                      "this session"))
+    wait_text = visual.TextStim(win, ("Press 5 to start\nq or escape will quit"))
     query_text = visual.TextStim(win, "1 or 2?")
     wait_text.draw()
     win.flip()
@@ -239,6 +213,13 @@ def run(stim_path, idx_path, on_msec_length=200, off_msec_length=(500, 1000, 200
         if ('q' in [k[0] for k in all_keys] or 'escape' in [k[0] for k in all_keys] or
             'esc' in [k[0] for k in all_keys]):
             break
+    visual.TextStim(win, "Run over").draw()
+    win.flip()
+    timings.append(("run_end", '', clock.getTime()))
+    all_keys = event.getKeys(timeStamped=clock)
+    if all_keys:
+        keys_pressed.extend([(key[0], key[1]) for key in all_keys])
+    core.wait(4)
     if eyetracker is not None:
         eyetracker.stopRecording()
         eyetracker.closeDataFile()
@@ -267,9 +248,8 @@ def _convert_str(list_of_strs):
     return saveable_list
 
 
-def expt(stimuli_path, number_of_runs, first_run, subj_name, output_dir="data/raw_behavioral",
-         input_dir="data/stimuli", eyetrack=False, screen_size_pix=[1920, 1080],
-         screen_size_deg=60, **kwargs):
+def expt(stimuli_path, subj_name, idx_path, output_dir="data/raw_behavioral", eyetrack=False,
+         screen_size_pix=[1920, 1080], screen_size_deg=60, **kwargs):
     """run a full experiment
 
     this just loops through the specified stims_path, passing each one to the run function in
@@ -280,16 +260,16 @@ def expt(stimuli_path, number_of_runs, first_run, subj_name, output_dir="data/ra
         os.makedirs(output_dir)
     file_path = op.join(output_dir, "%s_%s_sess{sess:02d}.hdf5" %
                         (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name))
-    edf_path = op.join(output_dir, "%s_%s_sess{sess:02d}_run{run:02d}.EDF" %
+    edf_path = op.join(output_dir, "%s_%s_sess{sess:02d}.EDF" %
                        (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name))
     sess_num = 0
     while glob.glob(file_path.format(sess=sess_num)):
         sess_num += 1
-    idx_paths = [op.join(input_dir, "%s_run-%02d_idx.npy" % (subj_name, i))
-                 for i in range(first_run, first_run+number_of_runs)]
-    for p in idx_paths:
-        if not os.path.isfile(p):
-            raise IOError("Unable to find array of stimulus indices %s!" % p)
+    if not os.path.isfile(idx_path):
+        raise IOError("Unable to find array of stimulus indices %s!" % idx_path)
+    if subj_name not in idx_path:
+        raise Exception("subj_name %s should be in idx_path %s, are you sure they correspond?" %
+                        (subj_name, idx_path))
     if eyetrack:
         eyetracker = _setup_eyelink(screen_size_pix)
     else:
@@ -297,71 +277,59 @@ def expt(stimuli_path, number_of_runs, first_run, subj_name, output_dir="data/ra
         # we pass through the same edf_path even if we're not using the eyetracker because it
         # doesn't get used (and if set this to None or something, then the edf_path.format call
         # several lines down will fail)
-    print("Running %d runs, with the following stimulus:" % number_of_runs)
+    print("Running 1 run, with the following stimulus:")
     print("\t%s" % stimuli_path)
-    print("Will use the following indices:")
-    print("\t%s" % "\n\t".join(idx_paths))
+    print("Will use the following index:")
+    print("\t%s" % idx_path)
     print("Will save at the following location:\n\t%s" % file_path.format(sess=sess_num))
-    for i, path in enumerate(idx_paths):
-        keys, timings, expt_params, idx = run(stimuli_path, path, size=screen_size_pix,
-                                              eyetracker=eyetracker,
-                                              screen_size_deg=screen_size_deg,
-                                              edf_path=edf_path.format(sess=sess_num, run=i),
-                                              **kwargs)
-        print(timings)
-        with h5py.File(file_path.format(sess=sess_num), 'a') as f:
-            f.create_dataset("run_%02d_button_presses" % i, data=_convert_str(keys))
-            f.create_dataset("run_%02d_timing_data" % i, data=_convert_str(timings))
-            f.create_dataset("run_%02d_stim_path" % i, data=stimuli_path.encode())
-            f.create_dataset("run_%02d_idx_path" % i, data=path.encode())
-            f.create_dataset("run_%02d_shuffled_indices" % i, data=idx)
-            for k, v in expt_params.items():
-                f.create_dataset("run_%02d_%s" % (i, k), data=v)
-            # also note differences from default options
-            for k, v in kwargs.items():
-                if v is None:
-                    f.create_dataset("run_%02d_%s" % (i, k), data=str(v))
-                else:
-                    f.create_dataset("run_%02d_%s" % (i, k), data=v)
-        if 'escape' in [k[0] for k in keys] or 'esc' in [k[0] for k in keys]:
-            break
+    keys, timings, expt_params, idx = run(stimuli_path, idx_path, size=screen_size_pix,
+                                          eyetracker=eyetracker,
+                                          screen_size_deg=screen_size_deg,
+                                          edf_path=edf_path.format(sess=sess_num),
+                                          **kwargs)
+    with h5py.File(file_path.format(sess=sess_num), 'a') as f:
+        f.create_dataset("button_presses", data=_convert_str(keys))
+        f.create_dataset("timing_data", data=_convert_str(timings))
+        f.create_dataset("stim_path", data=stimuli_path.encode())
+        f.create_dataset("idx_path", data=idx_path.encode())
+        f.create_dataset("shuffled_indices", data=idx)
+        for k, v in expt_params.items():
+            f.create_dataset("%s" % k, data=v)
+        # also note differences from default options
+        for k, v in kwargs.items():
+            if v is None:
+                f.create_dataset("%s" % k, data=str(v))
+            else:
+                f.create_dataset("%s" % k, data=v)
     if eyetracker is not None:
         eyetracker.close()
 
 
 if __name__ == '__main__':
-    class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter):
-        pass
     parser = argparse.ArgumentParser(
-        description=("Run an experiment! This takes in the path to your unshuffled stimuli, the "
-                     "name\n of your subject, and the number of runs, and passes that to expt. This "
-                     "will then\nassume that your run indices (which shuffle the stimuli) are saved"
-                     "in the INPUT_DIR\nat SUBJ_NAME_runNUM_idx.npy, where NUM runs from FIRST_RUN "
-                     "to\nFIRST_RUN+NUMBER_OF_RUNS-1 (because this is python, 0-based indexing), "
-                     "with all\n single-digit numbers represented as 0#.\n\nYou can run this without"
-                     " setting any of the arguments, letting the defaults take\ncare of everything"
-                     ". This will successfully run the tutorial expeirment."),
-        formatter_class=CustomFormatter)
-    parser.add_argument("stimuli_path", help="path to your unshuffled stimuli.")
-    parser.add_argument("--number_of_runs", "-n", help="number of runs you want to run", type=int,
-                        default=2)
-    parser.add_argument("--subj_name", "-s", help="name of the subject", default="sub-tutorial")
-    parser.add_argument("--input_dir", '-i', help=("path to directory that contains your shuffled"
-                                                   " run indices"),
-                        default=op.expanduser("~/Desktop/metamers/stimuli"))
+        description=("Run an ABX experiment to investigate metamers! Specify the location of the "
+                     "stimuli, the location of the (already-computed and randomized) indices, and"
+                     " the subject name, and we'll handle the rest. Each trial will consist of "
+                     "three stimuli, shown briefly, with blank screens in between, with a pause at"
+                     " the end of the trial, at which point they must specify whether the third "
+                     "stimulus was identical to the first or the second. This continues until we'"
+                     "ve gone through all the trials in the index array, at which point we save "
+                     "responses, stimulus timing, and exit out."),
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("stimuli_path", help="Path to your unshuffled stimuli.")
+    parser.add_argument("idx_path", help=("Path to the shuffled presentation indices"))
+    parser.add_argument("subj_name", help="Name of the subject")
     parser.add_argument("--output_dir", '-o', help="directory to place output in",
                         default=op.expanduser("~/Desktop/metamers/raw_behavioral"))
-    parser.add_argument("--first_run", '-f', type=int, default=0,
-                        help=("Which run to run first. Useful if, for instance, you ran the first "
-                              "two runs without problem and then had to quit out in the third. You"
-                              " should then set this to 2 (because they're 0-indexed)."))
     parser.add_argument("--eyetrack", '-e', action="store_true",
                         help=("Pass this flag to tell the script to gather eye-tracking data. If"
                               " pylink is not installed, this is impossible and will throw an "
                               "exception"))
+    parser.add_argument("--screen", '-s', default=0, type=int,
+                        help=("Screen number to display experiment on"))
     parser.add_argument("--screen_size_pix", '-p', nargs=2, help="Size of the screen (in pixels)",
-                        default=[1920, 1080])
-    parser.add_argument("--screen_size_deg", '-d', default=60,
-                        help="Size of shortest screen side (in degrees)")
+                        default=[1920, 1080], type=float)
+    parser.add_argument("--screen_size_deg", '-d', default=60, type=float,
+                        help="Size of longest screen side (in degrees)")
     args = vars(parser.parse_args())
     expt(**args)
