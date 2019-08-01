@@ -31,10 +31,3 @@ RUN /bin/bash -c "source activate $conda_env"
 # for now, need to copy this over manually
 COPY plenoptic /src/plenoptic
 RUN pip install -e /src/plenoptic/
-
-# copy over this directory
-COPY foveated-metamers /src/foveated-metamers
-WORKDIR /src/foveated-metamers
-
-# Correct the config file
-RUN echo "DATA_DIR: \"/mnt/graphics_ssd/home/billbrod/metamers\"" > /src/foveated-metamers/config.yml
