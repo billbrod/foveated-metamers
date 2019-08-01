@@ -41,7 +41,7 @@ manager.
 we use the
 [LIVE-NFLX-II](http://live.ece.utexas.edu/research/LIVE_NFLX_II/live_nflx_plus.html)
 data set to get some input images. We provide those in our
-[seed_images](https://osf.io/5t4ju) tarball, but the link is presented
+[ref_images](https://osf.io/5t4ju) tarball, but the link is presented
 here if you wish to examine the rest of the data set.
 
 # References

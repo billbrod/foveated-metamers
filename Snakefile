@@ -21,7 +21,8 @@ IMAGES = ['nuts', 'nuts_symmetric', 'nuts_constant', 'einstein', 'einstein_symme
 METAMER_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers', '{model_name}', '{image_name}',
                                 'scaling-{scaling}', 'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_'
                                 'em-{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_metamer.png')
-SEED_IMAGE_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'seed_images', '{image_name}.pgm')
+REF_IMAGE_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'ref_images', '{image_name}.pgm')
+SEEDS = {'sub-01': 0}
 
 def initial_metamer_inputs(wildcards):
     path_template = METAMER_TEMPLATE_PATH.replace('_metamer.png', '.pt')
@@ -53,9 +54,9 @@ rule initial_metamers:
         initial_metamer_inputs,
 
 
-rule all_seeds:
+rule all_refs:
     input:
-        [SEED_IMAGE_TEMPLATE_PATH.format(image_name=i) for i in IMAGES]
+        [REF_IMAGE_TEMPLATE_PATH.format(image_name=i) for i in IMAGES]
 
 
 rule yuv_to_mp4:
@@ -85,7 +86,7 @@ rule png_to_pgm:
     input:
         op.join(config['NFLX_DIR'], 'contents_org_yuv', '{video_name}', '{video_name}-{num}.png')
     output:
-        op.join(config['DATA_DIR'], 'seed_images', '{video_name}-{num}.pgm')
+        op.join(config['DATA_DIR'], 'ref_images', '{video_name}-{num}.pgm')
     run:
         import imageio
         im = imageio.imread(input[0], as_gray=True)
@@ -94,13 +95,13 @@ rule png_to_pgm:
 
 rule pad_image:
     input:
-        op.join(config["DATA_DIR"], 'seed_images', '{image_name}.{ext}')
+        op.join(config["DATA_DIR"], 'ref_images', '{image_name}.{ext}')
     output:
-        op.join(config["DATA_DIR"], 'seed_images', '{image_name}_{pad_mode}.{ext}')
+        op.join(config["DATA_DIR"], 'ref_images', '{image_name}_{pad_mode}.{ext}')
     log:
-        op.join(config["DATA_DIR"], 'logs', 'seed_images', '{image_name}_{pad_mode}-{ext}-%j.log')
+        op.join(config["DATA_DIR"], 'logs', 'ref_images', '{image_name}_{pad_mode}-{ext}-%j.log')
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'seed_images', '{image_name}_{pad_mode}-{ext}_benchmark.txt')
+        op.join(config["DATA_DIR"], 'logs', 'ref_images', '{image_name}_{pad_mode}-{ext}_benchmark.txt')
     run:
         import foveated_metamers as met
         met.stimuli.pad_image(input[0], wildcards.pad_mode, output[0])
@@ -108,7 +109,7 @@ rule pad_image:
 
 rule create_metamers:
     input:
-        SEED_IMAGE_TEMPLATE_PATH
+        REF_IMAGE_TEMPLATE_PATH
     output:
         METAMER_TEMPLATE_PATH.replace('_metamer.png', '.pt'),
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'synthesis.mp4'),
@@ -141,10 +142,10 @@ rule create_metamers:
 # if the images we use as inputs are different sizes.
 def get_metamers_for_expt(wildcards):
     ims = ['nuts', 'einstein']
-    images = [SEED_IMAGE_TEMPLATE_PATH.format(image_name=i) for i in ims]
-    return images+[METAMER_TEMPLATE_PATH.format(scaling=s, image_name=i, max_iter=1000,
+    images = [REF_IMAGE_TEMPLATE_PATH.format(image_name=i) for i in ims]
+    return images+[METAMER_TEMPLATE_PATH.format(scaling=sc, seed=s, image_name=i, max_iter=1000,
                                                 loss_thresh=1e-4, learning_rate=10, **wildcards)
-                   for i in ims for s in [.4, .5, .6]]
+                   for i in ims for sc in [.4, .5, .6] for s in [0, 1]]
 
 rule collect_metamers:
     input:
@@ -152,18 +153,39 @@ rule collect_metamers:
     output:
         # we collect across image_name and scaling, and don't care about
         # learning_rate, max_iter, loss_thresh
-        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'seed-{seed}_e0-{min_ecc}_em-'
-                '{max_ecc}_stimuli.npy'),
-        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'seed-{seed}_e0-{min_ecc}_em-'
-                '{max_ecc}_stimuli_description.csv'),
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'e0-{min_ecc}_em-{max_ecc}_'
+                'stimuli.npy'),
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'e0-{min_ecc}_em-{max_ecc}_'
+                'stimuli_description.csv'),
     log:
-        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'seed-{seed}_e0-{min_ecc}_'
-                'em-{max_ecc}_stimuli-%j.log'),
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'e0-{min_ecc}_em-{max_ecc}'
+                '_stimuli-%j.log'),
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'seed-{seed}_e0-{min_ecc}_'
-                'em-{max_ecc}_stimuli_benchmark.txt'),
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'e0-{min_ecc}_em-{max_ecc}'
+                '_stimuli_benchmark.txt'),
     run:
         import foveated_metamers as met
         met.stimuli.collect_images(input, output[0])
-        met.stimuli.create_metamer_df(input, [METAMER_TEMPLATE_PATH, SEED_IMAGE_TEMPLATE_PATH],
+        met.stimuli.create_metamer_df(input, [METAMER_TEMPLATE_PATH, REF_IMAGE_TEMPLATE_PATH],
                                       output[1])
+
+
+rule generate_experiment_idx:
+    input:
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'e0-{min_ecc}_em-{max_ecc}_'
+                'stimuli_description.csv'),
+    output:
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', '{subject}_e0-{min_ecc}_em-'
+                '{max_ecc}_idx.npy'),
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', '{subject}_e0-{min_ecc}_em-'
+                '{max_ecc}_idx-%j.log'),
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', '{subject}_e0-{min_ecc}_em-'
+                '{max_ecc}_idx_benchmark.txt'),
+    params:
+        seed = lambda wildcards: SEEDS[wildcards.subject]
+    run:
+        import foveated_metamers as met
+        import pandas as pd
+        met.stimuli.generate_indices(pd.read_csv(input[0]), params.seed, output[0])

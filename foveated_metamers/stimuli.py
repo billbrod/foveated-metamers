@@ -1,6 +1,7 @@
 """code to assemble stimuli for running experiment
 """
 import imageio
+import itertools
 import warnings
 import parse
 import numpy as np
@@ -136,7 +137,61 @@ def create_metamer_df(image_paths, image_template_paths, save_path=None):
     return df
 
 
-def generate_indices(description_df):
-    r"""Generate presentation indices
+def generate_indices(df, seed, save_path=None):
+    r"""Generate the randomized presentation indices
+
+    We take in the dataframe describing the metamer images combined into
+    our stimuli array and correctly structure the presentation indices
+    (as used in our experiment.py file), randomize them using the given
+    seed, and optionally save them.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The dataframe containing the metamer information, as created by
+        ``create_metamer_df``
+    seed : int
+        The seed passed to ``np.random.seed``.
+    save_path : str or None, optional
+        If a str, the path to save the indices array at (should end in
+        .npy). If None, we don't save the array.
+
+    Returns
+    -------
+    trials : np.array
+        The n x 3 of presentation indices.
     """
-    'hi'
+    np.random.seed(seed)
+    # The reference images will have a bunch of NaNs in the
+    # metamer-relevant fields. In order to be able to select them, we
+    # replace these with "None"
+    df = df.fillna('None')
+    trials_dict = {}
+    # Here we find the unique (non-None) values for the three fields
+    # that determine each trial
+    for k in ['scaling', 'image_name', 'model_name']:
+        v = [i for i in df[k].unique() if i != 'None']
+        trials_dict[k] = v
+    # Now go through and find the indices for each unique combination of
+    # these three (there should be multiple for each of these because of
+    # the different seeds used) and then add the reference image
+    trial_types = []
+    for s, i, m in itertools.product(*trials_dict.values()):
+        t = df.query('scaling==@s & image_name==@i & model_name==@m').index
+        t = t.append(df.query('scaling=="None" & image_name==@i & model_name=="None"').index)
+        trial_types.append(t)
+    trial_types = np.array(trial_types)
+    # Now generate the indices for the trial. At the end of this, trials
+    # is a 2d array, n by 3, where each row corresponds to a single ABX
+    # trial: two images from the same row of trial_types and then a
+    # repeat of one of them
+    trials = np.array([list(itertools.permutations(t, 2)) for t in trial_types])
+    trials = trials.reshape(-1, trials.shape[-1])
+    trials = np.array([[[i, j, i], [i, j, j]] for i, j in trials])
+    trials = trials.reshape(-1, trials.shape[-1])
+    # Now permute and save. we set the random seed at the top of this
+    # function for reproducibility
+    trials = np.random.permutation(trials)
+    if save_path is not None:
+        np.save(save_path, trials)
+    return trials
