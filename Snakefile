@@ -89,10 +89,7 @@ rule png_to_pgm:
     run:
         import imageio
         im = imageio.imread(input[0], as_gray=True)
-        # these are 1920 x 1080, but we want square images. this grabs
-        # the center 1024x1024 (note that in python, the shope is (1080,
-        # 1920))
-        imageio.imwrite(output[0], im[28:-28, 448:-448])
+        imageio.imwrite(output[0], im)
 
 
 rule pad_image:
