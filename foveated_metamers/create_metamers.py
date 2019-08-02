@@ -88,7 +88,7 @@ def setup_image(image, device):
     return image
 
 
-def setup_model(model_name, scaling, image, min_ecc, max_ecc):
+def setup_model(model_name, scaling, image, min_ecc, max_ecc, device):
     r"""setup the model
 
     We initialize the model, with the specified parameters, and return
@@ -135,7 +135,7 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc):
         figsize = tuple([s*max(1, image.shape[i+2]/512) for i, s in enumerate(figsize)])
     else:
         raise Exception("Don't know how to handle model_name %s" % model_name)
-    return model, figsize
+    return model.to(device), figsize
 
 
 def finalize_metamer_image(model, metamer_image, image):
@@ -268,7 +268,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     device = torch.device("cuda" if torch.cuda.is_available() and use_cuda else "cpu")
     logger.info("On device %s" % device)
     image = setup_image(image, device)
-    model, figsize = setup_model(model_name, scaling, image, min_ecc, max_ecc)
+    model, figsize = setup_model(model_name, scaling, image, min_ecc, max_ecc, device)
     logger.info("Using model %s from %.02f degrees to %.02f degrees" % (model_name, min_ecc,
                                                                         max_ecc))
     logger.info("Using learning rate %s, loss_thresh %s, and max_iter %s" % (learning_rate,
