@@ -209,7 +209,7 @@ def save(save_path, metamer, figsize):
     logger.info("Saving metamer image at %s" % metamer_path)
     metamer_image = finalize_metamer_image(metamer.model, metamer.matched_image,
                                            metamer.target_image)
-    imageio.imwrite(metamer_path, metamer_image.squeeze().detach())
+    imageio.imwrite(metamer_path, po.to_numpy(metamer_image.squeeze()))
     video_path = op.splitext(save_path)[0] + "_synthesis.mp4"
     logger.info("Saving synthesis video at %s" % video_path)
     anim = metamer.animate(figsize=figsize)
