@@ -1,4 +1,4 @@
-FROM nvidia/cuda:10.1-base
+FROM nvidia/cuda:9.0-base
 ARG conda_env=metamers
 
 # we need to get gcc
