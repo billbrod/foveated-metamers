@@ -128,14 +128,16 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, device):
         figsize = tuple([s*max(1, image.shape[i+2]/256) for i, s in enumerate(figsize)])
     elif model_name == 'V1':
         model = po.simul.PrimaryVisualCortex(scaling, image.shape[-2:], min_eccentricity=min_ecc,
-                                             max_eccentricity=max_ecc, transition_region_width=1)
+                                             max_eccentricity=max_ecc, transition_region_width=1,
+                                             device=device)
         figsize = (35, 11)
         # default figsize arguments work for an image that is 512x512,
         # may need to expand
         figsize = tuple([s*max(1, image.shape[i+2]/512) for i, s in enumerate(figsize)])
     else:
         raise Exception("Don't know how to handle model_name %s" % model_name)
-    return model.to(device), figsize
+    model.to(device)
+    return model, figsize
 
 
 def finalize_metamer_image(model, metamer_image, image):
