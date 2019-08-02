@@ -267,7 +267,13 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     logger.info("Using seed %s" % seed)
     torch.manual_seed(seed)
     np.random.seed(seed)
-    device = torch.device("cuda" if torch.cuda.is_available() and use_cuda else "cpu")
+    if torch.cuda.is_available() and use_cuda:
+        cuda_num = 0
+        while torch.cuda.memory_allocated(cuda_num) > 0:
+            cuda_num += 1
+        device = torch.device("cuda:%s" % cuda_num)
+    else:
+        device = torch.device("cpu")
     logger.info("On device %s" % device)
     image = setup_image(image, device)
     model, figsize = setup_model(model_name, scaling, image, min_ecc, max_ecc, device)
