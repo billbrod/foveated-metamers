@@ -137,7 +137,7 @@ rule create_metamers:
                                  int(wildcards.seed), float(wildcards.min_ecc),
                                  float(wildcards.max_ecc), float(wildcards.learning_rate),
                                  int(wildcards.max_iter), float(wildcards.loss_thresh), log_file,
-                                 output[0], {0: False, 1: True})
+                                 output[0], {0: False, 1: True}[resources.gpu])
 
 
 # need to come up with a clever way to do this: either delete the ones
