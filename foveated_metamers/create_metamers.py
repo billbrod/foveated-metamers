@@ -215,7 +215,7 @@ def save(save_path, metamer, figsize):
 
 
 def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_rate=1, max_iter=100,
-         loss_thresh=1e-4, log_file=None, save_path=None):
+         loss_thresh=1e-4, log_file=None, save_path=None, use_cuda=False):
     r"""create metamers!
 
     Given a model_name, model parameters, a target image, and some
@@ -256,13 +256,16 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         If a str, the path to the file to save the metamer object to. If
         None, we don't save the synthesis output (that's probably a bad
         idea)
+    use_cuda : bool, optional
+        If True and if torch.cuda.is_available(), we try to use the
+        gpu. else, we use the cpu
 
     """
     logger, log_file = setup_logger(log_file)
     logger.info("Using seed %s" % seed)
     torch.manual_seed(seed)
     np.random.seed(seed)
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() and use_cuda else "cpu")
     logger.info("On device %s" % device)
     image = setup_image(image, device)
     model, figsize = setup_model(model_name, scaling, image, min_ecc, max_ecc)

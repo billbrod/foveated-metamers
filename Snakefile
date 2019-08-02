@@ -22,7 +22,8 @@ IMAGES = ['nuts', 'nuts_symmetric', 'nuts_constant', 'einstein', 'einstein_symme
           'Chimera1102347-03', 'CosmosLaundromat-08']
 METAMER_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers', '{model_name}', '{image_name}',
                                 'scaling-{scaling}', 'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_'
-                                'em-{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_metamer.png')
+                                'em-{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}_'
+                                'metamer.png')
 REF_IMAGE_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'ref_images', '{image_name}.pgm')
 SEEDS = {'sub-01': 0}
 
@@ -119,11 +120,13 @@ rule create_metamers:
     log:
         op.join(config["DATA_DIR"], 'logs', 'metamers', '{model_name}', '{image_name}',
                 'scaling-{scaling}', 'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_'
-                'iter-{max_iter}_thresh-{loss_thresh}-%j.log')
+                'iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}-%j.log')
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'metamers', '{model_name}', '{image_name}',
                 'scaling-{scaling}', 'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_'
-                'iter-{max_iter}_thresh-{loss_thresh}_benchmark.txt')
+                'iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}_benchmark.txt')
+    resources:
+        gpu = lambda wildcards: int(wildcards.gpu),
     run:
         import foveated_metamers as met
         if ON_CLUSTER:
@@ -134,7 +137,7 @@ rule create_metamers:
                                  int(wildcards.seed), float(wildcards.min_ecc),
                                  float(wildcards.max_ecc), float(wildcards.learning_rate),
                                  int(wildcards.max_iter), float(wildcards.loss_thresh), log_file,
-                                 output[0])
+                                 output[0], {0: False, 1: True})
 
 
 # need to come up with a clever way to do this: either delete the ones
