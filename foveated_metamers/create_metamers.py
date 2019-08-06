@@ -7,11 +7,11 @@ import logging
 import numpy as np
 import plenoptic as po
 import os.path as op
-import matplotlib
+import matplotlib as mpl
 # by default matplotlib uses the TK gui toolkit which can cause problems
 # when I'm trying to render an image into a file, see
 # https://stackoverflow.com/questions/27147300/matplotlib-tcl-asyncdelete-async-handler-deleted-by-the-wrong-thread
-matplotlib.use('Agg')
+mpl.use('Agg')
 
 
 def setup_logger(log_file=None):
@@ -73,7 +73,7 @@ def setup_image(image, device):
     """
     logger = logging.getLogger('create_metamers')
     if isinstance(image, str):
-        logger.info("Loading in seed image from %s" % image)
+        logger.info("Loading in reference image from %s" % image)
         # use imageio.imread in order to handle rgb correctly. this uses the ITU-R 601-2 luma
         # transform, same as matlab
         image = imageio.imread(image, as_gray=True)
@@ -124,18 +124,34 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, device):
                                               max_eccentricity=max_ecc, transition_region_width=1)
         figsize = (17, 5)
         # default figsize arguments work for an image that is 256x256,
-        # may need to expand
-        figsize = tuple([s*max(1, image.shape[i+2]/256) for i, s in enumerate(figsize)])
+        # may need to expand. we go backwards through figsize because
+        # figsize and image shape are backwards of each other:
+        # image.shape's last two indices are (height, width), while
+        # figsize is (width, height)
+        figsize = tuple([s*max(1, image.shape[::-1][i]/256) for i, s in enumerate(figsize)])
+        rescale_factor = np.mean([image.shape[i+2]/256 for i in range(2)])
     elif model_name == 'V1':
         model = po.simul.PrimaryVisualCortex(scaling, image.shape[-2:], min_eccentricity=min_ecc,
                                              max_eccentricity=max_ecc, transition_region_width=1,
                                              device=device)
         figsize = (35, 11)
         # default figsize arguments work for an image that is 512x512,
-        # may need to expand
-        figsize = tuple([s*max(1, image.shape[i+2]/512) for i, s in enumerate(figsize)])
+        # may need to expand. we go backwards through figsize because
+        # figsize and image shape are backwards of each other:
+        # image.shape's last two indices are (height, width), while
+        # figsize is (width, height)
+        figsize = tuple([s*max(1, image.shape[::-1][i]/512) for i, s in enumerate(figsize)])
+        rescale_factor = np.mean([image.shape[i+2]/512 for i in range(2)])
     else:
         raise Exception("Don't know how to handle model_name %s" % model_name)
+    # 10 and 12 are the default font sizes for labels and titles,
+    # respectively, and we want to scale them in order to keep them
+    # readable. this should be global to matplotlib and so propagate
+    # through
+    mpl.rc('axes', labelsize=rescale_factor*10, titlesize=rescale_factor*12)
+    mpl.rc('xtick', labelsize=rescale_factor*10)
+    mpl.rc('ytick', labelsize=rescale_factor*10)
+    mpl.rc('lines', linewidth=rescale_factor*1.5, markersize=rescale_factor*6)
     model.to(device)
     return model, figsize
 
