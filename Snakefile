@@ -16,7 +16,7 @@ else:
 wildcard_constraints:
     num="[0-9]+"
 
-MODELS = ['RGC', 'V1']
+MODELS = ['RGC', 'V1', 'V1-norm']
 IMAGES = ['nuts', 'nuts_symmetric', 'nuts_constant', 'einstein', 'einstein_symmetric',
           'einstein_constant', 'AsianFusion-08', 'AirShow-12', 'ElFuenteDance-11',
           'Chimera1102347-03', 'CosmosLaundromat-08']

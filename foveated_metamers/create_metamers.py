@@ -95,10 +95,10 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, device):
         # figsize is (width, height)
         figsize = tuple([s*max(1, image.shape[::-1][i]/256) for i, s in enumerate(figsize)])
         rescale_factor = np.mean([image.shape[i+2]/256 for i in range(2)])
-    elif model_name == 'V1':
+    elif model_name.startswith('V1'):
         model = po.simul.PrimaryVisualCortex(scaling, image.shape[-2:], min_eccentricity=min_ecc,
                                              max_eccentricity=max_ecc, transition_region_width=1,
-                                             device=device)
+                                             device=device, normalize=model_name.endswith('norm'))
         figsize = (35, 11)
         # default figsize arguments work for an image that is 512x512,
         # may need to expand. we go backwards through figsize because
