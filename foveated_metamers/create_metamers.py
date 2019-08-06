@@ -6,6 +6,7 @@ import imageio
 import warnings
 import numpy as np
 import plenoptic as po
+import pyrtools as pt
 import os.path as op
 import matplotlib as mpl
 # by default matplotlib uses the TK gui toolkit which can cause problems
@@ -195,8 +196,49 @@ def save(save_path, metamer, figsize):
     anim.save(video_path)
 
 
+def setup_initial_image(initial_image_type, image, device):
+    r"""setup the initial image
+
+    Parameters
+    ----------
+    initial_image_type : {'white', 'pink', 'gray'}
+        What to use for the initial image. If 'white', we use white
+        noise. If 'pink', we use pink noise
+        (``pyrtools.synthetic_images.pink_noise(fract_dim=1)``). If
+        'gray', we use a flat image with values of .5 everywhere (note
+        that this one should only be used for the RGC model; it will
+        immediately break the V1 and V2 models, since it has no energy
+        at many frequencies)
+    image : torch.Tensor
+        The reference image tensor
+    device : torch.device
+        The torch device to put the image on
+
+    Returns
+    -------
+    initial_image : torch.Tensor
+        The initial image to pass to metamer.synthesize
+
+    """
+    if initial_image_type == 'white':
+        initial_image = torch.rand_like(image, device=device, dtype=torch.float32)
+    elif initial_image_type == 'gray':
+        initial_image = .5 * torch.ones_like(image, device=device, dtype=torch.float32)
+    elif initial_image_type == 'pink':
+        # this `.astype` probably isn't necessary, but just in case
+        initial_image = pt.synthetic_images.pink_noise(image.shape[-2:]).astype(np.float32)
+        # need to rescale this so it lies between 0 and 1
+        initial_image += np.abs(initial_image.min())
+        initial_image /= initial_image.max()
+        initial_image = torch.Tensor(initial_image, device=device).unsqueeze(0).unsqueeze(0)
+    else:
+        raise Exception("Don't know how to handle initial_image_type %s! Must be one of {'white',"
+                        " 'gray', 'pink'}" % initial_image_type)
+    return torch.nn.Parameter(initial_image)
+
+
 def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_rate=1, max_iter=100,
-         loss_thresh=1e-4, save_path=None, use_cuda=False):
+         loss_thresh=1e-4, save_path=None, initial_image_type='white', use_cuda=False):
     r"""create metamers!
 
     Given a model_name, model parameters, a target image, and some
@@ -226,7 +268,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         The learning rate to pass to metamer.synthesize's optimizer
     max_iter : int, optional
         The maximum number of iterations we allow the synthesis
-        optimization to run for
+n        optimization to run for
     loss_thresh : float, optional
         The loss threshold. If our loss is every below this, we stop
         synthesis and consider ourselves done.
@@ -234,6 +276,14 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         If a str, the path to the file to save the metamer object to. If
         None, we don't save the synthesis output (that's probably a bad
         idea)
+    initial_image_type : {'white', 'pink', 'gray'}
+        What to use for the initial image. If 'white', we use white
+        noise. If 'pink', we use pink noise
+        (``pyrtools.synthetic_images.pink_noise(fract_dim=1)``). If
+        'gray', we use a flat image with values of .5 everywhere (note
+        that this one should only be used for the RGC model; it will
+        immediately break the V1 and V2 models, since it has no energy
+        at many frequencies)
     use_cuda : bool, optional
         If True and if torch.cuda.is_available(), we try to use the
         gpu. else, we use the cpu
@@ -256,9 +306,8 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     print("Using learning rate %s, loss_thresh %s, and max_iter %s" % (learning_rate, loss_thresh,
                                                                        max_iter))
     clamper = po.RangeClamper((0, 1))
-    initial_image = torch.nn.Parameter(torch.rand_like(image, requires_grad=True, device=device,
-                                                       dtype=torch.float32))
     metamer = po.synth.Metamer(image, model)
+    initial_image = setup_initial_image(initial_image_type, image, device)
     if save_path is not None:
         save_progress = True
     else:

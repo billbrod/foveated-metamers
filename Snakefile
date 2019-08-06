@@ -21,9 +21,9 @@ IMAGES = ['nuts', 'nuts_symmetric', 'nuts_constant', 'einstein', 'einstein_symme
           'einstein_constant', 'AsianFusion-08', 'AirShow-12', 'ElFuenteDance-11',
           'Chimera1102347-03', 'CosmosLaundromat-08']
 METAMER_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers', '{model_name}', '{image_name}',
-                                'scaling-{scaling}', 'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_'
-                                'em-{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}_'
-                                'metamer.png')
+                                'scaling-{scaling}', 'seed-{seed}_init-{init_type}_lr-{learning_'
+                                'rate}_e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_thresh-{loss_'
+                                'thresh}_gpu-{gpu}_metamer.png')
 REF_IMAGE_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'ref_images', '{image_name}.pgm')
 SEEDS = {'sub-01': 0}
 
@@ -35,6 +35,7 @@ def initial_metamer_inputs(wildcards):
     #         [.1, 1, 10]]
     metamers = [path_template.format(model_name='V1', image_name=i, scaling=s, seed=0,
                                      learning_rate=lr,min_ecc=.5, max_iter=5000, loss_thresh=1e-6,
+                                     init_type='white',
                                      # want different max eccentricity
                                      # based on whether we've padded the
                                      # image (and thus doubled its
@@ -42,13 +43,14 @@ def initial_metamer_inputs(wildcards):
                                      max_ecc={True: 30, False: 15}['_' in i])
                 for i in IMAGES for s in [.4, .5, .6] for lr in [1, 10]]
     metamers.extend([path_template.format(model_name='RGC', image_name=i, scaling=s, seed=0,
-                                     learning_rate=lr,min_ecc=.5, max_iter=5000, loss_thresh=1e-6,
-                                     # want different max eccentricity
-                                     # based on whether we've padded the
-                                     # image (and thus doubled its
-                                     # width) or not
-                                     max_ecc={True: 30, False: 15}['_' in i])
-                for i in IMAGES for s in [.2, .3, .4] for lr in [1, 10]])
+                                          learning_rate=lr,min_ecc=.5, max_iter=5000, loss_thresh=1e-6,
+                                          init_type='white',
+                                          # want different max eccentricity
+                                          # based on whether we've padded the
+                                          # image (and thus doubled its
+                                          # width) or not
+                                          max_ecc={True: 30, False: 15}['_' in i])
+            for i in IMAGES for s in [.2, .3, .4] for lr in [1, 10]])
     return metamers
 
 
@@ -137,12 +139,12 @@ rule create_metamers:
         METAMER_TEMPLATE_PATH
     log:
         op.join(config["DATA_DIR"], 'logs', 'metamers', '{model_name}', '{image_name}',
-                'scaling-{scaling}', 'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_'
-                'iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}.log')
+                'scaling-{scaling}', 'seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc}'
+                '_em-{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}.log')
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'metamers', '{model_name}', '{image_name}',
-                'scaling-{scaling}', 'seed-{seed}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_'
-                'iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}_benchmark.txt')
+                'scaling-{scaling}', 'seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc}'
+                '_em-{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}_benchmark.txt')
     resources:
         gpu = lambda wildcards: int(wildcards.gpu),
     run:
@@ -154,19 +156,22 @@ rule create_metamers:
                                          int(wildcards.seed), float(wildcards.min_ecc),
                                          float(wildcards.max_ecc), float(wildcards.learning_rate),
                                          int(wildcards.max_iter), float(wildcards.loss_thresh),
-                                         output[0], {0: False, 1: True}[resources.gpu])
+                                         output[0], wildcards.init_type,
+                                         {0: False, 1: True}[resources.gpu])
 
 
 # need to come up with a clever way to do this: either delete the ones
 # we don't want or make this a function that only takes the ones we want
 # or maybe grabs one each for max_iter, loss_thresh, learning_rate.
 # Also need to think about how to handle max_ecc; it will be different
-# if the images we use as inputs are different sizes.
+# if the images we use as inputs are different sizes. and init_type as
+# well, V1/V2 will always be white, but RGC might also be gray or pink
 def get_metamers_for_expt(wildcards):
     ims = ['nuts', 'einstein']
     images = [REF_IMAGE_TEMPLATE_PATH.format(image_name=i) for i in ims]
     return images+[METAMER_TEMPLATE_PATH.format(scaling=sc, seed=s, image_name=i, max_iter=1000,
-                                                loss_thresh=1e-4, learning_rate=10, **wildcards)
+                                                loss_thresh=1e-4, learning_rate=10, init_type='white',
+                                                **wildcards)
                    for i in ims for sc in [.4, .5, .6] for s in [0, 1]]
 
 rule collect_metamers:
