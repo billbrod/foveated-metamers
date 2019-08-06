@@ -19,6 +19,6 @@ dependencies:
       - pytest
       - torchvision
       - torch>=1.1
-      - pyrtools>=0.9
+      - pyrtools>=0.9.2
       - parse
       # - plenoptic

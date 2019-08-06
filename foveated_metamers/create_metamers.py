@@ -201,10 +201,12 @@ def setup_initial_image(initial_image_type, image, device):
 
     Parameters
     ----------
-    initial_image_type : {'white', 'pink', 'gray'}
+    initial_image_type : {'white', 'pink', 'gray', 'blue'}
         What to use for the initial image. If 'white', we use white
         noise. If 'pink', we use pink noise
         (``pyrtools.synthetic_images.pink_noise(fract_dim=1)``). If
+        'blue', we use blue noise
+        (``pyrtools.synthetic_images.blue_noise(fract_dim=1)``). If
         'gray', we use a flat image with values of .5 everywhere (note
         that this one should only be used for the RGC model; it will
         immediately break the V1 and V2 models, since it has no energy
@@ -231,9 +233,16 @@ def setup_initial_image(initial_image_type, image, device):
         initial_image += np.abs(initial_image.min())
         initial_image /= initial_image.max()
         initial_image = torch.Tensor(initial_image, device=device).unsqueeze(0).unsqueeze(0)
+    elif initial_image_type == 'blue':
+        # this `.astype` probably isn't necessary, but just in case
+        initial_image = pt.synthetic_images.blue_noise(image.shape[-2:]).astype(np.float32)
+        # need to rescale this so it lies between 0 and 1
+        initial_image += np.abs(initial_image.min())
+        initial_image /= initial_image.max()
+        initial_image = torch.Tensor(initial_image, device=device).unsqueeze(0).unsqueeze(0)
     else:
         raise Exception("Don't know how to handle initial_image_type %s! Must be one of {'white',"
-                        " 'gray', 'pink'}" % initial_image_type)
+                        " 'gray', 'pink', 'blue'}" % initial_image_type)
     return torch.nn.Parameter(initial_image)
 
 
@@ -276,10 +285,12 @@ n        optimization to run for
         If a str, the path to the file to save the metamer object to. If
         None, we don't save the synthesis output (that's probably a bad
         idea)
-    initial_image_type : {'white', 'pink', 'gray'}
+    initial_image_type : {'white', 'pink', 'gray', 'blue'}
         What to use for the initial image. If 'white', we use white
         noise. If 'pink', we use pink noise
         (``pyrtools.synthetic_images.pink_noise(fract_dim=1)``). If
+        'blue', we use blue noise
+        (``pyrtools.synthetic_images.blue_noise(fract_dim=1)``). If
         'gray', we use a flat image with values of .5 everywhere (note
         that this one should only be used for the RGC model; it will
         immediately break the V1 and V2 models, since it has no energy
