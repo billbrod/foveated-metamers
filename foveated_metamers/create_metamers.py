@@ -3,7 +3,7 @@
 """
 import torch
 import imageio
-import logging
+import warnings
 import numpy as np
 import plenoptic as po
 import os.path as op
@@ -12,41 +12,6 @@ import matplotlib as mpl
 # when I'm trying to render an image into a file, see
 # https://stackoverflow.com/questions/27147300/matplotlib-tcl-asyncdelete-async-handler-deleted-by-the-wrong-thread
 mpl.use('Agg')
-
-
-def setup_logger(log_file=None):
-    r"""setup the logger we use
-
-    This just sets up the logger, sets the appropriate level and adds a
-    StreamHandler. If log_file is not None, we also log to that file
-
-    The logger we set up is the 'create_metamers' logger. After this has
-    been run, it can be grabbed by calling
-    ``logging.getLogger('create_metamers')``
-
-    Parameters
-    ----------
-    log_file : str or None, optional
-        If str, the path to the file we'll log to. If None, we don't log
-        to file
-
-    Returns
-    -------
-    logger : logging.Logger
-        The initialized create_metamers logger
-    log_file : None or file
-        If log_file parameter was None, so is this. If it was a str,
-        this is the open file object corresponding to that str. After
-        you've finished logging, should call ``log_file.close()``
-
-    """
-    logger = logging.getLogger('create_metamers')
-    logger.setLevel(logging.DEBUG)
-    logger.addHandler(logging.StreamHandler())
-    if log_file is not None:
-        log_file = open(log_file, 'w')
-        logger.addHandler(logging.StreamHandler(log_file))
-    return logger, log_file
 
 
 def setup_image(image, device):
@@ -71,17 +36,16 @@ def setup_image(image, device):
         The image tensor, ready to go
 
     """
-    logger = logging.getLogger('create_metamers')
     if isinstance(image, str):
-        logger.info("Loading in reference image from %s" % image)
+        print("Loading in reference image from %s" % image)
         # use imageio.imread in order to handle rgb correctly. this uses the ITU-R 601-2 luma
         # transform, same as matlab
         image = imageio.imread(image, as_gray=True)
     if image.max() > 1:
-        logger.warning("Assuming image range is (0, 255)")
+        warnings.warn("Assuming image range is (0, 255)")
         image /= 255
     else:
-        logger.warning("Assuming image range is (0, 1)")
+        warnings.warn("Assuming image range is (0, 1)")
     image = torch.tensor(image, dtype=torch.float32, device=device)
     while image.ndimension() < 4:
         image = image.unsqueeze(0)
@@ -217,23 +181,22 @@ def save(save_path, metamer, figsize):
         video, as returned by ``setup_model``.
 
     """
-    logger = logging.getLogger('create_metamers')
-    logger.info("Saving at %s" % save_path)
+    print("Saving at %s" % save_path)
     metamer.save(save_path, save_model_reduced=True)
     # save png of metamer
     metamer_path = op.splitext(save_path)[0] + "_metamer.png"
-    logger.info("Saving metamer image at %s" % metamer_path)
+    print("Saving metamer image at %s" % metamer_path)
     metamer_image = finalize_metamer_image(metamer.model, metamer.matched_image,
                                            metamer.target_image)
     imageio.imwrite(metamer_path, po.to_numpy(metamer_image.squeeze()))
     video_path = op.splitext(save_path)[0] + "_synthesis.mp4"
-    logger.info("Saving synthesis video at %s" % video_path)
+    print("Saving synthesis video at %s" % video_path)
     anim = metamer.animate(figsize=figsize)
     anim.save(video_path)
 
 
 def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_rate=1, max_iter=100,
-         loss_thresh=1e-4, log_file=None, save_path=None, use_cuda=False):
+         loss_thresh=1e-4, save_path=None, use_cuda=False):
     r"""create metamers!
 
     Given a model_name, model parameters, a target image, and some
@@ -267,9 +230,6 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     loss_thresh : float, optional
         The loss threshold. If our loss is every below this, we stop
         synthesis and consider ourselves done.
-    log_file : str or None, optional
-        If a str, the path to the file to log to. If None, we don't log
-        to a file (though we do still log to stdout)
     save_path : str or None, optional
         If a str, the path to the file to save the metamer object to. If
         None, we don't save the synthesis output (that's probably a bad
@@ -279,8 +239,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         gpu. else, we use the cpu
 
     """
-    logger, log_file = setup_logger(log_file)
-    logger.info("Using seed %s" % seed)
+    print("Using seed %s" % seed)
     torch.manual_seed(seed)
     np.random.seed(seed)
     if torch.cuda.is_available() and use_cuda:
@@ -290,14 +249,12 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         device = torch.device("cuda:%s" % cuda_num)
     else:
         device = torch.device("cpu")
-    logger.info("On device %s" % device)
+    print("On device %s" % device)
     image = setup_image(image, device)
     model, figsize = setup_model(model_name, scaling, image, min_ecc, max_ecc, device)
-    logger.info("Using model %s from %.02f degrees to %.02f degrees" % (model_name, min_ecc,
-                                                                        max_ecc))
-    logger.info("Using learning rate %s, loss_thresh %s, and max_iter %s" % (learning_rate,
-                                                                             loss_thresh,
-                                                                             max_iter))
+    print("Using model %s from %.02f degrees to %.02f degrees" % (model_name, min_ecc, max_ecc))
+    print("Using learning rate %s, loss_thresh %s, and max_iter %s" % (learning_rate, loss_thresh,
+                                                                       max_iter))
     clamper = po.RangeClamper((0, 1))
     initial_image = torch.nn.Parameter(torch.rand_like(image, requires_grad=True, device=device,
                                                        dtype=torch.float32))
@@ -313,5 +270,3 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                                                  save_progress=save_progress, save_path=save_path)
     if save_path is not None:
         save(save_path, metamer, figsize)
-    if log_file is not None:
-        log_file.close()
