@@ -238,7 +238,7 @@ def setup_initial_image(initial_image_type, image, device):
 
 
 def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_rate=1, max_iter=100,
-         loss_thresh=1e-4, save_path=None, initial_image_type='white', use_cuda=False):
+         loss_thresh=1e-4, save_path=None, initial_image_type='white', gpu_num=None):
     r"""create metamers!
 
     Given a model_name, model parameters, a target image, and some
@@ -284,19 +284,18 @@ n        optimization to run for
         that this one should only be used for the RGC model; it will
         immediately break the V1 and V2 models, since it has no energy
         at many frequencies)
-    use_cuda : bool, optional
-        If True and if torch.cuda.is_available(), we try to use the
-        gpu. else, we use the cpu
+    gpu_num : int or None, optional
+        If not None and if torch.cuda.is_available(), we try to use the
+        gpu whose number corresponds to gpu_num (WARNING: this means we
+        assume that you have already checked that this gpu is
+        available). else, we use the cpu
 
     """
     print("Using seed %s" % seed)
     torch.manual_seed(seed)
     np.random.seed(seed)
-    if torch.cuda.is_available() and use_cuda:
-        cuda_num = 0
-        while torch.cuda.memory_allocated(cuda_num) > 0:
-            cuda_num += 1
-        device = torch.device("cuda:%s" % cuda_num)
+    if torch.cuda.is_available() and gpu_num is not None:
+        device = torch.device("cuda:%s" % gpu_num)
     else:
         device = torch.device("cpu")
     print("On device %s" % device)
