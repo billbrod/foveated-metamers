@@ -109,7 +109,7 @@ rule png_to_pgm:
     run:
         import imageio
         import contextlib
-        with open(log[0], 'w') as log_file:
+        with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 im = imageio.imread(input[0], as_gray=True)
                 imageio.imwrite(output[0], im)
@@ -127,7 +127,7 @@ rule pad_image:
     run:
         import foveated_metamers as met
         import contextlib
-        with open(log[0], 'w') as log_file:
+        with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 met.stimuli.pad_image(input[0], wildcards.pad_mode, output[0])
 
@@ -143,7 +143,7 @@ def find_gpu_to_use(wildcards):
             # just to make sure we don't go racing with another process
             # happening at the same time
             time.sleep(.5)
-        with open(gpu_tmp % gpu_num, 'w') as f:
+        with open(gpu_tmp % gpu_num, 'w', buffering=1) as f:
             f.write('in use')
         return gpu_num
 
@@ -171,25 +171,20 @@ rule create_metamers:
     resources:
         gpu = lambda wildcards: int(wildcards.gpu),
     run:
-        # because of how we figure out the gup_num to use, we have to
-        # use run instead of shell; onstart/onsuccess/onerror get close
-        # but I don't think I can't pass values out of onstart and
-        # that's what I need. so we just use os.system to run
-        # create_metamers.py on the command line, surrounding it by the
-        # setup and cleanup necessary to make sure we're using gpus
-        # correctly
-        import os
+        import foveated_metamers as met
+        import contextlib
         # in an ideal world, we'd have this be in the params section or
         # something, but for some reason then it gets called more than
         # once and at times I don't understand. Putting it here seems to
         # work
         gpu_num = find_gpu_to_use(wildcards)
-        cmd = ('python foveated_metamers/create_metamers.py {model_name} {scaling} {input} -s '
-               '{seed} -e0 {min_ecc} -em {max_ecc} -l {learning_rate} -m {max_iter} -t '
-               '{loss_thresh} -p {output} -i {init_type} -g {gpu_num} &> {log}')
-        cmd = cmd.format(input=input[0], output=output[0], gpu_num=gpu_num, log=log[0], **wildcards)
-        ret_code = os.system(cmd)
-        cleanup_gpu(gpu_num)
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                met.create_metamers.main(wildcards.model_name, float(wildcards.scaling), input[0],
+                                         int(wildcards.seed), float(wildcards.min_ecc),
+                                         float(wildcards.max_ecc), float(wildcards.learning_rate),
+                                         int(wildcards.max_iter), float(wildcards.loss_thresh),
+                                         output[0], wildcards.init_type, gpu_num)
 
 
 # need to come up with a clever way to do this: either delete the ones
@@ -225,7 +220,7 @@ rule collect_metamers:
     run:
         import foveated_metamers as met
         import contextlib
-        with open(log[0], 'w') as log_file:
+        with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 met.stimuli.collect_images(input, output[0])
                 met.stimuli.create_metamer_df(input, [METAMER_TEMPLATE_PATH, REF_IMAGE_TEMPLATE_PATH],
@@ -251,6 +246,6 @@ rule generate_experiment_idx:
         import foveated_metamers as met
         import pandas as pd
         import contextlib
-        with open(log[0], 'w') as log_file:
+        with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 met.stimuli.generate_indices(pd.read_csv(input[0]), params.seed, output[0])
