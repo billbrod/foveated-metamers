@@ -178,13 +178,18 @@ rule create_metamers:
         # once and at times I don't understand. Putting it here seems to
         # work
         gpu_num = find_gpu_to_use(wildcards)
-        with open(log[0], 'w', buffering=1) as log_file:
-            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                met.create_metamers.main(wildcards.model_name, float(wildcards.scaling), input[0],
-                                         int(wildcards.seed), float(wildcards.min_ecc),
-                                         float(wildcards.max_ecc), float(wildcards.learning_rate),
-                                         int(wildcards.max_iter), float(wildcards.loss_thresh),
-                                         output[0], wildcards.init_type, gpu_num)
+        try:
+            with open(log[0], 'w', buffering=1) as log_file:
+                with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                    met.create_metamers.main(wildcards.model_name, float(wildcards.scaling), input[0],
+                                             int(wildcards.seed), float(wildcards.min_ecc),
+                                             float(wildcards.max_ecc), float(wildcards.learning_rate),
+                                             int(wildcards.max_iter), float(wildcards.loss_thresh),
+                                             output[0], wildcards.init_type, gpu_num)
+        except Exception as e:
+            cleanup_gpu(gpu_num)
+            raise e
+        cleanup_gpu(gpu_num)
 
 
 # need to come up with a clever way to do this: either delete the ones
