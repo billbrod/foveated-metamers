@@ -171,20 +171,24 @@ rule create_metamers:
     resources:
         gpu = lambda wildcards: int(wildcards.gpu),
     run:
-        import foveated_metamers as met
-        import contextlib
+        # because of how we figure out the gup_num to use, we have to
+        # use run instead of shell; onstart/onsuccess/onerror get close
+        # but I don't think I can't pass values out of onstart and
+        # that's what I need. so we just use os.system to run
+        # create_metamers.py on the command line, surrounding it by the
+        # setup and cleanup necessary to make sure we're using gpus
+        # correctly
+        import os
         # in an ideal world, we'd have this be in the params section or
         # something, but for some reason then it gets called more than
         # once and at times I don't understand. Putting it here seems to
         # work
         gpu_num = find_gpu_to_use(wildcards)
-        with open(log[0], 'w') as log_file:
-            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                met.create_metamers.main(wildcards.model_name, float(wildcards.scaling), input[0],
-                                         int(wildcards.seed), float(wildcards.min_ecc),
-                                         float(wildcards.max_ecc), float(wildcards.learning_rate),
-                                         int(wildcards.max_iter), float(wildcards.loss_thresh),
-                                         output[0], wildcards.init_type, gpu_num)
+        cmd = ('python foveated_metamers/create_metamers.py {model_name} {scaling} {input} -s '
+               '{seed} -e0 {min_ecc} -em {max_ecc} -l {learning_rate} -m {max_iter} -t '
+               '{loss_thresh} -p {output} -i {init_type} -g {gpu_num} &> {log}')
+        cmd = cmd.format(input=input[0], output=output[0], gpu_num=gpu_num, log=log[0], **wildcards)
+        ret_code = os.system(cmd)
         cleanup_gpu(gpu_num)
 
 

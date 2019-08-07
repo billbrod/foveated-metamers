@@ -2,6 +2,7 @@
 """create metamers for the experiment
 """
 import torch
+import argparse
 import imageio
 import warnings
 import numpy as np
@@ -256,7 +257,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
 
     Parameters
     ----------
-    model_name : {'RGC', 'V1'}
+    model_name : {'RGC', 'V1', 'V1-norm'}
         Which type of model to create.
     scaling : float
         The scaling parameter for the model
@@ -277,7 +278,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         The learning rate to pass to metamer.synthesize's optimizer
     max_iter : int, optional
         The maximum number of iterations we allow the synthesis
-n        optimization to run for
+        optimization to run for
     loss_thresh : float, optional
         The loss threshold. If our loss is every below this, we stop
         synthesis and consider ourselves done.
@@ -329,3 +330,43 @@ n        optimization to run for
                                                  save_progress=save_progress, save_path=save_path)
     if save_path is not None:
         save(save_path, metamer, figsize)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Create some metamers!",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('model_name', help="Name of the model to create: {'RGC', 'V1', 'V1-norm'}")
+    parser.add_argument('scaling', type=float, help="The scaling parameter for the model")
+    parser.add_argument('image', help=("Path to the image to use as the reference for metamer "
+                                       "synthesis"))
+    parser.add_argument('--seed', '-s', type=int, default=0,
+                        help=("The number to use for initializing numpy and torch's random "
+                              "number generators"))
+    parser.add_argument('--min_ecc', '-e0', type=float, default=.5,
+                        help="The minimum eccentricity for the pooling windows")
+    parser.add_argument('--max_ecc', '-em', type=float, default=15,
+                        help="The maximum eccentricity for the pooling windows")
+    parser.add_argument('--learning_rate', '-l', type=float, default=1,
+                        help="The learning rate to pass to metamer.synthesize's optimizer")
+    parser.add_argument('--max_iter', '-m', type=int, default=100,
+                        help=("The maximum number of iterations we allow the synthesis "
+                              "optimization to run for"))
+    parser.add_argument('--loss_thresh', '-t', type=float, default=1e-4,
+                        help=("The loss threshold. If our loss is every below this, we stop "
+                              "synthesis and consider ourselves done."))
+    parser.add_argument('--save_path', '-p', default='metamer.pt',
+                        help=("The path to the file to save the metamer object to (should end in "
+                              ".pt)"))
+    parser.add_argument('--initial_image_type', '-i', default='white',
+                        help=("{'white', 'pink', 'gray', 'blue'}. what to use for the initial "
+                              "image. All are different colors of noise except gray, which is a "
+                              "flat mid-gray image"))
+    parser.add_argument('--gpu_num', '-g', default=None,
+                        help=("If not None and if torch.cuda.is_available(), we try to use the gpu"
+                              " whose number corresponds to gpu_num. else, we use the cpu"))
+    args = vars(parser.parse_args())
+    try:
+        gpu_num = int(args.pop('gpu_num'))
+    except ValueError:
+        gpu_num = None
+    main(gpu_num=gpu_num, **args)
