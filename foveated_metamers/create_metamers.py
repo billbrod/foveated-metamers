@@ -233,14 +233,14 @@ def setup_initial_image(initial_image_type, image, device):
         # need to rescale this so it lies between 0 and 1
         initial_image += np.abs(initial_image.min())
         initial_image /= initial_image.max()
-        initial_image = torch.Tensor(initial_image, device=device).unsqueeze(0).unsqueeze(0)
+        initial_image = torch.Tensor(initial_image).unsqueeze(0).unsqueeze(0).to(device)
     elif initial_image_type == 'blue':
         # this `.astype` probably isn't necessary, but just in case
         initial_image = pt.synthetic_images.blue_noise(image.shape[-2:]).astype(np.float32)
         # need to rescale this so it lies between 0 and 1
         initial_image += np.abs(initial_image.min())
         initial_image /= initial_image.max()
-        initial_image = torch.Tensor(initial_image, device=device).unsqueeze(0).unsqueeze(0)
+        initial_image = torch.Tensor(initial_image).unsqueeze(0).unsqueeze(0).to(device)
     else:
         raise Exception("Don't know how to handle initial_image_type %s! Must be one of {'white',"
                         " 'gray', 'pink', 'blue'}" % initial_image_type)
