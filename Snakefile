@@ -132,27 +132,6 @@ rule pad_image:
                 met.stimuli.pad_image(input[0], wildcards.pad_mode, output[0])
 
 
-def find_gpu_to_use(wildcards):
-    if int(wildcards.gpu) == 0:
-        return None
-    else:
-        gpu_tmp = 'gpu_%02d.tmp'
-        gpu_num = 0
-        while op.exists(gpu_tmp % gpu_num):
-            gpu_num += 1
-            # just to make sure we don't go racing with another process
-            # happening at the same time
-            time.sleep(.5)
-        with open(gpu_tmp % gpu_num, 'w', buffering=1) as f:
-            f.write('in use')
-        return gpu_num
-
-
-def cleanup_gpu(gpu_num):
-    if gpu_num is not None:
-        os.remove('gpu_%02d.tmp' % gpu_num)
-
-
 rule create_metamers:
     input:
         REF_IMAGE_TEMPLATE_PATH
@@ -172,25 +151,24 @@ rule create_metamers:
         gpu = lambda wildcards: int(wildcards.gpu),
     run:
         import foveated_metamers as met
+	import GPUtil
         import contextlib
         # in an ideal world, we'd have this be in the params section or
         # something, but for some reason then it gets called more than
         # once and at times I don't understand. Putting it here seems to
         # work
-        gpu_num = find_gpu_to_use(wildcards)
-        try:
-            with open(log[0], 'w', buffering=1) as log_file:
-                with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                    print("Passing gpu_num %s" % gpu_num)
-                    met.create_metamers.main(wildcards.model_name, float(wildcards.scaling), input[0],
-                                             int(wildcards.seed), float(wildcards.min_ecc),
-                                             float(wildcards.max_ecc), float(wildcards.learning_rate),
-                                             int(wildcards.max_iter), float(wildcards.loss_thresh),
-                                             output[0], wildcards.init_type, gpu_num)
-        except Exception as e:
-            cleanup_gpu(gpu_num)
-            raise e
-        cleanup_gpu(gpu_num)
+	if resources.gpu > 0:
+            gpu_num = GPUtil.getAvailable(order='first', maxLoad=.1, maxMemory=.1, includeNan=False)[0]
+        else:
+            gpu_num = None
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                print("Passing gpu_num %s" % gpu_num)
+                met.create_metamers.main(wildcards.model_name, float(wildcards.scaling), input[0],
+                                         int(wildcards.seed), float(wildcards.min_ecc),
+                                         float(wildcards.max_ecc), float(wildcards.learning_rate),
+                                         int(wildcards.max_iter), float(wildcards.loss_thresh),
+                                         output[0], wildcards.init_type, gpu_num)
 
 
 # need to come up with a clever way to do this: either delete the ones
