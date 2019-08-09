@@ -132,6 +132,24 @@ rule pad_image:
                 met.stimuli.pad_image(input[0], wildcards.pad_mode, output[0])
 
 
+rule generate_image:
+    output:
+        op.join(config['DATA_DIR'], 'ref_images', '{image_type}_period-{period}_size-{size}.pgm')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'ref_images', '{image_type}_period-{period}_size-'
+                '{size}.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'ref_images', '{image_type}_period-{period}_size-'
+                '{size}_benchmark.txt')
+    run:
+        import foveated_metamers as met
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                met.stimuli.create_image(wildcards.image_type, int(wildcards.size), output[0],
+                                         int(wildcards.period))
+
+
 rule create_metamers:
     input:
         REF_IMAGE_TEMPLATE_PATH

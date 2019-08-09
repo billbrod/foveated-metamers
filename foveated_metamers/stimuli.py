@@ -5,8 +5,45 @@ import itertools
 import warnings
 import parse
 import numpy as np
+import pyrtools as pt
 import pandas as pd
 from skimage import util
+
+
+def create_image(image_type, image_size, save_path=None, period=4):
+    r"""Create a simple image
+
+    Parameters
+    ----------
+    image_type : {'plaid', 'checkerboard'}
+        What type of image to create
+    image_size : tuple
+        2-tuple of ints, specifying the image size
+    save_path : str or None, optional
+        If a str, the path to save the padded image at. If None, we
+        don't save
+    period : int, optional
+        If image_type is 'plaid' or 'checkerboard', what period to use
+        for the square waves that we use to generate them.
+
+    Returns
+    -------
+    image : np.array
+        The image we created
+
+    """
+    if image_type in ['plaid', 'checkerboard']:
+        image = pt.synthetic_images.square_wave(image_size, period=period)
+        image += pt.synthetic_images.square_wave(image_size, period=period, direction=np.pi/2)
+        image += np.abs(image.min())
+        image /= image.max()
+        if image_type == 'checkerboard':
+            image = np.where((image < .75) & (image > .25), 1, 0)
+    else:
+        raise Exception("Don't know how to handle image_type %s!" % image_type)
+    if save_path is not None:
+        imageio.imwrite(save_path, image)
+    return image
 
 
 def pad_image(image, pad_mode, save_path=None, constant_values=.5, **pad_kwargs):
