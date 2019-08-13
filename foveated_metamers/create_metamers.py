@@ -122,24 +122,23 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, device):
     return model, figsize
 
 
-def finalize_metamer_image(model, metamer_image, image):
+def add_center_to_image(model, initial_image, reference_image):
     r"""Add the center back to the metamer image
 
     The VentralStream class of models will do nothing to the center of
-    the image (they don't see the fovea) and so we ned to add the fovea
-    from the original image back in for our experiments.
+    the image (they don't see the fovea), so we add the fovea to the
+    initial image before synthesis.
 
     Parameters
     ----------
     model : plenoptic.simul.VentralStream
         The model used to create the metamer. Specifically, we need its
         windows attribute
-    metamer_image : torch.Tensor
-        The image created by metamer synthesis (its the argument
-        returned by ``metamer.synthesis`` or, equivalently,
-        ``metamer.matched_image``)
-    image : torch.Tensor
-        The original/target image for synthesis
+    initial_image : torch.Tensor
+        The initial image we will use for metamer synthesis. Probably a
+        bunch of white noise
+    reference_image : torch.Tensor
+        The reference/target image for synthesis
         (``metamer.target_image``)
 
     Returns
@@ -148,12 +147,10 @@ def finalize_metamer_image(model, metamer_image, image):
         The metamer image with the center added back in
 
     """
-    metamer_image = metamer_image.squeeze()
-    image = image.squeeze()
     windows = model.PoolingWindows.windows[0].flatten(0, -3)
     # for some reason ~ (invert) is not implemented for booleans in
     # pytorch yet, so we do this instead.
-    return ((windows.sum(0) * metamer_image) + ((1 - windows.sum(0)) * image))
+    return ((windows.sum(0) * initial_image) + ((1 - windows.sum(0)) * reference_image))
 
 
 def save(save_path, metamer, figsize):
@@ -188,16 +185,14 @@ def save(save_path, metamer, figsize):
     # save png of metamer
     metamer_path = op.splitext(save_path)[0] + "_metamer.png"
     print("Saving metamer image at %s" % metamer_path)
-    metamer_image = finalize_metamer_image(metamer.model, metamer.matched_image,
-                                           metamer.target_image)
-    imageio.imwrite(metamer_path, po.to_numpy(metamer_image.squeeze()))
+    imageio.imwrite(metamer_path, po.to_numpy(metamer.matched_image).squeeze())
     video_path = op.splitext(save_path)[0] + "_synthesis.mp4"
     print("Saving synthesis video at %s" % video_path)
     anim = metamer.animate(figsize=figsize)
     anim.save(video_path)
 
 
-def setup_initial_image(initial_image_type, image, device):
+def setup_initial_image(initial_image_type, model, image, device):
     r"""setup the initial image
 
     Parameters
@@ -212,6 +207,9 @@ def setup_initial_image(initial_image_type, image, device):
         that this one should only be used for the RGC model; it will
         immediately break the V1 and V2 models, since it has no energy
         at many frequencies)
+    model : plenoptic.simul.VentralStream
+        The model used to create the metamer. Specifically, we need its
+        windows attribute
     image : torch.Tensor
         The reference image tensor
     device : torch.device
@@ -244,6 +242,7 @@ def setup_initial_image(initial_image_type, image, device):
     else:
         raise Exception("Don't know how to handle initial_image_type %s! Must be one of {'white',"
                         " 'gray', 'pink', 'blue'}" % initial_image_type)
+    initial_image = add_center_to_image(model, initial_image, image)
     return torch.nn.Parameter(initial_image)
 
 
@@ -318,7 +317,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                                                                        max_iter))
     clamper = po.RangeClamper((0, 1))
     metamer = po.synth.Metamer(image, model)
-    initial_image = setup_initial_image(initial_image_type, image, device)
+    initial_image = setup_initial_image(initial_image_type, model, image, device)
     if save_path is not None:
         save_progress = True
     else:
