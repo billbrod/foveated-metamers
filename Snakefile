@@ -167,6 +167,8 @@ rule create_metamers:
                 '_em-{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}_benchmark.txt')
     resources:
         gpu = lambda wildcards: int(wildcards.gpu),
+    params:
+        cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache')
     run:
         import foveated_metamers as met
 	import GPUtil
@@ -186,7 +188,7 @@ rule create_metamers:
                                          int(wildcards.seed), float(wildcards.min_ecc),
                                          float(wildcards.max_ecc), float(wildcards.learning_rate),
                                          int(wildcards.max_iter), float(wildcards.loss_thresh),
-                                         output[0], wildcards.init_type, gpu_num)
+                                         output[0], wildcards.init_type, gpu_num, params.cache_dir)
 
 
 # need to come up with a clever way to do this: either delete the ones

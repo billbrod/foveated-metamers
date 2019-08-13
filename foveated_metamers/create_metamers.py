@@ -54,7 +54,7 @@ def setup_image(image, device):
     return image
 
 
-def setup_model(model_name, scaling, image, min_ecc, max_ecc, device):
+def setup_model(model_name, scaling, image, min_ecc, max_ecc, device, cache_dir):
     r"""setup the model
 
     We initialize the model, with the specified parameters, and return
@@ -75,6 +75,13 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, device):
     max_ecc : float
         The maximum eccentricity for the pooling windows (see
         plenoptic.simul.VentralStream for more details)
+    device : torch.device
+        The torch device to put the model on
+    cache_dir : str or None, optional
+        The directory to cache the windows tensor in. If set, we'll look
+        there for cached versions of the windows we create, load them if
+        they exist and create and cache them if they don't. If None, we
+        don't check for or cache the windows.
 
     Returns
     -------
@@ -87,7 +94,8 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, device):
     """
     if model_name == 'RGC':
         model = po.simul.RetinalGanglionCells(scaling, image.shape[-2:], min_eccentricity=min_ecc,
-                                              max_eccentricity=max_ecc, transition_region_width=1)
+                                              max_eccentricity=max_ecc, transition_region_width=1,
+                                              cache_dir=cache_dir)
         figsize = (17, 5)
         # default figsize arguments work for an image that is 256x256,
         # may need to expand. we go backwards through figsize because
@@ -99,7 +107,8 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, device):
     elif model_name.startswith('V1'):
         model = po.simul.PrimaryVisualCortex(scaling, image.shape[-2:], min_eccentricity=min_ecc,
                                              max_eccentricity=max_ecc, transition_region_width=1,
-                                             device=device, normalize=model_name.endswith('norm'))
+                                             device=device, normalize=model_name.endswith('norm'),
+                                             cache_dir=cache_dir)
         figsize = (35, 11)
         # default figsize arguments work for an image that is 512x512,
         # may need to expand. we go backwards through figsize because
@@ -247,7 +256,8 @@ def setup_initial_image(initial_image_type, model, image, device):
 
 
 def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_rate=1, max_iter=100,
-         loss_thresh=1e-4, save_path=None, initial_image_type='white', gpu_num=None):
+         loss_thresh=1e-4, save_path=None, initial_image_type='white', gpu_num=None,
+         cache_dir=None):
     r"""create metamers!
 
     Given a model_name, model parameters, a target image, and some
@@ -300,6 +310,11 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         gpu whose number corresponds to gpu_num (WARNING: this means we
         assume that you have already checked that this gpu is
         available). else, we use the cpu
+    cache_dir : str or None, optional
+        The directory to cache the windows tensor in. If set, we'll look
+        there for cached versions of the windows we create, load them if
+        they exist and create and cache them if they don't. If None, we
+        don't check for or cache the windows.
 
     """
     print("Using seed %s" % seed)
@@ -311,7 +326,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         device = torch.device("cpu")
     print("On device %s" % device)
     image = setup_image(image, device)
-    model, figsize = setup_model(model_name, scaling, image, min_ecc, max_ecc, device)
+    model, figsize = setup_model(model_name, scaling, image, min_ecc, max_ecc, device, cache_dir)
     print("Using model %s from %.02f degrees to %.02f degrees" % (model_name, min_ecc, max_ecc))
     print("Using learning rate %s, loss_thresh %s, and max_iter %s" % (learning_rate, loss_thresh,
                                                                        max_iter))
@@ -363,6 +378,10 @@ if __name__ == '__main__':
     parser.add_argument('--gpu_num', '-g', default=None,
                         help=("If not None and if torch.cuda.is_available(), we try to use the gpu"
                               " whose number corresponds to gpu_num. else, we use the cpu"))
+    parser.add_argument('--cache_dir', '-c', default=None,
+                        help=("If not None, the directory to use for caching windows tensors. "
+                              "Using this should greatly improve speed and memory usage on "
+                              "subsequent runs, especially for small scaling values."))
     args = vars(parser.parse_args())
     try:
         gpu_num = int(args.pop('gpu_num'))
