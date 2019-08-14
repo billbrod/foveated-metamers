@@ -325,7 +325,39 @@ def setup_initial_image(initial_image_type, model, image):
 
 
 def setup_device(*args, use_cuda=False):
-    r"""
+    r"""Setup device and get everything onto it
+
+    This simple function checks whether ``torch.cuda.is_available()``
+    and ``use_cuda`` are True and, if so, uses GPUtil to try and find
+    the first available and un-used one. If not, we use the cpu as the
+    device
+
+    We then call a.to(device) for every a in args (so this can be called
+    with an arbitrary number of objects, each of which just needs to have
+    .to method).
+
+    Note that we always return a list (even if you only pass one item),
+    so if you pass a single object, you'll need to either grab it
+    specifically, either by doing ``im = setup_device(im,
+    use_cuda=True)[0]`` or ``im, = setup_device(im)`` (notice the
+    comma).
+
+    Parameters
+    ----------
+    args :
+        Some number of torch objects that we want to get on the proper
+        device
+    use_cuda : bool, optional
+        Whether to try and use the GPU or not. Note that, to set this,
+        you must set it as a keyword, i.e., ``setup_device(im, True)``
+        won't work but ``setup_device(im, use_cuda=True)`` will (this is
+        because the ``*args`` in our function signature will greedily
+        grab every non-keyword argument).
+
+    Returns
+    -------
+    args : list
+        Every item we were passed in arg, now on the proper device
     """
     if torch.cuda.is_available() and use_cuda:
         gpu_num = GPUtil.getAvailable(order='first', maxLoad=.1, maxMemory=.1, includeNan=False)[0]
@@ -388,7 +420,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         at many frequencies)
     use_cuda : bool, optional
         If True and if torch.cuda.is_available(), we try to use find a
-        gpu we can use. We do this with gputil. else, we use the cpu
+        gpu we can use. We do this with GPUtil. else, we use the cpu
     cache_dir : str or None, optional
         The directory to cache the windows tensor in. If set, we'll look
         there for cached versions of the windows we create, load them if
@@ -451,16 +483,12 @@ if __name__ == '__main__':
                         help=("{'white', 'pink', 'gray', 'blue'}. what to use for the initial "
                               "image. All are different colors of noise except gray, which is a "
                               "flat mid-gray image"))
-    parser.add_argument('--gpu_num', '-g', default=None,
-                        help=("If not None and if torch.cuda.is_available(), we try to use the gpu"
-                              " whose number corresponds to gpu_num. else, we use the cpu"))
+    parser.add_argument('--use_cuda', action='store_true',
+                        help=("If True and if torch.cuda.is_available(), we try to find a gpu to "
+                              "use. else, we use the cpu"))
     parser.add_argument('--cache_dir', '-c', default=None,
                         help=("If not None, the directory to use for caching windows tensors. "
                               "Using this should greatly improve speed and memory usage on "
                               "subsequent runs, especially for small scaling values."))
     args = vars(parser.parse_args())
-    try:
-        gpu_num = int(args.pop('gpu_num'))
-    except ValueError:
-        gpu_num = None
-    main(gpu_num=gpu_num, **args)
+    main(**args)
