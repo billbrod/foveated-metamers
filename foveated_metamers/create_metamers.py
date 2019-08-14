@@ -10,6 +10,7 @@ import plenoptic as po
 import pyrtools as pt
 import os.path as op
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 # by default matplotlib uses the TK gui toolkit which can cause problems
 # when I'm trying to render an image into a file, see
 # https://stackoverflow.com/questions/27147300/matplotlib-tcl-asyncdelete-async-handler-deleted-by-the-wrong-thread
@@ -58,7 +59,7 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, device, cache_dir)
     r"""setup the model
 
     We initialize the model, with the specified parameters, and return
-    it with the appropriate figsize.
+    it with the appropriate figsizes.
 
     Parameters
     ----------
@@ -87,35 +88,47 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, device, cache_dir)
     -------
     model : plenoptic.simul.VentralStream
         A ventral stream model, ready to use
-    figsize : tuple
-        The figsize tuple to use with ``metamer.animate`` or other
-        plotting functions
+    animate_figsize : tuple
+        The figsize tuple to use with ``metamer.animate`` or
+        ``metamer.plot_metamer_status`` functions
+    rep_image_figsize : tuple
+        The figsize tuple to pass to ``summary_plots`` to for the
+        'rep_image' plot
 
     """
     if model_name == 'RGC':
         model = po.simul.RetinalGanglionCells(scaling, image.shape[-2:], min_eccentricity=min_ecc,
                                               max_eccentricity=max_ecc, transition_region_width=1,
                                               cache_dir=cache_dir)
-        figsize = (17, 5)
+        animate_figsize = (17, 5)
+        rep_image_figsize = (4, 13)
         # default figsize arguments work for an image that is 256x256,
         # may need to expand. we go backwards through figsize because
         # figsize and image shape are backwards of each other:
         # image.shape's last two indices are (height, width), while
         # figsize is (width, height)
-        figsize = tuple([s*max(1, image.shape[::-1][i]/256) for i, s in enumerate(figsize)])
+        animate_figsize = tuple([s*max(1, image.shape[::-1][i]/256) for i, s in
+                                 enumerate(animate_figsize)])
+        rep_image_figsize = tuple([s*max(1, image.shape[::-1][i]/256) for i, s in
+                                   enumerate(rep_image_figsize)])
         rescale_factor = np.mean([image.shape[i+2]/256 for i in range(2)])
     elif model_name.startswith('V1'):
         model = po.simul.PrimaryVisualCortex(scaling, image.shape[-2:], min_eccentricity=min_ecc,
                                              max_eccentricity=max_ecc, transition_region_width=1,
                                              device=device, normalize=model_name.endswith('norm'),
                                              cache_dir=cache_dir)
-        figsize = (35, 11)
+        animate_figsize = (35, 11)
+        rep_image_figsize = (27, 15)
         # default figsize arguments work for an image that is 512x512,
         # may need to expand. we go backwards through figsize because
         # figsize and image shape are backwards of each other:
         # image.shape's last two indices are (height, width), while
         # figsize is (width, height)
-        figsize = tuple([s*max(1, image.shape[::-1][i]/512) for i, s in enumerate(figsize)])
+        animate_figsize = tuple([s*max(1, image.shape[::-1][i]/512) for i, s in
+                                 enumerate(animate_figsize)])
+        # default rep_image_figsize arguments are for 256x256 image
+        rep_image_figsize = tuple([s*max(1, image.shape[::-1][i]/256) for i, s in
+                                   enumerate(rep_image_figsize)])
         rescale_factor = np.mean([image.shape[i+2]/512 for i in range(2)])
     else:
         raise Exception("Don't know how to handle model_name %s" % model_name)
@@ -128,7 +141,7 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, device, cache_dir)
     mpl.rc('ytick', labelsize=rescale_factor*10)
     mpl.rc('lines', linewidth=rescale_factor*1.5, markersize=rescale_factor*6)
     model.to(device)
-    return model, figsize
+    return model, animate_figsize, rep_image_figsize
 
 
 def add_center_to_image(model, initial_image, reference_image):
@@ -162,17 +175,67 @@ def add_center_to_image(model, initial_image, reference_image):
     return ((windows.sum(0) * initial_image) + ((1 - windows.sum(0)) * reference_image))
 
 
-def save(save_path, metamer, figsize):
+def summary_plots(metamer, rep_image_figsize):
+    r"""Create summary plots
+
+    This creates two summary plots:
+
+    1. 'rep_image': we show, in three separate rows, the representation
+    of the reference image, the representation of the metamer, and the
+    representation_ratio at the final ratio, all plotted as images using
+    ``metamer.model.plot_representaiton_image``.
+
+    2. 'windowed': on the top row we show the initial image, the
+    metamer, and the reference image, and on the bottom row we show
+    these with the contour lines of the windows (at value .5) plotted on
+    top in red.
+
+    Parameters
+    ----------
+    metamer : plenoptic.synth.Metamer
+        The metamer object after synthesis
+    rep_image_figsize : tuple
+        Tuple of floats to use as the figsize for the 'rep_image'
+
+    Returns
+    -------
+    rep_fig : matplotlib.figure.Figure
+        The figure containing the 'rep_image' plot
+    windowed_fig : matplotlib.figure.Figure
+        The figure containing the 'windowed' plot
+
+    """
+    rep_fig, axes = plt.subplots(3, 1, figsize=rep_image_figsize)
+    images = [metamer.model(metamer.target_image), metamer.model(metamer.matched_image),
+              metamer.representation_ratio()]
+    titles = ['Reference image |', 'Metamer |', 'Error |']
+    vranges = ['indep1', 'indep1', 'indep0']
+    for i, (im, t, vr) in enumerate(zip(images, titles, vranges)):
+        metamer.model.plot_representation_image(ax=axes[i], data=im, title=t, vrange=vr)
+    images = [metamer.saved_image[0], metamer.matched_image, metamer.target_image]
+    images = 2*[po.to_numpy(i).squeeze() for i in images]
+    titles = ['Initial image', 'Metamer', 'Reference image']
+    titles += ['Windowed '+t for t in titles]
+    windowed_fig = pt.imshow(images, col_wrap=3, title=titles, vrange=(0, 1))
+    for ax in windowed_fig.axes[3:]:
+        metamer.model.plot_windows(ax)
+    return rep_fig, windowed_fig
+
+
+def save(save_path, metamer, animate_figsize, rep_image_figsize):
     r"""save the metamer output
 
-    We save three things here:
+    We save five things here:
     - The metamer object itself, at ``save_path``. This contains, among
       other things, the saved image and representation over the course
       of synthesis.
     - The finished metamer image, at ``os.path.splitext(save_path)[0] +
-      "_metamer.png"``. This is not just ``metamer.matched_image``, but
-      has had the center added back in, as done by
-      ``finalize_metamer_image``
+      "_metamer.png"``.
+    - The 'rep_image', at ``os.path.splitext(save_path)[0]+"_rep.png"``.
+      See ``summary_plots()`` docstring for a description of this plot.
+    - The 'windowed_image', at ``os.path.splitext(save_path)[0] +
+      "_windowed.png"``. See ``summary_plots()`` docstring for a
+      description of this plot.
     - The video showing synthesis progress at
       ``os.path.splitext(save_path)[0] + "_synthesis.mp4"``. We use this
       to visualize the optimization progress.
@@ -184,9 +247,12 @@ def save(save_path, metamer, figsize):
         starting-point for the other save paths
     metamer : plenoptic.synth.Metamer
         The metamer object after synthesis
-    figsize : tuple
+    animate_figsize : tuple
         The tuple describing the size of the figure for the synthesis
         video, as returned by ``setup_model``.
+    rep_image_figsize : tuple
+        The tuple describing the size of the figure for the rep_image
+        plot, as returned by ``setup_model``.
 
     """
     print("Saving at %s" % save_path)
@@ -196,8 +262,15 @@ def save(save_path, metamer, figsize):
     print("Saving metamer image at %s" % metamer_path)
     imageio.imwrite(metamer_path, po.to_numpy(metamer.matched_image).squeeze())
     video_path = op.splitext(save_path)[0] + "_synthesis.mp4"
+    rep_fig, windowed_fig = summary_plots(metamer, rep_image_figsize)
+    rep_path = op.splitext(save_path)[0] + "_rep.png"
+    print("Saving representation image at %s" % rep_path)
+    rep_fig.savefig(rep_path)
+    windowed_path = op.splitext(save_path)[0] + "_windowed.png"
+    print("Saving windowed image at %s" % windowed_path)
+    windowed_fig.savefig(windowed_path)
     print("Saving synthesis video at %s" % video_path)
-    anim = metamer.animate(figsize=figsize)
+    anim = metamer.animate(figsize=animate_figsize)
     anim.save(video_path)
 
 
@@ -326,7 +399,8 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         device = torch.device("cpu")
     print("On device %s" % device)
     image = setup_image(image, device)
-    model, figsize = setup_model(model_name, scaling, image, min_ecc, max_ecc, device, cache_dir)
+    model, animate_figsize, rep_figsize = setup_model(model_name, scaling, image, min_ecc, max_ecc,
+                                                      device, cache_dir)
     print("Using model %s from %.02f degrees to %.02f degrees" % (model_name, min_ecc, max_ecc))
     print("Using learning rate %s, loss_thresh %s, and max_iter %s" % (learning_rate, loss_thresh,
                                                                        max_iter))
@@ -343,7 +417,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                                                  initial_image=initial_image,
                                                  save_progress=save_progress, save_path=save_path)
     if save_path is not None:
-        save(save_path, metamer, figsize)
+        save(save_path, metamer, animate_figsize, rep_figsize)
 
 
 if __name__ == '__main__':
