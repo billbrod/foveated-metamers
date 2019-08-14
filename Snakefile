@@ -171,24 +171,19 @@ rule create_metamers:
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache')
     run:
         import foveated_metamers as met
-	import GPUtil
         import contextlib
         # in an ideal world, we'd have this be in the params section or
         # something, but for some reason then it gets called more than
         # once and at times I don't understand. Putting it here seems to
         # work
-	if resources.gpu > 0:
-            gpu_num = GPUtil.getAvailable(order='first', maxLoad=.1, maxMemory=.1, includeNan=False)[0]
-        else:
-            gpu_num = None
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                print("Passing gpu_num %s" % gpu_num)
                 met.create_metamers.main(wildcards.model_name, float(wildcards.scaling), input[0],
                                          int(wildcards.seed), float(wildcards.min_ecc),
                                          float(wildcards.max_ecc), float(wildcards.learning_rate),
                                          int(wildcards.max_iter), float(wildcards.loss_thresh),
-                                         output[0], wildcards.init_type, gpu_num, params.cache_dir)
+                                         output[0], wildcards.init_type, resources.gpu>0,
+                                         params.cache_dir)
 
 
 # need to come up with a clever way to do this: either delete the ones
