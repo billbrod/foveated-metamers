@@ -56,7 +56,7 @@ def setup_image(image):
     return image
 
 
-def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir):
+def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normalize_dict=None):
     r"""setup the model
 
     We initialize the model, with the specified parameters, and return
@@ -64,7 +64,7 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir):
 
     Parameters
     ----------
-    model_name : {'RGC', 'V1'}
+    model_name : {'RGC', 'V1', 'V1-norm'}
         Which type of model to create.
     scaling : float
         The scaling parameter for the model
@@ -82,6 +82,11 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir):
         there for cached versions of the windows we create, load them if
         they exist and create and cache them if they don't. If None, we
         don't check for or cache the windows.
+    normalize_dict : dict or None, optional
+        If a dict, should contain the stats to use for normalization. If
+        None, we don't normalize. This can only be set (and must be set)
+        if the model is "V1-norm". In any other case, we'll throw an
+        Exception.
 
     Returns
     -------
@@ -96,6 +101,8 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir):
 
     """
     if model_name == 'RGC':
+        if normalize_dict is not None:
+            raise Exception("Cannot normalize RGC model!")
         model = po.simul.RetinalGanglionCells(scaling, image.shape[-2:], min_eccentricity=min_ecc,
                                               max_eccentricity=max_ecc, transition_region_width=1,
                                               cache_dir=cache_dir)
@@ -112,10 +119,15 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir):
                                    enumerate(rep_image_figsize)])
         rescale_factor = np.mean([image.shape[i+2]/256 for i in range(2)])
     elif model_name.startswith('V1'):
+        if not model_name.endswith('norm'):
+            if normalize_dict is not None:
+                raise Exception("Cannot normalize V1 model!")
+            normalize_dict = {}
+        if normalize_dict is None and model_name.endswith('norm'):
+            raise Exception("If model_name is V1-norm, normalize_dict must be set!")
         model = po.simul.PrimaryVisualCortex(scaling, image.shape[-2:], min_eccentricity=min_ecc,
                                              max_eccentricity=max_ecc, transition_region_width=1,
-                                             normalize=model_name.endswith('norm'),
-                                             cache_dir=cache_dir)
+                                             cache_dir=cache_dir, normalize_dict=normalize_dict)
         animate_figsize = (35, 11)
         rep_image_figsize = (27, 15)
         # default figsize arguments work for an image that is 512x512,
@@ -370,7 +382,7 @@ def setup_device(*args, use_cuda=False):
 
 def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_rate=1, max_iter=100,
          loss_thresh=1e-4, save_path=None, initial_image_type='white', use_cuda=False,
-         cache_dir=None):
+         cache_dir=None, normalize_dict=None):
     r"""create metamers!
 
     Given a model_name, model parameters, a target image, and some
@@ -426,14 +438,19 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         there for cached versions of the windows we create, load them if
         they exist and create and cache them if they don't. If None, we
         don't check for or cache the windows.
+    normalize_dict: str or None, optional
+        If a str, the path to the dictionary containing the statistics
+        to use for normalization. If None, we don't normalize anything
 
     """
     print("Using seed %s" % seed)
     torch.manual_seed(seed)
     np.random.seed(seed)
     image = setup_image(image)
+    if normalize_dict is not None:
+        normalize_dict = torch.load(normalize_dict)
     model, animate_figsize, rep_figsize = setup_model(model_name, scaling, image, min_ecc, max_ecc,
-                                                      cache_dir)
+                                                      cache_dir, normalize_dict)
     print("Using model %s from %.02f degrees to %.02f degrees" % (model_name, min_ecc, max_ecc))
     print("Using learning rate %s, loss_thresh %s, and max_iter %s" % (learning_rate, loss_thresh,
                                                                        max_iter))
