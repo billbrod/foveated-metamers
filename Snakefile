@@ -156,11 +156,13 @@ rule gen_norm_stats:
     output:
         # here V1 and texture could be considered wildcards, but they're
         # the only we're doing this for now
-        op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture_norm_stats.pt')
+        op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture_norm_stats-{num}.pt' )
     log:
-        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_texture_norm_stats.log')
+        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_texture_norm_stats-{num}.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_texture_norm_stats_benchmark.txt')
+        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_texture_norm_stats-{num}_benchmark.txt')
+    params:
+        index = lambda wildcards: (int(wildcards.num) * 100, (int(wildcards.num)+1) * 100)
     run:
         import plenoptic as po
         import contextlib
@@ -168,7 +170,37 @@ rule gen_norm_stats:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 # scaling doesn't matter here
                 v1 = po.simul.PrimaryVisualCortex(1, (512, 512))
-                po.simul.non_linearities.generate_norm_stats(v1, input[0], output[0], (512, 512))
+                po.simul.non_linearities.generate_norm_stats(v1, input[0], output[0], (512, 512),
+                                                             index=params.index)
+
+
+# we need to generate the stats in blocks, and then want to re-combine them
+rule combine_norm_stats:
+    input:
+        [op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture_norm_stats-{num}.pt').format(num=i)
+         for i in range(9)]
+    output:
+        op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture_norm_stats.pt' )
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_texture_norm_stats.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_texture_norm_stats_benchmark.txt')
+    run:
+        import torch
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                combined_stats = {}
+                to_combine = [torch.load(i) for i in input]
+                for k, v in to_combine[0].items():
+                    d = {}
+                    for l in v:
+                        s = []
+                        for i in to_combine:
+                            s.append(i[k][l])
+                        d[l] = torch.cat(s, 0)
+                    combined_stats[k] = d                
+                torch.save(combined_stats, output[0])
 
 
 def get_norm_dict(wildcards):
