@@ -303,12 +303,13 @@ def get_windows(wildcards):
     r"""determine the cached window path for the specified model
     """
     window_template = op.join(config["DATA_DIR"], 'windows_cache', 'scaling-{scaling}_size-{size}'
-                              '_e0-{min_ecc:.03f}_em-{max_ecc}_t-1.pt')
+                              '_e0-{min_ecc:.03f}_em-{max_ecc:.01f}_t-1.pt')
     im = imageio.imread(REF_IMAGE_TEMPLATE_PATH.format(image_name=wildcards.image_name))
     if wildcards.model_name == "RGC":
         size = ','.join([str(i) for i in im.shape])
         return window_template.format(scaling=wildcards.scaling, size=size,
-                                      max_ecc=wildcards.max_ecc, min_ecc=float(wildcards.min_ecc))
+                                      max_ecc=float(wildcards.max_ecc),
+                                      min_ecc=float(wildcards.min_ecc))
     elif wildcards.model_name.startswith('V1'):
         windows = []
         # need them for every scale
@@ -327,7 +328,8 @@ def get_windows(wildcards):
                                                        np.sqrt(2)*float(wildcards.max_ecc))
             min_ecc = np.max([min_ecc, float(wildcards.min_ecc)])
             windows.append(window_template.format(scaling=wildcards.scaling, size=output_size,
-                                                  max_ecc=wildcards.max_ecc, min_ecc=min_ecc))
+                                                  max_ecc=float(wildcards.max_ecc),
+                                                  min_ecc=min_ecc))
         return windows
 
 
