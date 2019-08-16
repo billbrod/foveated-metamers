@@ -223,7 +223,7 @@ def summary_plots(metamer, rep_image_figsize):
     for i, (im, t, vr) in enumerate(zip(images, titles, vranges)):
         metamer.model.plot_representation_image(ax=axes[i], data=im, title=t, vrange=vr)
     images = [metamer.saved_image[0], metamer.matched_image, metamer.target_image]
-    images = 2*[po.to_numpy(i).squeeze() for i in images]
+    images = 2*[po.to_numpy(i.to(torch.float32)).squeeze() for i in images]
     titles = ['Initial image', 'Metamer', 'Reference image']
     titles += ['Windowed '+t for t in titles]
     windowed_fig = pt.imshow(images, col_wrap=3, title=titles, vrange=(0, 1))
@@ -374,9 +374,14 @@ def setup_device(*args, use_cuda=False):
     if torch.cuda.is_available() and use_cuda:
         gpu_num = GPUtil.getAvailable(order='first', maxLoad=.1, maxMemory=.1, includeNan=False)[0]
         device = torch.device("cuda:%s" % gpu_num)
+        dtype = torch.float16
     else:
         device = torch.device("cpu")
+        dtype = None
     print("On device %s" % device)
+    if dtype is not None:
+        print("Changing dtype to %s" % dtype)
+        args = [a.to(dtype) for a in args]
     return [a.to(device) for a in args]
 
 
