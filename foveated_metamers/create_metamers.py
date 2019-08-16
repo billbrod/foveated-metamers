@@ -56,7 +56,7 @@ def setup_image(image):
     return image
 
 
-def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir):
+def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normalize_dict=None):
     r"""setup the model
 
     We initialize the model, with the specified parameters, and return
@@ -64,7 +64,7 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir):
 
     Parameters
     ----------
-    model_name : {'RGC', 'V1'}
+    model_name : {'RGC', 'V1', 'V1-norm'}
         Which type of model to create.
     scaling : float
         The scaling parameter for the model
@@ -82,6 +82,11 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir):
         there for cached versions of the windows we create, load them if
         they exist and create and cache them if they don't. If None, we
         don't check for or cache the windows.
+    normalize_dict : dict or None, optional
+        If a dict, should contain the stats to use for normalization. If
+        None, we don't normalize. This can only be set (and must be set)
+        if the model is "V1-norm". In any other case, we'll throw an
+        Exception.
 
     Returns
     -------
@@ -96,6 +101,8 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir):
 
     """
     if model_name == 'RGC':
+        if normalize_dict is not None:
+            raise Exception("Cannot normalize RGC model!")
         model = po.simul.RetinalGanglionCells(scaling, image.shape[-2:], min_eccentricity=min_ecc,
                                               max_eccentricity=max_ecc, transition_region_width=1,
                                               cache_dir=cache_dir)
@@ -112,10 +119,15 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir):
                                    enumerate(rep_image_figsize)])
         rescale_factor = np.mean([image.shape[i+2]/256 for i in range(2)])
     elif model_name.startswith('V1'):
+        if not model_name.endswith('norm'):
+            if normalize_dict is not None:
+                raise Exception("Cannot normalize V1 model!")
+            normalize_dict = {}
+        if normalize_dict is None and model_name.endswith('norm'):
+            raise Exception("If model_name is V1-norm, normalize_dict must be set!")
         model = po.simul.PrimaryVisualCortex(scaling, image.shape[-2:], min_eccentricity=min_ecc,
                                              max_eccentricity=max_ecc, transition_region_width=1,
-                                             normalize=model_name.endswith('norm'),
-                                             cache_dir=cache_dir)
+                                             cache_dir=cache_dir, normalize_dict=normalize_dict)
         animate_figsize = (35, 11)
         rep_image_figsize = (27, 15)
         # default figsize arguments work for an image that is 512x512,
@@ -375,7 +387,7 @@ def setup_device(*args, use_cuda=False):
 
 def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_rate=1, max_iter=100,
          loss_thresh=1e-4, save_path=None, initial_image_type='white', use_cuda=False,
-         cache_dir=None):
+         cache_dir=None, normalize_dict=None):
     r"""create metamers!
 
     Given a model_name, model parameters, a target image, and some
@@ -431,14 +443,19 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         there for cached versions of the windows we create, load them if
         they exist and create and cache them if they don't. If None, we
         don't check for or cache the windows.
+    normalize_dict: str or None, optional
+        If a str, the path to the dictionary containing the statistics
+        to use for normalization. If None, we don't normalize anything
 
     """
     print("Using seed %s" % seed)
     torch.manual_seed(seed)
     np.random.seed(seed)
     image = setup_image(image)
+    if normalize_dict is not None:
+        normalize_dict = torch.load(normalize_dict)
     model, animate_figsize, rep_figsize = setup_model(model_name, scaling, image, min_ecc, max_ecc,
-                                                      cache_dir)
+                                                      cache_dir, normalize_dict)
     print("Using model %s from %.02f degrees to %.02f degrees" % (model_name, min_ecc, max_ecc))
     print("Using learning rate %s, loss_thresh %s, and max_iter %s" % (learning_rate, loss_thresh,
                                                                        max_iter))
@@ -457,43 +474,3 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                                                  save_progress=save_progress, save_path=save_path)
     if save_path is not None:
         save(save_path, metamer, animate_figsize, rep_figsize)
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Create some metamers!",
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('model_name', help="Name of the model to create: {'RGC', 'V1', 'V1-norm'}")
-    parser.add_argument('scaling', type=float, help="The scaling parameter for the model")
-    parser.add_argument('image', help=("Path to the image to use as the reference for metamer "
-                                       "synthesis"))
-    parser.add_argument('--seed', '-s', type=int, default=0,
-                        help=("The number to use for initializing numpy and torch's random "
-                              "number generators"))
-    parser.add_argument('--min_ecc', '-e0', type=float, default=.5,
-                        help="The minimum eccentricity for the pooling windows")
-    parser.add_argument('--max_ecc', '-em', type=float, default=15,
-                        help="The maximum eccentricity for the pooling windows")
-    parser.add_argument('--learning_rate', '-l', type=float, default=1,
-                        help="The learning rate to pass to metamer.synthesize's optimizer")
-    parser.add_argument('--max_iter', '-m', type=int, default=100,
-                        help=("The maximum number of iterations we allow the synthesis "
-                              "optimization to run for"))
-    parser.add_argument('--loss_thresh', '-t', type=float, default=1e-4,
-                        help=("The loss threshold. If our loss is every below this, we stop "
-                              "synthesis and consider ourselves done."))
-    parser.add_argument('--save_path', '-p', default='metamer.pt',
-                        help=("The path to the file to save the metamer object to (should end in "
-                              ".pt)"))
-    parser.add_argument('--initial_image_type', '-i', default='white',
-                        help=("{'white', 'pink', 'gray', 'blue'}. what to use for the initial "
-                              "image. All are different colors of noise except gray, which is a "
-                              "flat mid-gray image"))
-    parser.add_argument('--use_cuda', action='store_true',
-                        help=("If True and if torch.cuda.is_available(), we try to find a gpu to "
-                              "use. else, we use the cpu"))
-    parser.add_argument('--cache_dir', '-c', default=None,
-                        help=("If not None, the directory to use for caching windows tensors. "
-                              "Using this should greatly improve speed and memory usage on "
-                              "subsequent runs, especially for small scaling values."))
-    args = vars(parser.parse_args())
-    main(**args)
