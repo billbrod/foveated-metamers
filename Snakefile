@@ -336,6 +336,8 @@ def get_windows(wildcards):
                 min_ecc *= 1e3
                 min_ecc -= min_ecc % 1
                 min_ecc = (min_ecc+1) / 1e3
+            else:
+                min_ecc = float(wildcards.min_ecc)
             windows.append(window_template.format(scaling=wildcards.scaling, size=output_size,
                                                   max_ecc=float(wildcards.max_ecc),
                                                   min_ecc=min_ecc))
