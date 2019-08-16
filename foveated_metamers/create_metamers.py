@@ -374,7 +374,7 @@ def setup_device(*args, use_cuda=False):
     if torch.cuda.is_available() and use_cuda:
         gpu_num = GPUtil.getAvailable(order='first', maxLoad=.1, maxMemory=.1, includeNan=False)[0]
         device = torch.device("cuda:%s" % gpu_num)
-        dtype = torch.float16
+        dtype = None
     else:
         device = torch.device("cpu")
         dtype = None
