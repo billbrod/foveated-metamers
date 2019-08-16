@@ -308,7 +308,7 @@ def get_windows(wildcards):
     if wildcards.model_name == "RGC":
         size = ','.join([str(i) for i in im.shape])
         return window_template.format(scaling=wildcards.scaling, size=size,
-                                      max_ecc=wildcards.max_ecc, min_ecc=wildcards.min_ecc)
+                                      max_ecc=wildcards.max_ecc, min_ecc=float(wildcards.min_ecc))
     elif wildcards.model_name.startswith('V1'):
         windows = []
         # need them for every scale
