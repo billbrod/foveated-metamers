@@ -204,7 +204,7 @@ rule combine_norm_stats:
 
 
 def get_norm_dict(wildcards):
-    if wildcards.model == 'V1-norm':
+    if wildcards.model_name == 'V1-norm':
         return op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture_norm_stats.pt')
     else:
         return None
@@ -227,7 +227,7 @@ rule create_metamers:
     resources:
         gpu = lambda wildcards: int(wildcards.gpu),
     params:
-        cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache')
+        cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
         norm_dict = get_norm_dict,
     run:
         import foveated_metamers as met
