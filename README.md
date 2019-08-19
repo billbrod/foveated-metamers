@@ -44,6 +44,22 @@ data set to get some input images. We provide those in our
 [ref_images](https://osf.io/5t4ju) tarball, but the link is presented
 here if you wish to examine the rest of the data set.
 
+## Minimal experiment install
+
+If you just want to run the experiment and you want to install the
+minumum number of things possible, the following should allow you to
+run this experiment. Create a new virtual environment and then:
+
+```
+pip install psychopy==3.1.5 pyglet==1.3.2 numpy h5py
+```
+
+And then if you're on Linux, fetch the wxPython wheel for you platform
+from [here](https://extras.wxpython.org/wxPython4/extras/linux/gtk3/)
+and install it with `pip install path/to/your/wxpython.whl`.
+
+Everything should then hopefully work.
+
 # References
 
 - Freeman, J., & Simoncelli, E. P. (2011). Metamers of the ventral

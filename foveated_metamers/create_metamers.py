@@ -3,7 +3,6 @@
 """
 import torch
 import GPUtil
-import argparse
 import imageio
 import warnings
 import numpy as np
