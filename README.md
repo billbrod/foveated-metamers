@@ -51,7 +51,7 @@ minumum number of things possible, the following should allow you to
 run this experiment. Create a new virtual environment and then:
 
 ```
-pip install psychopy==3.1.5 pyglet==1.3.2 numpy h5py
+pip install psychopy==3.1.5 pyglet==1.3.2 numpy h5py glfw
 ```
 
 And then if you're on Linux, fetch the wxPython wheel for you platform
