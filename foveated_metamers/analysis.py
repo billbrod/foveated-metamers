@@ -70,7 +70,7 @@ def get_responses(df, presentation_idx, trials, dep_variable='scaling'):
         The response dictionary, as described above
 
     """
-    correct_answers = np.where(presentation_idx[:, 2] == presentation_idx[:, 0], 1, 2)[:5]
+    correct_answers = np.where(presentation_idx[:, 2] == presentation_idx[:, 0], 1, 2)
     subj_answers = trials[:, 2]
     dep_variable_vals = np.where(~np.isnan(df.loc[presentation_idx[:, 0]][dep_variable]),
                                  df.loc[presentation_idx[:, 0]][dep_variable],
