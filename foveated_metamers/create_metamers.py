@@ -191,8 +191,8 @@ def summary_plots(metamer, rep_image_figsize):
 
     1. 'rep_image': we show, in three separate rows, the representation
     of the reference image, the representation of the metamer, and the
-    representation_ratio at the final ratio, all plotted as images using
-    ``metamer.model.plot_representaiton_image``.
+    representation_error at the final iteration, all plotted as images
+    using ``metamer.model.plot_representaiton_image``.
 
     2. 'windowed': on the top row we show the initial image, the
     metamer, and the reference image, and on the bottom row we show
@@ -216,7 +216,7 @@ def summary_plots(metamer, rep_image_figsize):
     """
     rep_fig, axes = plt.subplots(3, 1, figsize=rep_image_figsize)
     images = [metamer.model(metamer.target_image), metamer.model(metamer.matched_image),
-              metamer.representation_ratio()]
+              metamer.representation_error()]
     titles = ['Reference image |', 'Metamer |', 'Error |']
     vranges = ['indep1', 'indep1', 'indep0']
     for i, (im, t, vr) in enumerate(zip(images, titles, vranges)):
