@@ -15,6 +15,7 @@ dependencies:
   - pyosf
   - imageio
   - scikit-image
+  - h5py
   - pip:
       - pytest
       - torchvision
