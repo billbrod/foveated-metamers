@@ -379,7 +379,7 @@ rule create_metamers:
                                          float(wildcards.max_ecc), float(wildcards.learning_rate),
                                          int(wildcards.max_iter), float(wildcards.loss_thresh),
                                          output[0], wildcards.init_type, resources.gpu>0,
-                                         params.cache_dir, params.norm_dict)
+                                         params.cache_dir, params.norm_dict, resources.gpu)
 
 
 # need to come up with a clever way to do this: either delete the ones

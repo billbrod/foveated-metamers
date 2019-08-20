@@ -386,7 +386,7 @@ def setup_device(*args, use_cuda=False):
 
 def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_rate=1, max_iter=100,
          loss_thresh=1e-4, save_path=None, initial_image_type='white', use_cuda=False,
-         cache_dir=None, normalize_dict=None):
+         cache_dir=None, normalize_dict=None, num_gpus=0):
     r"""create metamers!
 
     Given a model_name, model parameters, a target image, and some
@@ -442,9 +442,14 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         there for cached versions of the windows we create, load them if
         they exist and create and cache them if they don't. If None, we
         don't check for or cache the windows.
-    normalize_dict: str or None, optional
+    normalize_dict : str or None, optional
         If a str, the path to the dictionary containing the statistics
         to use for normalization. If None, we don't normalize anything
+    num_gpus : int, optional
+        The number of gpus to use. If use_cuda is False, this must be
+        0. Otherwise, if it's greater than 1, we'll use
+        ``torch.nn.DataParallel`` to try and spread it across multiple
+        GPUs.
 
     """
     print("Using seed %s" % seed)
@@ -461,6 +466,19 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     clamper = po.RangeClamper((0, 1))
     initial_image = setup_initial_image(initial_image_type, model, image)
     image, initial_image, model = setup_device(image, initial_image, model, use_cuda=use_cuda)
+    if num_gpus > 0:
+        if not use_cuda:
+            raise Exception("Can only use GPUs if use_cuda is True!")
+        if num_gpus > 1:
+            gpus = GPUtil.getAvailable(maxLoad=.5, maxMemory=.5, limit=num_gpus, order='first')
+            # make sure the original gpu is on the list, or we throw an exception
+            if image.device.index not in gpus:
+                if len(gpus) < num_gpus:
+                    gpus += [image.device.index]
+                else:
+                    gpus = [image.device.index] + gpus[:-1]
+            print("Will put device on multiple gpus: %s" % gpus)
+            model = model.parallel(gpus)
     metamer = po.synth.Metamer(image, model)
     if save_path is not None:
         save_progress = True
