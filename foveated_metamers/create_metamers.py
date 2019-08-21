@@ -5,6 +5,7 @@ import torch
 import GPUtil
 import imageio
 import warnings
+import os
 import numpy as np
 import plenoptic as po
 import pyrtools as pt
@@ -478,7 +479,12 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                                                                        max_iter))
     clamper = po.RangeClamper((0, 1))
     initial_image = setup_initial_image(initial_image_type, model, image)
-    image, initial_image, model = setup_device(image, initial_image, model, use_cuda=use_cuda)
+    if num_gpus <= 1:
+        image, initial_image, model = setup_device(image, initial_image, model, use_cuda=use_cuda)
+    else:
+        # in this case, we're going to parallelize the model anyway, so
+        # don't put it on a single device
+        image, initial_image = setup_device(image, initial_image, use_cuda=use_cuda)
     if num_gpus > 0:
         if not use_cuda:
             raise Exception("Can only use GPUs if use_cuda is True!")
@@ -501,9 +507,11 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                                                  learning_rate=learning_rate, max_iter=max_iter,
                                                  loss_thresh=loss_thresh, seed=seed,
                                                  initial_image=initial_image,
-                                                 save_progress=save_progress, save_path=save_path,
+                                                 save_progress=save_progress,
                                                  optimizer=optimizer, fraction_removed=fraction_removed,
                                                  loss_change_fraction=loss_change_fraction,
-                                                 loss_change_thresh=.1)
+                                                 loss_change_thresh=.1,
+                                                 save_path=save_path.replace('.pt', '_inprogress.pt'))
     if save_path is not None:
         save(save_path, metamer, animate_figsize, rep_figsize)
+    os.remove(save_path.replace('.pt', '_inprogress.pt'))
