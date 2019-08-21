@@ -196,13 +196,19 @@ rule combine_norm_stats:
                 combined_stats = {}
                 to_combine = [torch.load(i) for i in input]
                 for k, v in to_combine[0].items():
-                    d = {}
-                    for l in v:
+                    if isinstance(v, dict):
+                        d = {}
+                        for l in v:
+                            s = []
+                            for i in to_combine:
+                                s.append(i[k][l])
+                            d[l] = torch.cat(s, 0)
+                        combined_stats[k] = d
+                    else:
                         s = []
                         for i in to_combine:
-                            s.append(i[k][l])
-                        d[l] = torch.cat(s, 0)
-                    combined_stats[k] = d                
+                            s.append(i[k])
+                        combined_stats[k] = torch.cat(s, 0)
                 torch.save(combined_stats, output[0])
 
 
