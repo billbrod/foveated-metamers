@@ -386,7 +386,8 @@ def setup_device(*args, use_cuda=False):
 
 def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_rate=1, max_iter=100,
          loss_thresh=1e-4, save_path=None, initial_image_type='white', use_cuda=False,
-         cache_dir=None, normalize_dict=None, num_gpus=0):
+         cache_dir=None, normalize_dict=None, num_gpus=0, optimizer='SGD', fraction_removed=0,
+         loss_change_fraction=1):
     r"""create metamers!
 
     Given a model_name, model parameters, a target image, and some
@@ -450,6 +451,18 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         0. Otherwise, if it's greater than 1, we'll use
         ``torch.nn.DataParallel`` to try and spread it across multiple
         GPUs.
+    optimizer: {'Adam', 'SGD', 'LBFGS'}
+        The choice of optimization algorithm
+    fraction_removed: float, optional
+        The fraction of the representation that will be ignored
+        when computing the loss. At every step the loss is computed
+        using the remaining fraction of the representation only.
+        A new sample is drawn a every step. This gives a stochastic
+        estimate of the gradient and might help optimization.
+    loss_change_fraction : float, optional
+        If we think the loss has stopped decreasing, the fraction of
+        the representation with the highest loss that we use to
+        calculate the gradients
 
     """
     print("Using seed %s" % seed)
@@ -488,6 +501,9 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                                                  learning_rate=learning_rate, max_iter=max_iter,
                                                  loss_thresh=loss_thresh, seed=seed,
                                                  initial_image=initial_image,
-                                                 save_progress=save_progress, save_path=save_path)
+                                                 save_progress=save_progress, save_path=save_path,
+                                                 optimizer=optimizer, fraction_removed=fraction_removed,
+                                                 loss_change_fraction=loss_change_fraction,
+                                                 loss_change_thresh=.1)
     if save_path is not None:
         save(save_path, metamer, animate_figsize, rep_figsize)
