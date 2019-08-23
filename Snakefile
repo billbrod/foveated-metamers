@@ -215,70 +215,6 @@ rule combine_norm_stats:
 
 rule cache_windows:
     output:
-        # transition_region_width (after t-) could also be a wildcard,
-        # but in practice, that's always 1 for us
-        op.join(config["DATA_DIR"], 'windows_cache', 'partial', 'scaling-{scaling}_size-{size}_e0-'
-                '{min_ecc}_em-{max_ecc}_t-1_a-{angle_idx}_e-{eccen_idx}.pt')
-    log:
-        op.join(config["DATA_DIR"], 'logs', 'windows_cache', 'partial', 'scaling-{scaling}_size-'
-                '{size}_e0-{min_ecc}_em-{max_ecc}_t-1_a-{angle_idx}_e-{eccen_idx}.log')
-    benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'windows_cache', 'partial', 'scaling-{scaling}_size-'
-                '{size}_e0-{min_ecc}_em-{max_ecc}_t-1_a-{angle_idx}_e-{eccen_idx}_benchmark.txt')
-    run:
-        import plenoptic as po
-        import contextlib
-        with open(log[0], 'w', buffering=1) as log_file:
-            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                img_size = [int(i) for i in wildcards.size.split(',')]
-                angle_idx = [int(i) for i in wildcards.angle_idx.split(',')]
-                eccen_idx = [int(i) for i in wildcards.eccen_idx.split(',')]
-                po.simul.PoolingWindows(float(wildcards.scaling), img_size, float(wildcards.min_ecc),
-                                        float(wildcards.max_ecc), cache_dir=op.dirname(output[0]),
-                                        angle_index=angle_idx, eccen_index=eccen_idx,
-                                        transition_region_width=1)
-
-
-def find_cached_windows(wildcards):
-    r"""Figure out which windows we need to create
-
-    The wildcards specify the scaling, size, min_ecc, and max_ecc, and
-    we can use this to determine what the full set of windows we need
-    would be and how to split it up into different portions to
-    efficiently create them.
-
-    """
-    input_template = op.join(config["DATA_DIR"], 'windows_cache', 'partial', 'scaling-{scaling}_'
-                             'size-{size}_e0-{min_ecc}_em-{max_ecc}_t-1_a-{i}_e-{j}.pt')
-    # multiply max_ecc by sqrt(2) because we actually need to create the
-    # windows out to the corner of the image, which is a distance (from
-    # the center) of max_ecc*np.sqrt(2) (because of trigonometry).
-    min_ecc, max_ecc = float(wildcards.min_ecc), float(wildcards.max_ecc)*np.sqrt(2)
-    scaling = float(wildcards.scaling)
-    ecc_width = pooling.calc_eccentricity_window_width(min_ecc, max_ecc, scaling=scaling)
-    n_polar_windows = int(round(pooling.calc_angular_n_windows(ecc_width / 2)))
-    angular_width = pooling.calc_angular_window_width(n_polar_windows)
-    # transition region width is always 1
-    window_widths = pooling.calc_window_widths_actual(angular_width, ecc_width, min_ecc, max_ecc,
-                                                      1)
-    n_eccentricity_bands = len(window_widths[0])
-    # we split the anglular windows into approximately 4 groups...
-    angle_idx = []
-    for i in range(4):
-        num = int(np.ceil(n_polar_windows / 4))
-        if i*num > n_polar_windows:
-            break
-        angle_idx.append(','.join([str(i*num), str((i+1)*num)]))
-    # but do each eccentricity band separately. this is so we append
-    # everything back together in the same order
-    eccen_idx = [','.join([str(i), str(i+1)]) for i in range(n_eccentricity_bands)]
-    return [input_template.format(i=i, j=j, **wildcards) for j in eccen_idx for i in angle_idx]
-
-
-rule combine_cache_windows:
-    input:
-        find_cached_windows,
-    output:
         op.join(config["DATA_DIR"], 'windows_cache', 'scaling-{scaling}_size-{size}_e0-{min_ecc}_'
                 'em-{max_ecc}_t-1.pt')
     log:
@@ -288,15 +224,14 @@ rule combine_cache_windows:
         op.join(config["DATA_DIR"], 'logs', 'windows_cache', 'scaling-{scaling}_size-{size}_e0-'
                 '{min_ecc}_em-{max_ecc}_t-1_benchmark.txt')
     run:
-        import torch
         import contextlib
+        import plenoptic as po
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                windows = []
-                for w in input:
-                    windows.append(torch.load(w))
-                windows = torch.cat(windows, 0)
-                torch.save(windows, output[0])
+                img_size = [int(i) for i in wildcards.size.split(',')]
+                po.simul.PoolingWindows(float(wildcards.scaling), img_size, float(wildcards.min_ecc),
+                                        float(wildcards.max_ecc), cache_dir=op.dirname(output[0]),
+                                        transition_region_width=1)
 
 
 def get_norm_dict(wildcards):

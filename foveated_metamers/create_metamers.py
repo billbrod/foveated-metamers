@@ -179,10 +179,11 @@ def add_center_to_image(model, initial_image, reference_image):
         The metamer image with the center added back in
 
     """
-    windows = model.PoolingWindows.windows[0].flatten(0, -3)
+    windows = torch.einsum('ahw,ehw->hw', [model.PoolingWindows.angle_windows[0],
+                                           model.PoolingWindows.ecc_windows[0]])
     # for some reason ~ (invert) is not implemented for booleans in
     # pytorch yet, so we do this instead.
-    return ((windows.sum(0) * initial_image) + ((1 - windows.sum(0)) * reference_image))
+    return ((windows * initial_image) + ((1 - windows) * reference_image))
 
 
 def summary_plots(metamer, rep_image_figsize):
