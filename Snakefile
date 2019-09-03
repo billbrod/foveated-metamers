@@ -284,6 +284,8 @@ rule create_metamers:
     output:
         METAMER_TEMPLATE_PATH.replace('_metamer.png', '.pt'),
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'synthesis.mp4'),
+        METAMER_TEMPLATE_PATH.replace('metamer.png', 'rep.png'),
+        METAMER_TEMPLATE_PATH.replace('metamer.png', 'windowed.png'),
         METAMER_TEMPLATE_PATH
     log:
         op.join(config["DATA_DIR"], 'logs', 'metamers', '{model_name}', '{image_name}',
