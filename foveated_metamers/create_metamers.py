@@ -499,6 +499,8 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                     gpus = [image.device.index] + gpus[:-1]
             print("Will put device on multiple gpus: %s" % gpus)
             model = model.parallel(gpus)
+            if hasattr(model, 'complex_steerable_pyramid'):
+                model.complex_steerable_pyramid = model.complex_steerable_pyramid.to(image.device)
     metamer = po.synth.Metamer(image, model)
     if save_path is not None:
         save_progress = True
