@@ -257,20 +257,11 @@ def get_windows(wildcards):
         # need them for every scale
         for i in range(4):
             output_size = ','.join([str(int(np.ceil(j / 2**i))) for j in im.shape])
-            # this multiplication by sqrt(2) here is because we're
-            # creating the windows out to the corner of the image, not
-            # just the edge. the calculation is essentially the same if
-            # we don't multiply size or max_ecc by sqrt(2) but differs
-            # in the 3rd decimal place or so. in order to make sure
-            # they're identical to what the PoolingWindows object will
-            # calculate, we do this.
-            window_size = [int(np.ceil(j*np.sqrt(2))) for j in im.shape]
             min_ecc, _ = pooling.calc_min_eccentricity(float(wildcards.scaling),
-                                                       [np.ceil(j / 2**i) for j in window_size],
-                                                       np.sqrt(2)*float(wildcards.max_ecc))
-            if i > 0:
-                # don't do this for the lowest scale
-                min_ecc = np.max([min_ecc, float(wildcards.min_ecc)])
+                                                       [np.ceil(j / 2**i) for j in im.shape],
+                                                       float(wildcards.max_ecc))
+            # don't do this for the lowest scale
+            if i > 0 and min_ecc > float(wildcards.min_ecc):
                 # this makes sure that whatever that third decimal place
                 # is, we're always one above it. e.g., if min_ecc was
                 # 1.3442, we want to use 1.345, and this will ensure
