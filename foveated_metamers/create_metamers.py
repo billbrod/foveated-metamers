@@ -220,7 +220,12 @@ def summary_plots(metamer, rep_image_figsize):
     images = [metamer.model(metamer.target_image), metamer.model(metamer.matched_image),
               metamer.representation_error()]
     titles = ['Reference image |', 'Metamer |', 'Error |']
-    vranges = ['indep1', 'indep1', 'indep0']
+    if metamer.model.state_dict_reduced['model_name'] == 'V1' and metamer.model.normalize_dict:
+        # then this is the V1-norm model and so we want to use symmetric
+        # color maps for all of them
+        vranges = ['indep0', 'indep0', 'indep0']
+    else:
+        vranges = ['indep1', 'indep1', 'indep0']
     for i, (im, t, vr) in enumerate(zip(images, titles, vranges)):
         metamer.model.plot_representation_image(ax=axes[i], data=im, title=t, vrange=vr)
     images = [metamer.saved_image[0], metamer.matched_image, metamer.target_image]
