@@ -272,6 +272,15 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize):
 
     """
     print("Saving at %s" % save_path)
+    # With the Adam optimizer, it also changes the pixels in the center,
+    # which the model does not see. This appears to be a feature of Adam
+    # (maybe some randomness in how it selects parameters to change?),
+    # since it basically doesn't happen with SGD and the gradient at
+    # those pixels is always zero. So, just to make things look nice, we
+    # add back the center at the end here.
+    metamer.matched_image = torch.nn.Parameter(add_center_to_image(metamer.model,
+                                                                   metamer.matched_image,
+                                                                   metamer.target_image))
     metamer.save(save_path, save_model_reduced=True)
     # save png of metamer
     metamer_path = op.splitext(save_path)[0] + "_metamer.png"
