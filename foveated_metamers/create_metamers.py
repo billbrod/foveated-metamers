@@ -179,8 +179,13 @@ def add_center_to_image(model, initial_image, reference_image):
         The metamer image with the center added back in
 
     """
-    windows = torch.einsum('ahw,ehw->hw', [model.PoolingWindows.angle_windows[0],
-                                           model.PoolingWindows.ecc_windows[0]])
+    model(initial_image)
+    try:
+        rep = model.representation['mean_luminance']
+    except IndexError:
+        rep = model.representation
+    dummy_ones = torch.ones_like(rep)
+    windows = model.PoolingWindows.project(dummy_ones).squeeze().to(initial_image.device)
     # for some reason ~ (invert) is not implemented for booleans in
     # pytorch yet, so we do this instead.
     return ((windows * initial_image) + ((1 - windows) * reference_image))
@@ -464,9 +469,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         to use for normalization. If None, we don't normalize anything
     num_gpus : int, optional
         The number of gpus to use. If use_cuda is False, this must be
-        0. Otherwise, if it's greater than 1, we'll use
-        ``torch.nn.DataParallel`` to try and spread it across multiple
-        GPUs.
+        0. Otherwise, if it's greater than 1
     optimizer: {'Adam', 'SGD', 'LBFGS'}
         The choice of optimization algorithm
     fraction_removed: float, optional
