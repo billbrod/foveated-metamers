@@ -408,7 +408,7 @@ def setup_device(*args, use_cuda=False):
 def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_rate=1, max_iter=100,
          loss_thresh=1e-4, save_path=None, initial_image_type='white', use_cuda=False,
          cache_dir=None, normalize_dict=None, num_gpus=0, optimizer='SGD', fraction_removed=0,
-         loss_change_fraction=1):
+         loss_change_fraction=1, coarse_to_fine=0):
     r"""create metamers!
 
     Given a model_name, model parameters, a target image, and some
@@ -482,6 +482,11 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         If we think the loss has stopped decreasing, the fraction of
         the representation with the highest loss that we use to
         calculate the gradients
+    coarse_to_fine : float, optional
+        A positive float or 0. If a positive float, we do coarse-to-fine
+        optimization (see Metamer.synthesize) for more details, passing
+        coarse_to_fine=True and loss_change_thresh as this value. If 0,
+        we set coarse_to_fine=False (and loss_change_thresh=.1)
 
     """
     print("Using seed %s" % seed)
@@ -524,6 +529,11 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         save_progress = True
     else:
         save_progress = False
+    if coarse_to_fine > 0:
+        loss_change_thresh = coarse_to_fine
+        coarse_to_fine = True
+    else:
+        loss_change_thresh = .1
     matched_im, matched_rep = metamer.synthesize(clamper=clamper, store_progress=10,
                                                  learning_rate=learning_rate, max_iter=max_iter,
                                                  loss_thresh=loss_thresh, seed=seed,
@@ -531,7 +541,8 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                                                  save_progress=save_progress,
                                                  optimizer=optimizer, fraction_removed=fraction_removed,
                                                  loss_change_fraction=loss_change_fraction,
-                                                 loss_change_thresh=.1,
+                                                 loss_change_thresh=loss_change_thresh,
+                                                 coarse_to_fine=coarse_to_fine,
                                                  save_path=save_path.replace('.pt', '_inprogress.pt'))
     if save_path is not None:
         save(save_path, metamer, animate_figsize, rep_figsize)

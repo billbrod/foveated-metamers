@@ -27,9 +27,9 @@ IMAGES = ['nuts', 'nuts_symmetric', 'nuts_constant', 'einstein', 'einstein_symme
           'Chimera1102347-03', 'CosmosLaundromat-08', 'checkerboard_period-64_size-256']
 METAMER_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers', '{model_name}', '{image_name}',
                                 'scaling-{scaling}', 'opt-{optimizer}', 'fr-{fract_removed}_lc-'
-                                '{loss_fract}', 'seed-{seed}_init-{init_type}_lr-{learning_'
-                                'rate}_e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_thresh-{loss_'
-                                'thresh}_gpu-{gpu}_metamer.png')
+                                '{loss_fract}_cf-{coarse_to_fine}', 'seed-{seed}_init-{init_type}'
+                                '_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_'
+                                'thresh-{loss_thresh}_gpu-{gpu}_metamer.png')
 REF_IMAGE_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'ref_images', '{image_name}.pgm')
 SEEDS = {'sub-01': 0}
 
@@ -258,13 +258,13 @@ rule create_metamers:
         METAMER_TEMPLATE_PATH
     log:
         op.join(config["DATA_DIR"], 'logs', 'metamers', '{model_name}', '{image_name}',
-                'scaling-{scaling}', 'opt-{optimizer}', 'fr-{fract_removed}_lc-{loss_fract}',
-                'seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc}'
+                'scaling-{scaling}', 'opt-{optimizer}', 'fr-{fract_removed}_lc-{loss_fract}_'
+                'cf-{coarse_to_fine}', 'seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc}'
                 '_em-{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}.log')
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'metamers', '{model_name}', '{image_name}',
-                'scaling-{scaling}', 'opt-{optimizer}', 'fr-{fract_removed}_lc-{loss_fract}',
-                'seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc}'
+                'scaling-{scaling}', 'opt-{optimizer}', 'fr-{fract_removed}_lc-{loss_fract}_'
+                'cf-{coarse_to_fine}', 'seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc}'
                 '_em-{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}_benchmark.txt')
     resources:
         gpu = lambda wildcards: int(wildcards.gpu),
@@ -283,7 +283,8 @@ rule create_metamers:
                                          output[0], wildcards.init_type, resources.gpu>0,
                                          params.cache_dir, params.norm_dict, resources.gpu,
                                          wildcards.optimizer, float(wildcards.fract_removed),
-                                         float(wildcards.loss_fract))
+                                         float(wildcards.loss_fract),
+                                         float(wildcards.coarse_to_fine))
 
 
 # need to come up with a clever way to do this: either delete the ones
