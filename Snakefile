@@ -24,7 +24,7 @@ wildcard_constraints:
 MODELS = ['RGC', 'V1', 'V1-norm']
 IMAGES = ['nuts', 'nuts_symmetric', 'nuts_constant', 'einstein', 'einstein_symmetric',
           'einstein_constant', 'AsianFusion-08', 'AirShow-12', 'ElFuenteDance-11',
-          'Chimera1102347-03', 'CosmosLaundromat-08']
+          'Chimera1102347-03', 'CosmosLaundromat-08', 'checkerboard_period-64_size-256']
 METAMER_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers', '{model_name}', '{image_name}',
                                 'scaling-{scaling}', 'opt-{optimizer}', 'fr-{fract_removed}_lc-'
                                 '{loss_fract}', 'seed-{seed}_init-{init_type}_lr-{learning_'
@@ -32,37 +32,6 @@ METAMER_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers', '{model_name}', 
                                 'thresh}_gpu-{gpu}_metamer.png')
 REF_IMAGE_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'ref_images', '{image_name}.pgm')
 SEEDS = {'sub-01': 0}
-
-def initial_metamer_inputs(wildcards):
-    path_template = METAMER_TEMPLATE_PATH.replace('_metamer.png', '.pt')
-    # return [path_template.format(model_name=m, image_name=i, scaling=s, seed=0, learning_rate=lr,
-    #                              min_ecc=.5, max_ecc=15, max_iter=20000, loss_thresh=1e-6) for
-    #         m in MODELS for i in IMAGES for s in [.1, .2, .3, .4, .5, .6, .7, .8, .9] for lr in
-    #         [.1, 1, 10]]
-    metamers = [path_template.format(model_name='V1', image_name=i, scaling=s, seed=0,
-                                     learning_rate=lr,min_ecc=.5, max_iter=5000, loss_thresh=1e-6,
-                                     init_type='white',
-                                     # want different max eccentricity
-                                     # based on whether we've padded the
-                                     # image (and thus doubled its
-                                     # width) or not
-                                     max_ecc={True: 30, False: 15}['_' in i])
-                for i in IMAGES for s in [.4, .5, .6] for lr in [1, 10]]
-    metamers.extend([path_template.format(model_name='RGC', image_name=i, scaling=s, seed=0,
-                                          learning_rate=lr,min_ecc=.5, max_iter=5000, loss_thresh=1e-6,
-                                          init_type='white',
-                                          # want different max eccentricity
-                                          # based on whether we've padded the
-                                          # image (and thus doubled its
-                                          # width) or not
-                                          max_ecc={True: 30, False: 15}['_' in i])
-            for i in IMAGES for s in [.2, .3, .4] for lr in [1, 10]])
-    return metamers
-
-
-rule initial_metamers:
-    input:
-        initial_metamer_inputs,
 
 
 rule all_refs:
@@ -305,10 +274,6 @@ rule create_metamers:
     run:
         import foveated_metamers as met
         import contextlib
-        # in an ideal world, we'd have this be in the params section or
-        # something, but for some reason then it gets called more than
-        # once and at times I don't understand. Putting it here seems to
-        # work
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 met.create_metamers.main(wildcards.model_name, float(wildcards.scaling), input[0],
