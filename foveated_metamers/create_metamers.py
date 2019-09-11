@@ -98,6 +98,9 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
     rep_image_figsize : tuple
         The figsize tuple to pass to ``summary_plots`` to for the
         'rep_image' plot
+    img_zoom : int or float
+        Either an int or an inverse power of 2, how much to zoom the
+        images by in the plots we'll create
 
     """
     if model_name == 'RGC':
@@ -113,15 +116,11 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
         # figsize and image shape are backwards of each other:
         # image.shape's last two indices are (height, width), while
         # figsize is (width, height)
-        animate_figsize = tuple([s*max(1, image.shape[::-1][i]/256) for i, s in
-                                 enumerate(animate_figsize)])
-        rep_image_figsize = tuple([s*max(1, image.shape[::-1][i]/256) for i, s in
-                                   enumerate(rep_image_figsize)])
-        rescale_factor = np.mean([image.shape[i+2]/256 for i in range(2)])
+        default_imgsize = 256
     elif model_name.startswith('V1'):
         if not model_name.endswith('norm'):
             if normalize_dict is not None:
-                raise Exception("Cannot normalize V1 model!")
+                raise Exception("Cannot normalize V1 model (must be V1-norm)!")
             normalize_dict = {}
         if normalize_dict is None and model_name.endswith('norm'):
             raise Exception("If model_name is V1-norm, normalize_dict must be set!")
@@ -129,20 +128,28 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
                                              max_eccentricity=max_ecc, transition_region_width=1,
                                              cache_dir=cache_dir, normalize_dict=normalize_dict)
         animate_figsize = (35, 11)
-        rep_image_figsize = (27, 15)
+        rep_image_figsize = (54, 30)
         # default figsize arguments work for an image that is 512x512,
         # may need to expand. we go backwards through figsize because
         # figsize and image shape are backwards of each other:
         # image.shape's last two indices are (height, width), while
         # figsize is (width, height)
-        animate_figsize = tuple([s*max(1, image.shape[::-1][i]/512) for i, s in
-                                 enumerate(animate_figsize)])
-        # default rep_image_figsize arguments are for 256x256 image
-        rep_image_figsize = tuple([s*max(1, image.shape[::-1][i]/256) for i, s in
-                                   enumerate(rep_image_figsize)])
-        rescale_factor = np.mean([image.shape[i+2]/512 for i in range(2)])
+        default_imgsize = 512
     else:
         raise Exception("Don't know how to handle model_name %s" % model_name)
+    zoom_factor = np.array([max(1, image.shape[::-1][i]/default_imgsize) for i in range(2)])
+    if (zoom_factor > 2).any():
+        zoom_factor = np.array([min(i, 2) for i in zoom_factor])
+        img_zoom = 1
+        while ((np.array(image.shape[::-1][:2]) * img_zoom) > (default_imgsize*zoom_factor)).any():
+            img_zoom /= 2
+        zoom_factor = np.array([max(1, img_zoom*image.shape[::-1][i]/default_imgsize) for i in range(2)])
+    else:
+        img_zoom = int(np.min(zoom_factor))
+    animate_figsize = tuple([s*zoom_factor[i] for i, s in enumerate(animate_figsize)])
+    # default rep_image_figsize arguments are for 256x256 image
+    rep_image_figsize = tuple([s*zoom_factor[i] for i, s in enumerate(rep_image_figsize)])
+    rescale_factor = np.mean(zoom_factor)
     # 10 and 12 are the default font sizes for labels and titles,
     # respectively, and we want to scale them in order to keep them
     # readable. this should be global to matplotlib and so propagate
@@ -151,7 +158,7 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
     mpl.rc('xtick', labelsize=rescale_factor*10)
     mpl.rc('ytick', labelsize=rescale_factor*10)
     mpl.rc('lines', linewidth=rescale_factor*1.5, markersize=rescale_factor*6)
-    return model, animate_figsize, rep_image_figsize
+    return model, animate_figsize, rep_image_figsize, img_zoom
 
 
 def add_center_to_image(model, initial_image, reference_image):
@@ -191,7 +198,7 @@ def add_center_to_image(model, initial_image, reference_image):
     return ((windows * initial_image) + ((1 - windows) * reference_image))
 
 
-def summary_plots(metamer, rep_image_figsize):
+def summary_plots(metamer, rep_image_figsize, img_zoom):
     r"""Create summary plots
 
     This creates two summary plots:
@@ -212,6 +219,9 @@ def summary_plots(metamer, rep_image_figsize):
         The metamer object after synthesis
     rep_image_figsize : tuple
         Tuple of floats to use as the figsize for the 'rep_image'
+    img_zoom : int or float
+        Either an int or an inverse power of 2, how much to zoom the
+        images by in the plots we'll create
 
     Returns
     -------
@@ -232,18 +242,19 @@ def summary_plots(metamer, rep_image_figsize):
     else:
         vranges = ['indep1', 'indep1', 'indep0']
     for i, (im, t, vr) in enumerate(zip(images, titles, vranges)):
-        metamer.model.plot_representation_image(ax=axes[i], data=im, title=t, vrange=vr)
+        metamer.model.plot_representation_image(ax=axes[i], data=im, title=t, vrange=vr,
+                                                zoom=img_zoom)
     images = [metamer.saved_image[0], metamer.matched_image, metamer.target_image]
     images = 2*[po.to_numpy(i.to(torch.float32)).squeeze() for i in images]
     titles = ['Initial image', 'Metamer', 'Reference image']
     titles += ['Windowed '+t for t in titles]
-    windowed_fig = pt.imshow(images, col_wrap=3, title=titles, vrange=(0, 1))
+    windowed_fig = pt.imshow(images, col_wrap=3, title=titles, vrange=(0, 1), zoom=img_zoom)
     for ax in windowed_fig.axes[3:]:
         metamer.model.plot_windows(ax)
     return rep_fig, windowed_fig
 
 
-def save(save_path, metamer, animate_figsize, rep_image_figsize):
+def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
     r"""save the metamer output
 
     We save five things here:
@@ -274,6 +285,9 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize):
     rep_image_figsize : tuple
         The tuple describing the size of the figure for the rep_image
         plot, as returned by ``setup_model``.
+    img_zoom : int or float
+        Either an int or an inverse power of 2, how much to zoom the
+        images by in the plots we'll create
 
     """
     print("Saving at %s" % save_path)
@@ -292,7 +306,7 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize):
     print("Saving metamer image at %s" % metamer_path)
     imageio.imwrite(metamer_path, po.to_numpy(metamer.matched_image).squeeze())
     video_path = op.splitext(save_path)[0] + "_synthesis.mp4"
-    rep_fig, windowed_fig = summary_plots(metamer, rep_image_figsize)
+    rep_fig, windowed_fig = summary_plots(metamer, rep_image_figsize, img_zoom)
     rep_path = op.splitext(save_path)[0] + "_rep.png"
     print("Saving representation image at %s" % rep_path)
     rep_fig.savefig(rep_path)
@@ -300,7 +314,7 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize):
     print("Saving windowed image at %s" % windowed_path)
     windowed_fig.savefig(windowed_path)
     print("Saving synthesis video at %s" % video_path)
-    anim = metamer.animate(figsize=animate_figsize)
+    anim = metamer.animate(figsize=animate_figsize, imshow_zoom=img_zoom)
     anim.save(video_path)
 
 
@@ -490,8 +504,9 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     image = setup_image(image)
     if normalize_dict is not None:
         normalize_dict = torch.load(normalize_dict)
-    model, animate_figsize, rep_figsize = setup_model(model_name, scaling, image, min_ecc, max_ecc,
-                                                      cache_dir, normalize_dict)
+    model, animate_figsize, rep_figsize, img_zoom = setup_model(model_name, scaling, image,
+                                                                min_ecc, max_ecc, cache_dir,
+                                                                normalize_dict)
     print("Using model %s from %.02f degrees to %.02f degrees" % (model_name, min_ecc, max_ecc))
     print("Using learning rate %s, loss_thresh %s, and max_iter %s" % (learning_rate, loss_thresh,
                                                                        max_iter))
@@ -534,5 +549,5 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                                                  loss_change_thresh=.1,
                                                  save_path=save_path.replace('.pt', '_inprogress.pt'))
     if save_path is not None:
-        save(save_path, metamer, animate_figsize, rep_figsize)
+        save(save_path, metamer, animate_figsize, rep_figsize, img_zoom)
     os.remove(save_path.replace('.pt', '_inprogress.pt'))
