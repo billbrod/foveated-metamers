@@ -454,8 +454,8 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         The maximum number of iterations we allow the synthesis
         optimization to run for
     loss_thresh : float, optional
-        The loss threshold. If our loss is every below this, we stop
-        synthesis and consider ourselves done.
+        The loss threshold. If the loss has changed by less than this
+        over the past 50 iterations, we quit out.
     save_path : str or None, optional
         If a str, the path to the file to save the metamer object to. If
         None, we don't save the synthesis output (that's probably a bad
