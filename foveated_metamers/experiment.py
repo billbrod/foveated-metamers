@@ -18,6 +18,57 @@ except ImportError:
     warnings.warn("Unable to find pylink, will not be able to collect eye-tracking data")
 
 
+def _convert_str(list_of_strs):
+    """convert strs to hdf5-savable format
+
+    python 3 strings are more complicated than python 2, see
+    http://docs.h5py.org/en/latest/strings.html and https://github.com/h5py/h5py/issues/892
+    """
+    list_of_strs = np.array(list_of_strs)
+    saveable_list = []
+    for x in list_of_strs:
+        try:
+            x = x.encode()
+        except AttributeError:
+            # then this is not a string but another list of strings
+            x = [i.encode() for i in x]
+        saveable_list.append(x)
+    return saveable_list
+
+
+def _insert_into_hdf5(f, key, value):
+    """insert value into hdf5 file with given key
+
+    if you try to set a dataset that already exists, it raises an
+    exception, so this tries to create a dataset and, if it raises that
+    exception, pop off the corresponding key and set it anew
+
+    """
+    try:
+        f.create_dataset(key, data=value)
+    except RuntimeError:
+        # then it already exists
+        f.pop(key)
+        f.create_dataset(key, data=value)
+
+
+def save(file_path, stimuli_path, idx_path, keys, timings, expt_params, idx, **kwargs):
+    dataset_names = ['button_presses', 'timing_data', 'stimuli_path', 'idx_path',
+                     'shuffled_indices']
+    with h5py.File(file_path, 'a') as f:
+        for k, d in zip(dataset_names, [_convert_str(keys), _convert_str(timings),
+                                        stimuli_path.encode(), idx_path.encode(), idx]):
+            _insert_into_hdf5(f, k, d)
+        for k, v in expt_params.items():
+            _insert_into_hdf5(f, "%s" % k, v)
+        # also note differences from default options
+        for k, v in kwargs.items():
+            if v is None:
+                _insert_into_hdf5(f, "%s" % k, str(v))
+            else:
+                _insert_into_hdf5(f, "%s" % k, v)
+
+
 def _setup_eyelink(win_size):
     """set up the eyelink eye-tracking
     """
@@ -141,16 +192,16 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
         win = [visual.Window(winType='glfw', screen=screen, **monitor_kwargs)]
         img_pos = [(0, 0)]
     elif len(monitor_kwargs['screen']) == 2:
-        screens = monitor_kwargs.pop('screen')
-        print("Doing binocular mode on screens %s" % screens)
+        screen = monitor_kwargs.pop('screen')
+        print("Doing binocular mode on screens %s" % screen)
         img_pos = [[-o // 2 for o in binocular_offset], [o // 2 for o in binocular_offset]]
         print("Using binocular offsets: %s" % img_pos)
-        win = [visual.Window(winType='glfw', screen=screens[0], swapInterval=1, **monitor_kwargs)]
+        win = [visual.Window(winType='glfw', screen=screen[0], swapInterval=1, **monitor_kwargs)]
         # see here for the explanation of swapInterval and share args
         # (basically, in order to make glfw correctly update the two
         # monitors together):
         # https://discourse.psychopy.org/t/strange-behavior-with-retina-displays-external-monitors-in-1-90-2-py2/5485/5
-        win.append(visual.Window(winType='glfw', screen=screens[1], swapInterval=0, share=win[0],
+        win.append(visual.Window(winType='glfw', screen=screen[1], swapInterval=0, share=win[0],
                                  **monitor_kwargs))
     else:
         raise Exception("Can't handle %s screens!" % len(monitor_kwargs['screen']))
@@ -241,6 +292,8 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
             if ('q' in [k[0] for k in all_keys] or 'escape' in [k[0] for k in all_keys] or
                 'esc' in [k[0] for k in all_keys]):
                 break
+        save(save_path, stimuli_path, idx_path, keys_pressed, timings, expt_params, idx,
+             screen=screen, edf_path=edf_path, screen_size_deg=screen_size_deg, **monitor_kwargs)
         if ('q' in [k[0] for k in all_keys] or 'escape' in [k[0] for k in all_keys] or
             'esc' in [k[0] for k in all_keys]):
             break
@@ -261,41 +314,24 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
     return keys_pressed, timings, expt_params, idx
 
 
-def _convert_str(list_of_strs):
-    """convert strs to hdf5-savable format
-
-    python 3 strings are more complicated than python 2, see
-    http://docs.h5py.org/en/latest/strings.html and https://github.com/h5py/h5py/issues/892
-    """
-    list_of_strs = np.array(list_of_strs)
-    saveable_list = []
-    for x in list_of_strs:
-        try:
-            x = x.encode()
-        except AttributeError:
-            # then this is not a string but another list of strings
-            x = [i.encode() for i in x]
-        saveable_list.append(x)
-    return saveable_list
-
-
 def expt(stimuli_path, subj_name, idx_path, output_dir="data/raw_behavioral", eyetrack=False,
          screen_size_pix=[1920, 1080], screen_size_deg=60, **kwargs):
     """run a full experiment
 
-    this just loops through the specified stims_path, passing each one to the run function in
-    turn. any other kwargs are sent directly to run as well. it then saves the returned
-    keys_pressed and frame intervals
+    this just sets up the various paths, calls ``run``, and then saves
+    the output
+
     """
     if not op.exists(output_dir):
         os.makedirs(output_dir)
-    file_path = op.join(output_dir, "%s_%s_sess{sess:02d}.hdf5" %
+    save_path = op.join(output_dir, "%s_%s_sess{sess:02d}.hdf5" %
                         (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name))
     edf_path = op.join(output_dir, "%s_%s_sess{sess:02d}.EDF" %
                        (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name))
     sess_num = 0
-    while glob.glob(file_path.format(sess=sess_num)):
+    while glob.glob(save_path.format(sess=sess_num)):
         sess_num += 1
+    save_path = save_path.format(sess=sess_num)
     if not os.path.isfile(idx_path):
         raise IOError("Unable to find array of stimulus indices %s!" % idx_path)
     if subj_name not in idx_path:
@@ -312,26 +348,14 @@ def expt(stimuli_path, subj_name, idx_path, output_dir="data/raw_behavioral", ey
     print("\t%s" % stimuli_path)
     print("Will use the following index:")
     print("\t%s" % idx_path)
-    print("Will save at the following location:\n\t%s" % file_path.format(sess=sess_num))
-    keys, timings, expt_params, idx = run(stimuli_path, idx_path, size=screen_size_pix,
+    print("Will save at the following location:\n\t%s" % save_path)
+    keys, timings, expt_params, idx = run(stimuli_path, idx_path, save_path, size=screen_size_pix,
                                           eyetracker=eyetracker,
                                           screen_size_deg=screen_size_deg,
                                           edf_path=edf_path.format(sess=sess_num),
                                           **kwargs)
-    with h5py.File(file_path.format(sess=sess_num), 'a') as f:
-        f.create_dataset("button_presses", data=_convert_str(keys))
-        f.create_dataset("timing_data", data=_convert_str(timings))
-        f.create_dataset("stim_path", data=stimuli_path.encode())
-        f.create_dataset("idx_path", data=idx_path.encode())
-        f.create_dataset("shuffled_indices", data=idx)
-        for k, v in expt_params.items():
-            f.create_dataset("%s" % k, data=v)
-        # also note differences from default options
-        for k, v in kwargs.items():
-            if v is None:
-                f.create_dataset("%s" % k, data=str(v))
-            else:
-                f.create_dataset("%s" % k, data=v)
+    save(save_path, stimuli_path, idx_path, keys, timings, expt_params, idx,
+         **kwargs)
     if eyetracker is not None:
         eyetracker.close()
 
