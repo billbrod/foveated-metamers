@@ -43,12 +43,12 @@ def _setup_eyelink(win_size):
     return eyetracker
 
 
-def _set_params(stim_path, idx_path, size=[1920, 1080], monitor='CBI-prisma-projector',
+def _set_params(stimuli_path, idx_path, size=[1920, 1080], monitor='CBI-prisma-projector',
                 units='pix', fullscr=True, screen=0, color=128, colorSpace='rgb255',
                 **monitor_kwargs):
     """set the various experiment parameters
     """
-    stimuli = np.load(stim_path)
+    stimuli = np.load(stimuli_path)
     idx = np.load(idx_path)
     # we do some nifty indexing here. idx will be a 2d array, i x 3
     # (where i is the number of trials we want), so when we do the
@@ -69,61 +69,71 @@ def _set_params(stim_path, idx_path, size=[1920, 1080], monitor='CBI-prisma-proj
     return stimuli, idx, expt_params, monitor_kwargs
 
 
-def run(stim_path, idx_path, on_msec_length=200, off_msec_length=(500, 1000, 2000),
+def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(500, 1000, 2000),
         fix_deg_size=.25, screen_size_deg=60, eyetracker=None, edf_path=None, save_frames=None,
         binocular_offset=[0, 0], **monitor_kwargs):
     """run one run of the experiment
 
-    stim_path specifies the path of the unshuffled experiment stimuli, while idx_path specifies the
-    path of the shuffled indices to use for this run. This function will load in the stimuli at
-    stim_path and rearrange them using the indices found at idx_path, then simply go through those
-    stimuli in order, showing each stimuli for `on_msec_length` msecs and then a blank screen for
-    `off_msec_length` msecs (or as close as possible, given the monitor's refresh rate).
+    stimuli_path specifies the path of the unshuffled experiment
+    stimuli, while idx_path specifies the path of the shuffled indices
+    to use for this run. This function will load in the stimuli at
+    stimuli_path and rearrange them using the indices found at idx_path,
+    then simply go through those stimuli in order, showing each stimuli
+    for ``on_msec_length`` msecs and then a blank screen for
+    ``off_msec_length[i]`` msecs (or as close as possible, given the
+    monitor's refresh rate; ``i`` depends on which of the stimulus just
+    shown was A, B, or X in our ABX design).
 
-    For fixation, we show a stream of digits whose colors alternate between black and white, with a
-    `fix_button_prob` chance of repeating. Digits are presented with alternating stimuli ON and OFF
-    blocks, so that a digit will be shown for on_msec_length+off_msec_length msecs and then there
-    will be nothing at fixation for the next on_msec_length+off_msec_length msecs. For now, you
-    can't change this.
+    For fixation, we show a simple red dot whose size (in degrees) is
+    specified by ``fix_deg_size``
 
-    All stimuli loaded in from stim_path will be shown.
-
+    All stimuli loaded in from stimuli_path will be shown.
 
     Arguments
     ============
+    stimuli_path: string
+        path to .npy file where stimuli are stored (as 3d array)
+    idx_path: string
+        path to .npy file where shuffled indices are stored (as 2d
+        array)
+    save_path: string
+        path to .hdf5 file where we'll store the outputs of this
+        experiment (we save every trial)
+    on_msec_length: int
+        length of the ON blocks in milliseconds; that is, the length of
+        time to display each stimulus
+    off_msec_length: tuple
+        3-tuple of ints specifying the length of the length of the OFF
+        blocks in milliseconds. This is an ABX experiment, so the 3 ints
+        correspond to the number of milliseconds between A and B, B and
+        X, and X and the A of the next trial
+    fix_deg_size: int
+        the size of the fixation digits, in degrees.
+    eyetracker: EyeLink object or None
+        if None, will not collect eyetracking data. if not None, will
+        gather it. the EyeLink object must already be initialized (by
+        calling the _setup_eyelink function, as is done in the expt
+        function). if this is set, must also specify edf_path
+    edf_path: str or None
+        if eyetracker is not None, this must be a string, which is where
+        we will save the output of the eyetracker
+    screen_size_deg: int or float.
+        the max visual angle (in degrees) of the full screen.
+    save_frames: None or str
+        if not None, this should be the filename you wish to save frames
+        at (one image will be made for each frame). WARNING: typically a
+        large number of files will be saved (depends on the length of
+        your session), which means this may make the end of the run
+        (with the screen completely blank) take a while
+    binocular_offset: list
+        list of 2 ints, specifying the horizontal, vertical offset
+        between the stimuli (in pixels) presented on the two monitors in
+        order to allow the user to successfully fuse the image. This
+        should come from the calibration, run before this experiment.
 
-    stim_path: string, path to .npy file where stimuli are stored (as 3d array)
-
-    idx_path: string, path to .npy file where shuffled indices are stored (as 2d array)
-
-    on_msec_length: int, length of the ON blocks in milliseconds; that is, the length of time to
-    display each stimulus before moving on
-
-    off_msec_length: int, length of the OFF blocks in milliseconds; that is, the length of time to
-    between stimuli
-
-    fix_pix_size: int, the size of the fixation digits, in pixels.
-
-    fix_button_prob: float. the probability that the fixation digit will repeat or the fixation dot
-    will change color (will never repeat more than once in a row). For fixation digit, this
-    probability is relative to each stimulus presentation / ON block starting; for fixation dot,
-    it's each stimulus change (stimulus ON or OFF block starting).
-
-    eyetracker: EyeLink object or None. if None, will not collect eyetracking data. if not None,
-    will gather it. the EyeLink object must already be initialized (by calling the _setup_eyelink
-    function, as is done in the expt function). if this is set, must also specify edf_path
-
-    edf_path: str or None. if eyetracker is not None, this must be a string, which is where we
-    will save the output of the eyetracker
-
-    screen_size_deg: int or float. the max visual angle (in degrees) of the full screen.
-
-    save_frames: None or str. if not None, this should be the filename you wish to save frames at
-    (one image will be made for each frame). WARNING: typically a large number of files will be
-    saved (depends on the length of your session), which means this may make the end of the run
-    (with the screen completely blank) take a while
     """
-    stimuli, idx, expt_params, monitor_kwargs = _set_params(stim_path, idx_path, **monitor_kwargs)
+    stimuli, idx, expt_params, monitor_kwargs = _set_params(stimuli_path, idx_path,
+                                                            **monitor_kwargs)
 
     if len(monitor_kwargs['screen']) == 1:
         screen = monitor_kwargs.pop('screen')[0]
