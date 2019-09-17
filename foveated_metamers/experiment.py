@@ -120,9 +120,26 @@ def _set_params(stimuli_path, idx_path, size=[1920, 1080], monitor='CBI-prisma-p
     return stimuli, idx, expt_params, monitor_kwargs
 
 
+def check_for_keys(all_keys, keys_to_check=['q', 'esc', 'escape']):
+    all_keys = [k[0] for k in all_keys]
+    return any([k in all_keys for k in keys_to_check])
+
+
+def pause(win, img_pos, clock):
+    pause_text = [visual.TextStim(w, "space to resume\nq or esc to quit\nc to re-run calibration",
+                                  pos=p) for w, p in zip(win, img_pos)]
+    all_keys = []
+    while not all_keys:
+        [text.draw() for text in pause_text]
+        [w.flip() for w in win]
+        core.wait(.1)
+        all_keys = event.getKeys(keyList=['space', 'q', 'escape', 'esc'], timeStamped=clock)
+    return [(key[0], key[1]) for key in all_keys]
+
+
 def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(500, 1000, 2000),
         fix_deg_size=.25, screen_size_deg=60, eyetracker=None, edf_path=None, save_frames=None,
-        binocular_offset=[0, 0], **monitor_kwargs):
+        binocular_offset=[0, 0], take_break=True, **monitor_kwargs):
     """run one run of the experiment
 
     stimuli_path specifies the path of the unshuffled experiment
@@ -210,6 +227,10 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
         # linear gamma ramp
         w.gammaRamp = np.tile(np.linspace(0, 1, 256), (3, 1))
 
+    break_time = len(stimuli) // 2
+    if take_break:
+        print("%s total trials, will take break after number %s" % (len(stimuli), break_time))
+
     fix_pix_size = fix_deg_size * (monitor_kwargs['size'][0] / screen_size_deg)
     fixation = [visual.GratingStim(w, size=fix_pix_size, pos=p, sf=0, color='red',
                                    mask='circle') for w, p in zip(win, img_pos)]
@@ -225,8 +246,8 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
         eyetracker.startRecording(1, 1, 1, 1)
 
     clock = core.Clock()
-    wait_text = [visual.TextStim(w, ("Press 5 to start\nq or escape will quit"), pos=p)
-                 for w, p in zip(win, img_pos)]
+    wait_text = [visual.TextStim(w, ("Press 5 to start\nq or esc will quit\nspace to pause"),
+                                 pos=p) for w, p in zip(win, img_pos)]
     query_text = [visual.TextStim(w, "1 or 2?", pos=p) for w, p in zip(win, img_pos)]
     [text.draw() for text in wait_text]
     [w.flip() for w in win]
@@ -238,6 +259,7 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
     # successfully pretty quickly after a win.flip()?)
     # all_keys = event.waitKeys(keyList=['5', 'q', 'escape', 'esc'], timeStamped=clock)
     all_keys = []
+    # wait until receive 5, which is the scanner trigger
     while not all_keys:
         [text.draw() for text in wait_text]
         [w.flip() for w in win]
@@ -246,9 +268,7 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
     if save_frames is not None:
         [w.getMovieFrame() for w in win]
 
-    # wait until receive 5, which is the scanner trigger
-    if ('q' in [k[0] for k in all_keys] or 'escape' in [k[0] for k in all_keys] or
-        'esc' in [k[0] for k in all_keys]):
+    if check_for_keys(all_keys):
         [w.close() for w in win]
         return all_keys, [], expt_params, idx
 
@@ -258,6 +278,7 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
     # this outer for loop is per trial
     for i, stim in enumerate(stimuli):
         # and this one is for the three stimuli in each trial
+        all_keys = []
         for j, s in enumerate(stim):
             for im, f, w in zip(img, fixation, win):
                 im.image = imagetools.array2image(s)
@@ -285,17 +306,29 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
             core.wait(abs(clock.getTime() - timings[0][2] - next_stim_time))
             if save_frames is not None:
                 [w.getMovieFrame() for w in win]
-            all_keys = event.getKeys(timeStamped=clock)
-            if all_keys:
-                keys_pressed.extend([(key[0], key[1]) for key in all_keys])
+            all_keys.extend(event.getKeys(timeStamped=clock))
             # we need this double break because we have two for loops
-            if ('q' in [k[0] for k in all_keys] or 'escape' in [k[0] for k in all_keys] or
-                'esc' in [k[0] for k in all_keys]):
+            if check_for_keys(all_keys):
                 break
+        print(timings)
+        print(keys_pressed)
+        if all_keys:
+            keys_pressed.extend([(key[0], key[1]) for key in all_keys])
+        if check_for_keys(all_keys, ['space']) or (take_break and i == break_time):
+            if take_break and i == break_time:
+                break_text = [visual.TextStim(w, "Break time!", pos=p)
+                              for w, p in zip(win, img_pos)]
+                [text.draw() for text in break_text]
+                [w.flip() for w in win]
+                core.wait(2)
+            paused_keys = pause(win, img_pos, clock)
+            keys_pressed.extend(paused_keys)
+        else:
+            paused_keys = []
+        print(paused_keys)
         save(save_path, stimuli_path, idx_path, keys_pressed, timings, expt_params, idx,
              screen=screen, edf_path=edf_path, screen_size_deg=screen_size_deg, **monitor_kwargs)
-        if ('q' in [k[0] for k in all_keys] or 'escape' in [k[0] for k in all_keys] or
-            'esc' in [k[0] for k in all_keys]):
+        if check_for_keys(all_keys+paused_keys):
             break
     [visual.TextStim(w, "Run over", pos=p).draw() for w, p in zip(win, img_pos)]
     [w.flip() for w in win]
@@ -315,7 +348,7 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
 
 
 def expt(stimuli_path, subj_name, idx_path, output_dir="data/raw_behavioral", eyetrack=False,
-         screen_size_pix=[1920, 1080], screen_size_deg=60, **kwargs):
+         screen_size_pix=[1920, 1080], screen_size_deg=60, take_break=True, **kwargs):
     """run a full experiment
 
     this just sets up the various paths, calls ``run``, and then saves
@@ -350,7 +383,7 @@ def expt(stimuli_path, subj_name, idx_path, output_dir="data/raw_behavioral", ey
     print("\t%s" % idx_path)
     print("Will save at the following location:\n\t%s" % save_path)
     keys, timings, expt_params, idx = run(stimuli_path, idx_path, save_path, size=screen_size_pix,
-                                          eyetracker=eyetracker,
+                                          eyetracker=eyetracker, take_break=take_break,
                                           screen_size_deg=screen_size_deg,
                                           edf_path=edf_path.format(sess=sess_num),
                                           **kwargs)
@@ -386,5 +419,8 @@ if __name__ == '__main__':
                         default=[1920, 1080], type=float)
     parser.add_argument("--screen_size_deg", '-d', default=60, type=float,
                         help="Size of longest screen side (in degrees)")
+    parser.add_argument('--no_break', '-n', action='store_true',
+                        help=("If passed, we do not take a break at the half-way point"))
     args = vars(parser.parse_args())
-    expt(**args)
+    take_break = not args.pop('no_break')
+    expt(take_break=take_break, **args)
