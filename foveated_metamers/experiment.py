@@ -71,7 +71,7 @@ def _set_params(stim_path, idx_path, size=[1920, 1080], monitor='CBI-prisma-proj
 
 def run(stim_path, idx_path, on_msec_length=200, off_msec_length=(500, 1000, 2000),
         fix_deg_size=.25, screen_size_deg=60, eyetracker=None, edf_path=None, save_frames=None,
-        **monitor_kwargs):
+        binocular_offset=[0, 0], **monitor_kwargs):
     """run one run of the experiment
 
     stim_path specifies the path of the unshuffled experiment stimuli, while idx_path specifies the
@@ -125,18 +125,37 @@ def run(stim_path, idx_path, on_msec_length=200, off_msec_length=(500, 1000, 200
     """
     stimuli, idx, expt_params, monitor_kwargs = _set_params(stim_path, idx_path, **monitor_kwargs)
 
-    win = visual.Window(winType='glfw', **monitor_kwargs)
-    win.mouseVisible = False
-    # linear gamma ramp
-    win.gammaRamp = np.tile(np.linspace(0, 1, 256), (3, 1))
+    if len(monitor_kwargs['screen']) == 1:
+        screen = monitor_kwargs.pop('screen')[0]
+        print('Doing single-monitor mode on screen %s' % screen)
+        win = [visual.Window(winType='glfw', screen=screen, **monitor_kwargs)]
+        img_pos = [(0, 0)]
+    elif len(monitor_kwargs['screen']) == 2:
+        screens = monitor_kwargs.pop('screen')
+        print("Doing binocular mode on screens %s" % screens)
+        img_pos = [[-o // 2 for o in binocular_offset], [o // 2 for o in binocular_offset]]
+        print("Using binocular offsets: %s" % img_pos)
+        win = [visual.Window(winType='glfw', screen=screens[0], swapInterval=1, **monitor_kwargs)]
+        # see here for the explanation of swapInterval and share args
+        # (basically, in order to make glfw correctly update the two
+        # monitors together):
+        # https://discourse.psychopy.org/t/strange-behavior-with-retina-displays-external-monitors-in-1-90-2-py2/5485/5
+        win.append(visual.Window(winType='glfw', screen=screens[1], swapInterval=0, share=win[0],
+                                 **monitor_kwargs))
+    else:
+        raise Exception("Can't handle %s screens!" % len(monitor_kwargs['screen']))
+    for w in win:
+        w.mouseVisible = False
+        # linear gamma ramp
+        w.gammaRamp = np.tile(np.linspace(0, 1, 256), (3, 1))
 
     fix_pix_size = fix_deg_size * (monitor_kwargs['size'][0] / screen_size_deg)
-    fixation = visual.GratingStim(win, size=fix_pix_size, pos=[0, 0], sf=0, color='red',
-                                  mask='circle')
+    fixation = [visual.GratingStim(w, size=fix_pix_size, pos=p, sf=0, color='red',
+                                   mask='circle') for w, p in zip(win, img_pos)]
     # first one is special: we preload it, but we still want to include it in the iterator so the
     # numbers all match up (we don't draw or wait during the on part of the first iteration)
-    img = visual.ImageStim(win, image=imagetools.array2image(stimuli[0, 0]),
-                           size=expt_params['stimuli_size'])
+    img = [visual.ImageStim(w, image=imagetools.array2image(stimuli[0, 0]), pos=p,
+                            size=expt_params['stimuli_size']) for w, p in zip(win, img_pos)]
 
     if eyetracker is not None:
         assert edf_path is not None, "edf_path must be set so we can save the eyetracker output!"
@@ -145,10 +164,11 @@ def run(stim_path, idx_path, on_msec_length=200, off_msec_length=(500, 1000, 200
         eyetracker.startRecording(1, 1, 1, 1)
 
     clock = core.Clock()
-    wait_text = visual.TextStim(win, ("Press 5 to start\nq or escape will quit"))
-    query_text = visual.TextStim(win, "1 or 2?")
-    wait_text.draw()
-    win.flip()
+    wait_text = [visual.TextStim(w, ("Press 5 to start\nq or escape will quit"), pos=p)
+                 for w, p in zip(win, img_pos)]
+    query_text = [visual.TextStim(w, "1 or 2?", pos=p) for w, p in zip(win, img_pos)]
+    [text.draw() for text in wait_text]
+    [w.flip() for w in win]
 
     # we should be able to use waitKeys for this, but something weird
     # has happened, where we don't record those button presses for some
@@ -158,17 +178,17 @@ def run(stim_path, idx_path, on_msec_length=200, off_msec_length=(500, 1000, 200
     # all_keys = event.waitKeys(keyList=['5', 'q', 'escape', 'esc'], timeStamped=clock)
     all_keys = []
     while not all_keys:
-        wait_text.draw()
-        win.flip()
+        [text.draw() for text in wait_text]
+        [w.flip() for w in win]
         core.wait(.1)
         all_keys = event.getKeys(keyList=['5', 'q', 'escape', 'esc'], timeStamped=clock)
     if save_frames is not None:
-        win.getMovieFrame()
+        [w.getMovieFrame() for w in win]
 
     # wait until receive 5, which is the scanner trigger
     if ('q' in [k[0] for k in all_keys] or 'escape' in [k[0] for k in all_keys] or
         'esc' in [k[0] for k in all_keys]):
-        win.close()
+        [w.close() for w in win]
         return all_keys, [], expt_params, idx
 
     # keys_pressed = [(key[0], key[1]) for key in all_keys]
@@ -178,10 +198,11 @@ def run(stim_path, idx_path, on_msec_length=200, off_msec_length=(500, 1000, 200
     for i, stim in enumerate(stimuli):
         # and this one is for the three stimuli in each trial
         for j, s in enumerate(stim):
-            img.image = imagetools.array2image(s)
-            img.draw()
-            fixation.draw()
-            win.flip()
+            for im, f, w in zip(img, fixation, win):
+                im.image = imagetools.array2image(s)
+                im.draw()
+                f.draw()
+                w.flip()
             timings.append(("stimulus_%d-%d" % (i, j), "on", clock.getTime()))
             next_stim_time = ((i*3*on_msec_length + (j+1)*on_msec_length +
                                i*np.sum(off_msec_length) + np.sum(off_msec_length[:j]) - 2)
@@ -190,19 +211,19 @@ def run(stim_path, idx_path, on_msec_length=200, off_msec_length=(500, 1000, 200
             if eyetracker is not None:
                 eyetracker.sendMessage("TRIALID %02d" % i)
             if save_frames is not None:
-                win.getMovieFrame()
+                [w.getMovieFrame() for w in win]
             if j == 2:
-                query_text.draw()
+                [q.draw() for q in query_text]
             else:
-                fixation.draw()
-            win.flip()
+                [f.draw() for f in fixation]
+            [w.flip() for w in win]
             timings.append(("stimulus_%d-%d" % (i, j), "off", clock.getTime()))
             next_stim_time = ((i*3*on_msec_length + (j+1)*on_msec_length +
                                i*np.sum(off_msec_length) + np.sum(off_msec_length[:j+1]) - 1)
                               / 1000.)
             core.wait(abs(clock.getTime() - timings[0][2] - next_stim_time))
             if save_frames is not None:
-                win.getMovieFrame()
+                [w.getMovieFrame() for w in win]
             all_keys = event.getKeys(timeStamped=clock)
             if all_keys:
                 keys_pressed.extend([(key[0], key[1]) for key in all_keys])
@@ -213,8 +234,8 @@ def run(stim_path, idx_path, on_msec_length=200, off_msec_length=(500, 1000, 200
         if ('q' in [k[0] for k in all_keys] or 'escape' in [k[0] for k in all_keys] or
             'esc' in [k[0] for k in all_keys]):
             break
-    visual.TextStim(win, "Run over").draw()
-    win.flip()
+    [visual.TextStim(w, "Run over", pos=p).draw() for w, p in zip(win, img_pos)]
+    [w.flip() for w in win]
     timings.append(("run_end", '', clock.getTime()))
     all_keys = event.getKeys(timeStamped=clock)
     if all_keys:
@@ -225,8 +246,8 @@ def run(stim_path, idx_path, on_msec_length=200, off_msec_length=(500, 1000, 200
         eyetracker.closeDataFile()
         eyetracker.receiveDataFile('temp.EDF', edf_path)
     if save_frames is not None:
-        win.saveMovieFrames(save_frames)
-    win.close()
+        [w.saveMovieFrames(save_frames) for w in win]
+    [w.close() for w in win]
     return keys_pressed, timings, expt_params, idx
 
 
@@ -325,7 +346,7 @@ if __name__ == '__main__':
                         help=("Pass this flag to tell the script to gather eye-tracking data. If"
                               " pylink is not installed, this is impossible and will throw an "
                               "exception"))
-    parser.add_argument("--screen", '-s', default=0, type=int,
+    parser.add_argument("--screen", '-s', default=0, type=int, nargs='+',
                         help=("Screen number to display experiment on"))
     parser.add_argument("--screen_size_pix", '-p', nargs=2, help="Size of the screen (in pixels)",
                         default=[1920, 1080], type=float)
