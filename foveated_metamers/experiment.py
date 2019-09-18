@@ -4,7 +4,6 @@
 
 import argparse
 import h5py
-import glob
 import os
 import os.path as op
 import datetime
@@ -139,7 +138,8 @@ def pause(win, img_pos, clock):
 
 def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(500, 1000, 2000),
         fix_deg_size=.25, screen_size_deg=60, eyetracker=None, edf_path=None, save_frames=None,
-        binocular_offset=[0, 0], take_break=True, **monitor_kwargs):
+        binocular_offset=[0, 0], take_break=True, keys_pressed=[], timings=[], start_from_stim=0,
+        **monitor_kwargs):
     """run one run of the experiment
 
     stimuli_path specifies the path of the unshuffled experiment
@@ -202,6 +202,8 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
     """
     stimuli, idx, expt_params, monitor_kwargs = _set_params(stimuli_path, idx_path,
                                                             **monitor_kwargs)
+    stimuli = stimuli[start_from_stim:]
+    print("Starting from stimulus %s" % start_from_stim)
 
     if len(monitor_kwargs['screen']) == 1:
         screen = monitor_kwargs.pop('screen')[0]
@@ -246,6 +248,11 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
         eyetracker.startRecording(1, 1, 1, 1)
 
     clock = core.Clock()
+    if timings:
+        # if we've been passed something, make sure everything happens
+        # after it. for some reason, need to use the negative value of
+        # it in order to add that to the clock...
+        clock.reset(-float(timings[-1][-1]))
     wait_text = [visual.TextStim(w, ("Press 5 to start\nq or esc will quit\nspace to pause"),
                                  pos=p) for w, p in zip(win, img_pos)]
     query_text = [visual.TextStim(w, "1 or 2?", pos=p) for w, p in zip(win, img_pos)]
@@ -272,9 +279,10 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
         [w.close() for w in win]
         return all_keys, [], expt_params, idx
 
-    # keys_pressed = [(key[0], key[1]) for key in all_keys]
-    keys_pressed = []
-    timings = [("start", "off", clock.getTime())]
+    timings.append(("start", "off", clock.getTime()))
+    # store this as a separate variable because, if we're appending to
+    # an existing timings, we don't know where the start time is stored
+    start_time = clock.getTime()
     # this outer for loop is per trial
     for i, stim in enumerate(stimuli):
         # and this one is for the three stimuli in each trial
@@ -285,11 +293,11 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
                 im.draw()
                 f.draw()
                 w.flip()
-            timings.append(("stimulus_%d-%d" % (i, j), "on", clock.getTime()))
+            timings.append(("stimulus_%d-%d" % (i+start_from_stim, j), "on", clock.getTime()))
             next_stim_time = ((i*3*on_msec_length + (j+1)*on_msec_length +
                                i*np.sum(off_msec_length) + np.sum(off_msec_length[:j]) - 2)
                               / 1000.)
-            core.wait(abs(clock.getTime() - timings[0][2] - next_stim_time))
+            core.wait(abs(clock.getTime() - start_time - next_stim_time))
             if eyetracker is not None:
                 eyetracker.sendMessage("TRIALID %02d" % i)
             if save_frames is not None:
@@ -299,19 +307,17 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
             else:
                 [f.draw() for f in fixation]
             [w.flip() for w in win]
-            timings.append(("stimulus_%d-%d" % (i, j), "off", clock.getTime()))
+            timings.append(("stimulus_%d-%d" % (i+start_from_stim, j), "off", clock.getTime()))
             next_stim_time = ((i*3*on_msec_length + (j+1)*on_msec_length +
                                i*np.sum(off_msec_length) + np.sum(off_msec_length[:j+1]) - 1)
                               / 1000.)
-            core.wait(abs(clock.getTime() - timings[0][2] - next_stim_time))
+            core.wait(abs(clock.getTime() - start_time - next_stim_time))
             if save_frames is not None:
                 [w.getMovieFrame() for w in win]
             all_keys.extend(event.getKeys(timeStamped=clock))
             # we need this double break because we have two for loops
             if check_for_keys(all_keys):
                 break
-        print(timings)
-        print(keys_pressed)
         if all_keys:
             keys_pressed.extend([(key[0], key[1]) for key in all_keys])
         if check_for_keys(all_keys, ['space']) or (take_break and i == break_time):
@@ -325,9 +331,9 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
             keys_pressed.extend(paused_keys)
         else:
             paused_keys = []
-        print(paused_keys)
         save(save_path, stimuli_path, idx_path, keys_pressed, timings, expt_params, idx,
-             screen=screen, edf_path=edf_path, screen_size_deg=screen_size_deg, **monitor_kwargs)
+             screen=screen, edf_path=edf_path, screen_size_deg=screen_size_deg,
+             last_trial=i+start_from_stim, **monitor_kwargs)
         if check_for_keys(all_keys+paused_keys):
             break
     [visual.TextStim(w, "Run over", pos=p).draw() for w, p in zip(win, img_pos)]
@@ -347,7 +353,7 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
     return keys_pressed, timings, expt_params, idx
 
 
-def expt(stimuli_path, subj_name, idx_path, output_dir="data/raw_behavioral", eyetrack=False,
+def expt(stimuli_path, subj_name, sess_num, output_dir="data/raw_behavioral", eyetrack=False,
          screen_size_pix=[1920, 1080], screen_size_deg=60, take_break=True, **kwargs):
     """run a full experiment
 
@@ -361,10 +367,28 @@ def expt(stimuli_path, subj_name, idx_path, output_dir="data/raw_behavioral", ey
                         (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name))
     edf_path = op.join(output_dir, "%s_%s_sess{sess:02d}.EDF" %
                        (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name))
-    sess_num = 0
-    while glob.glob(save_path.format(sess=sess_num)):
-        sess_num += 1
+    idx_path = stimuli_path.replace('_stimuli.npy', '_idx_sess-%02d.npy' % sess_num)
+    idx_path = idx_path.replace('e0', '%s_e0' % subj_name)
     save_path = save_path.format(sess=sess_num)
+    if os.path.isfile(save_path):
+        print("Existing save data %s found! Will load in and append results" % save_path)
+        f = h5py.File(save_path)
+        saved_stim_path = f['stimuli_path'][()].decode()
+        if stimuli_path != saved_stim_path:
+            raise Exception("Stimuli path not same in existing save data and this run! "
+                            "from save: %s, this run: %s" % (saved_stim_path, stimuli_path))
+        saved_idx_path = f['idx_path'][()].decode()
+        if idx_path != saved_idx_path:
+            raise Exception("Index path not same in existing save data and this run! "
+                            "from save: %s, this run: %s" % (saved_idx_path, idx_path))
+        keys = list(f.pop('button_presses')[()])
+        timings = list(f.pop('timing_data')[()])
+        start_from_stim = f.pop('last_trial')[()]
+        f.close()
+    else:
+        keys = []
+        timings = []
+        start_from_stim = 0
     if not os.path.isfile(idx_path):
         raise IOError("Unable to find array of stimulus indices %s!" % idx_path)
     if subj_name not in idx_path:
@@ -385,10 +409,10 @@ def expt(stimuli_path, subj_name, idx_path, output_dir="data/raw_behavioral", ey
     keys, timings, expt_params, idx = run(stimuli_path, idx_path, save_path, size=screen_size_pix,
                                           eyetracker=eyetracker, take_break=take_break,
                                           screen_size_deg=screen_size_deg,
+                                          start_from_stim=start_from_stim,
                                           edf_path=edf_path.format(sess=sess_num),
-                                          **kwargs)
-    save(save_path, stimuli_path, idx_path, keys, timings, expt_params, idx,
-         **kwargs)
+                                          keys_pressed=keys, timings=timings, **kwargs)
+    save(save_path, stimuli_path, idx_path, keys, timings, expt_params, idx, **kwargs)
     if eyetracker is not None:
         eyetracker.close()
 
@@ -405,8 +429,8 @@ if __name__ == '__main__':
                      "responses, stimulus timing, and exit out."),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("stimuli_path", help="Path to your unshuffled stimuli.")
-    parser.add_argument("idx_path", help=("Path to the shuffled presentation indices"))
     parser.add_argument("subj_name", help="Name of the subject")
+    parser.add_argument("sess_num", help=("Session number"), type=int)
     parser.add_argument("--output_dir", '-o', help="directory to place output in",
                         default=op.expanduser("~/Desktop/metamers/raw_behavioral"))
     parser.add_argument("--eyetrack", '-e', action="store_true",

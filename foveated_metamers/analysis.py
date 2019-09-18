@@ -35,9 +35,15 @@ def summarize_trials(raw_behavioral_path):
     """
     f = h5py.File(raw_behavioral_path)
     trials = []
+    button_presses = f['button_presses'][()]
+    # these are the button presses we want to ignore. they should only
+    # come up if we quit out in the middle and then restarted. also,
+    # they're all byte strings
+    button_mask = [b[0] not in [b'5', b'q', b'esc', b'escape', b'space'] for b in button_presses]
+    button_presses = button_presses[button_mask]
     for i, trial_beg in enumerate(f['timing_data'][()][7::6][:, 2].astype(float)):
-        button_where = np.abs(trial_beg - f['button_presses'][()][:, 1].astype(float)).argmin()
-        trials.append([i, trial_beg, *f['button_presses'][()][button_where]])
+        button_where = np.abs(trial_beg - button_presses[:, 1].astype(float)).argmin()
+        trials.append([i, trial_beg, *button_presses[button_where]])
     return np.array(trials).astype(float)
 
 
@@ -70,6 +76,8 @@ def get_responses(df, presentation_idx, trials, dep_variable='scaling'):
         The response dictionary, as described above
 
     """
+    # just in case it was an incomplete trial
+    presentation_idx = presentation_idx[:len(trials)]
     correct_answers = np.where(presentation_idx[:, 2] == presentation_idx[:, 0], 1, 2)
     subj_answers = trials[:, 2]
     dep_variable_vals = np.where(~np.isnan(df.loc[presentation_idx[:, 0]][dep_variable]),
