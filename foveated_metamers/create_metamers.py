@@ -159,41 +159,40 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
     return model, animate_figsize, rep_image_figsize, img_zoom
 
 
-def add_center_to_image(model, initial_image, reference_image):
-    r"""Add the center back to the metamer image
+def add_center_to_image(model, image, reference_image):
+    r"""Add the reference image center to an image
 
     The VentralStream class of models will do nothing to the center of
     the image (they don't see the fovea), so we add the fovea to the
-    initial image before synthesis.
+    image before synthesis.
 
     Parameters
     ----------
     model : plenoptic.simul.VentralStream
         The model used to create the metamer. Specifically, we need its
         windows attribute
-    initial_image : torch.Tensor
-        The initial image we will use for metamer synthesis. Probably a
-        bunch of white noise
+    image : torch.Tensor
+        The image to add the center back to
     reference_image : torch.Tensor
         The reference/target image for synthesis
-        (``metamer.target_image``)
+        (``metamer.target_image``); the center comes from this image.
 
     Returns
     -------
-    metamer_image : torch.Tensor
-        The metamer image with the center added back in
+    recentered_image : torch.Tensor
+        ``image`` with the reference image center added back in
 
     """
-    model(initial_image)
+    model(image)
     try:
         rep = model.representation['mean_luminance']
     except IndexError:
         rep = model.representation
     dummy_ones = torch.ones_like(rep)
-    windows = model.PoolingWindows.project(dummy_ones).squeeze().to(initial_image.device)
+    windows = model.PoolingWindows.project(dummy_ones).squeeze().to(image.device)
     # for some reason ~ (invert) is not implemented for booleans in
     # pytorch yet, so we do this instead.
-    return ((windows * initial_image) + ((1 - windows) * reference_image))
+    return ((windows * image) + ((1 - windows) * reference_image))
 
 
 def summary_plots(metamer, rep_image_figsize, img_zoom):
