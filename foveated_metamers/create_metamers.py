@@ -287,6 +287,8 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
         images by in the plots we'll create
 
     """
+    # make sure everything's on the cpu for saving
+    metamer = metamer.to('cpu')
     print("Saving at %s" % save_path)
     # With the Adam optimizer, it also changes the pixels in the center,
     # which the model does not see. This appears to be a feature of Adam
