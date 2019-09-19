@@ -138,14 +138,12 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
     else:
         raise Exception("Don't know how to handle model_name %s" % model_name)
     zoom_factor = np.array([max(1, image.shape[::-1][i]/default_imgsize) for i in range(2)])
+    img_zoom = 1
     if (zoom_factor > 2).any():
         zoom_factor = np.array([min(i, 2) for i in zoom_factor])
-        img_zoom = 1
         while ((np.array(image.shape[::-1][:2]) * img_zoom) > (default_imgsize*zoom_factor)).any():
             img_zoom /= 2
         zoom_factor = np.array([max(1, img_zoom*image.shape[::-1][i]/default_imgsize) for i in range(2)])
-    else:
-        img_zoom = int(np.min(zoom_factor))
     animate_figsize = tuple([s*zoom_factor[i] for i, s in enumerate(animate_figsize)])
     # default rep_image_figsize arguments are for 256x256 image
     rep_image_figsize = tuple([s*zoom_factor[i] for i, s in enumerate(rep_image_figsize)])
