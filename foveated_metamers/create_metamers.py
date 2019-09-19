@@ -540,7 +540,11 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
             model = model.to(image.device, do_windows=False)
     metamer = po.synth.Metamer(image, model)
     if save_path is not None:
-        save_progress = True
+        if max_iter < 200:
+            # no sense when it's this short
+            save_progress = False
+        else:
+            save_progress = max(200, max_iter//10)
     else:
         save_progress = False
     if coarse_to_fine > 0:
@@ -560,4 +564,5 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                                                  save_path=save_path.replace('.pt', '_inprogress.pt'))
     if save_path is not None:
         save(save_path, metamer, animate_figsize, rep_figsize, img_zoom)
-    os.remove(save_path.replace('.pt', '_inprogress.pt'))
+    if save_progress:
+        os.remove(save_path.replace('.pt', '_inprogress.pt'))
