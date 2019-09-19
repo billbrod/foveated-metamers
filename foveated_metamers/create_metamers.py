@@ -137,15 +137,23 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
         default_imgsize = 512
     else:
         raise Exception("Don't know how to handle model_name %s" % model_name)
+    # We want to figure out two things: 1. how much larger we need to
+    # make the different figures so we can fit everything on them and
+    # 2. if we need to shrink the images in order to fit
+    # everything. here we determine how much bigger the image is than
+    # the one we used to get the figsizes above
     zoom_factor = np.array([max(1, image.shape[::-1][i]/default_imgsize) for i in range(2)])
     img_zoom = 1
+    # if it's more than twice as big, then that's too much to blow
+    # everything up, so we figure out how much to shrink the image by to
+    # fit on a figure twice as big as above
     if (zoom_factor > 2).any():
         zoom_factor = np.array([min(i, 2) for i in zoom_factor])
         while ((np.array(image.shape[::-1][:2]) * img_zoom) > (default_imgsize*zoom_factor)).any():
             img_zoom /= 2
         zoom_factor = np.array([max(1, img_zoom*image.shape[::-1][i]/default_imgsize) for i in range(2)])
+    # and then update the figsizes appropriately
     animate_figsize = tuple([s*zoom_factor[i] for i, s in enumerate(animate_figsize)])
-    # default rep_image_figsize arguments are for 256x256 image
     rep_image_figsize = tuple([s*zoom_factor[i] for i, s in enumerate(rep_image_figsize)])
     rescale_factor = np.mean(zoom_factor)
     # 10 and 12 are the default font sizes for labels and titles,
