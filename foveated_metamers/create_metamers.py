@@ -6,9 +6,11 @@ import GPUtil
 import imageio
 import warnings
 import os
+import time
 import numpy as np
 import plenoptic as po
 import pyrtools as pt
+import pandas as pd
 import os.path as op
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -16,6 +18,18 @@ import matplotlib.pyplot as plt
 # when I'm trying to render an image into a file, see
 # https://stackoverflow.com/questions/27147300/matplotlib-tcl-asyncdelete-async-handler-deleted-by-the-wrong-thread
 mpl.use('Agg')
+
+
+def convert_seconds_to_str(secs):
+    r"""Convert seconds into a human-readable string
+
+    following https://stackoverflow.com/a/26277340/4659293
+    """
+    days = secs // 86400
+    hours = secs // 3600 % 24
+    minutes = secs // 60 % 60
+    seconds = secs % 60
+    return "%d:%02d:%02d:%.03f" % (days, hours, minutes, seconds)
 
 
 def setup_image(image):
@@ -124,6 +138,7 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
             normalize_dict = {}
         if normalize_dict is None and model_name.endswith('norm'):
             raise Exception("If model_name is V1-norm, normalize_dict must be set!")
+        # add fifth scale for big images/max ecc?!
         model = po.simul.PrimaryVisualCortex(scaling, image.shape[-2:], min_eccentricity=min_ecc,
                                              max_eccentricity=max_ecc, transition_region_width=1,
                                              cache_dir=cache_dir, normalize_dict=normalize_dict)
@@ -259,6 +274,22 @@ def summary_plots(metamer, rep_image_figsize, img_zoom):
     return rep_fig, windowed_fig
 
 
+def summarize(metamer, save_path, **kwargs):
+    r"""Generate and save some summaries
+    """
+    loss = metamer.loss[-1]
+    if np.isnan(loss):
+        loss = metamer.loss[-2]
+    data = {'normalized_representation_mse': metamer.normalized_mse().item(),
+            'num_iterations': len(metamer.loss), 'loss': loss,
+            'num_statistics': metamer.target_representation.numel(),
+            'image_mse': torch.pow(metamer.target_image - metamer.matched_image, 2).mean().item()}
+    data.update(kwargs)
+    summary = pd.DataFrame(data, index=[0])
+    summary.to_csv(save_path, index=False)
+    return summary
+
+
 def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
     r"""save the metamer output
 
@@ -295,8 +326,6 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
         images by in the plots we'll create
 
     """
-    # make sure everything's on the cpu for saving
-    metamer = metamer.to('cpu')
     print("Saving at %s" % save_path)
     # With the Adam optimizer, it also changes the pixels in the center,
     # which the model does not see. This appears to be a feature of Adam
@@ -513,6 +542,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     print("Using seed %s" % seed)
     torch.manual_seed(seed)
     np.random.seed(seed)
+    image_name = image
     image = setup_image(image)
     if normalize_dict is not None:
         normalize_dict = torch.load(normalize_dict)
@@ -560,6 +590,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         coarse_to_fine = True
     else:
         loss_change_thresh = .1
+    start_time = time.time()
     matched_im, matched_rep = metamer.synthesize(clamper=clamper, store_progress=10,
                                                  learning_rate=learning_rate, max_iter=max_iter,
                                                  loss_thresh=loss_thresh, seed=seed,
@@ -570,7 +601,18 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                                                  loss_change_thresh=loss_change_thresh,
                                                  coarse_to_fine=coarse_to_fine,
                                                  save_path=save_path.replace('.pt', '_inprogress.pt'))
+    duration = time.time() - start_time
+    # make sure everything's on the cpu for saving
+    metamer = metamer.to('cpu')
     if save_path is not None:
+        summarize(metamer, save_path.replace('.pt', '_summary.csv'),
+                  duration=convert_seconds_to_str(duration), learning_rate=learning_rate,
+                  optimizer=optimizer, fraction_removed=fraction_removed, model=model_name,
+                  target_image=image_name, seed=seed,
+                  loss_change_thresh=loss_change_thresh, coarse_to_fine=coarse_to_fine,
+                  loss_change_fraction=loss_change_fraction, initial_image=initial_image_type,
+                  num_gpus=num_gpus, min_ecc=min_ecc, max_ecc=max_ecc, max_iter=max_iter,
+                  loss_thresh_thresh=loss_thresh, scaling=scaling,)
         save(save_path, metamer, animate_figsize, rep_figsize, img_zoom)
     if save_progress:
         os.remove(save_path.replace('.pt', '_inprogress.pt'))
