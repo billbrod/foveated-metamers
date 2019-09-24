@@ -614,9 +614,9 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     metamer = metamer.to('cpu')
     if save_path is not None:
         summarize(metamer, save_path.replace('.pt', '_summary.csv'),
-                  duration=convert_seconds_to_str(duration), learning_rate=learning_rate,
+                  duration_human_readable=convert_seconds_to_str(duration), duration=duration,
                   optimizer=optimizer, fraction_removed=fraction_removed, model=model_name,
-                  target_image=image_name, seed=seed,
+                  target_image=image_name, seed=seed, learning_rate=learning_rate,
                   loss_change_thresh=loss_change_thresh, coarse_to_fine=coarse_to_fine,
                   loss_change_fraction=loss_change_fraction, initial_image=initial_image_type,
                   num_gpus=num_gpus, min_ecc=min_ecc, max_ecc=max_ecc, max_iter=max_iter,

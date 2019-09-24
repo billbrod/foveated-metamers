@@ -252,6 +252,7 @@ rule create_metamers:
         get_windows,
     output:
         METAMER_TEMPLATE_PATH.replace('_metamer.png', '.pt'),
+        METAMER_TEMPLATE_PATH.replace('metamer.png', 'summary.csv'),
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'synthesis.mp4'),
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'rep.png'),
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'windowed.png'),
