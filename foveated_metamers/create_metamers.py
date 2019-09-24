@@ -132,18 +132,26 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
         # figsize is (width, height)
         default_imgsize = 256
     elif model_name.startswith('V1'):
-        if not model_name.endswith('norm'):
+        if not 'norm' in model_name:
             if normalize_dict is not None:
                 raise Exception("Cannot normalize V1 model (must be V1-norm)!")
             normalize_dict = {}
-        if normalize_dict is None and model_name.endswith('norm'):
+        if normalize_dict is None and 'norm' in model_name:
             raise Exception("If model_name is V1-norm, normalize_dict must be set!")
+        if 'half_oct' in model_name:
+            half_oct = True
+        else:
+            half_oct = False
         # add fifth scale for big images/max ecc?!
         model = po.simul.PrimaryVisualCortex(scaling, image.shape[-2:], min_eccentricity=min_ecc,
                                              max_eccentricity=max_ecc, transition_region_width=1,
-                                             cache_dir=cache_dir, normalize_dict=normalize_dict)
+                                             cache_dir=cache_dir, normalize_dict=normalize_dict,
+                                             half_octave_pyramid=half_oct)
         animate_figsize = (35, 11)
-        rep_image_figsize = (54, 30)
+        rep_image_figsize = [54, 30]
+        if 'half_oct' in model_name:
+            # in this case, we have almost twice as many plots to make
+            rep_image_figsize[0] *= 2
         # default figsize arguments work for an image that is 512x512,
         # may need to expand. we go backwards through figsize because
         # figsize and image shape are backwards of each other:

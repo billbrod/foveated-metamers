@@ -21,7 +21,7 @@ else:
 wildcard_constraints:
     num="[0-9]+"
 
-MODELS = ['RGC', 'V1', 'V1-norm']
+MODELS = ['RGC', 'V1', 'V1-norm', 'V1-norm-half_oct']
 IMAGES = ['nuts', 'nuts_symmetric', 'nuts_constant', 'einstein', 'einstein_symmetric',
           'einstein_constant', 'AsianFusion-08', 'AirShow-12', 'ElFuenteDance-11',
           'Chimera1102347-03', 'CosmosLaundromat-08', 'checkerboard_period-64_size-256']
@@ -142,7 +142,7 @@ rule gen_norm_stats:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 # scaling doesn't matter here
-                v1 = po.simul.PrimaryVisualCortex(1, (512, 512))
+                v1 = po.simul.PrimaryVisualCortex(1, (512, 512), half_octave_pyramid=True)
                 po.simul.non_linearities.generate_norm_stats(v1, input[0], output[0], (512, 512),
                                                              index=params.index)
 
@@ -204,7 +204,7 @@ rule cache_windows:
 
 
 def get_norm_dict(wildcards):
-    if wildcards.model_name == 'V1-norm':
+    if 'norm' in wildcards.model_name and 'V1' in wildcards.model_name:
         return op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture_norm_stats.pt')
     else:
         return None
