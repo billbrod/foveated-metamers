@@ -246,6 +246,13 @@ def get_windows(wildcards):
         return windows
 
 
+def get_batches(wildcards):
+    if len(wildcards.gpu.split(':')) > 1:
+        return int(wildcards.gpu.split(':')[1])
+    else:
+        return 1
+
+
 rule create_metamers:
     input:
         REF_IMAGE_TEMPLATE_PATH,
@@ -268,10 +275,11 @@ rule create_metamers:
                 'cf-{coarse_to_fine}', 'seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc}'
                 '_em-{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}_benchmark.txt')
     resources:
-        gpu = lambda wildcards: int(wildcards.gpu),
+        gpu = lambda wildcards: int(wildcards.gpu.split(':')[0]),
     params:
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
         norm_dict = get_norm_dict,
+        num_batches = get_batches,
     run:
         import foveated_metamers as met
         import contextlib
@@ -285,7 +293,7 @@ rule create_metamers:
                                          params.cache_dir, params.norm_dict, resources.gpu,
                                          wildcards.optimizer, float(wildcards.fract_removed),
                                          float(wildcards.loss_fract),
-                                         float(wildcards.coarse_to_fine))
+                                         float(wildcards.coarse_to_fine), int(params.num_batches))
 
 
 # need to come up with a clever way to do this: either delete the ones

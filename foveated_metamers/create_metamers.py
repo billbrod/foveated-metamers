@@ -466,7 +466,7 @@ def setup_device(*args, use_cuda=False):
 def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_rate=1, max_iter=100,
          loss_thresh=1e-4, save_path=None, initial_image_type='white', use_cuda=False,
          cache_dir=None, normalize_dict=None, num_gpus=0, optimizer='SGD', fraction_removed=0,
-         loss_change_fraction=1, coarse_to_fine=0):
+         loss_change_fraction=1, coarse_to_fine=0, num_batches=1):
     r"""create metamers!
 
     Given a model_name, model parameters, a target image, and some
@@ -545,6 +545,11 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         optimization (see Metamer.synthesize) for more details, passing
         coarse_to_fine=True and loss_change_thresh as this value. If 0,
         we set coarse_to_fine=False (and loss_change_thresh=.1)
+    num_batches : int, optional
+        The number of batches to further split the angle windows into
+        during the PoolingWindows forward call. The larger this number,
+        the less memory the forward pass will take but the slower it
+        will be. Only used when ``num_gpus > 1``
 
     """
     print("Using seed %s" % seed)
@@ -580,7 +585,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                 else:
                     gpus = [image.device.index] + gpus[:-1]
             print("Will put device on multiple gpus: %s" % gpus)
-            model = model.parallel(gpus)
+            model = model.parallel(gpus, num_batches)
             # this makes sure we get the non-PoolingWindows onto the
             # same device as the image
             model = model.to(image.device, do_windows=False)
