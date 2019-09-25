@@ -142,7 +142,7 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
     pix_per_deg = calc_pix_per_deg(fixation_distance, size[0], monitor_cm_width)
     # guess what the initial offset should be; vertical starts at 0,
     # horizontal is based on difference from neutral_verg_angle
-    offset = [int((monocular_verg_angle - neutral_verg_angle) * pix_per_deg), 0]
+    offset = [int((neutral_verg_angle - monocular_verg_angle) * pix_per_deg), 0]
     # these pairs are horizontal, vertical
     img_pos = [[0, 0], offset]
     print("Using initial binocular offsets: %s" % img_pos)
