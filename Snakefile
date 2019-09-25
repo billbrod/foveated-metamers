@@ -112,6 +112,35 @@ rule prep_pixabay:
                 imageio.imwrite(output[0], cropped_im)
 
 
+# most of our input images are jpegs, which have already had a gamma
+# correction applied to them. since we'll be displaying them on a linear
+# display, we want to remove this correction (see
+# https://www.cambridgeincolour.com/tutorials/gamma-correction.htm for
+# an explanation)
+rule degamma_image:
+    input:
+        op.join(config['DATA_DIR'], 'ref_images', '{image_name}.pgm')
+    output:
+        op.join(config['DATA_DIR'], 'ref_images', '{image_name}-degamma.pgm')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'ref_images', '{image_name}-degamma.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'ref_images', '{image_name}-degamma_benchmark.txt')
+    run:
+        import imageio
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                im = imageio.imread(input[0], as_gray=True)
+                # when loaded in, the range of this will be 0 to 255, we
+                # want to convert it to 0 to 1
+                im = im / 255
+                # 1/2.2 is the standard encoding gamma for jpegs, so we
+                # raise this to its reciprocal, 2.2, in order to reverse
+                # it
+                imageio.imwrite(output[0], im**2.2)
+
+
 rule pad_image:
     input:
         op.join(config["DATA_DIR"], 'ref_images', '{image_name}.{ext}')
