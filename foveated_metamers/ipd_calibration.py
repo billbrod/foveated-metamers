@@ -167,12 +167,12 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
 
     calibrated = []
     for i in range(num_runs):
-        stim[1].pos = img_pos[1]
+        new_pos = [[int(j + np.random.randint(-5, 5)) for j in i.copy()] for i in img_pos]
+        stim[1].pos = new_pos[-1]
         # need to make sure to do this full copy so the img_pos object
         # doesn't get modified in the other function. we also add a bit
         # of random noise so it's not the same each time
-        calibrated.append(run_calibration(win, [i.copy()+np.random.randint(-5, 5)
-                                                for i in img_pos], stim))
+        calibrated.append(run_calibration(win, new_pos, stim))
     df = pd.DataFrame({'subject_name': subject_name, 'binocular_ipd': binocular_ipd,
                        'run': list(range(num_runs)), 'screen_width_pix': size[0],
                        'screen_width_cm': monitor_cm_width,
