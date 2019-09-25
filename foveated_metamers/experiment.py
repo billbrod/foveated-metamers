@@ -9,6 +9,8 @@ import os.path as op
 import datetime
 import warnings
 import numpy as np
+import pandas as pd
+from ipd_calibration import csv_to_binocular_offset
 from psychopy import visual, core, event
 from psychopy.tools import imagetools
 try:
@@ -29,8 +31,13 @@ def _convert_str(list_of_strs):
         try:
             x = x.encode()
         except AttributeError:
-            # then this is not a string but another list of strings
-            x = [i.encode() for i in x]
+            try:
+                # then this is not a string but another list of strings
+                x = [i.encode() for i in x]
+            except AttributeError:
+                # in this case, then it's numpy.bytes or something else
+                # that's fine
+                pass
         saveable_list.append(x)
     return saveable_list
 
@@ -95,7 +102,7 @@ def _setup_eyelink(win_size):
 
 def _set_params(stimuli_path, idx_path, size=[1920, 1080], monitor='CBI-prisma-projector',
                 units='pix', fullscr=True, screen=0, color=128, colorSpace='rgb255',
-                **monitor_kwargs):
+                allowGUI=False, **monitor_kwargs):
     """set the various experiment parameters
     """
     stimuli = np.load(stimuli_path)
@@ -115,7 +122,8 @@ def _set_params(stimuli_path, idx_path, size=[1920, 1080], monitor='CBI-prisma-p
 
     # these are all a variety of kwargs used by monitor
     monitor_kwargs.update({'size': size, 'monitor': monitor, 'units': units, 'fullscr': fullscr,
-                           'screen': screen, 'color': color, 'colorSpace': colorSpace})
+                           'screen': screen, 'color': color, 'colorSpace': colorSpace,
+                           'allowGUI': allowGUI})
     return stimuli, idx, expt_params, monitor_kwargs
 
 
@@ -124,9 +132,9 @@ def check_for_keys(all_keys, keys_to_check=['q', 'esc', 'escape']):
     return any([k in all_keys for k in keys_to_check])
 
 
-def pause(win, img_pos, clock):
+def pause(win, img_pos, clock, flip_text=True):
     pause_text = [visual.TextStim(w, "space to resume\nq or esc to quit\nc to re-run calibration",
-                                  pos=p) for w, p in zip(win, img_pos)]
+                                  pos=p, flipHoriz=flip_text) for w, p in zip(win, img_pos)]
     all_keys = []
     while not all_keys:
         [text.draw() for text in pause_text]
@@ -139,7 +147,7 @@ def pause(win, img_pos, clock):
 def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(500, 1000, 2000),
         fix_deg_size=.25, screen_size_deg=60, eyetracker=None, edf_path=None, save_frames=None,
         binocular_offset=[0, 0], take_break=True, keys_pressed=[], timings=[], start_from_stim=0,
-        **monitor_kwargs):
+        flip_text=True, **monitor_kwargs):
     """run one run of the experiment
 
     stimuli_path specifies the path of the unshuffled experiment
@@ -159,46 +167,47 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
 
     Arguments
     ============
-    stimuli_path: string
+    stimuli_path : string
         path to .npy file where stimuli are stored (as 3d array)
-    idx_path: string
+    idx_path : string
         path to .npy file where shuffled indices are stored (as 2d
         array)
-    save_path: string
+    save_path : string
         path to .hdf5 file where we'll store the outputs of this
         experiment (we save every trial)
-    on_msec_length: int
+    on_msec_length : int
         length of the ON blocks in milliseconds; that is, the length of
         time to display each stimulus
-    off_msec_length: tuple
+    off_msec_length : tuple
         3-tuple of ints specifying the length of the length of the OFF
         blocks in milliseconds. This is an ABX experiment, so the 3 ints
         correspond to the number of milliseconds between A and B, B and
         X, and X and the A of the next trial
-    fix_deg_size: int
+    fix_deg_size : int
         the size of the fixation digits, in degrees.
-    eyetracker: EyeLink object or None
+    eyetracker : EyeLink object or None
         if None, will not collect eyetracking data. if not None, will
         gather it. the EyeLink object must already be initialized (by
         calling the _setup_eyelink function, as is done in the expt
         function). if this is set, must also specify edf_path
-    edf_path: str or None
+    edf_path : str or None
         if eyetracker is not None, this must be a string, which is where
         we will save the output of the eyetracker
-    screen_size_deg: int or float.
+    screen_size_deg : int or float.
         the max visual angle (in degrees) of the full screen.
-    save_frames: None or str
+    save_frames : None or str
         if not None, this should be the filename you wish to save frames
         at (one image will be made for each frame). WARNING: typically a
         large number of files will be saved (depends on the length of
         your session), which means this may make the end of the run
         (with the screen completely blank) take a while
-    binocular_offset: list
+    binocular_offset : list
         list of 2 ints, specifying the horizontal, vertical offset
         between the stimuli (in pixels) presented on the two monitors in
         order to allow the user to successfully fuse the image. This
         should come from the calibration, run before this experiment.
-
+    flip_text : bool
+        Whether to flip the text horizontally or not
     """
     stimuli, idx, expt_params, monitor_kwargs = _set_params(stimuli_path, idx_path,
                                                             **monitor_kwargs)
@@ -212,8 +221,11 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
         img_pos = [(0, 0)]
     elif len(monitor_kwargs['screen']) == 2:
         screen = monitor_kwargs.pop('screen')
+        # want these to be in increasing order
+        screen.sort()
         print("Doing binocular mode on screens %s" % screen)
-        img_pos = [[-o // 2 for o in binocular_offset], [o // 2 for o in binocular_offset]]
+        img_pos = [[int(-o // 2) for o in binocular_offset],
+                   [int(o // 2) for o in binocular_offset]]
         print("Using binocular offsets: %s" % img_pos)
         win = [visual.Window(winType='glfw', screen=screen[0], swapInterval=1, **monitor_kwargs)]
         # see here for the explanation of swapInterval and share args
@@ -225,7 +237,6 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
     else:
         raise Exception("Can't handle %s screens!" % len(monitor_kwargs['screen']))
     for w in win:
-        w.mouseVisible = False
         # linear gamma ramp
         w.gammaRamp = np.tile(np.linspace(0, 1, 256), (3, 1))
 
@@ -254,8 +265,9 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
         # it in order to add that to the clock...
         clock.reset(-float(timings[-1][-1]))
     wait_text = [visual.TextStim(w, ("Press 5 to start\nq or esc will quit\nspace to pause"),
-                                 pos=p) for w, p in zip(win, img_pos)]
-    query_text = [visual.TextStim(w, "1 or 2?", pos=p) for w, p in zip(win, img_pos)]
+                                 pos=p, flipHoriz=flip_text) for w, p in zip(win, img_pos)]
+    query_text = [visual.TextStim(w, "1 or 2?", pos=p, flipHoriz=flip_text)
+                  for w, p in zip(win, img_pos)]
     [text.draw() for text in wait_text]
     [w.flip() for w in win]
 
@@ -322,12 +334,12 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
             keys_pressed.extend([(key[0], key[1]) for key in all_keys])
         if check_for_keys(all_keys, ['space']) or (take_break and i == break_time):
             if take_break and i == break_time:
-                break_text = [visual.TextStim(w, "Break time!", pos=p)
+                break_text = [visual.TextStim(w, "Break time!", pos=p, flipHoriz=flip_text)
                               for w, p in zip(win, img_pos)]
                 [text.draw() for text in break_text]
                 [w.flip() for w in win]
                 core.wait(2)
-            paused_keys = pause(win, img_pos, clock)
+            paused_keys = pause(win, img_pos, clock, flip_text)
             keys_pressed.extend(paused_keys)
         else:
             paused_keys = []
@@ -336,7 +348,7 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
              last_trial=i+start_from_stim, **monitor_kwargs)
         if check_for_keys(all_keys+paused_keys):
             break
-    [visual.TextStim(w, "Run over", pos=p).draw() for w, p in zip(win, img_pos)]
+    [visual.TextStim(w, "Run over", pos=p, flipHoriz=flip_text).draw() for w, p in zip(win, img_pos)]
     [w.flip() for w in win]
     timings.append(("run_end", '', clock.getTime()))
     all_keys = event.getKeys(timeStamped=clock)
@@ -354,7 +366,8 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
 
 
 def expt(stimuli_path, subj_name, sess_num, output_dir="data/raw_behavioral", eyetrack=False,
-         screen_size_pix=[1920, 1080], screen_size_deg=60, take_break=True, **kwargs):
+         screen_size_pix=[1920, 1080], screen_size_deg=60, take_break=True, ipd_csv=None,
+         flip_text=True, **kwargs):
     """run a full experiment
 
     this just sets up the various paths, calls ``run``, and then saves
@@ -363,6 +376,10 @@ def expt(stimuli_path, subj_name, sess_num, output_dir="data/raw_behavioral", ey
     """
     if not op.exists(output_dir):
         os.makedirs(output_dir)
+    if ipd_csv is not None:
+        binocular_offset = csv_to_binocular_offset(ipd_csv, subj_name)
+    else:
+        binocular_offset = [0, 0]
     save_path = op.join(output_dir, "%s_%s_sess{sess:02d}.hdf5" %
                         (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name))
     edf_path = op.join(output_dir, "%s_%s_sess{sess:02d}.EDF" %
@@ -383,7 +400,11 @@ def expt(stimuli_path, subj_name, sess_num, output_dir="data/raw_behavioral", ey
                             "from save: %s, this run: %s" % (saved_idx_path, idx_path))
         keys = list(f.pop('button_presses')[()])
         timings = list(f.pop('timing_data')[()])
-        start_from_stim = f.pop('last_trial')[()]
+        try:
+            start_from_stim = f['last_trial'][()]
+        except KeyError:
+            # in this case, the previous one was quit before it started
+            start_from_stim = 0
         f.close()
     else:
         keys = []
@@ -409,7 +430,8 @@ def expt(stimuli_path, subj_name, sess_num, output_dir="data/raw_behavioral", ey
     keys, timings, expt_params, idx = run(stimuli_path, idx_path, save_path, size=screen_size_pix,
                                           eyetracker=eyetracker, take_break=take_break,
                                           screen_size_deg=screen_size_deg,
-                                          start_from_stim=start_from_stim,
+                                          start_from_stim=start_from_stim, flip_text=flip_text,
+                                          binocular_offset=binocular_offset,
                                           edf_path=edf_path.format(sess=sess_num),
                                           keys_pressed=keys, timings=timings, **kwargs)
     save(save_path, stimuli_path, idx_path, keys, timings, expt_params, idx, **kwargs)
@@ -431,20 +453,28 @@ if __name__ == '__main__':
     parser.add_argument("stimuli_path", help="Path to your unshuffled stimuli.")
     parser.add_argument("subj_name", help="Name of the subject")
     parser.add_argument("sess_num", help=("Session number"), type=int)
+    parser.add_argument("--ipd_csv", '-i', help="Path to the csv containing ipd correction info",
+                        default=op.expanduser('~/Desktop/metamers/ipd/ipd_correction.csv'))
     parser.add_argument("--output_dir", '-o', help="directory to place output in",
                         default=op.expanduser("~/Desktop/metamers/raw_behavioral"))
     parser.add_argument("--eyetrack", '-e', action="store_true",
                         help=("Pass this flag to tell the script to gather eye-tracking data. If"
                               " pylink is not installed, this is impossible and will throw an "
                               "exception"))
-    parser.add_argument("--screen", '-s', default=0, type=int, nargs='+',
+    parser.add_argument("--screen", '-s', default=[1, 2], type=int, nargs='+',
                         help=("Screen number to display experiment on"))
     parser.add_argument("--screen_size_pix", '-p', nargs=2, help="Size of the screen (in pixels)",
-                        default=[1920, 1080], type=float)
-    parser.add_argument("--screen_size_deg", '-d', default=60, type=float,
+                        default=[4096, 2160], type=float)
+    parser.add_argument("--screen_size_deg", '-d', default=95, type=float,
                         help="Size of longest screen side (in degrees)")
     parser.add_argument('--no_break', '-n', action='store_true',
                         help=("If passed, we do not take a break at the half-way point"))
+    parser.add_argument("--no_flip", '-f', action='store_true',
+                        help=("This script is meant to be run on the haploscope. Therefore, we "
+                              "left-right flip all text by default. Use this option to disable"
+                              " that"))
     args = vars(parser.parse_args())
     take_break = not args.pop('no_break')
-    expt(take_break=take_break, **args)
+    flip = not args.pop('no_flip')
+    ipd_csv = pd.read_csv(args.pop('ipd_csv'))
+    expt(ipd_csv=ipd_csv, take_break=take_break, flip_text=flip, **args)
