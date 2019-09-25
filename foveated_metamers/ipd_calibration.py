@@ -81,14 +81,14 @@ def clear_events(win):
         event.getKeys()
 
 
-def run_calibration(win, img_pos, stim):
+def run_calibration(win, img_pos, stim, flip_text=True):
     """
     """
     clear_events(win)
 
     start_text = (u"Press space to begin\nUse arrow keys to adjust the location of the \u25a1 and "
                   "+ until they overlap\nThen press space")
-    start_text = [visual.TextStim(w, start_text, pos=p, wrapWidth=1000)
+    start_text = [visual.TextStim(w, start_text, pos=p, wrapWidth=1000, flipHoriz=flip_text)
                   for w, p in zip(win, img_pos)]
     [text.draw() for text in start_text]
     [w.flip() for w in win]
@@ -123,7 +123,8 @@ def run_calibration(win, img_pos, stim):
 
 
 def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4096, 2160],
-                    fixation_distance=42, monitor_cm_width=69.8, num_runs=3, **monitor_kwargs):
+                    fixation_distance=42, monitor_cm_width=69.8, num_runs=3, flip_text=True,
+                    **monitor_kwargs):
     """
     """
     if not op.exists(output_dir):
@@ -172,7 +173,7 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
         # need to make sure to do this full copy so the img_pos object
         # doesn't get modified in the other function. we also add a bit
         # of random noise so it's not the same each time
-        calibrated.append(run_calibration(win, new_pos, stim))
+        calibrated.append(run_calibration(win, new_pos, stim, flip_text))
     df = pd.DataFrame({'subject_name': subject_name, 'binocular_ipd': binocular_ipd,
                        'run': list(range(num_runs)), 'screen_width_pix': size[0],
                        'screen_width_cm': monitor_cm_width,
@@ -213,7 +214,7 @@ if __name__ == '__main__':
                         default=op.expanduser("~/Desktop/metamers/ipd"))
     parser.add_argument("--screen", '-s', default=[0], type=int, nargs='+',
                         help=("Screen number to display experiment on"))
-    parser.add_argument('--fixation_distance', '-f', default=42, type=float,
+    parser.add_argument('--fixation_distance', '-d', default=42, type=float,
                         help="Fixation distance (in cm) of the display")
     parser.add_argument("--size", '-p', nargs=2, help="Size of the screen (in pixels)",
                         default=[4096, 2160], type=float)
@@ -221,5 +222,10 @@ if __name__ == '__main__':
                         default=69.8, type=float)
     parser.add_argument("--num_runs", "-n", type=int, default=3,
                         help="Number of times to run the calibration")
+    parser.add_argument("--no_flip", '-f', action='store_true',
+                        help=("This script is meant to be run on the haploscope. Therefore, we "
+                              "left-right flip all text by default. Use this option to disable"
+                              " that"))
     args = vars(parser.parse_args())
-    ipd_calibration(**args)
+    flip = not args.pop('no_flip')
+    ipd_calibration(flip_text=flip, **args)
