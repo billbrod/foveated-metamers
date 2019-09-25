@@ -569,22 +569,14 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     initial_image = setup_initial_image(initial_image_type, model, image)
     if num_gpus <= 1:
         image, initial_image, model = setup_device(image, initial_image, model, use_cuda=use_cuda)
-    else:
-        # in this case, we're going to parallelize the model anyway, so
-        # don't put it on a single device
-        image, initial_image = setup_device(image, initial_image, use_cuda=use_cuda)
     if num_gpus > 0:
         if not use_cuda:
             raise Exception("Can only use GPUs if use_cuda is True!")
         if num_gpus > 1:
+            # in this case, we put the model on multiple gpus, but keep
+            # everything else on the cpu
             gpus = GPUtil.getAvailable(maxLoad=.5, maxMemory=.5, limit=num_gpus, order='first')
-            # make sure the original gpu is on the list, or we throw an exception
-            if image.device.index not in gpus:
-                if len(gpus) < num_gpus:
-                    gpus += [image.device.index]
-                else:
-                    gpus = [image.device.index] + gpus[:-1]
-            print("Will put device on multiple gpus: %s" % gpus)
+            print("Will put model in %d batch(es) on multiple gpus: %s" % (num_batches, gpus))
             model = model.parallel(gpus, num_batches)
             # this makes sure we get the non-PoolingWindows onto the
             # same device as the image
