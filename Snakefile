@@ -88,6 +88,30 @@ rule png_to_pgm:
                 imageio.imwrite(output[0], im)
 
 
+rule prep_pixabay:
+    input:
+        # all the pixabay images have a string of integers after the
+        # name, which we want to ignore
+        lambda wildcards: glob(op.join(config["PIXABAY_DIR"], '{image_name}-*.jpg').format(**wildcards))[0]
+    output:
+        op.join(config["DATA_DIR"], 'ref_images', '{image_name}.pgm')
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'ref_images', '{image_name}.log')
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'ref_images', '{image_name}_benchmark.txt')
+    run:
+        import imageio
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                im = imageio.imread(input[0], as_gray=True)
+                curr_shape = np.array(im.shape)
+                target_shape = np.array([2064, 4000])
+                crop_amt = curr_shape - target_shape
+                cropped_im = im[crop_amt[0]//2:-crop_amt[0]//2, crop_amt[1]//2:-crop_amt[1]//2]
+                imageio.imwrite(output[0], cropped_im)
+
+
 rule pad_image:
     input:
         op.join(config["DATA_DIR"], 'ref_images', '{image_name}.{ext}')

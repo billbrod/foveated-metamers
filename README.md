@@ -38,11 +38,25 @@ ffmpeg/intel/3.2.2` or, if `module` isn't working (like when using the
 For running the experiment, need to install `glfw` from your package
 manager.
 
-we use the
+## Source images
+
+We use the
 [LIVE-NFLX-II](http://live.ece.utexas.edu/research/LIVE_NFLX_II/live_nflx_plus.html)
-data set to get some input images. We provide those in our
+data set to get some input images. We provide the images (which are
+frames from some of these movies, with some processing: converting to
+grayscale, cropped appropriately, and saved as pgm) in our
 [ref_images](https://osf.io/5t4ju) tarball, but the link is presented
 here if you wish to examine the rest of the data set.
+
+We also use several images from pixabay. Similar to the LIVE-NFLX-II,
+these images have had some processing done to them, but the links to
+the originals are presented here:
+[japan](https://pixabay.com/photos/japan-travel-nature-asia-plant-4141578/),
+[sheep](https://pixabay.com/photos/sheep-agriculture-animals-17482/),
+[street](https://pixabay.com/photos/street-people-road-many-3279061/),
+[refuge](https://pixabay.com/photos/refuge-dolomites-fog-prato-steep-4457275/),
+[trees](https://pixabay.com/photos/trees-fir-forest-nature-conifers-3410830/).
+
 
 ## Minimal experiment install
 
