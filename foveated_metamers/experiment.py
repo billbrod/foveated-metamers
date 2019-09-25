@@ -102,7 +102,7 @@ def _setup_eyelink(win_size):
 
 def _set_params(stimuli_path, idx_path, size=[1920, 1080], monitor='CBI-prisma-projector',
                 units='pix', fullscr=True, screen=0, color=128, colorSpace='rgb255',
-                **monitor_kwargs):
+                allowGUI=False, **monitor_kwargs):
     """set the various experiment parameters
     """
     stimuli = np.load(stimuli_path)
@@ -122,7 +122,8 @@ def _set_params(stimuli_path, idx_path, size=[1920, 1080], monitor='CBI-prisma-p
 
     # these are all a variety of kwargs used by monitor
     monitor_kwargs.update({'size': size, 'monitor': monitor, 'units': units, 'fullscr': fullscr,
-                           'screen': screen, 'color': color, 'colorSpace': colorSpace})
+                           'screen': screen, 'color': color, 'colorSpace': colorSpace,
+                           'allowGUI': allowGUI})
     return stimuli, idx, expt_params, monitor_kwargs
 
 
@@ -236,7 +237,6 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
     else:
         raise Exception("Can't handle %s screens!" % len(monitor_kwargs['screen']))
     for w in win:
-        w.mouseVisible = False
         # linear gamma ramp
         w.gammaRamp = np.tile(np.linspace(0, 1, 256), (3, 1))
 
