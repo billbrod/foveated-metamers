@@ -130,7 +130,8 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
     if not op.exists(output_dir):
         os.makedirs(output_dir)
     monocular_verg_angle = calc_monocular_convergence_angle(binocular_ipd, fixation_distance)
-    default_monitor = {'units': 'pix', 'fullscr': True, 'color': 128, 'colorSpace': 'rgb255'}
+    default_monitor = {'units': 'pix', 'fullscr': True, 'color': 128, 'colorSpace': 'rgb255',
+                       'allowGUI': False}
     for k, v in default_monitor.items():
         monitor_kwargs.setdefault(k, v)
     neutral_verg_angle = calc_monocular_convergence_angle(62)
