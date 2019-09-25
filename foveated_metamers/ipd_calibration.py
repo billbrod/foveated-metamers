@@ -102,6 +102,10 @@ def run_calibration(win, img_pos, stim, flip_text=True):
 
     clear_events(win)
 
+    # when we're viewing through a mirror, want to flip the left/right
+    # direction the arrow keys map to as well
+    key_direction = {False: 1, True: -1}[flip_text]
+
     while True:
         [s.draw() for s in stim]
         [w.flip() for w in win]
@@ -109,13 +113,13 @@ def run_calibration(win, img_pos, stim, flip_text=True):
         if 'space' in keys:
             break
         if 'up' in keys:
-            img_pos[1][1] += 1
+            img_pos[1][1] += key_direction*1
         if 'down' in keys:
-            img_pos[1][1] -= 1
+            img_pos[1][1] -= key_direction*1
         if 'left' in keys:
-            img_pos[1][0] -= 1
+            img_pos[1][0] -= key_direction*1
         if 'right' in keys:
-            img_pos[1][0] += 1
+            img_pos[1][0] += key_direction*1
         stim[1].pos = img_pos[1]
 
     print("Final offset: %s" % img_pos[1])
