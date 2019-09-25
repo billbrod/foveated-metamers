@@ -123,7 +123,7 @@ def _set_params(stimuli_path, idx_path, size=[1920, 1080], monitor='CBI-prisma-p
     # these are all a variety of kwargs used by monitor
     monitor_kwargs.update({'size': size, 'monitor': monitor, 'units': units, 'fullscr': fullscr,
                            'screen': screen, 'color': color, 'colorSpace': colorSpace,
-                           'allowGUI': allowGUI})
+                           'allowGUI': allowGUI, "gamma": 1})
     return stimuli, idx, expt_params, monitor_kwargs
 
 
@@ -236,9 +236,6 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
                                  **monitor_kwargs))
     else:
         raise Exception("Can't handle %s screens!" % len(monitor_kwargs['screen']))
-    for w in win:
-        # linear gamma ramp
-        w.gammaRamp = np.tile(np.linspace(0, 1, 256), (3, 1))
 
     break_time = len(stimuli) // 2
     if take_break:
