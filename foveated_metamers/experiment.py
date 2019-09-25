@@ -31,8 +31,13 @@ def _convert_str(list_of_strs):
         try:
             x = x.encode()
         except AttributeError:
-            # then this is not a string but another list of strings
-            x = [i.encode() for i in x]
+            try:
+                # then this is not a string but another list of strings
+                x = [i.encode() for i in x]
+            except AttributeError:
+                # in this case, then it's numpy.bytes or something else
+                # that's fine
+                pass
         saveable_list.append(x)
     return saveable_list
 
