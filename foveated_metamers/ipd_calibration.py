@@ -113,9 +113,9 @@ def run_calibration(win, img_pos, stim, flip_text=True):
         if 'space' in keys:
             break
         if 'up' in keys:
-            img_pos[1][1] += key_direction*1
+            img_pos[1][1] += 1
         if 'down' in keys:
-            img_pos[1][1] -= key_direction*1
+            img_pos[1][1] -= 1
         if 'left' in keys:
             img_pos[1][0] -= key_direction*1
         if 'right' in keys:
