@@ -133,7 +133,7 @@ def check_for_keys(all_keys, keys_to_check=['q', 'esc', 'escape']):
 
 
 def pause(win, img_pos, clock, flip_text=True):
-    pause_text = [visual.TextStim(w, "space to resume\nq or esc to quit\nc to re-run calibration",
+    pause_text = [visual.TextStim(w, "space to resume\nq or esc to quit",
                                   pos=p, flipHoriz=flip_text) for w, p in zip(win, img_pos)]
     all_keys = []
     while not all_keys:
@@ -292,6 +292,7 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
     # store this as a separate variable because, if we're appending to
     # an existing timings, we don't know where the start time is stored
     start_time = clock.getTime()
+    paused_time = 0
     # this outer for loop is per trial
     for i, stim in enumerate(stimuli):
         # and this one is for the three stimuli in each trial
@@ -306,7 +307,7 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
             next_stim_time = ((i*3*on_msec_length + (j+1)*on_msec_length +
                                i*np.sum(off_msec_length) + np.sum(off_msec_length[:j]) - 2)
                               / 1000.)
-            core.wait(abs(clock.getTime() - start_time - next_stim_time))
+            core.wait(abs(clock.getTime() - paused_time - start_time - next_stim_time))
             if eyetracker is not None:
                 eyetracker.sendMessage("TRIALID %02d" % i)
             if save_frames is not None:
@@ -320,7 +321,7 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
             next_stim_time = ((i*3*on_msec_length + (j+1)*on_msec_length +
                                i*np.sum(off_msec_length) + np.sum(off_msec_length[:j+1]) - 1)
                               / 1000.)
-            core.wait(abs(clock.getTime() - start_time - next_stim_time))
+            core.wait(abs(clock.getTime() - paused_time - start_time - next_stim_time))
             if save_frames is not None:
                 [w.getMovieFrame() for w in win]
             all_keys.extend(event.getKeys(timeStamped=clock))
@@ -330,6 +331,7 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
         if all_keys:
             keys_pressed.extend([(key[0], key[1]) for key in all_keys])
         if check_for_keys(all_keys, ['space']) or (take_break and i == break_time):
+            timings.append(('pause', 'start', clock.getTime()))
             if take_break and i == break_time:
                 break_text = [visual.TextStim(w, "Break time!", pos=p, flipHoriz=flip_text)
                               for w, p in zip(win, img_pos)]
@@ -337,6 +339,8 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
                 [w.flip() for w in win]
                 core.wait(2)
             paused_keys = pause(win, img_pos, clock, flip_text)
+            paused_time += (clock.getTime() - timings[-1][-1])
+            timings.append(('pause', 'stop', clock.getTime()))
             keys_pressed.extend(paused_keys)
         else:
             paused_keys = []
