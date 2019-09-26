@@ -74,6 +74,20 @@ and install it with `pip install path/to/your/wxpython.whl`.
 
 Everything should then hopefully work.
 
+## IPD calibration
+
+We also include a script, `ipd_calibration.py`, which should work with
+the `psypy` environment set up from `environment-psychopy.yml` or the
+minimal experiment install above. This script is for use with a
+haploscope in order to determine how far apart the centers of the
+images in each eye should be to allow the subject to successfully fuse
+them. If their position is constant, this shouldn't change for a given
+subject (assuming your experimental setup doesn't change).
+
+To use, run from the command line. View that scripts help for more
+information about the different required arguments and options:
+`python foveated_metamers/ipd_calibraiton.py -h`.
+
 # References
 
 - Freeman, J., & Simoncelli, E. P. (2011). Metamers of the ventral
