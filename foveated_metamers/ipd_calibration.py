@@ -2,6 +2,7 @@
 """psychopy script for running IPD calibration, run from command-line
 """
 import argparse
+import warnings
 import os
 import numpy as np
 import pandas as pd
@@ -10,7 +11,36 @@ from psychopy import visual, event, core
 
 
 def csv_to_binocular_offset(ipd_csv, subject_name, units='pix'):
-    """
+    """Compute the binocular offset from the ipd_correction.csv file
+
+    The ipd_correction.csv file contains all the information for the
+    subjects we've run, and this little helper function will load it in
+    and give you the average (horizontal, vertical) offset, in
+    ``units``, for ``subject_name``.
+
+    This gives the difference between their centers that you should
+    use. It's up to you how exactly to do this, but I recommend moving
+    the image in one eye forward by half this amount and the other
+    backward by half this amount (separately for horizontal and
+    vertical)
+
+    Parameters
+    ----------
+    ipd_csv : str or pandas.DataFrame
+        Either the DataFrame object containing this information or the
+        path to the csv file containing the DataFrame
+    subject_name : str
+        The name of the subject to find the average binocular offset for
+    units : {'pix', 'deg'}
+        Whether to give the binocular offset in pixels or degrees
+
+    Returns
+    -------
+    binocular_offset : list
+        List of 2 ints (if ``units=='pix'``) or floats (if
+        ``units=='deg'``) specifying the offset between the two images
+        that you should be using for this subject
+
     """
     if isinstance(ipd_csv, str):
         ipd_csv = pd.read_csv(ipd_csv)
@@ -55,7 +85,30 @@ def calc_monocular_convergence_angle(binocular_ipd, fixation_distance=42.):
 
 
 def calc_pix_per_deg(fixation_distance=42., monitor_pix_width=4096, monitor_cm_width=69.8):
-    """
+    """Calculate the pixels per degree for a given set up
+
+    Using the fixation distance (in cm) and width of the monitor in
+    pixels and cm, we can quickly calculate the number of pixels per
+    degree.
+
+    Parameters
+    ----------
+    fixation_distance : float
+        The fixation distance of the monitor, in cm. Default value is
+        for the FancyPants v1 haploscope
+    monitor_pix_width : int
+        Width of the monitor, in pixels. Default value is for the
+        FancyPants v1 haploscope
+    monitor_cm_width : float
+        Width of the monitor, in cm. Default value is for the FancyPants
+        v1 haploscope
+
+    Returns
+    -------
+    pix_per_deg : float
+        Number of pixels per degree. Therefore, multiply this by the
+        size of something in degrees in order to get its size in pixels
+
     """
     # this follows from the trigonomery (picture an image of size 1cm,
     # fixation_distance away from an observer who's staring at its
@@ -73,7 +126,20 @@ def calc_pix_per_deg(fixation_distance=42., monitor_pix_width=4096, monitor_cm_w
 
 
 def clear_events(win):
-    """
+    """clear all keys from psychopy
+
+    I've been having issues with keys remaining in psychopy's buffer,
+    being pulled in at a later time (thus, pressing the spacebar once
+    gets parsed as pressing it twice, in rapid succession). This takes a
+    brief pause, .1 seconds, to rapidly flip the window several times
+    (should look like just a gray screen), calling ``event.getKeys()``
+    each time in order to make sure no keys are left in the buffer
+
+    Parameters
+    ----------
+    win : list
+        List of Psychopy.visual.Window objects that we want to flip
+
     """
     for i in range(10):
         [w.flip() for w in win]
@@ -82,7 +148,43 @@ def clear_events(win):
 
 
 def run_calibration(win, img_pos, stim, flip_text=True):
-    """
+    """run the actual calibration task
+
+    For a given run, we take the initialized windows, stimuli, and
+    they're starting conditions, and allow the user to move one around
+    until the two stimuli align. This will work for either one or two
+    windows (win should be a list in either case, just with 1 or 2
+    entries), but will probably fail for more than that.
+
+    The run continues until the user presses the space bar. We ignore
+    all buttons other than the arrow keys and space, which we use to
+    start and end the run.
+
+    Parameters
+    ----------
+    win : list
+        List of Psychopy.visual.Window objects where we'll be displaying
+        the stimuli. Has been tested when this contains one or two
+        windows, but could be extended to more, if you want to, for some
+        reason.
+    img_pos : list
+        List of 2-tuples of ints, same length as stim. The starting
+        locations for our stimuli.
+    stim : list
+        List of Psychopy.visual.TextStim, length 2. The two stimuli
+        (square and cross) which the user is adjusting for this task.
+    flip_text : bool, optional
+        Boolean, whether to left-right reverse everything. If True,
+        everything will be flipped, as you need on the haploscope. If
+        False, everything will be the right way round. This flips the
+        text but also reverses the direction the left/right arrow keys
+        move the stimuli
+
+    Returns
+    -------
+    img_pos : tuple
+        2-tuple of ints giving the user's final offset
+
     """
     clear_events(win)
 
@@ -128,17 +230,96 @@ def run_calibration(win, img_pos, stim, flip_text=True):
 
 def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4096, 2160],
                     fixation_distance=42, monitor_cm_width=69.8, num_runs=3, flip_text=True,
-                    **monitor_kwargs):
+                    default_ipd=6.2, allow_large_ipd=False, **window_kwargs):
+    """Run the full IPD calibration task
+
+    On a haploscope, two images are presented, one to each eye. The
+    construction of any haploscope is done with a certain default
+    inter-pupillary distance (IPD) in mind, probably 6.2 cm. If the
+    subject has an IPD very different from this, it can be difficult to
+    successfully fuse the image, so we want to adjust the images'
+    relative centers. We start out by doing a bit of trigonometry to get
+    them approximately correct, and then the user does an IPD
+    calibration task, where they adjust the location of two objects (a
+    square and a cross), presented in separate eyes, until they
+    overlap. This is done ``num_runs`` times (each run starts with a bit
+    of noise, an integer drawn from a uniform distribution from -5 to 5,
+    in both directions), and then we append these results to an
+    ipd_correction.csv file in the ``output_dir``, where we're keeping
+    track of this information.
+
+    If you want to use the information stored in this csv, the
+    ``csv_to_binocular_offset`` function will help you with that
+
+    Parameters
+    ----------
+    subject_name : str
+        Name of the subject. Will be used to record this information in
+        the ipd_correction.csv
+    binocular_ipd : float
+        The subject's inter-pupillary distance (IPD), that is, the
+        distance between the subject's eyes, in *cm*
+    output_dir : str
+        Path to the directory where we'll output the results, in
+        ipd_correction.csv
+    screen : list
+        List of ints giving the identifiers for the screens to run the
+        task on. Can contain one or two values.
+    size : list
+        List of 2 ints, containing (width, height) of the screen(s) in
+        pixels. Used for converting between pixels and
+        degrees. Currently, all screens must have same size. Default
+        value is for the FancyPants v1 haploscope
+    fixation_distance : float
+        The fixation distance of the monitor, in cm. Default value is
+        for the FancyPants v1 haploscope
+    monitor_cm_width : float
+        Width of the monitor, in cm. Default value is for the FancyPants
+        v1 haploscope
+    num_runs : int
+        Number of times to run this the calibration task. We'll store
+        all of them, and then it's expected that we'll average over all
+        results for a given subject.
+    flip_text : bool, optional
+        Boolean, whether to left-right reverse everything. If True,
+        everything will be flipped, as you need on the haploscope. If
+        False, everything will be the right way round. This flips the
+        text but also reverses the direction the left/right arrow keys
+        move the stimuli
+    default_ipd : float
+        The IPD (in cm) of the system's default IPD, that is, the IPD
+        where we shouldn't have to adjust the images at all. Used to get
+        a "first guess" based on the subject's IPD
+    allow_large_ipd : bool
+        It's easy to mess up and give an IPD in mm instead of cm, but we
+        require cm. In order to help check that, by default, we'll raise
+        an Exception if either binocular_ipd or default_ipd is larger
+        than 10, because that would be very large. If you really do have
+        IPDs larger than 10 cm for either of those values, you can set
+        this flag to True and we won't raise the Exception (but we'll
+        still raise a warning).
+    window_kwargs : kwargs
+        Other keyword=value pairs will be passed directly to the
+        creation of the Psychopy.visual.Window objects
+
     """
-    """
+    if (binocular_ipd > 10 or default_ipd > 10):
+        if not allow_large_ipd:
+            raise Exception("Your IPD values are really large! Are you sure you didn't input the "
+                            "IPD in mm? Is someone's IPD actually greater than 10 cm? If you're "
+                            "sure (and you didn't accidentally input them in mm), run this again"
+                            " with the allow_large_ipd flag set to True")
+        else:
+            warnings.warn("Your IPD values are really large but you say you know what you're"
+                          " doing...")
     if not op.exists(output_dir):
         os.makedirs(output_dir)
     monocular_verg_angle = calc_monocular_convergence_angle(binocular_ipd, fixation_distance)
-    default_monitor = {'units': 'pix', 'fullscr': True, 'color': 128, 'colorSpace': 'rgb255',
-                       'allowGUI': False}
-    for k, v in default_monitor.items():
-        monitor_kwargs.setdefault(k, v)
-    neutral_verg_angle = calc_monocular_convergence_angle(62)
+    default_window = {'units': 'pix', 'fullscr': True, 'color': 128, 'colorSpace': 'rgb255',
+                      'allowGUI': False}
+    for k, v in default_window.items():
+        window_kwargs.setdefault(k, v)
+    neutral_verg_angle = calc_monocular_convergence_angle(default_ipd)
     pix_per_deg = calc_pix_per_deg(fixation_distance, size[0], monitor_cm_width)
     # guess what the initial offset should be; vertical starts at 0,
     # horizontal is based on difference from neutral_verg_angle
@@ -148,7 +329,7 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
     print("Using initial binocular offsets: %s" % img_pos)
     if len(screen) == 1:
         print('Doing single-monitor mode on screen %s' % screen)
-        win = [visual.Window(winType='glfw', screen=screen[0], size=size, **monitor_kwargs)]
+        win = [visual.Window(winType='glfw', screen=screen[0], size=size, **window_kwargs)]
         # Show target icons (□ and +)
         stim = [visual.TextStim(win[0], text=[u'\u25a1', '+'][i], font="consolas", units='pix',
                                 pos=img_pos[i], height=[1.5, 3][i]*pix_per_deg, color=(1, 1, 1),
@@ -158,18 +339,18 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
         screen.sort()
         print("Doing binocular mode on screens %s" % screen)
         win = [visual.Window(winType='glfw', screen=screen[0], swapInterval=1, size=size,
-                             **monitor_kwargs)]
+                             **window_kwargs)]
         # see here for the explanation of swapInterval and share args
         # (basically, in order to make glfw correctly update the two
         # monitors together):
         # https://discourse.psychopy.org/t/strange-behavior-with-retina-displays-external-monitors-in-1-90-2-py2/5485/5
         win.append(visual.Window(winType='glfw', screen=screen[1], swapInterval=0, share=win[0],
-                                 size=size, **monitor_kwargs))
+                                 size=size, **window_kwargs))
         stim = [visual.TextStim(win[i], text=[u'\u25a1', '+'][i], font="consolas", units='pix',
                                 pos=img_pos[i], height=[1.5, 3][i]*pix_per_deg, color=(1, 1, 1),
                                 colorSpace='rgb') for i in range(2)]
     else:
-        raise Exception("Can't handle %s screens!" % len(monitor_kwargs['screen']))
+        raise Exception("Can't handle %s screens!" % len(window_kwargs['screen']))
 
     calibrated = []
     for i in range(num_runs):
@@ -202,14 +383,25 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description=("Run an ABX experiment to investigate metamers! Specify the location of the "
-                     "stimuli, the location of the (already-computed and randomized) indices, and"
-                     " the subject name, and we'll handle the rest. Each trial will consist of "
-                     "three stimuli, shown briefly, with blank screens in between, with a pause at"
-                     " the end of the trial, at which point they must specify whether the third "
-                     "stimulus was identical to the first or the second. This continues until we'"
-                     "ve gone through all the trials in the index array, at which point we save "
-                     "responses, stimulus timing, and exit out."),
+        description=("Run the full IPD calibration task"
+                     ""
+                     "On a haploscope, two images are presented, one to each eye. The"
+                     "construction of any haploscope is done with a certain default"
+                     "inter-pupillary distance (IPD) in mind, probably 6.2 cm. If the"
+                     "subject has an IPD very different from this, it can be difficult to"
+                     "successfully fuse the image, so we want to adjust the images'"
+                     "relative centers. We start out by doing a bit of trigonometry to get"
+                     "them approximately correct, and then the user does an IPD"
+                     "calibration task, where they adjust the location of two objects (a"
+                     "square and a cross), presented in separate eyes, until they"
+                     "overlap. This is done ``num_runs`` times (each run starts with a bit"
+                     "of noise, an integer drawn from a uniform distribution from -5 to 5,"
+                     "in both directions), and then we append these results to an"
+                     "ipd_correction.csv file in the ``output_dir``, where we're keeping"
+                     "track of this information."
+                     ""
+                     "If you want to use the information stored in this csv, the"
+                     "``csv_to_binocular_offset`` function will help you with that"),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("subject_name", help="Name of the subject")
     parser.add_argument("binocular_ipd", type=float,
@@ -231,6 +423,14 @@ if __name__ == '__main__':
                         help=("This script is meant to be run on the haploscope. Therefore, we "
                               "left-right flip all text by default. Use this option to disable"
                               " that"))
+    parser.add_argument("--allow_large_ipd", action='store_true',
+                        help=("It's easy to mess up and give an IPD in mm instead of cm, but we"
+                              " require cm. In order to help check that, by default, we'll raise"
+                              " anException if either binocular_ipd or default_ipd is larger than"
+                              " 10, because that would be very large. If you really do have IPDs "
+                              "larger than 10 cm for either of those values, you can set this flag"
+                              " to True and we won't raise the Exception (but we'll still raise a"
+                              " warning)."))
     args = vars(parser.parse_args())
     flip = not args.pop('no_flip')
     ipd_calibration(flip_text=flip, **args)
