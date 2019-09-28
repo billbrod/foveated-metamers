@@ -175,18 +175,44 @@ rule generate_image:
                 met.stimuli.create_image(wildcards.image_type, int(wildcards.size), output[0],
                                          int(wildcards.period))
 
-
-rule gen_norm_stats:
+rule degamma_textures:
     input:
         config['TEXTURE_DIR']
     output:
+        dir(config['TEXTURE_DIR'] + "_degamma")
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'degamma_textures.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'degamma_textures_benchmark.txt')
+    run:
+        import imageio
+        import contextlib
+        from glob import glob
+        import os.path as op
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                for i in glob(op.join(input[0], '*.jpg')):
+                    im = imageio.imread(i, as_gray=True)
+                    # when loaded in, the range of this will be 0 to 255, we
+                    # want to convert it to 0 to 1
+                    im = im / 255
+                    # 1/2.2 is the standard encoding gamma for jpegs, so we
+                    # raise this to its reciprocal, 2.2, in order to reverse
+                    # it
+                    imageio.imwrite(op.join(output[0], op.split(i)[-1]), im**2.2)
+
+
+rule gen_norm_stats:
+    input:
+        config['TEXTURE_DIR'] + "{gamma}"
+    output:
         # here V1 and texture could be considered wildcards, but they're
         # the only we're doing this for now
-        op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture_norm_stats-{num}.pt' )
+        op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture{gamma}_norm_stats-{num}.pt' )
     log:
-        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_texture_norm_stats-{num}.log')
+        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_texture{gamma}_norm_stats-{num}.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_texture_norm_stats-{num}_benchmark.txt')
+        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_texture{gamma}_norm_stats-{num}_benchmark.txt')
     params:
         index = lambda wildcards: (int(wildcards.num) * 100, (int(wildcards.num)+1) * 100)
     run:
@@ -203,14 +229,14 @@ rule gen_norm_stats:
 # we need to generate the stats in blocks, and then want to re-combine them
 rule combine_norm_stats:
     input:
-        [op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture_norm_stats-{num}.pt').format(num=i)
+        [op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture{gamma}_norm_stats-{num}.pt').format(num=i)
          for i in range(9)]
     output:
-        op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture_norm_stats.pt' )
+        op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture{gamma}_norm_stats.pt' )
     log:
-        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_texture_norm_stats.log')
+        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_texture{gamma}_norm_stats.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_texture_norm_stats_benchmark.txt')
+        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_texture{gamma}_norm_stats_benchmark.txt')
     run:
         import torch
         import contextlib
@@ -258,7 +284,10 @@ rule cache_windows:
 
 def get_norm_dict(wildcards):
     if 'norm' in wildcards.model_name and 'V1' in wildcards.model_name:
-        return op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture_norm_stats.pt')
+        gamma = ''
+        if 'degamma' in wildcards.image_name:
+            gamma = '_degamma'
+        return op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture%s_norm_stats.pt' % gamma)
     else:
         return None
 
