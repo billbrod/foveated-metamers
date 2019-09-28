@@ -179,7 +179,7 @@ rule degamma_textures:
     input:
         config['TEXTURE_DIR']
     output:
-        dir(config['TEXTURE_DIR'] + "_degamma")
+        directory(config['TEXTURE_DIR'] + "_degamma")
     log:
         op.join(config['DATA_DIR'], 'logs', 'degamma_textures.log')
     benchmark:
@@ -189,8 +189,10 @@ rule degamma_textures:
         import contextlib
         from glob import glob
         import os.path as op
+        import os
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                os.makedirs(output[0])
                 for i in glob(op.join(input[0], '*.jpg')):
                     im = imageio.imread(i, as_gray=True)
                     # when loaded in, the range of this will be 0 to 255, we
@@ -229,8 +231,8 @@ rule gen_norm_stats:
 # we need to generate the stats in blocks, and then want to re-combine them
 rule combine_norm_stats:
     input:
-        [op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture{gamma}_norm_stats-{num}.pt').format(num=i)
-         for i in range(9)]
+        lambda wildcards: [op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture{gamma}_norm_stats-{num}.pt').format(num=i, **wildcards)
+                           for i in range(9)]
     output:
         op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture{gamma}_norm_stats.pt' )
     log:
@@ -337,8 +339,9 @@ def get_batches(wildcards):
 
 rule create_metamers:
     input:
-        REF_IMAGE_TEMPLATE_PATH,
-        get_windows,
+        ref_image = REF_IMAGE_TEMPLATE_PATH,
+        windows = get_windows,
+        norm_dict = get_norm_dict,
     output:
         METAMER_TEMPLATE_PATH.replace('_metamer.png', '.pt'),
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'summary.csv'),
@@ -360,19 +363,18 @@ rule create_metamers:
         gpu = lambda wildcards: int(wildcards.gpu.split(':')[0]),
     params:
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
-        norm_dict = get_norm_dict,
         num_batches = get_batches,
     run:
         import foveated_metamers as met
         import contextlib
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                met.create_metamers.main(wildcards.model_name, float(wildcards.scaling), input[0],
-                                         int(wildcards.seed), float(wildcards.min_ecc),
+                met.create_metamers.main(wildcards.model_name, float(wildcards.scaling),
+                                         input.ref_image, int(wildcards.seed), float(wildcards.min_ecc),
                                          float(wildcards.max_ecc), float(wildcards.learning_rate),
                                          int(wildcards.max_iter), float(wildcards.loss_thresh),
                                          output[0], wildcards.init_type, resources.gpu>0,
-                                         params.cache_dir, params.norm_dict, resources.gpu,
+                                         params.cache_dir, input.norm_dict, resources.gpu,
                                          wildcards.optimizer, float(wildcards.fract_removed),
                                          float(wildcards.loss_fract),
                                          float(wildcards.coarse_to_fine), int(params.num_batches))
