@@ -142,13 +142,17 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
             half_oct = True
         else:
             half_oct = False
-        # add fifth scale for big images/max ecc?!
+        num_scales = 4
+        if 's' in model_name:
+            num_scales = int(model_name[-1])
         model = po.simul.PrimaryVisualCortex(scaling, image.shape[-2:], min_eccentricity=min_ecc,
                                              max_eccentricity=max_ecc, transition_region_width=1,
                                              cache_dir=cache_dir, normalize_dict=normalize_dict,
-                                             half_octave_pyramid=half_oct)
+                                             half_octave_pyramid=half_oct, num_scales=num_scales)
         animate_figsize = (35, 11)
-        rep_image_figsize = [54, 30]
+        # we need about 11 per plot (and we have one of those per scale,
+        # plus one for the mean luminance)
+        rep_image_figsize = [11 * (num_scales+1), 30]
         if 'half_oct' in model_name:
             # in this case, we have almost twice as many plots to make
             rep_image_figsize[0] *= 2

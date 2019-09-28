@@ -21,7 +21,7 @@ else:
 wildcard_constraints:
     num="[0-9]+"
 
-MODELS = ['RGC', 'V1', 'V1-norm', 'V1-norm-half_oct']
+MODELS = ['RGC', 'V1-norm-s6']
 IMAGES = ['nuts', 'nuts_symmetric', 'nuts_constant', 'einstein', 'einstein_symmetric',
           'einstein_constant', 'AsianFusion-08', 'AirShow-12', 'ElFuenteDance-11',
           'Chimera1102347-03', 'CosmosLaundromat-08', 'checkerboard_period-64_size-256']
@@ -223,7 +223,8 @@ rule gen_norm_stats:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 # scaling doesn't matter here
-                v1 = po.simul.PrimaryVisualCortex(1, (512, 512), half_octave_pyramid=True)
+                v1 = po.simul.PrimaryVisualCortex(1, (512, 512), half_octave_pyramid=True,
+                                                  num_scales=6)
                 po.simul.non_linearities.generate_norm_stats(v1, input[0], output[0], (512, 512),
                                                              index=params.index)
 
@@ -308,7 +309,10 @@ def get_windows(wildcards):
     elif wildcards.model_name.startswith('V1'):
         windows = []
         # need them for every scale
-        for i in range(4):
+        num_scales = 4
+        if 's' in wildcards.model_name:
+            num_scales = int(wildcards.model_name[-1])
+        for i in range(num_scales):
             output_size = ','.join([str(int(np.ceil(j / 2**i))) for j in im.shape])
             min_ecc, _ = pooling.calc_min_eccentricity(float(wildcards.scaling),
                                                        [np.ceil(j / 2**i) for j in im.shape],
