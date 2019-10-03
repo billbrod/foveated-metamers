@@ -292,7 +292,7 @@ def get_norm_dict(wildcards):
             gamma = '_degamma'
         return op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture%s_norm_stats.pt' % gamma)
     else:
-        return None
+        return []
 
 
 def get_windows(wildcards):
