@@ -315,7 +315,7 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
     if not op.exists(output_dir):
         os.makedirs(output_dir)
     monocular_verg_angle = calc_monocular_convergence_angle(binocular_ipd, fixation_distance)
-    default_window = {'units': 'pix', 'fullscr': True, 'color': 128, 'colorSpace': 'rgb255',
+    default_window = {'units': 'pix', 'fullscr': True, 'color': 0, 'colorSpace': 'rgb255',
                       'allowGUI': False}
     for k, v in default_window.items():
         window_kwargs.setdefault(k, v)
@@ -327,13 +327,22 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
     # these pairs are horizontal, vertical
     img_pos = [[0, 0], offset]
     print("Using initial binocular offsets: %s" % img_pos)
+    # Show target icon (⃝)
+    circle_stim = visual.TextStim(win[0], text=u'\u20dd', font="consolas", units='pix',
+                                  pos=img_pos[0], height=1.5, color=(1, 1, 1),
+                                  colorSpace='rgb')
+    horiz_line_start = [img_pos[1]-200, img_pos[1]-3]
+    horiz_line_end = [img_pos[1]+200, img_pos[1]+3]
+    # the vertical is just reversed
+    vert_line_start = horiz_line_start[::-1]
+    vert_line_end = horiz_line_end[::-1]
     if len(screen) == 1:
         print('Doing single-monitor mode on screen %s' % screen)
         win = [visual.Window(winType='glfw', screen=screen[0], size=size, **window_kwargs)]
-        # Show target icons (□ and +)
-        stim = [visual.TextStim(win[0], text=[u'\u25a1', '+'][i], font="consolas", units='pix',
-                                pos=img_pos[i], height=[1.5, 3][i]*pix_per_deg, color=(1, 1, 1),
-                                colorSpace='rgb') for i in range(2)]
+        # line stimuli
+        line_stim = [visual.Line(win[0], start=[horiz_line_start, vert_line_start][i],
+                                 end=[horiz_line_end, vert_line_end][i], units='pix',
+                                 color=(1, 1, 1), colorSpace='rgb') for i in range(2)]
     elif len(screen) == 2:
         # want these to be in increasing order
         screen.sort()
@@ -346,20 +355,21 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
         # https://discourse.psychopy.org/t/strange-behavior-with-retina-displays-external-monitors-in-1-90-2-py2/5485/5
         win.append(visual.Window(winType='glfw', screen=screen[1], swapInterval=0, share=win[0],
                                  size=size, **window_kwargs))
-        stim = [visual.TextStim(win[i], text=[u'\u25a1', '+'][i], font="consolas", units='pix',
-                                pos=img_pos[i], height=[1.5, 3][i]*pix_per_deg, color=(1, 1, 1),
-                                colorSpace='rgb') for i in range(2)]
+        line_stim = [visual.Line(win[1], start=[horiz_line_start, vert_line_start][i],
+                                 end=[horiz_line_end, vert_line_end][i], units='pix',
+                                 color=(1, 1, 1), colorSpace='rgb') for i in range(2)]
     else:
         raise Exception("Can't handle %s screens!" % len(window_kwargs['screen']))
 
     calibrated = []
     for i in range(num_runs):
-        new_pos = [[int(j + np.random.randint(-5, 5)) for j in i.copy()] for i in img_pos]
-        stim[1].pos = new_pos[-1]
         # need to make sure to do this full copy so the img_pos object
         # doesn't get modified in the other function. we also add a bit
         # of random noise so it's not the same each time
-        calibrated.append(run_calibration(win, new_pos, stim, flip_text))
+        for j in range(2):
+            new_pos = [[int(k + np.random.randint(-5, 5)) for k in i.copy()] for i in img_pos]
+            stim[1].pos = new_pos[-1]
+            calibrated.append(run_calibration(win, new_pos, stim, flip_text))
     df = pd.DataFrame({'subject_name': subject_name, 'binocular_ipd': binocular_ipd,
                        'run': list(range(num_runs)), 'screen_width_pix': size[0],
                        'screen_width_cm': monitor_cm_width,
