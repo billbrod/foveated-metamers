@@ -147,14 +147,14 @@ def clear_events(win):
         event.getKeys()
 
 
-def run_calibration(win, img_pos, stim, flip_text=True):
+def run_calibration(win, img_pos, stim, vert_or_horiz, flip_text=True):
     """run the actual calibration task
 
-    For a given run, we take the initialized windows, stimuli, and
-    they're starting conditions, and allow the user to move one around
-    until the two stimuli align. This will work for either one or two
-    windows (win should be a list in either case, just with 1 or 2
-    entries), but will probably fail for more than that.
+    For a given run, we take the initialized windows, stimuli, and their
+    starting conditions, and allow the user to move one around until the
+    two stimuli align. This will work for either one or two windows (win
+    should be a list in either case, just with 1 or 2 entries), but will
+    probably fail for more than that.
 
     The run continues until the user presses the space bar. We ignore
     all buttons other than the arrow keys and space, which we use to
@@ -173,6 +173,8 @@ def run_calibration(win, img_pos, stim, flip_text=True):
     stim : list
         List of Psychopy.visual.TextStim, length 2. The two stimuli
         (square and cross) which the user is adjusting for this task.
+    vert_or_horiz : {'vert', 'horiz'}
+        Whether we're doing the vertical or horizontal calibration
     flip_text : bool, optional
         Boolean, whether to left-right reverse everything. If True,
         everything will be flipped, as you need on the haploscope. If
@@ -188,8 +190,14 @@ def run_calibration(win, img_pos, stim, flip_text=True):
     """
     clear_events(win)
 
-    start_text = (u"Press space to begin\nUse arrow keys to adjust the location of the \u25a1 and "
-                  "+ until they overlap\nThen press space")
+    if vert_or_horiz == 'vert':
+        start_text = (u"Press space to begin, q or esc to quit (without saving anything)\nUse "
+                      "up/down arrow keys to adjust the vertical position of the line until it"
+                      " lies in the center of the circle, then press space")
+    elif vert_or_horiz == 'horiz':
+        start_text = (u"Press space to begin, q or esc to quit (without saving anything)\nUse "
+                      "left/right arrow keys to adjust the horizontal position of the line until"
+                      " it lies in the center of the circle, then press space")
     start_text = [visual.TextStim(w, start_text, pos=p, wrapWidth=1000, flipHoriz=flip_text)
                   for w, p in zip(win, img_pos)]
     [text.draw() for text in start_text]
@@ -200,7 +208,12 @@ def run_calibration(win, img_pos, stim, flip_text=True):
         [text.draw() for text in start_text]
         [w.flip() for w in win]
         core.wait(.1)
-        keys = event.getKeys(keyList=['space'])
+        keys = event.getKeys(keyList=['space', 'q', 'esc', 'escape'])
+
+    if 'q' in keys or 'esc' in keys or 'escape' in keys:
+        # then the user wanted to quit
+        print("Quitting out early, not saving any position")
+        return None
 
     clear_events(win)
 
@@ -212,25 +225,37 @@ def run_calibration(win, img_pos, stim, flip_text=True):
         [s.draw() for s in stim]
         [w.flip() for w in win]
         keys = event.getKeys()
-        if 'space' in keys:
+        if 'space' in keys or 'q' in keys or 'esc' in keys or 'escape' in keys:
             break
-        if 'up' in keys:
-            img_pos[1][1] += 1
-        if 'down' in keys:
-            img_pos[1][1] -= 1
-        if 'left' in keys:
-            img_pos[1][0] -= key_direction*1
-        if 'right' in keys:
-            img_pos[1][0] += key_direction*1
+        if vert_or_horiz == 'vert':
+            if 'up' in keys:
+                img_pos[1][1] += 1
+            if 'down' in keys:
+                img_pos[1][1] -= 1
+        elif vert_or_horiz == 'horiz':
+            if 'left' in keys:
+                img_pos[1][0] -= key_direction*1
+            if 'right' in keys:
+                img_pos[1][0] += key_direction*1
         stim[1].pos = img_pos[1]
 
-    print("Final offset: %s" % img_pos[1])
-    return img_pos[1]
+    # vert_or_horiz=='vert' will evaluate to True, and thus 1, if this
+    # is the vertical trial and False, and thus 0, if this is the
+    # horizontal one. That's what we want in order to correctly display
+    # the right info
+    if 'space' in keys:
+        print("Final %s offset: %s" % (vert_or_horiz, img_pos[1][vert_or_horiz == 'vert']))
+        return img_pos[1][vert_or_horiz == 'vert']
+    else:
+        # then the user wanted to quit
+        print("Quitting out early, not saving any position")
+        return None
 
 
 def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4096, 2160],
                     fixation_distance=42, monitor_cm_width=69.8, num_runs=3, flip_text=True,
-                    default_ipd=6.2, allow_large_ipd=False, **window_kwargs):
+                    default_ipd=6.2, allow_large_ipd=False, line_length=400, line_width=10,
+                    circle_radius=25, **window_kwargs):
     """Run the full IPD calibration task
 
     On a haploscope, two images are presented, one to each eye. The
@@ -301,6 +326,12 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
     window_kwargs : kwargs
         Other keyword=value pairs will be passed directly to the
         creation of the Psychopy.visual.Window objects
+    line_length : int
+        Length of the line stimulus, in pixels
+    line_width : int
+        Width of the line stimulus, in pixels
+    circle_radius : int
+        Radius of the circle stimulus, in pixels
 
     """
     if (binocular_ipd > 10 or default_ipd > 10):
@@ -327,28 +358,27 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
     # these pairs are horizontal, vertical
     img_pos = [[0, 0], offset]
     print("Using initial binocular offsets: %s" % img_pos)
-    # Show target icon (⃝)
-    circle_stim = visual.TextStim(win[0], text=u'\u20dd', font="consolas", units='pix',
-                                  pos=img_pos[0], height=1.5, color=(1, 1, 1),
-                                  colorSpace='rgb')
-    horiz_line_start = [img_pos[1]-200, img_pos[1]-3]
-    horiz_line_end = [img_pos[1]+200, img_pos[1]+3]
-    # the vertical is just reversed
+    # want these to be in increasing order
+    screen.sort()
+    win = [visual.Window(winType='glfw', screen=screen[0], swapInterval=1, size=size,
+                         **window_kwargs)]
+    circle_stim = visual.Circle(win[0], units='pix', pos=img_pos[0], radius=circle_radius,
+                                lineColor=(1, 1, 1), lineColorSpace='rgb')
+    horiz_line_start = [int(-line_length)//2, 0]
+    horiz_line_end = [int(line_length)//2, 0]
+    # the vertical is just a reversed version of the horizontal (since
+    # it goes x, y)
     vert_line_start = horiz_line_start[::-1]
     vert_line_end = horiz_line_end[::-1]
     if len(screen) == 1:
         print('Doing single-monitor mode on screen %s' % screen)
-        win = [visual.Window(winType='glfw', screen=screen[0], size=size, **window_kwargs)]
         # line stimuli
         line_stim = [visual.Line(win[0], start=[horiz_line_start, vert_line_start][i],
                                  end=[horiz_line_end, vert_line_end][i], units='pix',
-                                 color=(1, 1, 1), colorSpace='rgb') for i in range(2)]
+                                 lineWidth=line_width, pos=img_pos[1], lineColor=(1, 1, 1),
+                                 lineColorSpace='rgb') for i in range(2)]
     elif len(screen) == 2:
-        # want these to be in increasing order
-        screen.sort()
         print("Doing binocular mode on screens %s" % screen)
-        win = [visual.Window(winType='glfw', screen=screen[0], swapInterval=1, size=size,
-                             **window_kwargs)]
         # see here for the explanation of swapInterval and share args
         # (basically, in order to make glfw correctly update the two
         # monitors together):
@@ -356,8 +386,9 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
         win.append(visual.Window(winType='glfw', screen=screen[1], swapInterval=0, share=win[0],
                                  size=size, **window_kwargs))
         line_stim = [visual.Line(win[1], start=[horiz_line_start, vert_line_start][i],
-                                 end=[horiz_line_end, vert_line_end][i], units='pix',
-                                 color=(1, 1, 1), colorSpace='rgb') for i in range(2)]
+                                 lineWidth=line_width, end=[horiz_line_end, vert_line_end][i],
+                                 units='pix', pos=img_pos[1], lineColor=(1, 1, 1),
+                                 lineColorSpace='rgb') for i in range(2)]
     else:
         raise Exception("Can't handle %s screens!" % len(window_kwargs['screen']))
 
@@ -367,16 +398,26 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
         # doesn't get modified in the other function. we also add a bit
         # of random noise so it's not the same each time
         for j in range(2):
-            new_pos = [[int(k + np.random.randint(-5, 5)) for k in i.copy()] for i in img_pos]
-            stim[1].pos = new_pos[-1]
-            calibrated.append(run_calibration(win, new_pos, stim, flip_text))
+            trial_type = ['vert', 'horiz'][j]
+            new_pos = [[int(k + np.random.randint(-5, 5)) for k in l.copy()] for l in img_pos]
+            line_stim[j].pos = new_pos[1]
+            shift_amt = run_calibration(win, new_pos, [circle_stim, line_stim[j]],
+                                        trial_type, flip_text)
+            if shift_amt is None:
+                # then the user pressed q or esc and we want to quit
+                # without saving anything
+                return
+            calibrated.append([shift_amt, trial_type])
     df = pd.DataFrame({'subject_name': subject_name, 'binocular_ipd': binocular_ipd,
                        'run': list(range(num_runs)), 'screen_width_pix': size[0],
                        'screen_width_cm': monitor_cm_width,
-                       'ipd_correction_pix_horizontal': [c[0] for c in calibrated],
-                       'ipd_correction_pix_vertical': [c[1] for c in calibrated],
-                       'ipd_correction_deg_horizontal': [c[0] / pix_per_deg for c in calibrated],
-                       'ipd_correction_deg_vertical': [c[1] / pix_per_deg for c in calibrated],
+                       'ipd_correction_pix_horizontal': [c[0] for c in calibrated
+                                                         if c[1] == 'horiz'],
+                       'ipd_correction_pix_vertical': [c[0] for c in calibrated if c[1] == 'vert'],
+                       'ipd_correction_deg_horizontal': [c[0] / pix_per_deg for c in calibrated
+                                                         if c[1] == 'horiz'],
+                       'ipd_correction_deg_vertical': [c[0] / pix_per_deg for c in calibrated
+                                                       if c[1] == 'vert'],
                        'monocular_vergence_angle': monocular_verg_angle,
                        'fixation_distance_cm': fixation_distance})
     if op.exists(op.join(output_dir, 'ipd_correction.csv')):
@@ -423,7 +464,7 @@ if __name__ == '__main__':
                         help="Fixation distance (in cm) of the display")
     parser.add_argument("--size", '-p', nargs=2, help="Size of the screen (in pixels)",
                         default=[4096, 2160], type=float)
-    parser.add_argument("--monitor_cm_width", '-w', help="Width of the screen in cm",
+    parser.add_argument("--monitor_cm_width", '-c', help="Width of the screen in cm",
                         default=69.8, type=float)
     parser.add_argument("--num_runs", "-n", type=int, default=3,
                         help="Number of times to run the calibration")
@@ -439,6 +480,12 @@ if __name__ == '__main__':
                               "larger than 10 cm for either of those values, you can set this flag"
                               " to True and we won't raise the Exception (but we'll still raise a"
                               " warning)."))
+    parser.add_argument("--line_length", '-l', default=400,
+                        help="Length of the line stimulus, in pixels")
+    parser.add_argument("--line_width", '-w', default=10,
+                        help="Width of the line stimulus, in pixels")
+    parser.add_argument("--circle_radius", '-r', default=25,
+                        help="Radius of the circle stimulus, in pixels")
     args = vars(parser.parse_args())
     flip = not args.pop('no_flip')
     ipd_calibration(flip_text=flip, **args)
