@@ -561,7 +561,8 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     np.random.seed(seed)
     image_name = image
     image = setup_image(image)
-    if normalize_dict is not None:
+    # this will be false if normalize_dict is None or an empty list
+    if normalize_dict:
         normalize_dict = torch.load(normalize_dict)
     model, animate_figsize, rep_figsize, img_zoom = setup_model(model_name, scaling, image,
                                                                 min_ecc, max_ecc, cache_dir,
