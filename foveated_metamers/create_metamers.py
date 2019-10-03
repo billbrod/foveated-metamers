@@ -118,7 +118,7 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
 
     """
     if model_name == 'RGC':
-        if normalize_dict is not None:
+        if normalize_dict:
             raise Exception("Cannot normalize RGC model!")
         model = po.simul.RetinalGanglionCells(scaling, image.shape[-2:], min_eccentricity=min_ecc,
                                               max_eccentricity=max_ecc, transition_region_width=1,
@@ -132,11 +132,11 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
         # figsize is (width, height)
         default_imgsize = 256
     elif model_name.startswith('V1'):
-        if not 'norm' in model_name:
-            if normalize_dict is not None:
+        if 'norm' not in model_name:
+            if normalize_dict:
                 raise Exception("Cannot normalize V1 model (must be V1-norm)!")
             normalize_dict = {}
-        if normalize_dict is None and 'norm' in model_name:
+        if not normalize_dict and 'norm' in model_name:
             raise Exception("If model_name is V1-norm, normalize_dict must be set!")
         if 'half_oct' in model_name:
             half_oct = True
