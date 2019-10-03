@@ -383,25 +383,23 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description=("Run the full IPD calibration task"
-                     ""
-                     "On a haploscope, two images are presented, one to each eye. The"
-                     "construction of any haploscope is done with a certain default"
-                     "inter-pupillary distance (IPD) in mind, probably 6.2 cm. If the"
-                     "subject has an IPD very different from this, it can be difficult to"
-                     "successfully fuse the image, so we want to adjust the images'"
+        description=("Run the full IPD calibration task. "
+                     "On a haploscope, two images are presented, one to each eye. The "
+                     "construction of any haploscope is done with a certain default "
+                     "inter-pupillary distance (IPD) in mind, probably 6.2 cm. If the "
+                     "subject has an IPD very different from this, it can be difficult to "
+                     "successfully fuse the image, so we want to adjust the images' "
                      "relative centers. We start out by doing a bit of trigonometry to get"
-                     "them approximately correct, and then the user does an IPD"
+                     " them approximately correct, and then the user does an IPD "
                      "calibration task, where they adjust the location of two objects (a"
-                     "square and a cross), presented in separate eyes, until they"
-                     "overlap. This is done ``num_runs`` times (each run starts with a bit"
+                     " square and a cross), presented in separate eyes, until they "
+                     "overlap. This is done ``num_runs`` times (each run starts with a bit "
                      "of noise, an integer drawn from a uniform distribution from -5 to 5,"
-                     "in both directions), and then we append these results to an"
-                     "ipd_correction.csv file in the ``output_dir``, where we're keeping"
-                     "track of this information."
-                     ""
-                     "If you want to use the information stored in this csv, the"
-                     "``csv_to_binocular_offset`` function will help you with that"),
+                     " in both directions), and then we append these results to an "
+                     "ipd_correction.csv file in the ``output_dir``, where we're keeping "
+                     "track of this information. If you want to use the information stored"
+                     "in this csv, the ``csv_to_binocular_offset`` function will help you "
+                     "with that"),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("subject_name", help="Name of the subject")
     parser.add_argument("binocular_ipd", type=float,
@@ -415,7 +413,7 @@ if __name__ == '__main__':
                         help="Fixation distance (in cm) of the display")
     parser.add_argument("--size", '-p', nargs=2, help="Size of the screen (in pixels)",
                         default=[4096, 2160], type=float)
-    parser.add_argument("--monitor_cm_width", '-w', nargs=2, help="Width of the screen in cm",
+    parser.add_argument("--monitor_cm_width", '-w', help="Width of the screen in cm",
                         default=69.8, type=float)
     parser.add_argument("--num_runs", "-n", type=int, default=3,
                         help="Number of times to run the calibration")
@@ -426,7 +424,7 @@ if __name__ == '__main__':
     parser.add_argument("--allow_large_ipd", action='store_true',
                         help=("It's easy to mess up and give an IPD in mm instead of cm, but we"
                               " require cm. In order to help check that, by default, we'll raise"
-                              " anException if either binocular_ipd or default_ipd is larger than"
+                              " an Exception if either binocular_ipd or default_ipd is larger than"
                               " 10, because that would be very large. If you really do have IPDs "
                               "larger than 10 cm for either of those values, you can set this flag"
                               " to True and we won't raise the Exception (but we'll still raise a"
