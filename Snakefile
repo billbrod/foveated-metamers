@@ -31,7 +31,7 @@ METAMER_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers', '{model_name}', 
 REF_IMAGE_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'ref_images', '{image_name}.pgm')
 SEEDS = {'sub-01': 0}
 
-def get_all_metamers:
+def get_all_metamers(min_idx=0, max_idx=-1):
     images = [REF_IMAGE_TEMPLATE_PATH.format(image_name=i) for i in IMAGES]
     rgc_scaling = [.01, .013, .017, .021, .027, .035, .045, .058, .075]
     rgc_gpu_dict = {.01: 0, .013: 0, .017: 4, .021: 4, .027: 3, .035: 3}
@@ -50,7 +50,11 @@ def get_all_metamers:
                                                 max_ecc=41, max_iter={.075: 7500}.get(sc, 5000),
                                                 loss_thresh=1e-8, gpu=1)
                     for i in IMAGES for sc in v1_scaling for s in range(4)]
-    return images + rgc_metamers + v1_metamers
+    all_metamers = rgc_metamers + v1_metamers
+    # we use -1 as a dummy value, ignoring it
+    if max_idx != -1:
+        all_metamers = all_metamers[:max_idx]
+    return all_metamers[min_idx:]
 
 
 rule all_refs:
@@ -402,6 +406,14 @@ rule create_metamers:
                                          float(wildcards.loss_fract),
                                          float(wildcards.coarse_to_fine), int(params.num_batches))
 
+
+rule dummy_metamer_gen:
+    input:
+        lambda wildcards: get_all_metamers(int(wildcards.min_idx), int(wildcards.max_idx)),
+    output:
+        op.join(config['DATA_DIR'], 'metamers', 'dummy_{min_idx}_{max_idx}.txt')
+    shell:
+        "touch {output}"
 
 # need to come up with a clever way to do this: either delete the ones
 # we don't want or make this a function that only takes the ones we want
