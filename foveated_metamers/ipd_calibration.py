@@ -254,7 +254,7 @@ def run_calibration(win, img_pos, stim, vert_or_horiz, flip_text=True):
 
 def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4096, 2160],
                     fixation_distance=42, monitor_cm_width=69.8, num_runs=3, flip_text=True,
-                    default_ipd=6.2, allow_large_ipd=False, line_length=400, line_width=10,
+                    default_ipd=6.2, allow_large_ipd=False, line_length=800, line_width=5,
                     circle_radius=25, **window_kwargs):
     """Run the full IPD calibration task
 
