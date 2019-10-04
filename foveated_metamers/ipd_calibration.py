@@ -148,7 +148,7 @@ def clear_events(win):
 
 
 def run_calibration(win, img_pos, circle_stim, line_stim, vert_or_horiz, flip_text=True,
-                    line_on_duration=.5, line_off_duration=1):
+                    line_on_duration=.5, line_off_duration=1, arrows=False):
     """run the actual calibration task
 
     For a given run, we take the initialized windows, stimuli, and their
@@ -191,6 +191,10 @@ def run_calibration(win, img_pos, circle_stim, line_stim, vert_or_horiz, flip_te
         Length of time (in seconds) that the line should be on for
     line_off_duration : float, optional
         Length of time (in seconds) that the line should be off for
+    arrows : bool
+        By default, we use the numpad to allow for both coarse and fine
+        positioning. By setting this to True, we use arrows (only fine)
+        instead
 
     Returns
     -------
@@ -201,13 +205,25 @@ def run_calibration(win, img_pos, circle_stim, line_stim, vert_or_horiz, flip_te
     clear_events(win)
 
     if vert_or_horiz == 'vert':
-        start_text = (u"Press space to begin, q or esc to quit (without saving anything)\nUse "
-                      "up/down arrow keys to adjust the vertical position of the line until it"
-                      " lies in the center of the circle, then press space")
+        if arrows:
+            start_text = (u"Press space to begin, q or esc to quit (without saving anything)\nUse "
+                          "up/down arrow keys to adjust the vertical position of the line until it"
+                          " lies in the center of the circle, then press space")
+        else:
+            start_text = (u"Press space to begin, q or esc to quit (without saving anything)\nUse "
+                          "8/2 arrow keys to adjust the vertical position coarsely of the line "
+                          "(7/1 to adjust it finely) until it lies in the center of the circle, "
+                          "then press space")
     elif vert_or_horiz == 'horiz':
-        start_text = (u"Press space to begin, q or esc to quit (without saving anything)\nUse "
-                      "left/right arrow keys to adjust the horizontal position of the line until"
-                      " it lies in the center of the circle, then press space")
+        if arrows:
+            start_text = (u"Press space to begin, q or esc to quit (without saving anything)\nUse "
+                          "left/right arrow keys to adjust the horizontal position of the line "
+                          "until it lies in the center of the circle, then press space")
+        else:
+            start_text = (u"Press space to begin, q or esc to quit (without saving anything)\nUse "
+                          "4/6 arrow keys to adjust the horizontal position coarsely of the line "
+                          "(1/3 to adjust it finely) until it lies in the center of the circle, "
+                          "then press space")
     start_text = [visual.TextStim(w, start_text, pos=p, wrapWidth=1000, flipHoriz=flip_text)
                   for w, p in zip(win, img_pos)]
     [text.draw() for text in start_text]
@@ -243,16 +259,37 @@ def run_calibration(win, img_pos, circle_stim, line_stim, vert_or_horiz, flip_te
         keys = event.getKeys()
         if 'space' in keys or 'q' in keys or 'esc' in keys or 'escape' in keys:
             break
-        if vert_or_horiz == 'vert':
-            if 'up' in keys:
-                img_pos[1][1] += 1
-            if 'down' in keys:
-                img_pos[1][1] -= 1
-        elif vert_or_horiz == 'horiz':
-            if 'left' in keys:
-                img_pos[1][0] -= key_direction*1
-            if 'right' in keys:
-                img_pos[1][0] += key_direction*1
+        print(keys)
+        if arrows:
+            if vert_or_horiz == 'vert':
+                if 'up' in keys:
+                    img_pos[1][1] += 1
+                if 'down' in keys:
+                    img_pos[1][1] -= 1
+            elif vert_or_horiz == 'horiz':
+                if 'left' in keys:
+                    img_pos[1][0] -= key_direction*1
+                if 'right' in keys:
+                    img_pos[1][0] += key_direction*1
+        else:
+            if vert_or_horiz == 'vert':
+                if '8' in keys:
+                    img_pos[1][1] += 5
+                if '2' in keys:
+                    img_pos[1][1] -= 5
+                if '7' in keys:
+                    img_pos[1][1] += 1
+                if '1' in keys:
+                    img_pos[1][1] -= 1
+            elif vert_or_horiz == 'horiz':
+                if '4' in keys:
+                    img_pos[1][0] -= key_direction*5
+                if '6' in keys:
+                    img_pos[1][0] += key_direction*5
+                if '1' in keys:
+                    img_pos[1][0] -= key_direction*1
+                if '3' in keys:
+                    img_pos[1][0] += key_direction*1
         line_stim.pos = img_pos[1]
 
     # vert_or_horiz=='vert' will evaluate to True, and thus 1, if this
@@ -271,7 +308,8 @@ def run_calibration(win, img_pos, circle_stim, line_stim, vert_or_horiz, flip_te
 def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4096, 2160],
                     fixation_distance=42, monitor_cm_width=69.8, num_runs=3, flip_text=True,
                     default_ipd=6.2, allow_large_ipd=False, line_length=800, line_width=5,
-                    circle_radius=25, line_on_duration=.5, line_off_duration=1, **window_kwargs):
+                    circle_radius=25, line_on_duration=.5, line_off_duration=1, arrows=False,
+                    **window_kwargs):
     """Run the full IPD calibration task
 
     On a haploscope, two images are presented, one to each eye. The
@@ -352,6 +390,10 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
         Length of time (in seconds) that the line should be on for
     line_off_duration : float, optional
         Length of time (in seconds) that the line should be off for
+    arrows : bool
+        By default, we use the numpad to allow for both coarse and fine
+        positioning. By setting this to True, we use arrows (only fine)
+        instead
 
     """
     if (binocular_ipd > 10 or default_ipd > 10):
@@ -422,7 +464,7 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
             new_pos = [[int(k + np.random.randint(-5, 5)) for k in l.copy()] for l in img_pos]
             line_stim[j].pos = new_pos[1]
             shift_amt = run_calibration(win, new_pos, circle_stim, line_stim[j], trial_type,
-                                        flip_text, line_on_duration, line_off_duration)
+                                        flip_text, line_on_duration, line_off_duration, arrows)
             if shift_amt is None:
                 # then the user pressed q or esc and we want to quit
                 # without saving anything
@@ -510,6 +552,10 @@ if __name__ == '__main__':
                         help="Length of time (in seconds) that the line should be on for")
     parser.add_argument("--line_off_duration", '-off', default=1, type=float,
                         help="Length of time (in seconds) that the line should be off for")
+    parser.add_argument('--arrows', action='store_true',
+                        help=("By default, we use the numpad to allow for both coarse and fine"
+                              " positioning. By setting this option, we use arrows (only fine)"
+                              " instead"))
     args = vars(parser.parse_args())
     flip = not args.pop('no_flip')
     ipd_calibration(flip_text=flip, **args)
