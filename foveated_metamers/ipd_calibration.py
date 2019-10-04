@@ -259,7 +259,6 @@ def run_calibration(win, img_pos, circle_stim, line_stim, vert_or_horiz, flip_te
         keys = event.getKeys()
         if 'space' in keys or 'q' in keys or 'esc' in keys or 'escape' in keys:
             break
-        print(keys)
         if arrows:
             if vert_or_horiz == 'vert':
                 if 'up' in keys:
@@ -273,22 +272,22 @@ def run_calibration(win, img_pos, circle_stim, line_stim, vert_or_horiz, flip_te
                     img_pos[1][0] += key_direction*1
         else:
             if vert_or_horiz == 'vert':
-                if '8' in keys:
-                    img_pos[1][1] += 5
-                if '2' in keys:
-                    img_pos[1][1] -= 5
-                if '7' in keys:
+                if 'num_8' in keys:
+                    img_pos[1][1] += 10
+                if 'num_2' in keys:
+                    img_pos[1][1] -= 10
+                if 'num_7' in keys:
                     img_pos[1][1] += 1
-                if '1' in keys:
+                if 'num_1' in keys:
                     img_pos[1][1] -= 1
             elif vert_or_horiz == 'horiz':
-                if '4' in keys:
-                    img_pos[1][0] -= key_direction*5
-                if '6' in keys:
-                    img_pos[1][0] += key_direction*5
-                if '1' in keys:
+                if 'num_4' in keys:
+                    img_pos[1][0] -= key_direction*10
+                if 'num_6' in keys:
+                    img_pos[1][0] += key_direction*10
+                if 'num_1' in keys:
                     img_pos[1][0] -= key_direction*1
-                if '3' in keys:
+                if 'num_3' in keys:
                     img_pos[1][0] += key_direction*1
         line_stim.pos = img_pos[1]
 
@@ -308,8 +307,8 @@ def run_calibration(win, img_pos, circle_stim, line_stim, vert_or_horiz, flip_te
 def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4096, 2160],
                     fixation_distance=42, monitor_cm_width=69.8, num_runs=3, flip_text=True,
                     default_ipd=6.2, allow_large_ipd=False, line_length=800, line_width=5,
-                    circle_radius=25, line_on_duration=.5, line_off_duration=1, arrows=False,
-                    **window_kwargs):
+                    circle_radius=25, line_on_duration=.25, line_off_duration=1, arrows=False,
+                    win_type='pyglet', **window_kwargs):
     """Run the full IPD calibration task
 
     On a haploscope, two images are presented, one to each eye. The
@@ -422,10 +421,10 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
     print("Using initial binocular offsets: %s" % img_pos)
     # want these to be in increasing order
     screen.sort()
-    win = [visual.Window(winType='glfw', screen=screen[0], swapInterval=1, size=size,
+    win = [visual.Window(winType=win_type, screen=screen[0], swapInterval=1, size=size,
                          **window_kwargs)]
     circle_stim = visual.Circle(win[0], units='pix', pos=img_pos[0], radius=circle_radius,
-                                lineColor=(1, 1, 1), lineColorSpace='rgb')
+                                lineColor=(1, 1, 1), lineColorSpace='rgb', lineWidth=line_width)
     horiz_line_start = [int(-line_length)//2, 0]
     horiz_line_end = [int(line_length)//2, 0]
     # the vertical is just a reversed version of the horizontal (since
@@ -445,7 +444,7 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
         # (basically, in order to make glfw correctly update the two
         # monitors together):
         # https://discourse.psychopy.org/t/strange-behavior-with-retina-displays-external-monitors-in-1-90-2-py2/5485/5
-        win.append(visual.Window(winType='glfw', screen=screen[1], swapInterval=0, share=win[0],
+        win.append(visual.Window(winType=win_type, screen=screen[1], swapInterval=0, share=win[0],
                                  size=size, **window_kwargs))
         line_stim = [visual.Line(win[1], start=[horiz_line_start, vert_line_start][i],
                                  lineWidth=line_width, end=[horiz_line_end, vert_line_end][i],
@@ -542,13 +541,13 @@ if __name__ == '__main__':
                               "larger than 10 cm for either of those values, you can set this flag"
                               " to True and we won't raise the Exception (but we'll still raise a"
                               " warning)."))
-    parser.add_argument("--line_length", '-l', default=400, type=int,
+    parser.add_argument("--line_length", '-l', default=800, type=int,
                         help="Length of the line stimulus, in pixels")
-    parser.add_argument("--line_width", '-w', default=10, type=int,
+    parser.add_argument("--line_width", '-w', default=5, type=int,
                         help="Width of the line stimulus, in pixels")
     parser.add_argument("--circle_radius", '-r', default=25, type=int,
                         help="Radius of the circle stimulus, in pixels")
-    parser.add_argument("--line_on_duration", '-on', default=.5, type=float,
+    parser.add_argument("--line_on_duration", '-on', default=.25, type=float,
                         help="Length of time (in seconds) that the line should be on for")
     parser.add_argument("--line_off_duration", '-off', default=1, type=float,
                         help="Length of time (in seconds) that the line should be off for")
@@ -556,6 +555,13 @@ if __name__ == '__main__':
                         help=("By default, we use the numpad to allow for both coarse and fine"
                               " positioning. By setting this option, we use arrows (only fine)"
                               " instead"))
+    parser.add_argument('--win_type', default='pyglet',
+                        help=("{glfw, pyglet}. Backend to use for the psychopy Window type. "
+                              "pyglet (the default) does not work on my Fedora laptop (it "
+                              "raises `AssertionError: XF86VidModeGetGammaRamp failed`), but"
+                              " it does work on Ubuntu 18.04 on the lab machines. glfw "
+                              "doesn't seem to capture the numpad, so if you use it as the "
+                              "backend, you might need to enable the arrows option as well."))
     args = vars(parser.parse_args())
     flip = not args.pop('no_flip')
     ipd_calibration(flip_text=flip, **args)
