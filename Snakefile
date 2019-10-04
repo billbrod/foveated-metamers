@@ -22,9 +22,7 @@ wildcard_constraints:
     num="[0-9]+"
 
 MODELS = ['RGC', 'V1-norm-s6']
-IMAGES = ['nuts', 'nuts_symmetric', 'nuts_constant', 'einstein', 'einstein_symmetric',
-          'einstein_constant', 'AsianFusion-08', 'AirShow-12', 'ElFuenteDance-11',
-          'Chimera1102347-03', 'CosmosLaundromat-08', 'checkerboard_period-64_size-256']
+IMAGES = ['trees-degamma', 'sheep-degamma', 'refuge-degamma', 'japan-degamma', 'street-degamma']
 METAMER_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers', '{model_name}', '{image_name}',
                                 'scaling-{scaling}', 'opt-{optimizer}', 'fr-{fract_removed}_lc-'
                                 '{loss_fract}_cf-{coarse_to_fine}', 'seed-{seed}_init-{init_type}'
@@ -32,6 +30,27 @@ METAMER_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers', '{model_name}', 
                                 'thresh-{loss_thresh}_gpu-{gpu}_metamer.png')
 REF_IMAGE_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'ref_images', '{image_name}.pgm')
 SEEDS = {'sub-01': 0}
+
+def get_all_metamers:
+    images = [REF_IMAGE_TEMPLATE_PATH.format(image_name=i) for i in IMAGES]
+    rgc_scaling = [.01, .013, .017, .021, .027, .035, .045, .058, .075]
+    rgc_gpu_dict = {.01: 0, .013: 0, .017: 4, .021: 4, .027: 3, .035: 3}
+    rgc_metamers = [METAMER_TEMPLATE_PATH.format(model_name='RGC', image_name=i, scaling=sc,
+                                                 optimizer='Adam', fract_removed=0, loss_fract=1,
+                                                 coarse_to_fine=0, seed=s, init_type='white',
+                                                 learning_rate=1, min_ecc=3.72, max_ecc=41,
+                                                 max_iter=750, loss_thresh=1e-8,
+                                                 gpu=rgc_gpu_dict.get(sc, 1))
+                    for i in IMAGES for sc in rgc_scaling for s in range(4)]
+    v1_scaling = [.075, .095, .12, .15, .19, .25, .31, .39, .5]
+    v1_metamers = [METAMER_TEMPLATE_PATH.format(model_name='V1', image_name=i, scaling=sc,
+                                                optimizer='Adam', fract_removed=0, loss_fract=1,
+                                                coarse_to_fine=1e-2, seed=s, init_type='white',
+                                                learning_rate={.075: 1}.get(sc, .1), min_ecc=.5,
+                                                max_ecc=41, max_iter={.075: 7500}.get(sc, 5000),
+                                                loss_thresh=1e-8, gpu=1)
+                    for i in IMAGES for sc in v1_scaling for s in range(4)]
+    return images + rgc_metamers + v1_metamers
 
 
 rule all_refs:
