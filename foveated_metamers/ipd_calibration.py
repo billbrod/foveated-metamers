@@ -147,7 +147,8 @@ def clear_events(win):
         event.getKeys()
 
 
-def run_calibration(win, img_pos, stim, vert_or_horiz, flip_text=True):
+def run_calibration(win, img_pos, circle_stim, line_stim, vert_or_horiz, flip_text=True,
+                    line_on_duration=.5, line_off_duration=1):
     """run the actual calibration task
 
     For a given run, we take the initialized windows, stimuli, and their
@@ -160,6 +161,10 @@ def run_calibration(win, img_pos, stim, vert_or_horiz, flip_text=True):
     all buttons other than the arrow keys and space, which we use to
     start and end the run.
 
+    We present a circle and a line (either vertical or horizontal), and
+    the subject's job is to line them up. We flash the line to prevent
+    the eye tracking it.
+
     Parameters
     ----------
     win : list
@@ -170,9 +175,10 @@ def run_calibration(win, img_pos, stim, vert_or_horiz, flip_text=True):
     img_pos : list
         List of 2-tuples of ints, same length as stim. The starting
         locations for our stimuli.
-    stim : list
-        List of Psychopy.visual.TextStim, length 2. The two stimuli
-        (square and cross) which the user is adjusting for this task.
+    circle_stim : Psychopy.visual.Circle
+        The circle stimulus that we present
+    line_stim : Psychopy.visual.Line
+        The line stimulus that we present
     vert_or_horiz : {'vert', 'horiz'}
         Whether we're doing the vertical or horizontal calibration
     flip_text : bool, optional
@@ -181,6 +187,10 @@ def run_calibration(win, img_pos, stim, vert_or_horiz, flip_text=True):
         False, everything will be the right way round. This flips the
         text but also reverses the direction the left/right arrow keys
         move the stimuli
+    line_on_duration : float, optional
+        Length of time (in seconds) that the line should be on for
+    line_off_duration : float, optional
+        Length of time (in seconds) that the line should be off for
 
     Returns
     -------
@@ -221,8 +231,14 @@ def run_calibration(win, img_pos, stim, vert_or_horiz, flip_text=True):
     # direction the arrow keys map to as well
     key_direction = {False: 1, True: -1}[flip_text]
 
+    clock = core.Clock()
+
     while True:
-        [s.draw() for s in stim]
+        circle_stim.draw()
+        if clock.getTime() < line_on_duration:
+            line_stim.draw()
+        elif clock.getTime() > line_on_duration + line_off_duration:
+            clock.reset()
         [w.flip() for w in win]
         keys = event.getKeys()
         if 'space' in keys or 'q' in keys or 'esc' in keys or 'escape' in keys:
@@ -237,7 +253,7 @@ def run_calibration(win, img_pos, stim, vert_or_horiz, flip_text=True):
                 img_pos[1][0] -= key_direction*1
             if 'right' in keys:
                 img_pos[1][0] += key_direction*1
-        stim[1].pos = img_pos[1]
+        line_stim.pos = img_pos[1]
 
     # vert_or_horiz=='vert' will evaluate to True, and thus 1, if this
     # is the vertical trial and False, and thus 0, if this is the
@@ -255,7 +271,7 @@ def run_calibration(win, img_pos, stim, vert_or_horiz, flip_text=True):
 def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4096, 2160],
                     fixation_distance=42, monitor_cm_width=69.8, num_runs=3, flip_text=True,
                     default_ipd=6.2, allow_large_ipd=False, line_length=800, line_width=5,
-                    circle_radius=25, **window_kwargs):
+                    circle_radius=25, line_on_duration=.5, line_off_duration=1, **window_kwargs):
     """Run the full IPD calibration task
 
     On a haploscope, two images are presented, one to each eye. The
@@ -266,7 +282,7 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
     relative centers. We start out by doing a bit of trigonometry to get
     them approximately correct, and then the user does an IPD
     calibration task, where they adjust the location of two objects (a
-    square and a cross), presented in separate eyes, until they
+    circle and a line), presented in separate eyes, until they
     overlap. This is done ``num_runs`` times (each run starts with a bit
     of noise, an integer drawn from a uniform distribution from -5 to 5,
     in both directions), and then we append these results to an
@@ -332,6 +348,10 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
         Width of the line stimulus, in pixels
     circle_radius : int
         Radius of the circle stimulus, in pixels
+    line_on_duration : float, optional
+        Length of time (in seconds) that the line should be on for
+    line_off_duration : float, optional
+        Length of time (in seconds) that the line should be off for
 
     """
     if (binocular_ipd > 10 or default_ipd > 10):
@@ -401,8 +421,8 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
             trial_type = ['vert', 'horiz'][j]
             new_pos = [[int(k + np.random.randint(-5, 5)) for k in l.copy()] for l in img_pos]
             line_stim[j].pos = new_pos[1]
-            shift_amt = run_calibration(win, new_pos, [circle_stim, line_stim[j]],
-                                        trial_type, flip_text)
+            shift_amt = run_calibration(win, new_pos, circle_stim, line_stim[j], trial_type,
+                                        flip_text, line_on_duration, line_off_duration)
             if shift_amt is None:
                 # then the user pressed q or esc and we want to quit
                 # without saving anything
@@ -443,7 +463,7 @@ if __name__ == '__main__':
                      "relative centers. We start out by doing a bit of trigonometry to get"
                      " them approximately correct, and then the user does an IPD "
                      "calibration task, where they adjust the location of two objects (a"
-                     " square and a cross), presented in separate eyes, until they "
+                     " circle and a line), presented in separate eyes, until they "
                      "overlap. This is done ``num_runs`` times (each run starts with a bit "
                      "of noise, an integer drawn from a uniform distribution from -5 to 5,"
                      " in both directions), and then we append these results to an "
@@ -480,12 +500,16 @@ if __name__ == '__main__':
                               "larger than 10 cm for either of those values, you can set this flag"
                               " to True and we won't raise the Exception (but we'll still raise a"
                               " warning)."))
-    parser.add_argument("--line_length", '-l', default=400,
+    parser.add_argument("--line_length", '-l', default=400, type=int,
                         help="Length of the line stimulus, in pixels")
-    parser.add_argument("--line_width", '-w', default=10,
+    parser.add_argument("--line_width", '-w', default=10, type=int,
                         help="Width of the line stimulus, in pixels")
-    parser.add_argument("--circle_radius", '-r', default=25,
+    parser.add_argument("--circle_radius", '-r', default=25, type=int,
                         help="Radius of the circle stimulus, in pixels")
+    parser.add_argument("--line_on_duration", '-on', default=.5, type=float,
+                        help="Length of time (in seconds) that the line should be on for")
+    parser.add_argument("--line_off_duration", '-off', default=1, type=float,
+                        help="Length of time (in seconds) that the line should be off for")
     args = vars(parser.parse_args())
     flip = not args.pop('no_flip')
     ipd_calibration(flip_text=flip, **args)
