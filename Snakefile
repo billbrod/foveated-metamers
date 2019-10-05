@@ -422,12 +422,30 @@ rule dummy_metamer_gen:
 # if the images we use as inputs are different sizes. and init_type as
 # well, V1/V2 will always be white, but RGC might also be gray or pink
 def get_metamers_for_expt(wildcards):
-    ims = ['nuts', 'einstein']
+    ims = ['japan-degamma', 'trees-degamma']
     images = [REF_IMAGE_TEMPLATE_PATH.format(image_name=i) for i in ims]
-    return images+[METAMER_TEMPLATE_PATH.format(scaling=sc, seed=s, image_name=i, max_iter=1000,
-                                                loss_thresh=1e-4, learning_rate=10, init_type='white',
-                                                **wildcards)
-                   for i in ims for sc in [.4, .5, .6] for s in [0, 1]]
+    if wildcards.model_name == 'RGC':
+        scaling = [.0075, .01, .02, .03, .04, .05, .1]
+        max_iter = dict((k, 750) for k in scaling)
+        gpu = {.0075: 0, .01: 0, .02: 8, .03: 6, .04: 2, .05: 2, .1: 1}
+        cf = 0
+        lr = dict((k, 1) for k in scaling)
+        seeds = dict((k, [0, 1]) for k in scaling)
+    elif wildcards.model_name == 'V1-norm-s6':
+        scaling = [.075, .1, .2, .3, .4, .5, 1.]
+        max_iter = dict((k, 5000) for k in scaling)
+        max_iter[.075] = 7500
+        cf = '1e-2'
+        lr = dict((k, '.1') for k in scaling)
+        lr[.075] = 1
+        gpu = dict((k, 1) for k in scaling)
+        seeds = {.075: [0], .1: [0, 1], .2: [1], .3: [0, 1], .4: [0, 1], .5: [0, 1], 1.: [0, 1]}
+    metamers = [METAMER_TEMPLATE_PATH.format(image_name=i, scaling=sc, optimizer='Adam', fract_removed=0,
+                                             loss_fract=1, coarse_to_fine=cf, seed=s, init_type='white',
+                                             learning_rate=lr[sc], max_iter=max_iter[sc], gpu=gpu[sc],
+                                             loss_thresh='1e-8', **wildcards)
+                for sc in scaling for s in seeds[sc] for i in ims]
+    return images + metamers
 
 rule collect_metamers:
     input:
