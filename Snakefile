@@ -41,7 +41,7 @@ def get_all_metamers(min_idx=0, max_idx=-1):
                                                  learning_rate=1, min_ecc=3.72, max_ecc=41,
                                                  max_iter=750, loss_thresh=1e-8,
                                                  gpu=rgc_gpu_dict.get(sc, 1))
-                    for i in IMAGES for sc in rgc_scaling for s in range(4)]
+                    for i in IMAGES for sc in rgc_scaling for s in range(3)]
     v1_scaling = [.075, .095, .12, .15, .19, .25, .31, .39, .5]
     v1_metamers = [METAMER_TEMPLATE_PATH.format(model_name='V1', image_name=i, scaling=sc,
                                                 optimizer='Adam', fract_removed=0, loss_fract=1,
@@ -49,7 +49,7 @@ def get_all_metamers(min_idx=0, max_idx=-1):
                                                 learning_rate={.075: 1}.get(sc, .1), min_ecc=.5,
                                                 max_ecc=41, max_iter={.075: 7500}.get(sc, 5000),
                                                 loss_thresh=1e-8, gpu=1)
-                    for i in IMAGES for sc in v1_scaling for s in range(4)]
+                    for i in IMAGES for sc in v1_scaling for s in range(3)]
     all_metamers = rgc_metamers + v1_metamers
     # we use -1 as a dummy value, ignoring it
     if max_idx != -1:
