@@ -301,10 +301,11 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
         # and this one is for the three stimuli in each trial
         all_keys = []
         for j, s in enumerate(stim):
-            for im, f, w in zip(img, fixation, win):
+            for im, f in zip(img, fixation):
                 im.image = imagetools.array2image(s)
                 im.draw()
                 f.draw()
+            for w in win:
                 w.flip()
             timings.append(("stimulus_%d-%d" % (i+start_from_stim, j), "on", clock.getTime()))
             next_stim_time = ((i*3*on_msec_length + (j+1)*on_msec_length +
