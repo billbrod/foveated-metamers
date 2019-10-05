@@ -118,7 +118,10 @@ def _set_params(stimuli_path, idx_path, size=[1920, 1080], monitor='CBI-prisma-p
     # trial (3), and the final two are the size of the stimuli
     expt_params['trial_num'] = stimuli.shape[0]
     expt_params['stimuli_per_trial'] = stimuli.shape[1]
-    expt_params['stimuli_size'] = stimuli.shape[2:]
+    expt_params['stimuli_size'] = stimuli.shape[2::]
+    # array size and stimulus size are backwards of each other, so
+    # need to reverse this
+    expt_params['stimuli_size'] = expt_params['stimuli_size'][::-1]
 
     # these are all a variety of kwargs used by monitor
     monitor_kwargs.update({'size': size, 'monitor': monitor, 'units': units, 'fullscr': fullscr,
