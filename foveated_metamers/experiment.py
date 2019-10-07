@@ -11,7 +11,7 @@ import warnings
 import numpy as np
 import pandas as pd
 from ipd_calibration import csv_to_binocular_offset
-from psychopy import visual, core, event
+from psychopy import visual, core, event, clock
 from psychopy.tools import imagetools
 try:
     import pylink
@@ -135,7 +135,7 @@ def check_for_keys(all_keys, keys_to_check=['q', 'esc', 'escape']):
     return any([k in all_keys for k in keys_to_check])
 
 
-def pause(win, img_pos, clock, flip_text=True):
+def pause(win, img_pos, expt_clock, flip_text=True):
     pause_text = [visual.TextStim(w, "space to resume\nq or esc to quit",
                                   pos=p, flipHoriz=flip_text) for w, p in zip(win, img_pos)]
     all_keys = []
@@ -143,7 +143,7 @@ def pause(win, img_pos, clock, flip_text=True):
         [text.draw() for text in pause_text]
         [w.flip() for w in win]
         core.wait(.1)
-        all_keys = event.getKeys(keyList=['space', 'q', 'escape', 'esc'], timeStamped=clock)
+        all_keys = event.getKeys(keyList=['space', 'q', 'escape', 'esc'], timeStamped=expt_clock)
     return [(key[0], key[1]) for key in all_keys]
 
 
@@ -258,12 +258,13 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
         pylink.flushGetkeyQueue()
         eyetracker.startRecording(1, 1, 1, 1)
 
-    clock = core.Clock()
+    timer = clock.StaticPeriod(screenHz=60)
+    expt_clock = clock.Clock()
     if timings:
         # if we've been passed something, make sure everything happens
         # after it. for some reason, need to use the negative value of
-        # it in order to add that to the clock...
-        clock.reset(-float(timings[-1][-1]))
+        # it in order to add that to the expt_clock...
+        expt_clock.reset(-float(timings[-1][-1]))
     wait_text = [visual.TextStim(w, ("Press 5 to start\nq or esc will quit\nspace to pause"),
                                  pos=p, flipHoriz=flip_text) for w, p in zip(win, img_pos)]
     query_text = [visual.TextStim(w, "Same as 1 or 2?", pos=p, flipHoriz=flip_text)
@@ -276,14 +277,14 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
     # reason, so instead we do this while loop with a win.flip() and
     # core.wait() (the issue seems to be that we only grab keys
     # successfully pretty quickly after a win.flip()?)
-    # all_keys = event.waitKeys(keyList=['5', 'q', 'escape', 'esc'], timeStamped=clock)
+    # all_keys = event.waitKeys(keyList=['5', 'q', 'escape', 'esc'], timeStamped=expt_clock)
     all_keys = []
     # wait until receive 5, which is the scanner trigger
     while not all_keys:
         [text.draw() for text in wait_text]
         [w.flip() for w in win]
         core.wait(.1)
-        all_keys = event.getKeys(keyList=['5', 'q', 'escape', 'esc'], timeStamped=clock)
+        all_keys = event.getKeys(keyList=['5', 'q', 'escape', 'esc'], timeStamped=expt_clock)
     if save_frames is not None:
         [w.getMovieFrame() for w in win]
 
@@ -291,27 +292,21 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
         [w.close() for w in win]
         return all_keys, [], expt_params, idx
 
-    timings.append(("start", "off", clock.getTime()))
-    # store this as a separate variable because, if we're appending to
-    # an existing timings, we don't know where the start time is stored
-    start_time = clock.getTime()
-    paused_time = 0
+    timings.append(("start", "off", expt_clock.getTime()))
+
     # this outer for loop is per trial
     for i, stim in enumerate(stimuli):
         # and this one is for the three stimuli in each trial
         all_keys = []
-        for j, s in enumerate(stim):
+        for j in range(len(stim)):
             for im, f in zip(img, fixation):
-                im.image = imagetools.array2image(s)
                 im.draw()
                 f.draw()
             for w in win:
                 w.flip()
-            timings.append(("stimulus_%d-%d" % (i+start_from_stim, j), "on", clock.getTime()))
-            next_stim_time = ((i*3*on_msec_length + (j+1)*on_msec_length +
-                               i*np.sum(off_msec_length) + np.sum(off_msec_length[:j]) - 2)
-                              / 1000.)
-            core.wait(abs(clock.getTime() - paused_time - start_time - next_stim_time))
+            timings.append(("stimulus_%d-%d" % (i+start_from_stim, j), "on", expt_clock.getTime()))
+            # convert to sec
+            core.wait(on_msec_length / 1000)
             if eyetracker is not None:
                 eyetracker.sendMessage("TRIALID %02d" % i)
             if save_frames is not None:
@@ -321,30 +316,39 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
             else:
                 [f.draw() for f in fixation]
             [w.flip() for w in win]
-            timings.append(("stimulus_%d-%d" % (i+start_from_stim, j), "off", clock.getTime()))
-            next_stim_time = ((i*3*on_msec_length + (j+1)*on_msec_length +
-                               i*np.sum(off_msec_length) + np.sum(off_msec_length[:j+1]) - 1)
-                              / 1000.)
-            core.wait(abs(clock.getTime() - paused_time - start_time - next_stim_time))
+            timings.append(("stimulus_%d-%d" % (i+start_from_stim, j), "off",
+                            expt_clock.getTime()))
+            timer.start(off_msec_length[j] / 1000)
+            for im in img:
+                # off msec lengths are always longer than on msec length, so
+                # we preload the next image here
+                try:
+                    # we either load the next one in the set of three for
+                    # this trial...
+                    im.image = imagetools.array2image(stim[j+1])
+                except IndexError:
+                    # or, if we've gone through all those, we load the first
+                    # image for the next trial
+                    im.image = imagetools.array2image(stimuli[i+1][0])
             if save_frames is not None:
                 [w.getMovieFrame() for w in win]
-            all_keys.extend(event.getKeys(timeStamped=clock))
+            timer.complete()
+            all_keys.extend(event.getKeys(timeStamped=expt_clock))
             # we need this double break because we have two for loops
             if check_for_keys(all_keys):
                 break
         if all_keys:
             keys_pressed.extend([(key[0], key[1]) for key in all_keys])
         if check_for_keys(all_keys, ['space']) or (take_break and i == break_time):
-            timings.append(('pause', 'start', clock.getTime()))
+            timings.append(('pause', 'start', expt_clock.getTime()))
             if take_break and i == break_time:
                 break_text = [visual.TextStim(w, "Break time!", pos=p, flipHoriz=flip_text)
                               for w, p in zip(win, img_pos)]
                 [text.draw() for text in break_text]
                 [w.flip() for w in win]
                 core.wait(2)
-            paused_keys = pause(win, img_pos, clock, flip_text)
-            paused_time += (clock.getTime() - timings[-1][-1])
-            timings.append(('pause', 'stop', clock.getTime()))
+            paused_keys = pause(win, img_pos, expt_clock, flip_text)
+            timings.append(('pause', 'stop', expt_clock.getTime()))
             keys_pressed.extend(paused_keys)
         else:
             paused_keys = []
@@ -355,8 +359,8 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
             break
     [visual.TextStim(w, "Run over", pos=p, flipHoriz=flip_text).draw() for w, p in zip(win, img_pos)]
     [w.flip() for w in win]
-    timings.append(("run_end", '', clock.getTime()))
-    all_keys = event.getKeys(timeStamped=clock)
+    timings.append(("run_end", '', expt_clock.getTime()))
+    all_keys = event.getKeys(timeStamped=expt_clock)
     if all_keys:
         keys_pressed.extend([(key[0], key[1]) for key in all_keys])
     core.wait(4)
