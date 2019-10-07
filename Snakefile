@@ -20,6 +20,9 @@ else:
     ON_CLUSTER = False
 wildcard_constraints:
     num="[0-9]+"
+ruleorder:
+    degamma_image > prep_pixabay
+
 
 MODELS = ['RGC', 'V1-norm-s6']
 IMAGES = ['trees-degamma', 'sheep-degamma', 'refuge-degamma', 'japan-degamma', 'street-degamma']
@@ -115,7 +118,7 @@ rule prep_pixabay:
     input:
         # all the pixabay images have a string of integers after the
         # name, which we want to ignore
-        lambda wildcards: glob(op.join(config["PIXABAY_DIR"], '{image_name}-*.jpg').format(**wildcards))[0]
+        lambda wildcards: glob(op.join(config["PIXABAY_DIR"], '{image_name}-*.jpg').format(**wildcards))
     output:
         op.join(config["DATA_DIR"], 'ref_images', '{image_name}.pgm')
     log:
