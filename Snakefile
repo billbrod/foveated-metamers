@@ -37,13 +37,12 @@ SEEDS = {'sub-01': 0}
 def get_all_metamers(min_idx=0, max_idx=-1):
     images = [REF_IMAGE_TEMPLATE_PATH.format(image_name=i) for i in IMAGES]
     rgc_scaling = [.01, .013, .017, .021, .027, .035, .045, .058, .075]
-    rgc_gpu_dict = {.01: 0, .013: 0, .017: 4, .021: 4, .027: 3, .035: 3}
+    # rgc_gpu_dict = {.01: 0, .013: 0, .017: 4, .021: 4, .027: 3, .035: 3}
     rgc_metamers = [METAMER_TEMPLATE_PATH.format(model_name='RGC', image_name=i, scaling=sc,
                                                  optimizer='Adam', fract_removed=0, loss_fract=1,
                                                  coarse_to_fine=0, seed=s, init_type='white',
                                                  learning_rate=1, min_ecc=3.72, max_ecc=41,
-                                                 max_iter=750, loss_thresh=1e-8,
-                                                 gpu=rgc_gpu_dict.get(sc, 1))
+                                                 max_iter=750, loss_thresh=1e-8, gpu=0)
                     for i in IMAGES for sc in rgc_scaling for s in range(3)]
     v1_scaling = [.075, .095, .12, .15, .19, .25, .31, .39, .5]
     v1_metamers = [METAMER_TEMPLATE_PATH.format(model_name='V1-norm-s6', image_name=i, scaling=sc,
