@@ -46,7 +46,7 @@ def get_all_metamers(min_idx=0, max_idx=-1):
                                                  gpu=rgc_gpu_dict.get(sc, 1))
                     for i in IMAGES for sc in rgc_scaling for s in range(3)]
     v1_scaling = [.075, .095, .12, .15, .19, .25, .31, .39, .5]
-    v1_metamers = [METAMER_TEMPLATE_PATH.format(model_name='V1', image_name=i, scaling=sc,
+    v1_metamers = [METAMER_TEMPLATE_PATH.format(model_name='V1-norm-s6', image_name=i, scaling=sc,
                                                 optimizer='Adam', fract_removed=0, loss_fract=1,
                                                 coarse_to_fine=1e-2, seed=s, init_type='white',
                                                 learning_rate={.075: 1}.get(sc, .1), min_ecc=.5,
