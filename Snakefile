@@ -472,8 +472,7 @@ rule collect_metamers:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 met.stimuli.collect_images(input, output[0])
-                met.stimuli.create_metamer_df(input, [METAMER_TEMPLATE_PATH, REF_IMAGE_TEMPLATE_PATH],
-                                              output[1])
+                met.stimuli.create_metamer_df(input, output[1])
 
 
 rule generate_experiment_idx:
