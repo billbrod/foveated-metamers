@@ -385,7 +385,7 @@ def expt(stimuli_path, subj_name, sess_num, output_dir="data/raw_behavioral", ey
         binocular_offset = csv_to_binocular_offset(ipd_csv, subj_name)
     else:
         binocular_offset = [0, 0]
-    model_name = op.dirname(stimuli_path)
+    model_name = op.split(op.dirname(stimuli_path))[-1]
     save_path = op.join(output_dir, "%s_%s_%s_sess{sess:02d}.hdf5" %
                         (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name, model_name))
     edf_path = op.join(output_dir, "%s_%s_%s_sess{sess:02d}.EDF" %
