@@ -10,7 +10,7 @@ import datetime
 import warnings
 import numpy as np
 import pandas as pd
-from ipd_calibration import csv_to_binocular_offset
+from ipd_calibration import csv_to_binocular_offset, clear_events
 from psychopy import visual, core, event, clock
 from psychopy.tools import imagetools
 try:
@@ -144,6 +144,7 @@ def pause(win, img_pos, expt_clock, flip_text=True):
         [w.flip() for w in win]
         core.wait(.1)
         all_keys = event.getKeys(keyList=['space', 'q', 'escape', 'esc'], timeStamped=expt_clock)
+    clear_events(win)
     return [(key[0], key[1]) for key in all_keys]
 
 
