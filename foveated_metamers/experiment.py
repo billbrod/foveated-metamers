@@ -266,7 +266,7 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
         clock.reset(-float(timings[-1][-1]))
     wait_text = [visual.TextStim(w, ("Press 5 to start\nq or esc will quit\nspace to pause"),
                                  pos=p, flipHoriz=flip_text) for w, p in zip(win, img_pos)]
-    query_text = [visual.TextStim(w, "1 or 2?", pos=p, flipHoriz=flip_text)
+    query_text = [visual.TextStim(w, "Same as 1 or 2?", pos=p, flipHoriz=flip_text)
                   for w, p in zip(win, img_pos)]
     [text.draw() for text in wait_text]
     [w.flip() for w in win]
