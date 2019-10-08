@@ -384,17 +384,17 @@ def expt(stimuli_path, subj_name, sess_num, output_dir="data/raw_behavioral", ey
     the output
 
     """
-    if not op.exists(output_dir):
-        os.makedirs(output_dir)
     if ipd_csv is not None:
         binocular_offset = csv_to_binocular_offset(ipd_csv, subj_name)
     else:
         binocular_offset = [0, 0]
     model_name = op.split(op.dirname(stimuli_path))[-1]
-    save_path = op.join(output_dir, "%s_%s_%s_sess{sess:02d}.hdf5" %
-                        (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name, model_name))
-    edf_path = op.join(output_dir, "%s_%s_%s_sess{sess:02d}.EDF" %
-                       (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name, model_name))
+    if not op.exists(op.join(output_dir, model_name)):
+        os.makedirs(op.join(output_dir, model_name))
+    save_path = op.join(output_dir, model_name, "%s_%s_sess{sess:02d}.hdf5" %
+                        (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name))
+    edf_path = op.join(output_dir, model_name, "%s_%s_sess{sess:02d}.EDF" %
+                       (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name))
     idx_path = stimuli_path.replace('_stimuli.npy', '_idx_sess-%02d.npy' % sess_num)
     idx_path = idx_path.replace('e0', '%s_e0' % subj_name)
     save_path = save_path.format(sess=sess_num)
