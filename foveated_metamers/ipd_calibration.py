@@ -552,7 +552,7 @@ if __name__ == '__main__':
                               "(in cm)"))
     parser.add_argument("--output_dir", '-o', default=op.expanduser("~/Desktop/metamers/ipd"),
                         help="Directory where we look for ""ipd_correction.csv")
-    parser.add_argument("--screen", '-s', default=[0], type=int, nargs='+',
+    parser.add_argument("--screen", '-s', default=[1, 2], type=int, nargs='+',
                         help=("Screen number to display experiment on"))
     parser.add_argument('--fixation_distance', '-d', default=42, type=float,
                         help="Fixation distance (in cm) of the display")
