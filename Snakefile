@@ -32,7 +32,7 @@ METAMER_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers', '{model_name}', 
                                 '_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_'
                                 'thresh-{loss_thresh}_gpu-{gpu}_metamer.png')
 REF_IMAGE_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'ref_images', '{image_name}.pgm')
-SEEDS = {'sub-01': 0}
+SUBJ_SEEDS = {'sub-01': 0}
 
 def get_all_metamers(min_idx=0, max_idx=-1):
     images = [REF_IMAGE_TEMPLATE_PATH.format(image_name=i) for i in IMAGES]
@@ -480,15 +480,15 @@ rule generate_experiment_idx:
                 'stimuli_description.csv'),
     output:
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', '{subject}_e0-{min_ecc}_em-'
-                '{max_ecc}_idx.npy'),
+                '{max_ecc}_idx_sess-{num}.npy'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', '{subject}_e0-{min_ecc}_em-'
-                '{max_ecc}_idx.log'),
+                '{max_ecc}_idx_sess-{num}.log'),
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', '{subject}_e0-{min_ecc}_em-'
-                '{max_ecc}_idx_benchmark.txt'),
+                '{max_ecc}_idx_sess-{num}_benchmark.txt'),
     params:
-        seed = lambda wildcards: SEEDS[wildcards.subject]
+        seed = lambda wildcards: SUBJ_SEEDS[wildcards.subject] + int(wildcards.num)
     run:
         import foveated_metamers as met
         import pandas as pd
