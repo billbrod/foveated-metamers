@@ -86,7 +86,7 @@ subject (assuming your experimental setup doesn't change).
 
 To use, run from the command line. View that scripts help for more
 information about the different required arguments and options:
-`python foveated_metamers/ipd_calibraiton.py -h`.
+`python foveated_metamers/ipd_calibration.py -h`.
 
 # References
 
