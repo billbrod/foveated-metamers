@@ -125,6 +125,43 @@ def calc_pix_per_deg(fixation_distance=42., monitor_pix_width=4096, monitor_cm_w
     return 1 / (deg_per_cm * cm_per_pix)
 
 
+def calc_initial_offset(monocular_verg_angle, pix_per_deg, left_right_flip=True):
+    """Calculate initial horizontal and vertical pixel offset
+
+    This convenience function just takes the monocular convvergence
+    angle, converts it from degrees to pixel, and optionally flips it.
+
+    Parameters
+    ----------
+    monocular_verg_angle : float
+        The monocular convergence angle, in degrees (as returned by
+        `calc_monocular_convergence_angle`)
+    pix_per_deg : float
+        Number of pixels per degree. Therefore, multiply this by the
+        size of something in degrees in order to get its size in pixels
+        (as returned by `calc_pix_per_deg`)
+    left_right_flip : bool, optional
+        Boolean, whether to left-right reverse everything. If True,
+        everything will be flipped, as you need on the haploscope. If
+        False, everything will be the right way round.
+
+    Returns
+    -------
+    initial_offset : list
+        A list with 2 ints, containing our guess for the initial
+        horizontal and vertical pixel offset
+
+    """
+    # when we're viewing through a mirror, want to flip the left/right
+    # direction the arrow keys map to as well
+    key_direction = {False: 1, True: -1}[left_right_flip]
+    # guess what the initial offset should be; vertical starts at 0,
+    # horizontal is the monocular vergence angle (we want to shift this
+    # to the left, which is negative, and that should be flipped if
+    # we're viewing through a mirror)
+    return [int(key_direction * -monocular_verg_angle * pix_per_deg), 0]
+
+
 def clear_events(win):
     """clear all keys from psychopy
 
@@ -193,8 +230,8 @@ def run_calibration(win, img_pos, circle_stim, line_stim, vert_or_horiz, flip_te
         Length of time (in seconds) that the line should be off for
     arrows : bool
         By default, we use the numpad to allow for both coarse and fine
-        positioning. By setting this to True, we use arrows (only fine)
-        instead
+        positioning. By setting this to True, we use arrows (only
+        coarse) instead
 
     Returns
     -------
@@ -262,14 +299,14 @@ def run_calibration(win, img_pos, circle_stim, line_stim, vert_or_horiz, flip_te
         if arrows:
             if vert_or_horiz == 'vert':
                 if 'up' in keys:
-                    img_pos[1][1] += 1
+                    img_pos[1][1] += 10
                 if 'down' in keys:
-                    img_pos[1][1] -= 1
+                    img_pos[1][1] -= 10
             elif vert_or_horiz == 'horiz':
                 if 'left' in keys:
-                    img_pos[1][0] -= key_direction*1
+                    img_pos[1][0] -= key_direction*10
                 if 'right' in keys:
-                    img_pos[1][0] += key_direction*1
+                    img_pos[1][0] += key_direction*10
         else:
             if vert_or_horiz == 'vert':
                 if 'num_8' in keys:
@@ -306,9 +343,9 @@ def run_calibration(win, img_pos, circle_stim, line_stim, vert_or_horiz, flip_te
 
 def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4096, 2160],
                     fixation_distance=42, monitor_cm_width=69.8, num_runs=3, flip_text=True,
-                    default_ipd=6.2, allow_large_ipd=False, line_length=800, line_width=5,
-                    circle_radius=25, line_on_duration=.25, line_off_duration=1, arrows=False,
-                    win_type='pyglet', **window_kwargs):
+                    allow_large_ipd=False, line_length=800, line_width=5, circle_radius=25,
+                    line_on_duration=.25, line_off_duration=1, arrows=False, win_type='pyglet',
+                    **window_kwargs):
     """Run the full IPD calibration task
 
     On a haploscope, two images are presented, one to each eye. The
@@ -364,18 +401,13 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
         False, everything will be the right way round. This flips the
         text but also reverses the direction the left/right arrow keys
         move the stimuli
-    default_ipd : float
-        The IPD (in cm) of the system's default IPD, that is, the IPD
-        where we shouldn't have to adjust the images at all. Used to get
-        a "first guess" based on the subject's IPD
     allow_large_ipd : bool
         It's easy to mess up and give an IPD in mm instead of cm, but we
         require cm. In order to help check that, by default, we'll raise
-        an Exception if either binocular_ipd or default_ipd is larger
-        than 10, because that would be very large. If you really do have
-        IPDs larger than 10 cm for either of those values, you can set
-        this flag to True and we won't raise the Exception (but we'll
-        still raise a warning).
+        an Exception if binocular_ipd is larger than 10, because that
+        would be very large. If you really do have IPDs larger than 10
+        cm for either of those values, you can set this flag to True and
+        we won't raise the Exception (but we'll still raise a warning).
     window_kwargs : kwargs
         Other keyword=value pairs will be passed directly to the
         creation of the Psychopy.visual.Window objects
@@ -391,11 +423,11 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
         Length of time (in seconds) that the line should be off for
     arrows : bool
         By default, we use the numpad to allow for both coarse and fine
-        positioning. By setting this to True, we use arrows (only fine)
-        instead
+        positioning. By setting this to True, we use arrows (only
+        coarse) instead
 
     """
-    if (binocular_ipd > 10 or default_ipd > 10):
+    if binocular_ipd > 10:
         if not allow_large_ipd:
             raise Exception("Your IPD values are really large! Are you sure you didn't input the "
                             "IPD in mm? Is someone's IPD actually greater than 10 cm? If you're "
@@ -411,11 +443,12 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
                       'allowGUI': False}
     for k, v in default_window.items():
         window_kwargs.setdefault(k, v)
-    neutral_verg_angle = calc_monocular_convergence_angle(default_ipd)
     pix_per_deg = calc_pix_per_deg(fixation_distance, size[0], monitor_cm_width)
     # guess what the initial offset should be; vertical starts at 0,
-    # horizontal is based on difference from neutral_verg_angle
-    offset = [int((neutral_verg_angle - monocular_verg_angle) * pix_per_deg), 0]
+    # horizontal is the monocular convvergence angle (we want to shift
+    # this to the left, which is negative, and that should be flipped if
+    # we're viewing through a mirror)
+    offset = calc_initial_offset(monocular_verg_angle, pix_per_deg, flip_text)
     # these pairs are horizontal, vertical
     img_pos = [[0, 0], offset]
     print("Using initial binocular offsets: %s" % img_pos)
@@ -510,15 +543,15 @@ if __name__ == '__main__':
                      " in both directions), and then we append these results to an "
                      "ipd_correction.csv file in the ``output_dir``, where we're keeping "
                      "track of this information. If you want to use the information stored"
-                     "in this csv, the ``csv_to_binocular_offset`` function will help you "
+                     " in this csv, the ``csv_to_binocular_offset`` function will help you "
                      "with that"),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("subject_name", help="Name of the subject")
     parser.add_argument("binocular_ipd", type=float,
                         help=("Subject's binocular IPD, i.e., the distance between their eyes "
                               "(in cm)"))
-    parser.add_argument("--output_dir", '-o', help="directory to place output in",
-                        default=op.expanduser("~/Desktop/metamers/ipd"))
+    parser.add_argument("--output_dir", '-o', default=op.expanduser("~/Desktop/metamers/ipd"),
+                        help="Directory where we look for ""ipd_correction.csv")
     parser.add_argument("--screen", '-s', default=[0], type=int, nargs='+',
                         help=("Screen number to display experiment on"))
     parser.add_argument('--fixation_distance', '-d', default=42, type=float,
@@ -536,11 +569,10 @@ if __name__ == '__main__':
     parser.add_argument("--allow_large_ipd", action='store_true',
                         help=("It's easy to mess up and give an IPD in mm instead of cm, but we"
                               " require cm. In order to help check that, by default, we'll raise"
-                              " an Exception if either binocular_ipd or default_ipd is larger than"
-                              " 10, because that would be very large. If you really do have IPDs "
-                              "larger than 10 cm for either of those values, you can set this flag"
-                              " to True and we won't raise the Exception (but we'll still raise a"
-                              " warning)."))
+                              " an Exception if binocular_ipd is larger than 10, because that "
+                              "would be very large. If you really do have IPDs larger than 10 cm"
+                              " for either of those values, you can set this flag to True and we"
+                              " won't raise the Exception (but we'll still raise a warning)."))
     parser.add_argument("--line_length", '-l', default=800, type=int,
                         help="Length of the line stimulus, in pixels")
     parser.add_argument("--line_width", '-w', default=5, type=int,
@@ -553,7 +585,7 @@ if __name__ == '__main__':
                         help="Length of time (in seconds) that the line should be off for")
     parser.add_argument('--arrows', action='store_true',
                         help=("By default, we use the numpad to allow for both coarse and fine"
-                              " positioning. By setting this option, we use arrows (only fine)"
+                              " positioning. By setting this option, we use arrows (only coarse)"
                               " instead"))
     parser.add_argument('--win_type', default='pyglet',
                         help=("{glfw, pyglet}. Backend to use for the psychopy Window type. "
