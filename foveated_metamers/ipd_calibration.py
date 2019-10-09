@@ -349,15 +349,22 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
     """Run the full IPD calibration task
 
     On a haploscope, two images are presented, one to each eye. The
-    construction of any haploscope is done with a certain default
-    inter-pupillary distance (IPD) in mind, probably 6.2 cm. If the
-    subject has an IPD very different from this, it can be difficult to
-    successfully fuse the image, so we want to adjust the images'
-    relative centers. We start out by doing a bit of trigonometry to get
-    them approximately correct, and then the user does an IPD
-    calibration task, where they adjust the location of two objects (a
-    circle and a line), presented in separate eyes, until they
-    overlap. This is done ``num_runs`` times (each run starts with a bit
+    construction of the haploscope is done with the mirrors in a
+    position such that the images in each eye would be perfectly
+    centered at optical infinity, i.e., if the user's eyes were staring
+    straight ahead. This is not what actually happens; people's eyes
+    will fixate on some point, and so have some convergence angle
+    (optical infinity is equivalent to having a convergence angle of 0
+    degrees). We will need to shift the image forward by this amount.
+
+    However, that's only a first-pass approximation, as successful
+    fusion of stereo-presented images depends on more than just the a
+    person's IPD. Therefore, we also provide a task to allow the user to
+    make small adjustments to the location of two objects in order to
+    find the appropriate offset for successful fusion. The subject will
+    adjust the location of two objects (a circle and a line), presented
+    in separate eyes, until the line goes through the center of the
+    circle. This is done ``num_runs`` times (each run starts with a bit
     of noise, an integer drawn from a uniform distribution from -5 to 5,
     in both directions), and then we append these results to an
     ipd_correction.csv file in the ``output_dir``, where we're keeping
