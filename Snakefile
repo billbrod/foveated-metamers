@@ -32,7 +32,7 @@ METAMER_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers', '{model_name}', 
                                 '_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_'
                                 'thresh-{loss_thresh}_gpu-{gpu}_metamer.png')
 REF_IMAGE_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'ref_images', '{image_name}.pgm')
-SUBJ_SEEDS = {'sub-01': 0}
+
 
 def get_all_metamers(min_idx=0, max_idx=-1):
     images = [REF_IMAGE_TEMPLATE_PATH.format(image_name=i) for i in IMAGES]
@@ -488,7 +488,13 @@ rule generate_experiment_idx:
         op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', '{subject}_e0-{min_ecc}_em-'
                 '{max_ecc}_idx_sess-{num}_benchmark.txt'),
     params:
-        seed = lambda wildcards: SUBJ_SEEDS[wildcards.subject] + int(wildcards.num)
+        # the number from subject will be a number from 1 to 30, which
+        # we multiply by 10 in order to get the tens/hundreds place, and
+        # the session number will be between 0 and 2, which we use for
+        # the ones place. we use the same seed for different models /
+        # min_ecc / max_ecc combinations, since those will be completely
+        # different sets of images.
+        seed = lambda wildcards: 10*int(wildcards.subject.replace('sub-', '')) + int(wildcards.num)
     run:
         import foveated_metamers as met
         import pandas as pd
