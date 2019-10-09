@@ -32,9 +32,11 @@ METAMER_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers', '{model_name}', 
                                 '_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_'
                                 'thresh-{loss_thresh}_gpu-{gpu}_metamer.png')
 REF_IMAGE_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'ref_images', '{image_name}.pgm')
+SUBJECTS = ['sub-%02d' % i for i in range(1, 31)]
+SESSIONS = [0, 1, 2]
 
 
-def get_all_metamers(min_idx=0, max_idx=-1):
+def get_all_metamers(min_idx=0, max_idx=-1, model_name=None, min_ecc=None, max_ecc=None):
     images = [REF_IMAGE_TEMPLATE_PATH.format(image_name=i) for i in IMAGES]
     rgc_scaling = [.01, .013, .017, .021, .027, .035, .045, .058, .075]
     # rgc_gpu_dict = {.01: 0, .013: 0, .017: 4, .021: 4, .027: 3, .035: 3}
@@ -52,7 +54,19 @@ def get_all_metamers(min_idx=0, max_idx=-1):
                                                 max_ecc=41, max_iter={.075: 7500}.get(sc, 5000),
                                                 loss_thresh=1e-8, gpu=1)
                     for i in IMAGES for sc in v1_scaling for s in range(3)]
-    all_metamers = rgc_metamers + v1_metamers
+    if model_name is None:
+        all_metamers = rgc_metamers + v1_metamers
+        if min_ecc is not None or max_ecc is not None:
+            raise Exception("Can't set min/max_ecc when model_name is None")
+    elif model_name == 'RGC':
+        all_metamers = rgc_metamers
+        if float(min_ecc) != 3.72 or float(max_ecc) != 41:
+            raise Exception("if model_name is RGC, min_ecc must be 3.72 and max_ecc must be 41")
+    elif model_name == 'V1-norm-s6':
+        all_metamers = v1_metamers
+        if float(min_ecc) != .5 or float(max_ecc) != 41:
+            raise Exception("if model_name is V1-norm-s6, min_ecc must be .5 and max_ecc must "
+                            "be 41")
     # we use -1 as a dummy value, ignoring it
     if max_idx != -1:
         all_metamers = all_metamers[:max_idx]
@@ -417,41 +431,10 @@ rule dummy_metamer_gen:
     shell:
         "touch {output}"
 
-# need to come up with a clever way to do this: either delete the ones
-# we don't want or make this a function that only takes the ones we want
-# or maybe grabs one each for max_iter, loss_thresh, learning_rate.
-# Also need to think about how to handle max_ecc; it will be different
-# if the images we use as inputs are different sizes. and init_type as
-# well, V1/V2 will always be white, but RGC might also be gray or pink
-def get_metamers_for_expt(wildcards):
-    ims = ['japan-degamma', 'trees-degamma']
-    images = [REF_IMAGE_TEMPLATE_PATH.format(image_name=i) for i in ims]
-    if wildcards.model_name == 'RGC':
-        scaling = [.0075, .01, .02, .03, .04, .05, .1]
-        max_iter = dict((k, 750) for k in scaling)
-        gpu = {.0075: 0, .01: 0, .02: 8, .03: 6, .04: 2, .05: 2, .1: 1}
-        cf = 0
-        lr = dict((k, 1) for k in scaling)
-        seeds = dict((k, [0, 1]) for k in scaling)
-    elif wildcards.model_name == 'V1-norm-s6':
-        scaling = [.075, .1, .2, .3, .4, .5, 1.]
-        max_iter = dict((k, 5000) for k in scaling)
-        max_iter[.075] = 7500
-        cf = '1e-2'
-        lr = dict((k, '.1') for k in scaling)
-        lr[.075] = 1
-        gpu = dict((k, 1) for k in scaling)
-        seeds = {.075: [0], .1: [0, 1], .2: [1], .3: [0, 1], .4: [0, 1], .5: [0, 1], 1.: [0, 1]}
-    metamers = [METAMER_TEMPLATE_PATH.format(image_name=i, scaling=sc, optimizer='Adam', fract_removed=0,
-                                             loss_fract=1, coarse_to_fine=cf, seed=s, init_type='white',
-                                             learning_rate=lr[sc], max_iter=max_iter[sc], gpu=gpu[sc],
-                                             loss_thresh='1e-8', **wildcards)
-                for sc in scaling for s in seeds[sc] for i in ims]
-    return images + metamers
 
 rule collect_metamers:
     input:
-        get_metamers_for_expt,
+        lambda wildcards: get_metamers_for_expt(**wildcards),
     output:
         # we collect across image_name and scaling, and don't care about
         # learning_rate, max_iter, loss_thresh
@@ -502,3 +485,15 @@ rule generate_experiment_idx:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 met.stimuli.generate_indices(pd.read_csv(input[0]), params.seed, output[0])
+
+
+rule gen_all_idx:
+    input:
+        [op.join(config["DATA_DIR"], 'stimuli', '{model_name}', '{subject}_e0-{min_ecc}_em-'
+                 '{max_ecc}_idx_sess-{num}.npy').format(model_name='RGC', subject=s, min_ecc=3.72,
+                                                        max_ecc=41, num=n)
+         for s in SUBJECTS for n in SESSIONS],
+        [op.join(config["DATA_DIR"], 'stimuli', '{model_name}', '{subject}_e0-{min_ecc}_em-'
+                 '{max_ecc}_idx_sess-{num}.npy').format(model_name='V1-norm-s6', subject=s,
+                                                        min_ecc=.5, max_ecc=41, num=n)
+         for s in SUBJECTS for n in SESSIONS]
