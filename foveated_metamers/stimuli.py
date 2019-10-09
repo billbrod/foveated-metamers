@@ -3,10 +3,10 @@
 import imageio
 import itertools
 import warnings
-import parse
 import numpy as np
 import pyrtools as pt
 import pandas as pd
+import os.path as op
 from skimage import util
 
 
@@ -125,30 +125,17 @@ def collect_images(image_paths, save_path=None):
     return images
 
 
-def create_metamer_df(image_paths, image_template_paths, save_path=None):
+def create_metamer_df(image_paths, save_path=None):
     r"""Create dataframe summarizing metamer information
 
-    We do this by parsing the values in ``image_template_paths``, which
-    should therefore look like a python 3-style format string, e.g.,
-    'image-{image}_seed-{seed}'.
-
-    Each of the named fields will be a column in the created dataframe
-    and each path will be a row.
-
-    Note that, in order for this to work properly, all of the fields in
-    each ``image_template_paths`` str must be named, i.e., we don't
-    handle 'image-{image}_seed-{}'. This is because we then don't know
-    how to name that column in the dataframe
+    We do this by loading in and concatenating the summary.csv files
+    created as one of the outputs of metamer creation. We also add one
+    more column, the image_name
 
     Parameters
     ----------
     image_paths : list
         A list of strings to image paths
-    image_template_paths : list
-        A list of python 3 format strings. See above for examples. We
-        try them in order until we hit one that works, considering it a
-        failure (and therefore trying the next one) if ``parse.parse``
-        returns None
     save_path : str or None
         If a str, must end in csv, and we save the dataframe here as a
         csv. If None, we don't save the dataframe
@@ -161,14 +148,21 @@ def create_metamer_df(image_paths, image_template_paths, save_path=None):
     """
     metamer_info = []
     for p in image_paths:
-        for t in image_template_paths:
-            info = parse.parse(t, p)
-            if info is not None:
-                break
-        if len(info.fixed) > 0:
-            raise Exception("All fields in each image_template_path str must be named!")
-        metamer_info.append(info.named)
-    df = pd.DataFrame(metamer_info)
+        csv_path = p.replace('metamer.png', 'summary.csv')
+        if csv_path.endswith('csv'):
+            # then this was a metamer image and the replace above
+            # completed successfully
+            tmp = pd.read_csv(csv_path)
+        else:
+            # then this was one of our original images, and the replace
+            # above failed
+            tmp = pd.DataFrame({'target_image': p}, index=[0])
+        # all target_images are .pgm files and each tmp df will only contain value
+        if len(tmp.target_image.unique()) > 1:
+            raise Exception("Somehow we have more than one target image for metamer %s" % p)
+        tmp['image_name'] = op.basename(tmp.target_image.unique()[0]).replace('.pgm', '')
+        metamer_info.append(tmp)
+    df = pd.concat(metamer_info)
     if save_path is not None:
         df.to_csv(save_path, index=False)
     return df
@@ -206,7 +200,7 @@ def generate_indices(df, seed, save_path=None):
     trials_dict = {}
     # Here we find the unique (non-None) values for the three fields
     # that determine each trial
-    for k in ['scaling', 'image_name', 'model_name']:
+    for k in ['scaling', 'image_name', 'model']:
         v = [i for i in df[k].unique() if i != 'None']
         trials_dict[k] = v
     # Now go through and find the indices for each unique combination of
@@ -214,8 +208,8 @@ def generate_indices(df, seed, save_path=None):
     # the different seeds used) and then add the reference image
     trial_types = []
     for s, i, m in itertools.product(*trials_dict.values()):
-        t = df.query('scaling==@s & image_name==@i & model_name==@m').index
-        t = t.append(df.query('scaling=="None" & image_name==@i & model_name=="None"').index)
+        t = df.query('scaling==@s & image_name==@i & model==@m').index
+        t = t.append(df.query('scaling=="None" & image_name==@i & model=="None"').index)
         trial_types.append(t)
     trial_types = np.array(trial_types)
     # Now generate the indices for the trial. At the end of this, trials
