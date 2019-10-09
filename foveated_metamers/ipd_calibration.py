@@ -224,7 +224,8 @@ def run_calibration(win, img_pos, circle_stim, line_stim, vert_or_horiz, flip_te
                           "4/6 arrow keys to adjust the horizontal position coarsely of the line "
                           "(1/3 to adjust it finely) until it lies in the center of the circle, "
                           "then press space")
-    start_text = [visual.TextStim(w, start_text, pos=p, wrapWidth=1000, flipHoriz=flip_text)
+    start_text = [visual.TextStim(w, start_text, pos=p, wrapWidth=1000, flipHoriz=flip_text,
+                                  color=(-1, -1, -1), colorSpace='rgb')
                   for w, p in zip(win, img_pos)]
     [text.draw() for text in start_text]
     [w.flip() for w in win]
@@ -407,7 +408,7 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
     if not op.exists(output_dir):
         os.makedirs(output_dir)
     monocular_verg_angle = calc_monocular_convergence_angle(binocular_ipd, fixation_distance)
-    default_window = {'units': 'pix', 'fullscr': True, 'color': 0, 'colorSpace': 'rgb255',
+    default_window = {'units': 'pix', 'fullscr': True, 'color': 0, 'colorSpace': 'rgb',
                       'allowGUI': False}
     for k, v in default_window.items():
         window_kwargs.setdefault(k, v)
@@ -424,7 +425,7 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
     win = [visual.Window(winType=win_type, screen=screen[0], swapInterval=1, size=size,
                          **window_kwargs)]
     circle_stim = visual.Circle(win[0], units='pix', pos=img_pos[0], radius=circle_radius,
-                                lineColor=(1, 1, 1), lineColorSpace='rgb', lineWidth=line_width)
+                                lineColor=(-1, -1, -1), lineColorSpace='rgb', lineWidth=line_width)
     horiz_line_start = [int(-line_length)//2, 0]
     horiz_line_end = [int(line_length)//2, 0]
     # the vertical is just a reversed version of the horizontal (since
@@ -436,7 +437,7 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
         # line stimuli
         line_stim = [visual.Line(win[0], start=[horiz_line_start, vert_line_start][i],
                                  end=[horiz_line_end, vert_line_end][i], units='pix',
-                                 lineWidth=line_width, pos=img_pos[1], lineColor=(1, 1, 1),
+                                 lineWidth=line_width, pos=img_pos[1], lineColor=(-1, -1, -1),
                                  lineColorSpace='rgb') for i in range(2)]
     elif len(screen) == 2:
         print("Doing binocular mode on screens %s" % screen)
@@ -448,7 +449,7 @@ def ipd_calibration(subject_name, binocular_ipd, output_dir, screen=[0], size=[4
                                  size=size, **window_kwargs))
         line_stim = [visual.Line(win[1], start=[horiz_line_start, vert_line_start][i],
                                  lineWidth=line_width, end=[horiz_line_end, vert_line_end][i],
-                                 units='pix', pos=img_pos[1], lineColor=(1, 1, 1),
+                                 units='pix', pos=img_pos[1], lineColor=(-1, -1, -1),
                                  lineColorSpace='rgb') for i in range(2)]
     else:
         raise Exception("Can't handle %s screens!" % len(window_kwargs['screen']))
