@@ -266,7 +266,7 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
         # after it. for some reason, need to use the negative value of
         # it in order to add that to the expt_clock...
         expt_clock.reset(-float(timings[-1][-1]))
-    wait_text = [visual.TextStim(w, ("Press 5 to start\nq or esc will quit\nspace to pause"),
+    wait_text = [visual.TextStim(w, ("Press space to start\nq or esc will quit\nspace to pause"),
                                  pos=p, flipHoriz=flip_text) for w, p in zip(win, img_pos)]
     query_text = [visual.TextStim(w, "Same as 1 or 2?", pos=p, flipHoriz=flip_text)
                   for w, p in zip(win, img_pos)]
@@ -278,14 +278,13 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
     # reason, so instead we do this while loop with a win.flip() and
     # core.wait() (the issue seems to be that we only grab keys
     # successfully pretty quickly after a win.flip()?)
-    # all_keys = event.waitKeys(keyList=['5', 'q', 'escape', 'esc'], timeStamped=expt_clock)
+    # all_keys = event.waitKeys(keyList=['space', 'q', 'escape', 'esc'], timeStamped=expt_clock)
     all_keys = []
-    # wait until receive 5, which is the scanner trigger
     while not all_keys:
         [text.draw() for text in wait_text]
         [w.flip() for w in win]
         core.wait(.1)
-        all_keys = event.getKeys(keyList=['5', 'q', 'escape', 'esc'], timeStamped=expt_clock)
+        all_keys = event.getKeys(keyList=['space', 'q', 'escape', 'esc'], timeStamped=expt_clock)
     if save_frames is not None:
         [w.getMovieFrame() for w in win]
 
