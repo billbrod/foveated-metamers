@@ -2,6 +2,7 @@
 """create metamers for the experiment
 """
 import torch
+import re
 import GPUtil
 import imageio
 import warnings
@@ -78,7 +79,7 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
 
     Parameters
     ----------
-    model_name : {'RGC', 'V1', 'V1-norm'}
+    model_name : {'RGC', 'V1', 'V1_norm'}
         Which type of model to create.
     scaling : float
         The scaling parameter for the model
@@ -99,7 +100,7 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
     normalize_dict : dict or None, optional
         If a dict, should contain the stats to use for normalization. If
         None, we don't normalize. This can only be set (and must be set)
-        if the model is "V1-norm". In any other case, we'll throw an
+        if the model is "V1_norm". In any other case, we'll throw an
         Exception.
 
     Returns
@@ -117,12 +118,27 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
         images by in the plots we'll create
 
     """
-    if model_name == 'RGC':
+    try:
+        # cone_power must be a float, but we can't have / in a path (it
+        # separates directories), so in order to work around that, we
+        # have to special repeating decimal floats we want to be able to
+        # get: 1/2.2 (the standard gamma value) and 1/3 (the standard
+        # approximation of cone physiology).
+        if 'cone-gamma' in model_name:
+            cone_power = 1/2.2
+        elif 'cone-phys' in model_name:
+            cone_power = 1/3
+        else:
+            cone_power = float(re.findall('cone-([.0-9]+)', model_name)[0])
+    except IndexError:
+        # default is 1, linear response
+        cone_power = 1
+    if model_name.startswith('RGC'):
         if normalize_dict:
             raise Exception("Cannot normalize RGC model!")
         model = po.simul.RetinalGanglionCells(scaling, image.shape[-2:], min_eccentricity=min_ecc,
                                               max_eccentricity=max_ecc, transition_region_width=1,
-                                              cache_dir=cache_dir)
+                                              cone_power=cone_power, cache_dir=cache_dir)
         animate_figsize = (17, 5)
         rep_image_figsize = (4, 13)
         # default figsize arguments work for an image that is 256x256,
@@ -134,26 +150,28 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
     elif model_name.startswith('V1'):
         if 'norm' not in model_name:
             if normalize_dict:
-                raise Exception("Cannot normalize V1 model (must be V1-norm)!")
+                raise Exception("Cannot normalize V1 model (must be V1_norm)!")
             normalize_dict = {}
         if not normalize_dict and 'norm' in model_name:
-            raise Exception("If model_name is V1-norm, normalize_dict must be set!")
-        if 'half_oct' in model_name:
+            raise Exception("If model_name is V1_norm, normalize_dict must be set!")
+        if 'half-oct' in model_name:
             half_oct = True
         else:
             half_oct = False
-        num_scales = 4
-        if 's' in model_name:
-            num_scales = int(model_name[-1])
+        try:
+            num_scales = int(re.findall('s([0-9]+)', model_name)[0])
+        except (IndexError, ValueError):
+            num_scales = 4
         model = po.simul.PrimaryVisualCortex(scaling, image.shape[-2:], min_eccentricity=min_ecc,
                                              max_eccentricity=max_ecc, transition_region_width=1,
                                              cache_dir=cache_dir, normalize_dict=normalize_dict,
-                                             half_octave_pyramid=half_oct, num_scales=num_scales)
+                                             half_octave_pyramid=half_oct, num_scales=num_scales,
+                                             cone_power=cone_power)
         animate_figsize = (35, 11)
         # we need about 11 per plot (and we have one of those per scale,
         # plus one for the mean luminance)
         rep_image_figsize = [11 * (num_scales+1), 30]
-        if 'half_oct' in model_name:
+        if 'half-oct' in model_name:
             # in this case, we have almost twice as many plots to make
             rep_image_figsize[0] *= 2
         # default figsize arguments work for an image that is 512x512,
@@ -268,7 +286,7 @@ def summary_plots(metamer, rep_image_figsize, img_zoom):
               metamer.representation_error()]
     titles = ['Reference image |', 'Metamer |', 'Error |']
     if metamer.model.state_dict_reduced['model_name'] == 'V1' and metamer.model.normalize_dict:
-        # then this is the V1-norm model and so we want to use symmetric
+        # then this is the V1_norm model and so we want to use symmetric
         # color maps for all of them
         vranges = ['indep0', 'indep0', 'indep0']
     else:
@@ -479,7 +497,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
 
     Parameters
     ----------
-    model_name : {'RGC', 'V1', 'V1-norm'}
+    model_name : {'RGC', 'V1', 'V1_norm'}
         Which type of model to create.
     scaling : float
         The scaling parameter for the model

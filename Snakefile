@@ -1,4 +1,5 @@
 import os
+import re
 import imageio
 import time
 import os.path as op
@@ -24,7 +25,7 @@ ruleorder:
     degamma_image > prep_pixabay
 
 
-MODELS = ['RGC', 'V1-norm-s6']
+MODELS = ['RGC', 'V1_norm_s6']
 IMAGES = ['trees-degamma', 'sheep-degamma', 'refuge-degamma', 'japan-degamma', 'street-degamma']
 METAMER_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers', '{model_name}', '{image_name}',
                                 'scaling-{scaling}', 'opt-{optimizer}', 'fr-{fract_removed}_lc-'
@@ -340,7 +341,7 @@ def get_windows(wildcards):
     window_template = op.join(config["DATA_DIR"], 'windows_cache', 'scaling-{scaling}_size-{size}'
                               '_e0-{min_ecc:.03f}_em-{max_ecc:.01f}_t-1.pt')
     im = imageio.imread(REF_IMAGE_TEMPLATE_PATH.format(image_name=wildcards.image_name))
-    if wildcards.model_name == "RGC":
+    if wildcards.model_name.startswith("RGC"):
         size = ','.join([str(i) for i in im.shape])
         return window_template.format(scaling=wildcards.scaling, size=size,
                                       max_ecc=float(wildcards.max_ecc),
@@ -348,9 +349,10 @@ def get_windows(wildcards):
     elif wildcards.model_name.startswith('V1'):
         windows = []
         # need them for every scale
-        num_scales = 4
-        if 's' in wildcards.model_name:
-            num_scales = int(wildcards.model_name[-1])
+        try:
+            num_scales = int(re.findall('s([0-9]+)', wildcards.model_name)[0])
+        except (IndexError, ValueError):
+            num_scales = 4
         for i in range(num_scales):
             output_size = ','.join([str(int(np.ceil(j / 2**i))) for j in im.shape])
             min_ecc, _ = pooling.calc_min_eccentricity(float(wildcards.scaling),
