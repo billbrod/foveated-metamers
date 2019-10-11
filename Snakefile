@@ -21,7 +21,8 @@ else:
     ON_CLUSTER = False
 wildcard_constraints:
     num="[0-9]+",
-    pad_mode="constant|symmetric"
+    pad_mode="constant|symmetric",
+    gamma="|_degamma"
 ruleorder:
     degamma_image > prep_pixabay
 
@@ -345,9 +346,9 @@ def get_norm_dict(wildcards):
             gamma = '_degamma'
         try:
             if 'cone-gamma' in wildcards.model_name:
-                cone_power = 1/2.2
+                cone_power = 'gamma'
             elif 'cone-phys' in wildcards.model_name:
-                cone_power = 1/3
+                cone_power = 'phys'
             else:
                 cone_power = float(re.findall('cone-([.0-9]+)', wildcards.model_name)[0])
         except IndexError:
