@@ -22,9 +22,12 @@ else:
 wildcard_constraints:
     num="[0-9]+",
     pad_mode="constant|symmetric",
-    gamma="|_degamma"
+    gamma="|_degamma",
+    period="[0-9]+",
+    size="[0-9,]+",
+    bits="[0-9]+",
 ruleorder:
-    degamma_image > prep_pixabay
+    generate_image > degamma_image > prep_pixabay
 
 
 MODELS = ['RGC', 'V1_norm_s6']
@@ -34,7 +37,7 @@ METAMER_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers', '{model_name}', 
                                 '{loss_fract}_cf-{coarse_to_fine}', 'seed-{seed}_init-{init_type}'
                                 '_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_'
                                 'thresh-{loss_thresh}_gpu-{gpu}_metamer.png')
-REF_IMAGE_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'ref_images', '{image_name}.pgm')
+REF_IMAGE_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'ref_images', '{image_name}.png')
 SUBJECTS = ['sub-%02d' % i for i in range(1, 31)]
 SESSIONS = [0, 1, 2]
 
@@ -112,11 +115,11 @@ rule mp4_to_pngs:
         "ffmpeg -i {input} -r 1 {params.out_name} &> {log}"
 
 
-rule png_to_pgm:
+rule convert_to_greyscale:
     input:
         op.join(config['NFLX_DIR'], 'contents_org_yuv', '{video_name}', '{video_name}-{num}.png')
     output:
-        op.join(config['DATA_DIR'], 'ref_images', '{video_name}-{num}.pgm')
+        op.join(config['DATA_DIR'], 'ref_images', '{video_name}-{num}.png')
     log:
         op.join(config['DATA_DIR'], 'logs', 'ref_images', '{video_name}-{num}.log')
     benchmark:
@@ -136,7 +139,7 @@ rule prep_pixabay:
         # name, which we want to ignore
         lambda wildcards: glob(op.join(config["PIXABAY_DIR"], '{image_name}-*.jpg').format(**wildcards))
     output:
-        op.join(config["DATA_DIR"], 'ref_images', '{image_name}.pgm')
+        op.join(config["DATA_DIR"], 'ref_images', '{image_name}.png')
     log:
         op.join(config["DATA_DIR"], 'logs', 'ref_images', '{image_name}.log')
     benchmark:
@@ -161,13 +164,14 @@ rule prep_pixabay:
 # an explanation)
 rule degamma_image:
     input:
-        op.join(config['DATA_DIR'], 'ref_images', '{image_name}.pgm')
+        op.join(config['DATA_DIR'], 'ref_images', '{image_name}.png')
     output:
-        op.join(config['DATA_DIR'], 'ref_images', '{image_name}-degamma.pgm')
+        op.join(config['DATA_DIR'], 'ref_images', '{image_name}-degamma-{bits}.png')
     log:
-        op.join(config['DATA_DIR'], 'logs', 'ref_images', '{image_name}-degamma.log')
+        op.join(config['DATA_DIR'], 'logs', 'ref_images', '{image_name}-degamma-{bits}.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'ref_images', '{image_name}-degamma_benchmark.txt')
+        op.join(config['DATA_DIR'], 'logs', 'ref_images', '{image_name}-degamma-{bits}'
+                '_benchmark.txt')
     run:
         import imageio
         import contextlib
@@ -180,7 +184,9 @@ rule degamma_image:
                 # 1/2.2 is the standard encoding gamma for jpegs, so we
                 # raise this to its reciprocal, 2.2, in order to reverse
                 # it
-                imageio.imwrite(output[0], im**2.2)
+                im = im**2.2
+                dtype = eval('np.uint%s' % wildcards.bits)
+                imageio.imwrite(output[0], (im * np.iinfo(dtype).max).astype(dtype))
 
 
 rule pad_image:
@@ -202,7 +208,7 @@ rule pad_image:
 
 rule generate_image:
     output:
-        op.join(config['DATA_DIR'], 'ref_images', '{image_type}_period-{period}_size-{size}.pgm')
+        op.join(config['DATA_DIR'], 'ref_images', '{image_type}_period-{period}_size-{size}.png')
     log:
         op.join(config['DATA_DIR'], 'logs', 'ref_images', '{image_type}_period-{period}_size-'
                 '{size}.log')
