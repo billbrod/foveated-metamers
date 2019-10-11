@@ -370,7 +370,10 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
     # save png of metamer
     metamer_path = op.splitext(save_path)[0] + "_metamer.png"
     print("Saving metamer image at %s" % metamer_path)
-    imageio.imwrite(metamer_path, po.to_numpy(metamer.matched_image).squeeze())
+    metamer_image = po.to_numpy(metamer.matched_image).squeeze()
+    imageio.imwrite(metamer_path, metamer_image)
+    print("Saving 16-bit metamer image at %s" % metamer_path.replace('.png', '-16.png'))
+    imageio.imwrite(metamer_path, (metamer_image * np.iinfo(np.uint16).max).astype(np.uint16))
     video_path = op.splitext(save_path)[0] + "_synthesis.mp4"
     rep_fig, windowed_fig = summary_plots(metamer, rep_image_figsize, img_zoom)
     rep_path = op.splitext(save_path)[0] + "_rep.png"
