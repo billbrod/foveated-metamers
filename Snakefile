@@ -250,11 +250,14 @@ rule gen_norm_stats:
     output:
         # here V1 and texture could be considered wildcards, but they're
         # the only we're doing this for now
-        op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture{gamma}_norm_stats-{num}.pt' )
+        op.join(config['DATA_DIR'], 'norm_stats', 'V1_cone-{cone}_texture{gamma}_norm_stats-'
+                '{num}.pt' )
     log:
-        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_texture{gamma}_norm_stats-{num}.log')
+        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_cone-{cone}_texture{gamma}_norm_'
+                'stats-{num}.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_texture{gamma}_norm_stats-{num}_benchmark.txt')
+        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_cone-{cone}_texture{gamma}_norm_'
+                'stats-{num}_benchmark.txt')
     params:
         index = lambda wildcards: (int(wildcards.num) * 100, (int(wildcards.num)+1) * 100)
     run:
@@ -263,8 +266,14 @@ rule gen_norm_stats:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 # scaling doesn't matter here
+                if 'gamma' == wildcards.cone:
+                    cone_power = 1/2.2
+                elif 'phys' == wildcards.cone:
+                    cone_power = 1/3
+                else:
+                    cone_power = float(wildcards.cone)
                 v1 = po.simul.PrimaryVisualCortex(1, (512, 512), half_octave_pyramid=True,
-                                                  num_scales=6)
+                                                  num_scales=6, cone_power=cone_power)
                 po.simul.non_linearities.generate_norm_stats(v1, input[0], output[0], (512, 512),
                                                              index=params.index)
 
@@ -272,14 +281,17 @@ rule gen_norm_stats:
 # we need to generate the stats in blocks, and then want to re-combine them
 rule combine_norm_stats:
     input:
-        lambda wildcards: [op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture{gamma}_norm_stats-{num}.pt').format(num=i, **wildcards)
+        lambda wildcards: [op.join(config['DATA_DIR'], 'norm_stats', 'V1_cone-{cone}_texture'
+                                   '{gamma}_norm_stats-{num}.pt').format(num=i, **wildcards)
                            for i in range(9)]
     output:
-        op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture{gamma}_norm_stats.pt' )
+        op.join(config['DATA_DIR'], 'norm_stats', 'V1_cone-{cone}_texture{gamma}_norm_stats.pt' )
     log:
-        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_texture{gamma}_norm_stats.log')
+        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_cone-{cone}_texture{gamma}_norm_'
+                'stats.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_texture{gamma}_norm_stats_benchmark.txt')
+        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_cone-{cone}_texture{gamma}_norm'
+                '_stats_benchmark.txt')
     run:
         import torch
         import contextlib
@@ -330,7 +342,18 @@ def get_norm_dict(wildcards):
         gamma = ''
         if 'degamma' in wildcards.image_name:
             gamma = '_degamma'
-        return op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture%s_norm_stats.pt' % gamma)
+        try:
+            if 'cone-gamma' in wildcards.model_name:
+                cone_power = 1/2.2
+            elif 'cone-phys' in wildcards.model_name:
+                cone_power = 1/3
+            else:
+                cone_power = float(re.findall('cone-([.0-9]+)', wildcards.model_name)[0])
+        except IndexError:
+            # default is 1, linear response
+            cone_power = 1
+        return op.join(config['DATA_DIR'], 'norm_stats', 'V1_cone-%s_texture%s_norm_stats.pt'
+                       % (cone_power, gamma))
     else:
         return []
 
