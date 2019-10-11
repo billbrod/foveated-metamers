@@ -20,7 +20,8 @@ if os.system("module list") == 0:
 else:
     ON_CLUSTER = False
 wildcard_constraints:
-    num="[0-9]+"
+    num="[0-9]+",
+    pad_mode="constant|symmetric"
 ruleorder:
     degamma_image > prep_pixabay
 
