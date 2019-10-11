@@ -34,9 +34,10 @@ MODELS = ['RGC', 'V1_norm_s6']
 IMAGES = ['trees-degamma', 'sheep-degamma', 'refuge-degamma', 'japan-degamma', 'street-degamma']
 METAMER_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers', '{model_name}', '{image_name}',
                                 'scaling-{scaling}', 'opt-{optimizer}', 'fr-{fract_removed}_lc-'
-                                '{loss_fract}_cf-{coarse_to_fine}', 'seed-{seed}_init-{init_type}'
-                                '_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_'
-                                'thresh-{loss_thresh}_gpu-{gpu}_metamer.png')
+                                '{loss_fract}_cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}',
+                                'seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc}_em-'
+                                '{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}_'
+                                'metamer.png')
 REF_IMAGE_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'ref_images', '{image_name}.png')
 SUBJECTS = ['sub-%02d' % i for i in range(1, 31)]
 SESSIONS = [0, 1, 2]
@@ -424,17 +425,20 @@ rule create_metamers:
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'synthesis.mp4'),
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'rep.png'),
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'windowed.png'),
+        METAMER_TEMPLATE_PATH.replace('metamer.png', 'metamer-16.png'),
         METAMER_TEMPLATE_PATH
     log:
         op.join(config["DATA_DIR"], 'logs', 'metamers', '{model_name}', '{image_name}',
                 'scaling-{scaling}', 'opt-{optimizer}', 'fr-{fract_removed}_lc-{loss_fract}_'
-                'cf-{coarse_to_fine}', 'seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc}'
-                '_em-{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}.log')
+                'cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}', 'seed-{seed}_init-{init_type}_'
+                'lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}'
+                '_gpu-{gpu}.log')
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'metamers', '{model_name}', '{image_name}',
                 'scaling-{scaling}', 'opt-{optimizer}', 'fr-{fract_removed}_lc-{loss_fract}_'
-                'cf-{coarse_to_fine}', 'seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc}'
-                '_em-{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}_benchmark.txt')
+                'cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}', 'seed-{seed}_init-{init_type}_'
+                'lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}'
+                '_gpu-{gpu}_benchmark.txt')
     resources:
         gpu = lambda wildcards: int(wildcards.gpu.split(':')[0]),
     params:
@@ -445,6 +449,12 @@ rule create_metamers:
         import contextlib
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                # bool('False') == True, so we do this to avoid that
+                # situation
+                if wildcards.clamp_each_iter == 'True':
+                    clamp_each_iter = True
+                elif wildcards.clamp_each_iter == 'False':
+                    clamp_each_iter = False
                 met.create_metamers.main(wildcards.model_name, float(wildcards.scaling),
                                          input.ref_image, int(wildcards.seed), float(wildcards.min_ecc),
                                          float(wildcards.max_ecc), float(wildcards.learning_rate),
@@ -453,7 +463,8 @@ rule create_metamers:
                                          params.cache_dir, input.norm_dict, resources.gpu,
                                          wildcards.optimizer, float(wildcards.fract_removed),
                                          float(wildcards.loss_fract),
-                                         float(wildcards.coarse_to_fine), int(params.num_batches))
+                                         float(wildcards.coarse_to_fine), int(params.num_batches),
+                                         wildcards.clamp, clamp_each_iter)
 
 
 rule dummy_metamer_gen:

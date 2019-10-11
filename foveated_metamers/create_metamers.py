@@ -373,7 +373,8 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
     metamer_image = po.to_numpy(metamer.matched_image).squeeze()
     imageio.imwrite(metamer_path, metamer_image)
     print("Saving 16-bit metamer image at %s" % metamer_path.replace('.png', '-16.png'))
-    imageio.imwrite(metamer_path, (metamer_image * np.iinfo(np.uint16).max).astype(np.uint16))
+    imageio.imwrite(metamer_path.replace('.png', '-16.png'),
+                    (metamer_image * np.iinfo(np.uint16).max).astype(np.uint16))
     video_path = op.splitext(save_path)[0] + "_synthesis.mp4"
     rep_fig, windowed_fig = summary_plots(metamer, rep_image_figsize, img_zoom)
     rep_path = op.splitext(save_path)[0] + "_rep.png"
@@ -491,7 +492,8 @@ def setup_device(*args, use_cuda=False):
 def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_rate=1, max_iter=100,
          loss_thresh=1e-4, save_path=None, initial_image_type='white', use_cuda=False,
          cache_dir=None, normalize_dict=None, num_gpus=0, optimizer='SGD', fraction_removed=0,
-         loss_change_fraction=1, coarse_to_fine=0, num_batches=1):
+         loss_change_fraction=1, coarse_to_fine=0, num_batches=1, clamper_name='clamp',
+         clamp_each_iter=True):
     r"""create metamers!
 
     Given a model_name, model parameters, a target image, and some
@@ -575,6 +577,16 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         during the PoolingWindows forward call. The larger this number,
         the less memory the forward pass will take but the slower it
         will be. Only used when ``num_gpus > 1``
+    clamper_name : {'clamp', 'remap'}, optional
+        For the image to make sense, its range must lie between 0 and
+        1. We can enforce that in two ways: clamping (in which case we
+        send everything below 0 to 0 and everything above 1 to 1) or
+        remapping (in which case we subtract away the minimum and divide
+        by the max)
+    clamp_each_iter : bool, optional
+        Whether we call the clamper each iteration of the optimization
+        or only at the end. True, the default, is recommended, and is
+        necesasry for fractional values of cone_power
 
     """
     print("Using seed %s" % seed)
@@ -591,7 +603,10 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     print("Using model %s from %.02f degrees to %.02f degrees" % (model_name, min_ecc, max_ecc))
     print("Using learning rate %s, loss_thresh %s, and max_iter %s" % (learning_rate, loss_thresh,
                                                                        max_iter))
-    clamper = po.RangeClamper((0, 1))
+    if clamper_name == 'clamp':
+        clamper = po.RangeClamper((0, 1))
+    elif clamper_name == 'remap':
+        clamper = po.RangeRemapper((0, 1))
     initial_image = setup_initial_image(initial_image_type, model, image)
     if num_gpus <= 1:
         image, initial_image, model = setup_device(image, initial_image, model, use_cuda=use_cuda)
@@ -626,6 +641,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                                                  learning_rate=learning_rate, max_iter=max_iter,
                                                  loss_thresh=loss_thresh, seed=seed,
                                                  initial_image=initial_image,
+                                                 clamp_each_iter=clamp_each_iter,
                                                  save_progress=save_progress,
                                                  optimizer=optimizer, fraction_removed=fraction_removed,
                                                  loss_change_fraction=loss_change_fraction,
@@ -643,7 +659,8 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                   loss_change_thresh=loss_change_thresh, coarse_to_fine=coarse_to_fine,
                   loss_change_fraction=loss_change_fraction, initial_image=initial_image_type,
                   num_gpus=num_gpus, min_ecc=min_ecc, max_ecc=max_ecc, max_iter=max_iter,
-                  loss_thresh_thresh=loss_thresh, scaling=scaling,)
+                  loss_thresh_thresh=loss_thresh, scaling=scaling, clamper=clamper_name,
+                  clamp_each_iter=clamp_each_iter)
         save(save_path, metamer, animate_figsize, rep_figsize, img_zoom)
     if save_progress:
         os.remove(save_path.replace('.pt', '_inprogress.pt'))
