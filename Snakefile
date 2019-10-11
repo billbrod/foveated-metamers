@@ -467,7 +467,7 @@ rule dummy_metamer_gen:
 
 rule collect_metamers:
     input:
-        lambda wildcards: get_metamers_for_expt(**wildcards),
+        lambda wildcards: get_all_metamers(**wildcards),
     output:
         # we collect across image_name and scaling, and don't care about
         # learning_rate, max_iter, loss_thresh
