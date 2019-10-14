@@ -85,55 +85,6 @@ rule all_refs:
         [REF_IMAGE_TEMPLATE_PATH.format(image_name=i) for i in IMAGES]
 
 
-rule yuv_to_mp4:
-    input:
-        op.join(config['NFLX_DIR'], 'contents_org_yuv', '{video_name}.yuv')
-    output:
-        op.join(config['NFLX_DIR'], 'contents_org_yuv', '{video_name}.mp4')
-    log:
-        op.join(config['NFLX_DIR'], 'logs', 'contents_org_yuv', '{video_name}.log')
-    benchmark:
-        op.join(config['NFLX_DIR'], 'logs', 'contents_org_yuv', '{video_name}_benchmark.txt')
-    shell:
-        # following this stackoverflow comment: https://stackoverflow.com/a/15780960/4659293
-        "ffmpeg -f rawvideo -vcodec rawvideo -framerate 60 -s 1920x1080 -pixel_format yuv420p "
-        "-i {input} -c:v libx264 -preset ultrafast -qp 0 {output} &> {log}"
-
-
-rule mp4_to_pngs:
-    input:
-        op.join(config['NFLX_DIR'], 'contents_org_yuv', '{video_name}.mp4')
-    output:
-        [op.join(config['NFLX_DIR'], 'contents_org_yuv', '{{video_name}}', '{{video_name}}-{:02d}.png').format(i) for i in range(1, 13)]
-    log:
-        op.join(config['NFLX_DIR'], 'logs', 'contents_org_yuv', '{video_name}-png.log')
-    benchmark:
-        op.join(config['NFLX_DIR'], 'logs', 'contents_org_yuv', '{video_name}-png_benchmark.txt')
-    params:
-        out_name = lambda wildcards, output: output[0].replace('01', '%02d')
-    shell:
-        # following this stackoverlow: https://stackoverflow.com/a/10962408/4659293
-        "ffmpeg -i {input} -r 1 {params.out_name} &> {log}"
-
-
-rule convert_to_greyscale:
-    input:
-        op.join(config['NFLX_DIR'], 'contents_org_yuv', '{video_name}', '{video_name}-{num}.png')
-    output:
-        op.join(config['DATA_DIR'], 'ref_images', '{video_name}-{num}.png')
-    log:
-        op.join(config['DATA_DIR'], 'logs', 'ref_images', '{video_name}-{num}.log')
-    benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'ref_images', '{video_name}-{num}_benchmark.txt')
-    run:
-        import imageio
-        import contextlib
-        with open(log[0], 'w', buffering=1) as log_file:
-            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                im = imageio.imread(input[0], as_gray=True)
-                imageio.imwrite(output[0], im)
-
-
 rule prep_pixabay:
     input:
         # all the pixabay images have a string of integers after the
