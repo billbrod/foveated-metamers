@@ -27,7 +27,7 @@ wildcard_constraints:
     size="[0-9,]+",
     bits="[0-9]+",
 ruleorder:
-    generate_image > degamma_image > prep_pixabay
+    crop_image > generate_image > degamma_image > prep_pixabay
 
 
 MODELS = ['RGC', 'V1_norm_s6']
@@ -139,6 +139,54 @@ rule degamma_image:
                 im = im**2.2
                 dtype = eval('np.uint%s' % wildcards.bits)
                 imageio.imwrite(output[0], (im * np.iinfo(dtype).max).astype(dtype))
+
+
+rule demosaic_image:
+    input:
+        op.join(config['DATA_DIR'], 'raw_images', '{image_name}.NEF')
+    output:
+        op.join(config['DATA_DIR'], 'ref_images', '{image_name}.tiff')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'ref_images', '{image_name}.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'ref_images', '{image_name}_benchmark.txt')
+    params:
+        tiff_file = lambda wildcards, input: input[0].replace('NEF', 'tiff')
+    shell:
+        "dcraw -v -4 -q 3 -T {input}; "
+        "mv {params.tiff_file} {output}"
+
+
+rule crop_image:
+    input:
+        op.join(config['DATA_DIR'], 'ref_images', '{image_name}.tiff')
+    output:
+        op.join(config['DATA_DIR'], 'ref_images', '{image_name}_size-{size}.png')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'ref_images', '{image_name}_size-{size}.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'ref_images', '{image_name}_size-{size}_benchmark.txt')
+    run:
+        import imageio
+        import contextlib
+        from skimage import color
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                im = imageio.imread(input[0])
+                curr_shape = np.array(im.shape)[:2]
+                target_shape = [int(i) for i in wildcards.size.split(',')]
+                if len(target_shape) == 1:
+                    target_shape = 2* target_shape
+                target_shape = np.array(target_shape)
+                crop_amt = curr_shape - target_shape
+                cropped_im = im[crop_amt[0]//2:-crop_amt[0]//2, crop_amt[1]//2:-crop_amt[1]//2]
+                cropped_im = color.rgb2gray(cropped_im)
+                imageio.imwrite(output[0], (cropped_im * np.iinfo(np.uint16).max).astype(np.uint16))
+                # tiffs can't be read in using the as_gray arg, so we
+                # save it as a png, and then read it back in as_gray and
+                # save it back out
+                cropped_im = imageio.imread(output[0], as_gray=True)
+                imageio.imwrite(output[0], cropped_im.astype(np.uint16))
 
 
 rule pad_image:
