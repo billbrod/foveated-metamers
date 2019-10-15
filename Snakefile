@@ -103,7 +103,7 @@ rule prep_pixabay:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 im = imageio.imread(input[0], as_gray=True)
                 curr_shape = np.array(im.shape)
-                target_shape = np.array([2064, 3528])
+                target_shape = np.array([2060, 3528])
                 crop_amt = curr_shape - target_shape
                 cropped_im = im[crop_amt[0]//2:-crop_amt[0]//2, crop_amt[1]//2:-crop_amt[1]//2]
                 imageio.imwrite(output[0], cropped_im)
