@@ -15,6 +15,7 @@ import pandas as pd
 import os.path as op
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from skimage import color
 # by default matplotlib uses the TK gui toolkit which can cause problems
 # when I'm trying to render an image into a file, see
 # https://stackoverflow.com/questions/27147300/matplotlib-tcl-asyncdelete-async-handler-deleted-by-the-wrong-thread
@@ -57,14 +58,19 @@ def setup_image(image):
     """
     if isinstance(image, str):
         print("Loading in reference image from %s" % image)
-        # use imageio.imread in order to handle rgb correctly. this uses the ITU-R 601-2 luma
-        # transform, same as matlab
-        image = imageio.imread(image, as_gray=True)
-    if image.max() > 1:
-        warnings.warn("Assuming image range is (0, 255)")
-        image /= 255
+        image = imageio.imread(image)
+    # we use skimage.color.rgb2gray in order to handle rgb
+    # correctly. this uses the ITU-R 601-2 luma transform, same as
+    # matlab
+    image = color.rgb2gray(image)
+    if image.dtype == np.uint8:
+        warnings.warn("Image is int8, with range (0, 255)")
+        image /= np.iinfo(np.uint8).max
+    if image.dtype == np.uint16:
+        warnings.warn("Image is int16 , with range (0, 65535)")
+        image /= np.iinfo(np.uint16).max
     else:
-        warnings.warn("Assuming image range is (0, 1)")
+        warnings.warn("Image is float 32, so we assume image range is (0, 1)")
     image = torch.tensor(image, dtype=torch.float32)
     while image.ndimension() < 4:
         image = image.unsqueeze(0)
