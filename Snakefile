@@ -249,7 +249,10 @@ rule degamma_textures:
                     # 1/2.2 is the standard encoding gamma for jpegs, so we
                     # raise this to its reciprocal, 2.2, in order to reverse
                     # it
-                    imageio.imwrite(op.join(output[0], op.split(i)[-1]), im**2.2)
+                    im = im ** 2.2
+                    # save as a 16 bit png
+                    im = (im * np.iinfo(np.uint16).max).astype(np.uint16)
+                    imageio.imwrite(op.join(output[0], op.split(i)[-1].replace('jpg', 'png')))
 
 
 rule gen_norm_stats:
