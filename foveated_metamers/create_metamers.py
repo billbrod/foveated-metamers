@@ -59,18 +59,23 @@ def setup_image(image):
     if isinstance(image, str):
         print("Loading in reference image from %s" % image)
         image = imageio.imread(image)
-    # we use skimage.color.rgb2gray in order to handle rgb
-    # correctly. this uses the ITU-R 601-2 luma transform, same as
-    # matlab
-    image = color.rgb2gray(image)
     if image.dtype == np.uint8:
         warnings.warn("Image is int8, with range (0, 255)")
-        image /= np.iinfo(np.uint8).max
-    if image.dtype == np.uint16:
+        image = image / np.iinfo(np.uint8).max
+    elif image.dtype == np.uint16:
         warnings.warn("Image is int16 , with range (0, 65535)")
-        image /= np.iinfo(np.uint16).max
+        image = image / np.iinfo(np.uint16).max
     else:
         warnings.warn("Image is float 32, so we assume image range is (0, 1)")
+        if image.max() > 1:
+            raise Exception("Image is neither int8 nor int16, but its max is greater than 1!")
+    # we use skimage.color.rgb2gray in order to handle rgb
+    # correctly. this uses the ITU-R 601-2 luma transform, same as
+    # matlab. we do this after the above, because it changes the image
+    # dtype to float32
+    if image.ndim == 3:
+        # then it's a color image, and we need to make it grayscale
+        image = color.rgb2gray(image)
     image = torch.tensor(image, dtype=torch.float32)
     while image.ndimension() < 4:
         image = image.unsqueeze(0)
