@@ -597,7 +597,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     clamp_each_iter : bool, optional
         Whether we call the clamper each iteration of the optimization
         or only at the end. True, the default, is recommended, and is
-        necesasry for fractional values of cone_power
+        necessary for fractional values of cone_power
 
     """
     print("Using seed %s" % seed)
@@ -647,6 +647,10 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         coarse_to_fine = True
     else:
         loss_change_thresh = .1
+    if model.cone_power < 1:
+        clip_grad_norm = 1
+    else:
+        clip_grad_norm = False
     start_time = time.time()
     matched_im, matched_rep = metamer.synthesize(clamper=clamper, store_progress=10,
                                                  learning_rate=learning_rate, max_iter=max_iter,
@@ -658,6 +662,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                                                  loss_change_fraction=loss_change_fraction,
                                                  loss_change_thresh=loss_change_thresh,
                                                  coarse_to_fine=coarse_to_fine,
+                                                 clip_grad_norm=clip_grad_norm,
                                                  save_path=save_path.replace('.pt', '_inprogress.pt'))
     duration = time.time() - start_time
     # make sure everything's on the cpu for saving
@@ -671,7 +676,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                   loss_change_fraction=loss_change_fraction, initial_image=initial_image_type,
                   num_gpus=num_gpus, min_ecc=min_ecc, max_ecc=max_ecc, max_iter=max_iter,
                   loss_thresh_thresh=loss_thresh, scaling=scaling, clamper=clamper_name,
-                  clamp_each_iter=clamp_each_iter)
+                  clamp_each_iter=clamp_each_iter, clip_grad_norm=clip_grad_norm)
         save(save_path, metamer, animate_figsize, rep_figsize, img_zoom)
     if save_progress:
         os.remove(save_path.replace('.pt', '_inprogress.pt'))
