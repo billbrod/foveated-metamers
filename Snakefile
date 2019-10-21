@@ -252,7 +252,7 @@ rule degamma_textures:
                     im = im ** 2.2
                     # save as a 16 bit png
                     im = (im * np.iinfo(np.uint16).max).astype(np.uint16)
-                    imageio.imwrite(op.join(output[0], op.split(i)[-1].replace('jpg', 'png')))
+                    imageio.imwrite(op.join(output[0], op.split(i)[-1].replace('jpg', 'png')), im)
 
 
 rule gen_norm_stats:
