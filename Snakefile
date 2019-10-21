@@ -457,11 +457,15 @@ rule create_metamers:
                     clamp_each_iter = True
                 elif wildcards.clamp_each_iter == 'False':
                     clamp_each_iter = False
+                if wildcards.init_type not in ['white', 'blue', 'pink', 'gray']:
+                    init_type = REF_IMAGE_TEMPLATE_PATH.format(image_name=wildcards.init_type)
+                else:
+                    init_type = wildcards.init_type
                 met.create_metamers.main(wildcards.model_name, float(wildcards.scaling),
                                          input.ref_image, int(wildcards.seed), float(wildcards.min_ecc),
                                          float(wildcards.max_ecc), float(wildcards.learning_rate),
                                          int(wildcards.max_iter), float(wildcards.loss_thresh),
-                                         output[0], wildcards.init_type, resources.gpu>0,
+                                         output[0], init_type, resources.gpu>0,
                                          params.cache_dir, input.norm_dict, resources.gpu,
                                          wildcards.optimizer, float(wildcards.fract_removed),
                                          float(wildcards.loss_fract),

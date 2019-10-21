@@ -444,6 +444,11 @@ def setup_initial_image(initial_image_type, model, image):
         initial_image += np.abs(initial_image.min())
         initial_image /= initial_image.max()
         initial_image = torch.Tensor(initial_image).unsqueeze(0).unsqueeze(0)
+    elif op.isfile(initial_image_type):
+        warnings.warn("Using image %s as initial image!" % initial_image_type)
+        initial_image = imageio.imread(initial_image_type)
+        initial_image = initial_image / np.iinfo(initial_image.dtype).max
+        initial_image = torch.tensor(initial_image, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
     else:
         raise Exception("Don't know how to handle initial_image_type %s! Must be one of {'white',"
                         " 'gray', 'pink', 'blue'}" % initial_image_type)
