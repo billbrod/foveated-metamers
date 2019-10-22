@@ -627,14 +627,6 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     print("Using model %s from %.02f degrees to %.02f degrees" % (model_name, min_ecc, max_ecc))
     print("Using learning rate %s, loss_thresh %s, and max_iter %s" % (learning_rate, loss_thresh,
                                                                        max_iter))
-    if clamper_name == 'clamp':
-        clamper = po.RangeClamper((0, 1))
-    elif clamper_name == 'clamp2':
-        clamper = po.TwoMomentsClamper(image)
-    elif clamper_name == 'clamp4':
-        clamper = po.FourMomentsClamper(image)
-    elif clamper_name == 'remap':
-        clamper = po.RangeRemapper((0, 1))
     initial_image = setup_initial_image(initial_image_type, model, image)
     if num_gpus <= 1:
         image, initial_image, model = setup_device(image, initial_image, model, use_cuda=use_cuda)
@@ -650,6 +642,14 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
             # this makes sure we get the non-PoolingWindows onto the
             # same device as the image
             model = model.to(image.device, do_windows=False)
+    if clamper_name == 'clamp':
+        clamper = po.RangeClamper((0, 1))
+    elif clamper_name == 'clamp2':
+        clamper = po.TwoMomentsClamper(image)
+    elif clamper_name == 'clamp4':
+        clamper = po.FourMomentsClamper(image)
+    elif clamper_name == 'remap':
+        clamper = po.RangeRemapper((0, 1))
     metamer = po.synth.Metamer(image, model)
     if save_path is not None:
         if max_iter < 200:
