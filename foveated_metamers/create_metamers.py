@@ -629,6 +629,10 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                                                                        max_iter))
     if clamper_name == 'clamp':
         clamper = po.RangeClamper((0, 1))
+    elif clamper_name == 'clamp2':
+        clamper = po.TwoMomentsClamper(image)
+    elif clamper_name == 'clamp4':
+        clamper = po.FourMomentsClamper(image)
     elif clamper_name == 'remap':
         clamper = po.RangeRemapper((0, 1))
     initial_image = setup_initial_image(initial_image_type, model, image)
