@@ -144,12 +144,19 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
     except IndexError:
         # default is 1, linear response
         cone_power = 1
+    if 'gaussian' in model_name:
+        window_type = 'gaussian'
+        t_width = .5
+    elif 'cosine' in model_name:
+        window_type = 'cosine'
+        t_width = 1
     if model_name.startswith('RGC'):
         if normalize_dict:
             raise Exception("Cannot normalize RGC model!")
         model = po.simul.RetinalGanglionCells(scaling, image.shape[-2:], min_eccentricity=min_ecc,
-                                              max_eccentricity=max_ecc, transition_region_width=.5,
-                                              cone_power=cone_power, cache_dir=cache_dir)
+                                              max_eccentricity=max_ecc, window_type=window_type,
+                                              transition_region_width=t_width, cache_dir=cache_dir,
+                                              cone_power=cone_power)
         animate_figsize = (17, 5)
         rep_image_figsize = (4, 13)
         # default figsize arguments work for an image that is 256x256,
@@ -178,10 +185,11 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
         except (IndexError, ValueError):
             num_scales = 4
         model = po.simul.PrimaryVisualCortex(scaling, image.shape[-2:], min_eccentricity=min_ecc,
-                                             max_eccentricity=max_ecc, transition_region_width=.5,
+                                             max_eccentricity=max_ecc,
+                                             transition_region_width=t_width,
                                              cache_dir=cache_dir, normalize_dict=normalize_dict,
                                              half_octave_pyramid=half_oct, num_scales=num_scales,
-                                             cone_power=cone_power,
+                                             cone_power=cone_power, window_type=window_type,
                                              include_highpass=include_highpass)
         animate_figsize = (35, 11)
         # we need about 11 per plot (and we have one of those per scale,
