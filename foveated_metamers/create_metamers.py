@@ -148,7 +148,7 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
         if normalize_dict:
             raise Exception("Cannot normalize RGC model!")
         model = po.simul.RetinalGanglionCells(scaling, image.shape[-2:], min_eccentricity=min_ecc,
-                                              max_eccentricity=max_ecc, transition_region_width=1,
+                                              max_eccentricity=max_ecc, transition_region_width=.5,
                                               cone_power=cone_power, cache_dir=cache_dir)
         animate_figsize = (17, 5)
         rep_image_figsize = (4, 13)
@@ -178,7 +178,7 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
         except (IndexError, ValueError):
             num_scales = 4
         model = po.simul.PrimaryVisualCortex(scaling, image.shape[-2:], min_eccentricity=min_ecc,
-                                             max_eccentricity=max_ecc, transition_region_width=1,
+                                             max_eccentricity=max_ecc, transition_region_width=.5,
                                              cache_dir=cache_dir, normalize_dict=normalize_dict,
                                              half_octave_pyramid=half_oct, num_scales=num_scales,
                                              cone_power=cone_power,
