@@ -491,7 +491,6 @@ def get_ref_image(wildcards):
         template = REF_IMAGE_TEMPLATE_PATH.replace('ref_images', 'ref_images_preproc')
     else:
         template = REF_IMAGE_TEMPLATE_PATH
-    print(template.format(image_name=wildcards.image_name))
     return template.format(image_name=wildcards.image_name)
 
 
