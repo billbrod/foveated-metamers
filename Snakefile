@@ -26,8 +26,11 @@ wildcard_constraints:
     period="[0-9]+",
     size="[0-9,]+",
     bits="[0-9]+",
+    preproc="full|cone|cone_full",
+    preproc_image_name="azulejos|tiles|market|flowers",
+    pixabay_image_name="trees|sheep|refuge|japan|street",
 ruleorder:
-    crop_image > generate_image > degamma_image > prep_pixabay
+    preproc_image > crop_image > generate_image > degamma_image > prep_pixabay
 
 
 MODELS = ['RGC', 'V1_norm_s6']
@@ -38,6 +41,12 @@ METAMER_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers', '{model_name}', 
                                 'seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc}_em-'
                                 '{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}_'
                                 'metamer.png')
+OUTPUT_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers_display', '{model_name}', '{image_name}',
+                               'scaling-{scaling}', 'opt-{optimizer}', 'fr-{fract_removed}_lc-'
+                               '{loss_fract}_cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}',
+                               'seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc}_em-'
+                               '{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}_'
+                               'metamer.png')
 REF_IMAGE_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'ref_images', '{image_name}.png')
 SUBJECTS = ['sub-%02d' % i for i in range(1, 31)]
 SESSIONS = [0, 1, 2]
@@ -89,13 +98,13 @@ rule prep_pixabay:
     input:
         # all the pixabay images have a string of integers after the
         # name, which we want to ignore
-        lambda wildcards: glob(op.join(config["PIXABAY_DIR"], '{image_name}-*.jpg').format(**wildcards))
+        lambda wildcards: glob(op.join(config["PIXABAY_DIR"], '{pixabay_image_name}-*.jpg').format(**wildcards))
     output:
-        op.join(config["DATA_DIR"], 'ref_images', '{image_name}.png')
+        op.join(config["DATA_DIR"], 'ref_images', '{pixabay_image_name}.png')
     log:
-        op.join(config["DATA_DIR"], 'logs', 'ref_images', '{image_name}.log')
+        op.join(config["DATA_DIR"], 'logs', 'ref_images', '{pixabay_image_name}.log')
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'ref_images', '{image_name}_benchmark.txt')
+        op.join(config["DATA_DIR"], 'logs', 'ref_images', '{pixabay_image_name}_benchmark.txt')
     run:
         import imageio
         import contextlib
@@ -187,6 +196,45 @@ rule crop_image:
                 # save it back out
                 cropped_im = imageio.imread(output[0], as_gray=True)
                 imageio.imwrite(output[0], cropped_im.astype(np.uint16))
+
+
+rule preproc_image:
+    input:
+        op.join(config['DATA_DIR'], 'ref_images', '{preproc_image_name}_size-{size}.png')
+    output:
+        op.join(config['DATA_DIR'], 'ref_images_preproc', '{preproc_image_name}_{preproc}_size-{size}.png')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'ref_image_preproc',
+                '{preproc_image_name}_{preproc}_size-{size}.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'ref_image_preproc',
+                '{preproc_image_name}_{preproc}_size-{size}_benchmark.txt')
+    run:
+        import imageio
+        import contextlib
+        import numpy as np
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                im = imageio.imread(input[0])
+                dtype = im.dtype
+                im = np.array(im, dtype=np.float32)
+                print("Original image has dtype %s" % dtype)
+                if 'full' in wildcards.preproc:
+                    print("Setting image to use full dynamic range")
+                    # set the minimum value to 0
+                    im = im - im.min()
+                    # set the maximum value to 1
+                    im = im / im.max()
+                else:
+                    print("Image will *not* use full dynamic range")
+                    im = im / np.iinfo(dtype).max
+                if 'cone' in wildcards.preproc:
+                    print("Raising image to the 1/3, to approximate cone response")
+                    im = im ** (1/3)
+                # always save it as 16 bit
+                print("Saving as 16 bit")
+                im = im * np.iinfo(np.uint16).max
+                imageio.imwrite(output[0], im.astype(np.uint16))
 
 
 rule pad_image:
@@ -376,7 +424,18 @@ def get_windows(wildcards):
     """
     window_template = op.join(config["DATA_DIR"], 'windows_cache', 'scaling-{scaling}_size-{size}'
                               '_e0-{min_ecc:.03f}_em-{max_ecc:.01f}_t-{t_width}_{window_type}.pt')
-    im = imageio.imread(REF_IMAGE_TEMPLATE_PATH.format(image_name=wildcards.image_name))
+    if 'size-' in wildcards.image_name:
+        im_shape = wildcards.image_name[wildcards.image_name.index('size-') + len('size-'):]
+        im_shape = im_shape.replace('.png', '')
+        im_shape = [int(i) for i in im_shape.split(',')]
+    else:
+        try:
+            im = imageio.imread(REF_IMAGE_TEMPLATE_PATH.format(image_name=wildcards.image_name))
+            im_shape = im.shape
+        except FileNotFoundError:
+            raise Exception("Can't find input image %s or infer its shape, so don't know what "
+                            "windows to cache!" %
+                            REF_IMAGE_TEMPLATE_PATH.format(image_name=wildcards.image_name))
     if 'cosine' in wildcards.model_name:
         window_type = 'cosine'
         t_width = 1.0
@@ -384,7 +443,7 @@ def get_windows(wildcards):
         window_type = 'gaussian'
         t_width = .5
     if wildcards.model_name.startswith("RGC"):
-        size = ','.join([str(i) for i in im.shape])
+        size = ','.join([str(i) for i in im_shape])
         return window_template.format(scaling=wildcards.scaling, size=size,
                                       max_ecc=float(wildcards.max_ecc), t_width=t_width,
                                       min_ecc=float(wildcards.min_ecc), window_type=window_type,)
@@ -396,9 +455,9 @@ def get_windows(wildcards):
         except (IndexError, ValueError):
             num_scales = 4
         for i in range(num_scales):
-            output_size = ','.join([str(int(np.ceil(j / 2**i))) for j in im.shape])
+            output_size = ','.join([str(int(np.ceil(j / 2**i))) for j in im_shape])
             min_ecc, _ = pooling.calc_min_eccentricity(float(wildcards.scaling),
-                                                       [np.ceil(j / 2**i) for j in im.shape],
+                                                       [np.ceil(j / 2**i) for j in im_shape],
                                                        float(wildcards.max_ecc))
             # don't do this for the lowest scale
             if i > 0 and min_ecc > float(wildcards.min_ecc):
@@ -425,9 +484,20 @@ def get_batches(wildcards):
         return 1
 
 
+def get_ref_image(wildcards):
+    r"""get ref image
+    """
+    if 'full' in wildcards.image_name or 'cone' in wildcards.image_name:
+        template = REF_IMAGE_TEMPLATE_PATH.replace('ref_images', 'ref_images_preproc')
+    else:
+        template = REF_IMAGE_TEMPLATE_PATH
+    print(template.format(image_name=wildcards.image_name))
+    return template.format(image_name=wildcards.image_name)
+
+
 rule create_metamers:
     input:
-        ref_image = REF_IMAGE_TEMPLATE_PATH,
+        ref_image = get_ref_image,
         windows = get_windows,
         norm_dict = get_norm_dict,
     output:
@@ -437,7 +507,7 @@ rule create_metamers:
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'rep.png'),
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'windowed.png'),
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'metamer-16.png'),
-        METAMER_TEMPLATE_PATH
+        METAMER_TEMPLATE_PATH,
     log:
         op.join(config["DATA_DIR"], 'logs', 'metamers', '{model_name}', '{image_name}',
                 'scaling-{scaling}', 'opt-{optimizer}', 'fr-{fract_removed}_lc-{loss_fract}_'
@@ -480,6 +550,56 @@ rule create_metamers:
                                          float(wildcards.loss_fract),
                                          float(wildcards.coarse_to_fine), int(params.num_batches),
                                          wildcards.clamp, clamp_each_iter)
+
+
+rule postproc_metamers:
+    input:
+        METAMER_TEMPLATE_PATH.replace('metamer.png', 'summary.csv'),
+        METAMER_TEMPLATE_PATH.replace('metamer.png', 'synthesis.mp4'),
+        METAMER_TEMPLATE_PATH.replace('metamer.png', 'rep.png'),
+        METAMER_TEMPLATE_PATH.replace('metamer.png', 'windowed.png'),
+        METAMER_TEMPLATE_PATH.replace('metamer.png', 'metamer-16.png'),
+        METAMER_TEMPLATE_PATH,
+    output:
+        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'summary.csv'),
+        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'synthesis.mp4'),
+        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'rep.png'),
+        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'windowed.png'),
+        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'metamer-16.png'),
+        OUTPUT_TEMPLATE_PATH,
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'postproc_metamers', '{model_name}',
+                '{image_name}', 'scaling-{scaling}', 'opt-{optimizer}',
+                'fr-{fract_removed}_lc-{loss_fract}_cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}',
+                'seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-'
+                '{max_iter}_thresh-{loss_thresh}_gpu-{gpu}.log')
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'postproc_metamers', '{model_name}',
+                '{image_name}', 'scaling-{scaling}', 'opt-{optimizer}',
+                'fr-{fract_removed}_lc-{loss_fract}_cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}',
+                'seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-'
+                '{max_iter}_thresh-{loss_thresh}_gpu-{gpu}_benchmark.txt')
+    run:
+        import foveated_metamers as met
+        import contextlib
+        import numpy as np
+        import shutil
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                for i, f in enumerate(input):
+                    if ('cone' in wildcards.image_name and
+                        (f.endswith('metamer.png') or f.endswith('metamer-16.png'))):
+                        print("De-conifying image %s, saving at %s" % (f, output[i]))
+                        im = imageio.imread(f)
+                        dtype = im.dtype
+                        print("Retaining image dtype %s" % dtype)
+                        im = np.array(im, dtype=np.float32) / np.iinfo(dtype).max
+                        im = im ** 3
+                        im = im * np.iinfo(dtype).max
+                        imageio.imwrite(output[i], im.astype(dtype))
+                    else:
+                        print("Copy file %s to %s" % (f, output[i]))
+                        shutil.copy(f, output[i])
 
 
 rule dummy_metamer_gen:
