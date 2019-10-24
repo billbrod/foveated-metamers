@@ -390,9 +390,11 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
     # since it basically doesn't happen with SGD and the gradient at
     # those pixels is always zero. So, just to make things look nice, we
     # add back the center at the end here.
+    print(metamer.matched_image.min(), metamer.matched_image.max())
     metamer.matched_image = torch.nn.Parameter(add_center_to_image(metamer.model,
                                                                    metamer.matched_image,
                                                                    metamer.target_image))
+    print(metamer.matched_image.min(), metamer.matched_image.max())
     metamer.save(save_path, save_model_reduced=True)
     # save png of metamer
     metamer_path = op.splitext(save_path)[0] + "_metamer.png"
@@ -689,6 +691,9 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                                                  coarse_to_fine=coarse_to_fine,
                                                  clip_grad_norm=clip_grad_norm,
                                                  save_path=save_path.replace('.pt', '_inprogress.pt'))
+    print(matched_im.min(), matched_im.max())
+    print(metamer.matched_image.min(), metamer.matched_image.max())
+    print(metamer.saved_image[-1].min(), metamer.saved_image[-1].max())
     duration = time.time() - start_time
     # make sure everything's on the cpu for saving
     metamer = metamer.to('cpu')
