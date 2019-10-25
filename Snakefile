@@ -379,22 +379,28 @@ rule combine_norm_stats:
 rule cache_windows:
     output:
         op.join(config["DATA_DIR"], 'windows_cache', 'scaling-{scaling}_size-{size}_e0-{min_ecc}_'
-                'em-{max_ecc}_t-{t_width}_{window_type}.pt')
+                'em-{max_ecc}_w-{t_width}_{window_type}.pt')
     log:
         op.join(config["DATA_DIR"], 'logs', 'windows_cache', 'scaling-{scaling}_size-{size}_e0-'
-                '{min_ecc}_em-{max_ecc}_t-{t_width}_{window_type}.log')
+                '{min_ecc}_em-{max_ecc}_w-{t_width}_{window_type}.log')
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'windows_cache', 'scaling-{scaling}_size-{size}_e0-'
-                '{min_ecc}_em-{max_ecc}_t-{t_width}_{window_type}.benchmark.txt')
+                '{min_ecc}_em-{max_ecc}_w-{t_width}_{window_type}.benchmark.txt')
     run:
         import contextlib
         import plenoptic as po
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 img_size = [int(i) for i in wildcards.size.split(',')]
+                if wildcards.window_type == 'cosine':
+                    t_width = float(wildcards.t_width)
+                    std_dev = None
+                elif wildcards.window_type == 'gaussian':
+                    std_dev = float(wildcards.t_width)
+                    t_width = None
                 po.simul.PoolingWindows(float(wildcards.scaling), img_size, float(wildcards.min_ecc),
                                         float(wildcards.max_ecc), cache_dir=op.dirname(output[0]),
-                                        transition_region_width=float(wildcards.t_width),
+                                        transition_region_width=t_width, std_dev=std_dev,
                                         window_type=wildcards.window_type)
 
 
@@ -423,7 +429,7 @@ def get_windows(wildcards):
     r"""determine the cached window path for the specified model
     """
     window_template = op.join(config["DATA_DIR"], 'windows_cache', 'scaling-{scaling}_size-{size}'
-                              '_e0-{min_ecc:.03f}_em-{max_ecc:.01f}_t-{t_width}_{window_type}.pt')
+                              '_e0-{min_ecc:.03f}_em-{max_ecc:.01f}_w-{t_width}_{window_type}.pt')
     if 'size-' in wildcards.image_name:
         im_shape = wildcards.image_name[wildcards.image_name.index('size-') + len('size-'):]
         im_shape = im_shape.replace('.png', '')
@@ -441,7 +447,7 @@ def get_windows(wildcards):
         t_width = 1.0
     elif 'gaussian' in wildcards.model_name:
         window_type = 'gaussian'
-        t_width = .5
+        t_width = 1.0
     if wildcards.model_name.startswith("RGC"):
         size = ','.join([str(i) for i in im_shape])
         return window_template.format(scaling=wildcards.scaling, size=size,

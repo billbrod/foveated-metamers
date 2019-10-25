@@ -146,17 +146,19 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
         cone_power = 1
     if 'gaussian' in model_name:
         window_type = 'gaussian'
-        t_width = .5
+        t_width = None
+        std_dev = 1
     elif 'cosine' in model_name:
         window_type = 'cosine'
         t_width = 1
+        std_dev = None
     if model_name.startswith('RGC'):
         if normalize_dict:
             raise Exception("Cannot normalize RGC model!")
         model = po.simul.RetinalGanglionCells(scaling, image.shape[-2:], min_eccentricity=min_ecc,
                                               max_eccentricity=max_ecc, window_type=window_type,
                                               transition_region_width=t_width, cache_dir=cache_dir,
-                                              cone_power=cone_power)
+                                              cone_power=cone_power, std_dev=std_dev)
         animate_figsize = (17, 5)
         rep_image_figsize = (4, 13)
         # default figsize arguments work for an image that is 256x256,
@@ -185,7 +187,7 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
         except (IndexError, ValueError):
             num_scales = 4
         model = po.simul.PrimaryVisualCortex(scaling, image.shape[-2:], min_eccentricity=min_ecc,
-                                             max_eccentricity=max_ecc,
+                                             max_eccentricity=max_ecc, std_dev=std_dev,
                                              transition_region_width=t_width,
                                              cache_dir=cache_dir, normalize_dict=normalize_dict,
                                              half_octave_pyramid=half_oct, num_scales=num_scales,
