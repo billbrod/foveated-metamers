@@ -22,11 +22,10 @@ else:
 wildcard_constraints:
     num="[0-9]+",
     pad_mode="constant|symmetric",
-    gamma="|_degamma",
     period="[0-9]+",
     size="[0-9,]+",
     bits="[0-9]+",
-    preproc="full|cone|cone_full",
+    img_preproc="full|cone|cone_full",
     preproc_image_name="azulejos|tiles|market|flowers",
     pixabay_image_name="trees|sheep|refuge|japan|street",
 ruleorder:
@@ -35,6 +34,7 @@ ruleorder:
 
 MODELS = ['RGC', 'V1_norm_s6']
 IMAGES = ['trees-degamma', 'sheep-degamma', 'refuge-degamma', 'japan-degamma', 'street-degamma']
+LINEAR_IMAGES = ['azulejos', 'tiles', 'market', 'flowers']
 METAMER_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers', '{model_name}', '{image_name}',
                                 'scaling-{scaling}', 'opt-{optimizer}', 'fr-{fract_removed}_lc-'
                                 '{loss_fract}_cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}',
@@ -202,13 +202,13 @@ rule preproc_image:
     input:
         op.join(config['DATA_DIR'], 'ref_images', '{preproc_image_name}_size-{size}.png')
     output:
-        op.join(config['DATA_DIR'], 'ref_images_preproc', '{preproc_image_name}_{preproc}_size-{size}.png')
+        op.join(config['DATA_DIR'], 'ref_images_preproc', '{preproc_image_name}_{img_preproc}_size-{size}.png')
     log:
         op.join(config['DATA_DIR'], 'logs', 'ref_image_preproc',
-                '{preproc_image_name}_{preproc}_size-{size}.log')
+                '{preproc_image_name}_{img_preproc}_size-{size}.log')
     benchmark:
         op.join(config['DATA_DIR'], 'logs', 'ref_image_preproc',
-                '{preproc_image_name}_{preproc}_size-{size}_benchmark.txt')
+                '{preproc_image_name}_{img_preproc}_size-{size}_benchmark.txt')
     run:
         import imageio
         import contextlib
@@ -219,7 +219,7 @@ rule preproc_image:
                 dtype = im.dtype
                 im = np.array(im, dtype=np.float32)
                 print("Original image has dtype %s" % dtype)
-                if 'full' in wildcards.preproc:
+                if 'full' in wildcards.img_preproc:
                     print("Setting image to use full dynamic range")
                     # set the minimum value to 0
                     im = im - im.min()
@@ -228,7 +228,7 @@ rule preproc_image:
                 else:
                     print("Image will *not* use full dynamic range")
                     im = im / np.iinfo(dtype).max
-                if 'cone' in wildcards.preproc:
+                if 'cone' in wildcards.img_preproc:
                     print("Raising image to the 1/3, to approximate cone response")
                     im = im ** (1/3)
                 # always save it as 16 bit
@@ -410,7 +410,8 @@ rule cache_windows:
 def get_norm_dict(wildcards):
     if 'norm' in wildcards.model_name and 'V1' in wildcards.model_name:
         preproc = ''
-        if 'degamma' in wildcards.image_name:
+        # lienar images should also use the degamma'd textures
+        if 'degamma' in wildcards.image_name or any([i in wildcards.image_name for i in LINEAR_IMAGES]):
             preproc += '_degamma'
         if 'cone' in wildcards.image_name:
             preproc += '_cone'
