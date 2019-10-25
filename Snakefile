@@ -271,15 +271,15 @@ rule generate_image:
                 met.stimuli.create_image(wildcards.image_type, int(wildcards.size), output[0],
                                          int(wildcards.period))
 
-rule degamma_textures:
+rule preproc_textures:
     input:
         config['TEXTURE_DIR']
     output:
-        directory(config['TEXTURE_DIR'] + "_degamma")
+        directory(config['TEXTURE_DIR'] + "_{preproc}")
     log:
-        op.join(config['DATA_DIR'], 'logs', 'degamma_textures.log')
+        op.join(config['DATA_DIR'], 'logs', '{preproc}_textures.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'degamma_textures_benchmark.txt')
+        op.join(config['DATA_DIR'], 'logs', '{preproc}_textures_benchmark.txt')
     run:
         import imageio
         import contextlib
@@ -294,10 +294,13 @@ rule degamma_textures:
                     # when loaded in, the range of this will be 0 to 255, we
                     # want to convert it to 0 to 1
                     im = im / 255
-                    # 1/2.2 is the standard encoding gamma for jpegs, so we
-                    # raise this to its reciprocal, 2.2, in order to reverse
-                    # it
-                    im = im ** 2.2
+                    if 'degamma' in wildcards.preproc:
+                        # 1/2.2 is the standard encoding gamma for jpegs, so we
+                        # raise this to its reciprocal, 2.2, in order to reverse
+                        # it
+                        im = im ** 2.2
+                    if 'cone' in wildcards.preproc:
+                        im = im ** (1/3)
                     # save as a 16 bit png
                     im = (im * np.iinfo(np.uint16).max).astype(np.uint16)
                     imageio.imwrite(op.join(output[0], op.split(i)[-1].replace('jpg', 'png')), im)
@@ -305,17 +308,17 @@ rule degamma_textures:
 
 rule gen_norm_stats:
     input:
-        config['TEXTURE_DIR'] + "{gamma}"
+        config['TEXTURE_DIR'] + "{preproc}"
     output:
         # here V1 and texture could be considered wildcards, but they're
         # the only we're doing this for now
-        op.join(config['DATA_DIR'], 'norm_stats', 'V1_cone-{cone}_texture{gamma}_norm_stats-'
+        op.join(config['DATA_DIR'], 'norm_stats', 'V1_cone-{cone}_texture{preproc}_norm_stats-'
                 '{num}.pt' )
     log:
-        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_cone-{cone}_texture{gamma}_norm_'
+        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_cone-{cone}_texture{preproc}_norm_'
                 'stats-{num}.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_cone-{cone}_texture{gamma}_norm_'
+        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_cone-{cone}_texture{preproc}_norm_'
                 'stats-{num}_benchmark.txt')
     params:
         index = lambda wildcards: (int(wildcards.num) * 100, (int(wildcards.num)+1) * 100)
@@ -342,15 +345,15 @@ rule gen_norm_stats:
 rule combine_norm_stats:
     input:
         lambda wildcards: [op.join(config['DATA_DIR'], 'norm_stats', 'V1_cone-{cone}_texture'
-                                   '{gamma}_norm_stats-{num}.pt').format(num=i, **wildcards)
+                                   '{preproc}_norm_stats-{num}.pt').format(num=i, **wildcards)
                            for i in range(9)]
     output:
-        op.join(config['DATA_DIR'], 'norm_stats', 'V1_cone-{cone}_texture{gamma}_norm_stats.pt' )
+        op.join(config['DATA_DIR'], 'norm_stats', 'V1_cone-{cone}_texture{preproc}_norm_stats.pt' )
     log:
-        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_cone-{cone}_texture{gamma}_norm_'
+        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_cone-{cone}_texture{preproc}_norm_'
                 'stats.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_cone-{cone}_texture{gamma}_norm'
+        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_cone-{cone}_texture{preproc}_norm'
                 '_stats_benchmark.txt')
     run:
         import torch
@@ -406,9 +409,11 @@ rule cache_windows:
 
 def get_norm_dict(wildcards):
     if 'norm' in wildcards.model_name and 'V1' in wildcards.model_name:
-        gamma = ''
+        preproc = ''
         if 'degamma' in wildcards.image_name:
-            gamma = '_degamma'
+            preproc += '_degamma'
+        if 'cone' in wildcards.image_name:
+            preproc += '_cone'
         try:
             if 'cone-gamma' in wildcards.model_name:
                 cone_power = 'gamma'
@@ -420,7 +425,7 @@ def get_norm_dict(wildcards):
             # default is 1, linear response
             cone_power = 1
         return op.join(config['DATA_DIR'], 'norm_stats', 'V1_cone-%s_texture%s_norm_stats.pt'
-                       % (cone_power, gamma))
+                       % (cone_power, preproc))
     else:
         return []
 
