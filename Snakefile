@@ -75,10 +75,12 @@ def get_all_metamers(min_idx=0, max_idx=-1, model_name=None):
                     for sc in v1_scaling for i in IMAGES for s in range(3)]
     if model_name is None:
         all_metamers = rgc_metamers + v1_metamers
-    elif model_name == 'RGC_cone-1.0_gaussian':
+    elif model_name == MODELS[0]:
         all_metamers = rgc_metamers
-    elif model_name == 'V1_cone-1.0_norm_s6_gaussian':
+    elif model_name == MODELS[1]:
         all_metamers = v1_metamers
+    else:
+        raise Exception("model_name must be one of %s" % MODELS)
     # we use -1 as a dummy value, ignoring it
     if max_idx != -1:
         all_metamers = all_metamers[:max_idx]
