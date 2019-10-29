@@ -33,9 +33,10 @@ ruleorder:
     preproc_image > crop_image > generate_image > degamma_image > prep_pixabay
 
 
-MODELS = ['RGC', 'V1_norm_s6']
-IMAGES = ['trees-degamma', 'sheep-degamma', 'refuge-degamma', 'japan-degamma', 'street-degamma']
 LINEAR_IMAGES = ['azulejos', 'tiles', 'market', 'flowers']
+MODELS = ['RGC_cone-1.0_gaussian', 'V1_cone-1.0_norm_s6_gaussian']
+IMAGES = ['azulejos_cone_full_size-2048,3528', 'tiles_cone_full_size-2048,3528',
+          'market_cone_full_size-2048,3528', 'flowers_cone_full_size-2048,3528']
 METAMER_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers', '{model_name}', '{image_name}',
                                 'scaling-{scaling}', 'opt-{optimizer}', 'fr-{fract_removed}_lc-'
                                 '{loss_fract}_cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}',
@@ -54,23 +55,22 @@ SESSIONS = [0, 1, 2]
 
 
 def get_all_metamers(min_idx=0, max_idx=-1, model_name=None, min_ecc=None, max_ecc=None):
-    images = [REF_IMAGE_TEMPLATE_PATH.format(image_name=i) for i in IMAGES]
     rgc_scaling = [.01, .013, .017, .021, .027, .035, .045, .058, .075]
     # rgc_gpu_dict = {.01: 0, .013: 0, .017: 4, .021: 4, .027: 3, .035: 3}
-    rgc_metamers = [METAMER_TEMPLATE_PATH.format(model_name='RGC', image_name=i, scaling=sc,
+    rgc_metamers = [OUTPUT_TEMPLATE_PATH.format(model_name='RGC', image_name=i, scaling=sc,
                                                  optimizer='Adam', fract_removed=0, loss_fract=1,
                                                  coarse_to_fine=0, seed=s, init_type='white',
                                                  learning_rate=1, min_ecc=3.72, max_ecc=41,
                                                  max_iter=750, loss_thresh=1e-8, gpu=0)
-                    for i in IMAGES for sc in rgc_scaling for s in range(3)]
+                    for sc in rgc_scaling for i in IMAGES for s in range(3)]
     v1_scaling = [.075, .095, .12, .15, .19, .25, .31, .39, .5]
-    v1_metamers = [METAMER_TEMPLATE_PATH.format(model_name='V1-norm-s6', image_name=i, scaling=sc,
+    v1_metamers = [OUTPUT_TEMPLATE_PATH.format(model_name='V1-norm-s6', image_name=i, scaling=sc,
                                                 optimizer='Adam', fract_removed=0, loss_fract=1,
                                                 coarse_to_fine=1e-2, seed=s, init_type='white',
                                                 learning_rate={.075: 1}.get(sc, .1), min_ecc=.5,
                                                 max_ecc=41, max_iter={.075: 7500}.get(sc, 5000),
                                                 loss_thresh=1e-8, gpu=1)
-                    for i in IMAGES for sc in v1_scaling for s in range(3)]
+                    for sc in v1_scaling for i in IMAGES for s in range(3)]
     if model_name is None:
         all_metamers = rgc_metamers + v1_metamers
         if min_ecc is not None or max_ecc is not None:
