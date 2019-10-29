@@ -26,17 +26,17 @@ wildcard_constraints:
     size="[0-9,]+",
     bits="[0-9]+",
     img_preproc="full|cone|cone_full",
-    preproc_image_name="azulejos|tiles|market|flowers",
+    preproc_image_name="azulejos|tiles|market|flower",
     pixabay_image_name="trees|sheep|refuge|japan|street",
-    preproc="|_degamma|_degamma_cone|_cone"
+    preproc="|_degamma|_degamma_cone|_cone|degamma|degamma_cone|cone"
 ruleorder:
     preproc_image > crop_image > generate_image > degamma_image > prep_pixabay
 
 
-LINEAR_IMAGES = ['azulejos', 'tiles', 'market', 'flowers']
+LINEAR_IMAGES = ['azulejos', 'tiles', 'market', 'flower']
 MODELS = ['RGC_cone-1.0_gaussian', 'V1_cone-1.0_norm_s6_gaussian']
 IMAGES = ['azulejos_cone_full_size-2048,3528', 'tiles_cone_full_size-2048,3528',
-          'market_cone_full_size-2048,3528', 'flowers_cone_full_size-2048,3528']
+          'market_cone_full_size-2048,3528', 'flower_cone_full_size-2048,3528']
 METAMER_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers', '{model_name}', '{image_name}',
                                 'scaling-{scaling}', 'opt-{optimizer}', 'fr-{fract_removed}_lc-'
                                 '{loss_fract}_cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}',
@@ -54,36 +54,31 @@ SUBJECTS = ['sub-%02d' % i for i in range(1, 31)]
 SESSIONS = [0, 1, 2]
 
 
-def get_all_metamers(min_idx=0, max_idx=-1, model_name=None, min_ecc=None, max_ecc=None):
+def get_all_metamers(min_idx=0, max_idx=-1, model_name=None):
     rgc_scaling = [.01, .013, .017, .021, .027, .035, .045, .058, .075]
     # rgc_gpu_dict = {.01: 0, .013: 0, .017: 4, .021: 4, .027: 3, .035: 3}
-    rgc_metamers = [OUTPUT_TEMPLATE_PATH.format(model_name='RGC', image_name=i, scaling=sc,
-                                                 optimizer='Adam', fract_removed=0, loss_fract=1,
-                                                 coarse_to_fine=0, seed=s, init_type='white',
-                                                 learning_rate=1, min_ecc=3.72, max_ecc=41,
-                                                 max_iter=750, loss_thresh=1e-8, gpu=0)
+    rgc_metamers = [OUTPUT_TEMPLATE_PATH.format(model_name=MODELS[0], image_name=i, scaling=sc,
+                                                optimizer='Adam', fract_removed=0, loss_fract=1,
+                                                coarse_to_fine=0, seed=s, init_type='white',
+                                                learning_rate=1, min_ecc=3.71, max_ecc=41,
+                                                max_iter=750, loss_thresh=1e-8, gpu=0,
+                                                clamp='clamp2', clamp_each_iter=True)
                     for sc in rgc_scaling for i in IMAGES for s in range(3)]
     v1_scaling = [.075, .095, .12, .15, .19, .25, .31, .39, .5]
-    v1_metamers = [OUTPUT_TEMPLATE_PATH.format(model_name='V1-norm-s6', image_name=i, scaling=sc,
-                                                optimizer='Adam', fract_removed=0, loss_fract=1,
-                                                coarse_to_fine=1e-2, seed=s, init_type='white',
-                                                learning_rate={.075: 1}.get(sc, .1), min_ecc=.5,
-                                                max_ecc=41, max_iter={.075: 7500}.get(sc, 5000),
-                                                loss_thresh=1e-8, gpu=1)
+    v1_metamers = [OUTPUT_TEMPLATE_PATH.format(model_name=MODELS[1], image_name=i, scaling=sc,
+                                               optimizer='Adam', fract_removed=0, loss_fract=1,
+                                               coarse_to_fine=1e-2, seed=s, init_type='white',
+                                               learning_rate={.075: 1}.get(sc, .1), min_ecc=.5,
+                                               max_ecc=41, max_iter={.075: 7500}.get(sc, 5000),
+                                               loss_thresh=1e-8, gpu=1, clamp='clamp2',
+                                               clamp_each_iter=True)
                     for sc in v1_scaling for i in IMAGES for s in range(3)]
     if model_name is None:
         all_metamers = rgc_metamers + v1_metamers
-        if min_ecc is not None or max_ecc is not None:
-            raise Exception("Can't set min/max_ecc when model_name is None")
-    elif model_name == 'RGC':
+    elif model_name == 'RGC_cone-1.0_gaussian':
         all_metamers = rgc_metamers
-        if float(min_ecc) != 3.72 or float(max_ecc) != 41:
-            raise Exception("if model_name is RGC, min_ecc must be 3.72 and max_ecc must be 41")
-    elif model_name == 'V1-norm-s6':
+    elif model_name == 'V1_cone-1.0_norm_s6_gaussian':
         all_metamers = v1_metamers
-        if float(min_ecc) != .5 or float(max_ecc) != 41:
-            raise Exception("if model_name is V1-norm-s6, min_ecc must be .5 and max_ecc must "
-                            "be 41")
     # we use -1 as a dummy value, ignoring it
     if max_idx != -1:
         all_metamers = all_metamers[:max_idx]
@@ -616,9 +611,10 @@ rule postproc_metamers:
 
 rule dummy_metamer_gen:
     input:
-        lambda wildcards: get_all_metamers(int(wildcards.min_idx), int(wildcards.max_idx)),
+        lambda wildcards: get_all_metamers(int(wildcards.min_idx), int(wildcards.max_idx),
+                                           wildcards.model_name),
     output:
-        op.join(config['DATA_DIR'], 'metamers', 'dummy_{min_idx}_{max_idx}.txt')
+        op.join(config['DATA_DIR'], 'metamers', 'dummy_{model_name}_{min_idx}_{max_idx}.txt')
     shell:
         "touch {output}"
 
@@ -629,16 +625,12 @@ rule collect_metamers:
     output:
         # we collect across image_name and scaling, and don't care about
         # learning_rate, max_iter, loss_thresh
-        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'e0-{min_ecc}_em-{max_ecc}_'
-                'stimuli.npy'),
-        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'e0-{min_ecc}_em-{max_ecc}_'
-                'stimuli_description.csv'),
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli.npy'),
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description.csv'),
     log:
-        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'e0-{min_ecc}_em-{max_ecc}'
-                '_stimuli.log'),
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'stimuli.log'),
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'e0-{min_ecc}_em-{max_ecc}'
-                '_stimuli_benchmark.txt'),
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'stimuli_benchmark.txt'),
     run:
         import foveated_metamers as met
         import contextlib
@@ -650,24 +642,22 @@ rule collect_metamers:
 
 rule generate_experiment_idx:
     input:
-        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'e0-{min_ecc}_em-{max_ecc}_'
-                'stimuli_description.csv'),
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description.csv'),
     output:
-        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', '{subject}_e0-{min_ecc}_em-'
-                '{max_ecc}_idx_sess-{num}.npy'),
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', '{subject}_idx_sess-{num}.npy'),
     log:
-        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', '{subject}_e0-{min_ecc}_em-'
-                '{max_ecc}_idx_sess-{num}.log'),
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', '{subject}_idx_sess-{num}'
+                '.log'),
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', '{subject}_e0-{min_ecc}_em-'
-                '{max_ecc}_idx_sess-{num}_benchmark.txt'),
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', '{subject}_idx_sess-{num}'
+                '_benchmark.txt'),
     params:
         # the number from subject will be a number from 1 to 30, which
         # we multiply by 10 in order to get the tens/hundreds place, and
         # the session number will be between 0 and 2, which we use for
-        # the ones place. we use the same seed for different models /
-        # min_ecc / max_ecc combinations, since those will be completely
-        # different sets of images.
+        # the ones place. we use the same seed for different model
+        # stimuli, since those will be completely different sets of
+        # images.
         seed = lambda wildcards: 10*int(wildcards.subject.replace('sub-', '')) + int(wildcards.num)
     run:
         import foveated_metamers as met
@@ -680,11 +670,9 @@ rule generate_experiment_idx:
 
 rule gen_all_idx:
     input:
-        [op.join(config["DATA_DIR"], 'stimuli', '{model_name}', '{subject}_e0-{min_ecc}_em-'
-                 '{max_ecc}_idx_sess-{num}.npy').format(model_name='RGC', subject=s, min_ecc=3.72,
-                                                        max_ecc=41, num=n)
+        [op.join(config["DATA_DIR"], 'stimuli', '{model_name}', '{subject}_idx_sess-'
+                 '{num}.npy').format(model_name='RGC', subject=s, num=n)
          for s in SUBJECTS for n in SESSIONS],
-        [op.join(config["DATA_DIR"], 'stimuli', '{model_name}', '{subject}_e0-{min_ecc}_em-'
-                 '{max_ecc}_idx_sess-{num}.npy').format(model_name='V1-norm-s6', subject=s,
-                                                        min_ecc=.5, max_ecc=41, num=n)
+        [op.join(config["DATA_DIR"], 'stimuli', '{model_name}', '{subject}_idx_sess-'
+                 '{num}.npy').format(model_name='V1-norm-s6', subject=s, num=n)
          for s in SUBJECTS for n in SESSIONS]
