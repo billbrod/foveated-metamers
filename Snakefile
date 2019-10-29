@@ -28,6 +28,7 @@ wildcard_constraints:
     img_preproc="full|cone|cone_full",
     preproc_image_name="azulejos|tiles|market|flowers",
     pixabay_image_name="trees|sheep|refuge|japan|street",
+    preproc="|_degamma|_degamma_cone|_cone"
 ruleorder:
     preproc_image > crop_image > generate_image > degamma_image > prep_pixabay
 
