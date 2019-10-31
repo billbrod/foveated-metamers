@@ -509,7 +509,9 @@ def setup_device(*args, use_cuda=False):
     args : list
         Every item we were passed in arg, now on the proper device
     """
-    if torch.cuda.is_available() and use_cuda:
+    if use_cuda:
+        if not torch.cuda.is_available():
+            raise Exception("CUDA is not available but use_cuda is True!")
         gpu_num = GPUtil.getAvailable(order='first', maxLoad=.1, maxMemory=.1, includeNan=False)[0]
         device = torch.device("cuda:%s" % gpu_num)
         dtype = torch.float32

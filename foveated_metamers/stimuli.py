@@ -117,7 +117,7 @@ def collect_images(image_paths, save_path=None):
     """
     images = []
     for i in image_paths:
-        images.append(imageio.imread(i, as_gray=True))
+        images.append(imageio.imread(i))
     # want our images to be indexed along the first dimension
     images = np.einsum('ijk -> kij', np.dstack(images)).astype(np.uint8)
     if save_path is not None:
@@ -160,7 +160,8 @@ def create_metamer_df(image_paths, save_path=None):
         # all target_images are .pgm files and each tmp df will only contain value
         if len(tmp.target_image.unique()) > 1:
             raise Exception("Somehow we have more than one target image for metamer %s" % p)
-        tmp['image_name'] = op.basename(tmp.target_image.unique()[0]).replace('.pgm', '')
+        # target image can be either a pgm or png file
+        tmp['image_name'] = op.basename(tmp.target_image.unique()[0]).replace('.pgm', '').replace('.png', '')
         metamer_info.append(tmp)
     df = pd.concat(metamer_info)
     if save_path is not None:

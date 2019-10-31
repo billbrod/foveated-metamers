@@ -143,15 +143,306 @@ not to change anything) you can focus on the arguments to `snakemake`,
 which specify how to submit the jobs rather than making sure you get
 all the arguments and everything correct.
 
+## Setup
+
+Make sure you've set up the software environment as described in the
+[requirements](#requirements) section and activate the `metamers`
+environment: `conda activate metamers`.
+
+In order to generate these metamers in a reasonable time, you'll need
+to have GPUs availabe. Without it, the code will not work; it could be
+modified trivially by replacing the `gpu=1` with `gpu=0` in the
+`get_all_metamers` function at the top of `Snakefile`, but generating
+all the metamers would take far too much time to be realistic.
+
+Decide where you want to place the metamers and data for this
+project. For this README, it will be
+`/home/billbrod/Desktop/metamers`. Edit the first line of the
+`config.yml` file in this repo to contain this value (don't use the
+tilde `~` for your home directory, python does not understand it, so
+write out the full path).
+
+Create that directory, download the tarball containing the reference
+images and normalizing statistics, and unzip it into that directory:
+
+```
+mkdir /home/billbrod/Desktop/metamers
+cd /home/billbrod/Desktop/metamers
+wget -O- https://osf.io/5t4ju/download | tar xvz -C .
+```
+
+You should now have two directories here: `raw_images`, `ref_images`
+and `norm_stats`. `raw_images` should contain four `.NEF` (Nikon's raw
+format) images: `azulejos`, `flower`, `tiles`, and
+`market`. `norm_stats` should contain a single `.pt` (pytorch) file:
+`V1_cone-1.0_texture_degamma_cone_norm_stats.pt`. `ref_images` should
+contain `einstein_size-256,256.png`, which we'll use for testing the
+setup.
+
+## Test setup
+
+A quick snakemake rule is provided to test whether your setup is
+working: `snakemake -j 4 -prk test_setup`. This will create a small number
+of metamers, without running the optimization to completion. If this
+runs without throwing any exceptions, your environment should be set
+up correctly and you should have gpus available.
+
+The output will end up in `~/Desktop/metamers/test_setup` and you can
+delete this folder after you've finished.
+
 ## Generate metamers
 
+Generating the metamers is very time consuming and requires a lot of
+computing resources. We generate 108 images per model (4 reference
+images * 3 seeds * 9 scaling values), and the amount of time/resources
+required to create each image depends on the model and the scaling
+value. The smaller the scaling value, the longer it will take and the
+more memory it will require. For equivalent scaling values, V1
+metamers require more memory and time than the RGC ones, but the RGC
+metamers required for the experiment all have much smaller scaling
+values. For the smallest of these, they require too much memory to fit
+on a single GPU, and thus the length it takes increases drastically,
+up to about 8 hours. For the V1 images, the max is about three hours.
 
+The more GPUs you have available, the better.
+
+If you wanted to generate all of your metamers at once, this is very
+easy: simply running
+
+```
+snakemake -j n --resources gpu=n -prk
+--restart-times 3 --ri
+~/Desktop/metamers_display/dummy_RGC_cone-1.0_gaussian_0_-1.txt
+~/Desktop/metamers_display/dummy_V1_cone-1.0_norm_s6_gaussian_0_-1.txt
+```
+
+will do this (where you should replace both `n` with the number to
+tell of GPUs you have; this is how many jobs we run
+simultaneously. Assuming everything is working correctly, you could
+increase the `n` after `-j` to be greater than the one after
+`--resources gpu=`, and snakemake should be able to figure everything
+out, but I've had mixed success with this). `snakemake` will create
+the DAG of jobs necessary to create those two txt files, which are
+just placeholders that require all the metamers as their input.
+
+However, you probably can't create all metamers at once on one
+machine, because that would take too much time. You probably want to
+split things up. If you've got a cluster system, you can configure
+`snakemake` to work with it in a [straightforward
+manner](https://snakemake.readthedocs.io/en/stable/executable.html#cluster-execution)
+(snakemake also works with cloud services like AWS, kubernetes, but I
+have no experience with that; you should google around to find info
+for your specific job scheduler, see the small repo [I put
+together](https://github.com/billbrod/snakemake-slurm) for using NYU's
+SLURM system). In that case, you'll need to put together a
+`cluster.json` file within this directory to tell snakemake how to
+request GPUs, etc. Something like this should work for a SLURM system
+(the different `key: value` pairs would probably need to be changed on
+different systems, depending on how you request resources; the one
+that's probably the most variable is the final line, gpus):
+
+```
+{
+    "__default__":
+    {
+	"nodes": 1,
+	"tasks_per_node": 1,
+	"mem": "48GB",
+	"time": "12:00:00",
+	"job_name": "{rule}.{wildcards}",
+	"cpus_per_task": 1,
+	"output": "{log}",
+	"error": "{log}",
+	"gres": "gpu:{resources.gpus}"
+    }
+}
+```
+
+If you don't have a cluster available and instead have several
+machines with GPUs so you can split up the jobs, that `dummy.txt` file
+will help there as well: the structure of the file is
+`dummy_{model_name}_{min_idx}_{max_idx}.txt`, where `{model_name}`
+should be one of the two mentioned above, and `{min_idx}` and
+`{max_idx}` are two integers from 0 to 108 inclusive (`max_idx` can
+also be -1, which is equivalent to 108), where these index the list of
+all 108 metamers generated for each model, returned in order of
+increasing scaling value. Therefore, for each model, the lower
+integers correspond to metamers that will take longer to generate, and
+the higher ones correspond to metamers that will take less time (and
+resources). You can use this to break up the generation of the
+metamers in whatever way makes sense to you and your resources (note
+because of how python indexing works, the different sets should have
+overlapping `max_idx/min_idx` values; we go from
+`metamers[min_idx:max_idx]`, so if you want to break this into e.g.,
+two groups, you should create `dummy_{model_name}_0_64.txt` and
+`dummy_{model_name}_64_108`). While messing with this, pay attention
+to the `-j n` and `--resources gpu=n` flags, which tell snakemake how
+many jobs to run at once and how many GPUs you have available,
+respectively.
+
+Note that I couldn't figure out any clever way to schedule jobs across
+different GPUs, so the way I decided to handle it is to let jobs grab
+the first GPU they think is available (available meaning that at most
+10% of the its memory is being used, as determined by `GPUtil`). If
+two jobs start at almost exactly the same time, one of them will
+likely fail because it ran out of memory. To handle this, I recommend
+adding the `--restart-times 3` flag to the snakemake call, as I do
+above, which tells snakemake to try re-submitting a job up to 3 times
+if it fails. Hopefully, the second time a job is submitted, it won't
+have a similar problem. But it might require running the `snakemake`
+command a small number of times in order to get everything
+straightened out.
 
 ## Prepare for experiment
 
+Once the metamers have all been generated, they'll need to be combined
+into a numpy array for the displaying during the experiment, and the
+presentation indices will need to generated for each subject.
+
+For the experiment we performed, we had 30 subjects, with 3 sessions
+per model. In order to re-generate the indices we used, you can simply
+run `snakemake -prk gen_all_idx`. This will generate the indices for
+each subject, each session, each model, as well as the stimuli array
+(we actually use the same index for each model for a given subject and
+session number; they're generated using the same seed).
+
+This can be run on your local machine, as it won't take too much time
+or memory.
+
+The stimuli arrays will be located at:
+`~/Desktop/metamers/stimuli/{model_name}/stimuli.npy` and the
+presentation indices will be at
+`~/Desktop/metamers/stimuli/{model_name}/{subject}_idx_sess-{num}.npy`. There
+will also be a pandas DataFrame, saved as a csv, at
+`~/Desktop/metamers/stimuli/{model_name}/stimuli_description.csv`,
+which contains information about the metamers and their
+optimization. It's used to generate the presentation indices as well
+as to analyze the data.
+
+You can generate your own, novel presentation indices by running
+`snakemake -prk
+~/Desktop/metamers/stimuli/{model_name}/{subject}_idx_sess-{num}.npy`,
+replacing `{model_name}` with one of `'RGC_cone-1.0_gaussian',
+'V1_cone-1.0_norm_s6_gaussian'`, `{subject}` must be of the format
+`sub-##`, where `##` is some integer (ideally zero-padded, but this
+isn't required), and `{num}` must also be an integer.
+
 ## Run experiment
 
+To run the experiment, make sure that the stimuli array and
+presentation indices have been generated and are at the appropriate
+path. If you're running this experiment in a binocular setup (e.g., a
+haploscope), make sure you've run the [IPD
+calibration](#ipd-calibration) for the subject you're about to
+run. It's recommended that you use a bite bar or eye-tracker or some
+other way to guarantee that your subject remains fixated on the center
+of the image; the results of the experiment rely very heavily on the
+subject's and model's foveations being identical.
 
+We want 3 sessions per subject per model. Each session will contain
+all trials in the experiment, the only thing that differs is the
+presentation order. Each trial lasts 4.1 seconds and is structured
+like so:
+
+```
+|Image 1 | Blank  |Image 2 |  Blank  |Image X |  Blank  |
+|--------|--------|--------|---------|--------|---------|
+|200 msec|500 msec|200 msec|1000 msec|200 msec|2000 msec|
+```
+
+Image 1 and image 2 will always be two different images. They will
+either be two metamers generated from the same reference image with
+the same scaling value (and model), but different seeds, or one of
+those images and the reference image it was generated from. Image X
+will always be a repeat of either image 1 or 2, and the subject's job
+is to press either 1 or 2 on the keyboard, in order to indicate which
+image they think was repeated.
+
+To run the experiment:
+
+- Activate the `psypy` environment: `conda activate psypy`
+- Start the experiment script from the command line: `python
+   foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/{model
+   name}/stimuli.npy {subject} {num}`, where `{model_name}, {subject},
+   and {num}` are as above
+   - There are several other arguments the experiment script can take,
+     run `python foveated_metamers/experiment.py -h` to see them, and
+     see the [other arguments](#other-arguments) section for more
+     information.
+- Explain the task to the subject, as seen in the "say this to subject
+  for experiment" section
+- When the subject is ready, press the space bar to begin the task.
+- You can press the space bar at any point to pause it, but the pause
+  won't happen until the end of the current trial, so don't press it a
+  bunch of times because it doesn't seem to be working. However, try
+  not to pause the experiment at all.
+- You can press q/esc to quit, but don't do this unless truly
+  necessary.
+- There will be a break half-way through the block. The subject can
+  get up, walk, and stretch during this period, but remind them to
+  take no more than 5 minutes. When they're ready to begin again,
+  press the space bar to resume.
+- The data will be saved on every trial, so if you do need to quit
+  out, all is not lost. You can run the same command as above, and the
+  experiment will pick up where you stopped.
+
+Recommended explanation to subjects:
+
+> In this experiment, you'll be asked to complete what we call an "ABX
+> task": you'll view three images in sequence; the first two will
+> always be different from each other, and the third will be a repeat
+> of either the first or second. After the third image finishes
+> displaying, you'll be prompted to answer whether the third image was
+> a repeat of the first or second image; press either the 1 or 2
+> button on the keyboard. All the images will be presented for a very
+> brief period of time, so pay attention. Sometimes, the two images
+> will be very similar; sometimes, they'll be very different. For the
+> very similar images, we expect the task to be hard. Just do your
+> best!
+
+> For this experiment, fixate on the center of the image the whole
+> time and try not to move your eyes.
+
+> The task will last for about an hour, but there will be a break
+> halfway through. During the break, you can move away from the
+> device, walk around, and stretch, but please don't take more than 5
+> minutes. Tell me when you're ready to begin again.
+
+### Other arguments
+
+The `experiment.py` takes several optional arguments, several of which
+are probably relevant in order to re-run this on a different
+experiment set up:
+
+- `--screen` / `-s`: one or two integers which indicate which screens
+  to use. If two numbers are passed, we'll run the experiment in
+  binocular mode; if one is passed, we'll run it in monocular mode.
+- `--no_flip` / `-f`: by default, the script is meant to be run on a
+  haploscope, which means that all text is left-right flipped (because
+  the subject is viewing the screens through a mirror). Passing this
+  flag indicates that we should not flip the text.
+- `--scren_size_pix` / `-p`: two integers which indicate the size of
+  the screen(s) in pixels (if using two screens, they must have
+  identical resolution).
+- `--screen_size_deg` / `-d`: a single float which gives the length of
+  the longest screen side in degrees (again, if using two screens,
+  this must be identical for them).
+
+For more details on the other arguments, run `python
+foveated_metamers/experiment.py -h` to see the full docstring.
+
+NOTE: While the above options allow you to run the experiment on a
+setup that has a different screen size (both in pixels and in degrees)
+than the intended one, the metamers were created with this specific
+set up in mind. Things should be approximately correct on a different
+setup (in particular, double-check that images are cropped, not
+stretched, when presented on a smaller monitor), but there's no
+guarantee. If you run this experiment, with these stimuli, on a
+different setup, my guess is that the psychophysical curves will look
+different, but that their critical scaling values should match; that
+is, there's no guarantee that all scaling values will give images that
+will be equally confusable on different setups, but the maximum
+scaling value that leads to 50% accuracy should be about the same.
 
 ## Analyze experiment output
 

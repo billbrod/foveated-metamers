@@ -486,5 +486,9 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
     take_break = not args.pop('no_break')
     flip = not args.pop('no_flip')
-    ipd_csv = pd.read_csv(args.pop('ipd_csv'))
+    if op.exists(args['ipd_csv']):
+        ipd_csv = pd.read_csv(args.pop('ipd_csv'))
+    else:
+        warnings.warn("Can't find ipd_csv, using zero binocular offset!")
+        ipd_csv = None
     expt(ipd_csv=ipd_csv, take_break=take_break, flip_text=flip, **args)

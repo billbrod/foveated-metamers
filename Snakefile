@@ -25,8 +25,8 @@ wildcard_constraints:
     period="[0-9]+",
     size="[0-9,]+",
     bits="[0-9]+",
-    img_preproc="full|cone|cone_full",
-    preproc_image_name="azulejos|tiles|market|flower",
+    img_preproc="full|cone|cone_full|degamma_cone",
+    preproc_image_name="azulejos|tiles|market|flower|einstein",
     pixabay_image_name="trees|sheep|refuge|japan|street",
     preproc="|_degamma|_degamma_cone|_cone|degamma|degamma_cone|cone"
 ruleorder:
@@ -85,6 +85,57 @@ def get_all_metamers(min_idx=0, max_idx=-1, model_name=None):
     if max_idx != -1:
         all_metamers = all_metamers[:max_idx]
     return all_metamers[min_idx:]
+
+
+# quick rule to check that there are GPUs available and the environment
+# has been set up correctly.
+rule test_setup:
+    input:
+        METAMER_TEMPLATE_PATH.format(model_name=MODELS[0],
+                                     image_name='einstein_degamma_cone_size-256,256',
+                                     scaling=.1, optimizer='Adam', fract_removed=0, loss_fract=1,
+                                     coarse_to_fine=0, seed=0, init_type='white',
+                                     learning_rate=1, min_ecc=2, max_ecc=15,
+                                     max_iter=100, loss_thresh=1e-8, gpu=0,
+                                     clamp='clamp2', clamp_each_iter=True),
+        METAMER_TEMPLATE_PATH.format(model_name=MODELS[1],
+                                     image_name='einstein_degamma_cone_size-256,256',
+                                     scaling=.5, optimizer='Adam', fract_removed=0, loss_fract=1,
+                                     coarse_to_fine=0.01, seed=0, init_type='white',
+                                     learning_rate=.1, min_ecc=.5, max_ecc=15,
+                                     max_iter=100, loss_thresh=1e-8, gpu=0,
+                                     clamp='clamp2', clamp_each_iter=True),
+        METAMER_TEMPLATE_PATH.format(model_name=MODELS[0],
+                                     image_name='einstein_degamma_cone_size-256,256',
+                                     scaling=.1, optimizer='Adam', fract_removed=0, loss_fract=1,
+                                     coarse_to_fine=0, seed=0, init_type='white',
+                                     learning_rate=1, min_ecc=2, max_ecc=15,
+                                     max_iter=100, loss_thresh=1e-8, gpu=1,
+                                     clamp='clamp2', clamp_each_iter=True),
+        METAMER_TEMPLATE_PATH.format(model_name=MODELS[1],
+                                     image_name='einstein_degamma_cone_size-256,256',
+                                     scaling=.5, optimizer='Adam', fract_removed=0, loss_fract=1,
+                                     coarse_to_fine=0.01, seed=0, init_type='white',
+                                     learning_rate=.1, min_ecc=.5, max_ecc=15,
+                                     max_iter=100, loss_thresh=1e-8, gpu=1,
+                                     clamp='clamp2', clamp_each_iter=True),
+    output:
+        directory(op.join(config['DATA_DIR'], 'test_setup', MODELS[0], 'einstein')),
+        directory(op.join(config['DATA_DIR'], 'test_setup', MODELS[1], 'einstein'))
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'test_setup.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'test_setup_benchmark.txt')
+    run:
+        import contextlib
+        import shutil
+        import os.path as op
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                print("Moving outputs from %s to %s" % (op.dirname(input[0]), output[0]))
+                shutil.move(op.dirname(input[0]), output[0])
+                print("Moving outputs from %s to %s" % (op.dirname(input[1]), output[1]))
+                shutil.move(op.dirname(input[1]), output[1])
 
 
 rule all_refs:
@@ -616,7 +667,7 @@ rule dummy_metamer_gen:
         lambda wildcards: get_all_metamers(int(wildcards.min_idx), int(wildcards.max_idx),
                                            wildcards.model_name),
     output:
-        op.join(config['DATA_DIR'], 'metamers', 'dummy_{model_name}_{min_idx}_{max_idx}.txt')
+        op.join(config['DATA_DIR'], 'metamers_display', 'dummy_{model_name}_{min_idx}_{max_idx}.txt')
     shell:
         "touch {output}"
 
@@ -673,8 +724,5 @@ rule generate_experiment_idx:
 rule gen_all_idx:
     input:
         [op.join(config["DATA_DIR"], 'stimuli', '{model_name}', '{subject}_idx_sess-'
-                 '{num}.npy').format(model_name='RGC', subject=s, num=n)
-         for s in SUBJECTS for n in SESSIONS],
-        [op.join(config["DATA_DIR"], 'stimuli', '{model_name}', '{subject}_idx_sess-'
-                 '{num}.npy').format(model_name='V1-norm-s6', subject=s, num=n)
-         for s in SUBJECTS for n in SESSIONS]
+                 '{num}.npy').format(model_name=m, subject=s, num=n)
+         for s in SUBJECTS for n in SESSIONS for m in MODELS],
