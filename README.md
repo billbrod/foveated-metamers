@@ -1,6 +1,7 @@
 # foveated-metamers
 
-Create metamers using models of the ventral stream and run experiments to validate them
+Create metamers using models of the ventral stream and run experiments
+to validate them
 
 This project starts with a replication of Freeman and Simoncelli,
 2011, out to higher eccentricities, and will extend it by looking at
@@ -12,8 +13,8 @@ In order to build Dockerfile, have this directory and the most recent
 version of `plenoptic` in the same directory and then FROM THAT
 DIRECTORY (the one above this one), run `sudo docker build
 --tag=foveated-metamers:YYYY-MM-dd -f foveated-metamers/Dockerfile
-.`. This ensures that we can copy plenoptic over into the Docker
-container.
+--compress .`. This ensures that we can copy plenoptic over into the
+Docker container.
 
 Once we get plenoptic up on pip (or even make it public on github), we
 won't need to do this. At that time, make sure to replace
@@ -22,7 +23,7 @@ the plenoptic bit.
 
 Once image is built, save it to a gzipped tarball by the following:
 `sudo docker save foveated-metamers:YYYY-MM-dd | gzip >
-foveated-metamers_YYYY-MM-dd.tar.gz` and then copy to wherever you
+foveated-metamers_YYYY-MM-dd.tgz` and then copy to wherever you
 need it.
 
 # Requirements
@@ -37,6 +38,44 @@ ffmpeg/intel/3.2.2` or, if `module` isn't working (like when using the
 
 For running the experiment, need to install `glfw` from your package
 manager.
+
+There are two separate python environments for this project: one for
+running the experiment, and one for everything else. To install the
+experimental environment, either follow [the minimal
+install](#minimal-experiment-install) or do the following:
+
+```
+conda install -f environment-psychopy.yml
+```
+
+Then, to activate, run `conda activate psypy`.
+
+To setup the environment for everything else:
+
+```
+conda install -f environment.yml
+```
+
+Then, to activate, run `conda activate metamers`.
+
+The [plenoptic
+library](https://github.com/LabForComputationalVision/plenoptic/) is
+not yet on `pip`, so you'll have to download it manually (at that
+link), then (in the `metamers` environment), navigate to that
+directory and install it:
+
+```
+git clone git@github.com:LabForComputationalVision/plenoptic.git
+cd plenoptic
+pip install -e .
+```
+
+This environment contains the packages necessary to generate the
+metamers, prepare for the experiment, and analyze the data, but it
+*does not* contain the packages necessary to run the experiment. Most
+importantly, it doesn't contain Psychopy, because I've found that
+package can sometimes be a bit trickier to set up and is not necessary
+for anything outside the experiment itself.
 
 ## Source images
 
@@ -73,6 +112,50 @@ from [here](https://extras.wxpython.org/wxPython4/extras/linux/gtk3/)
 and install it with `pip install path/to/your/wxpython.whl`.
 
 Everything should then hopefully work.
+
+# Usage
+
+The general structure of the research project this repo describes is
+as follows:
+
+1. Develop models of the early visual system
+2. Generate metamers for these models
+3. Use psychophysics to set model parameters
+
+The code for the models and general metamer synthesis are contained in
+the [plenoptic
+library](https://github.com/LabForComputationalVision/plenoptic/);
+this repo has four main components: generate metamers (2), prepare for
+the experiment (3), run the experiment (3), analyze the data from the
+experiment (3), and run an IPD calibration (3; only necessary for
+haploscope). How to use this repo for each of those tasks is described
+below.
+
+I use the [Snakemake](https://snakemake.readthedocs.io/en/stable/)
+workflow management tool to handle most of the work involved in
+generating the metamers, preparing for the experiment, and analyzing
+the experiment output, so for everything except running the experiment
+itself, you won't call the python scripts directly; instead you'll
+tell `snakemake` the outputs you want, and it will figure out the
+calls necessary, including all dependencies. This simplifies things
+considerably, and means that (assuming you only want to run things,
+not to change anything) you can focus on the arguments to `snakemake`,
+which specify how to submit the jobs rather than making sure you get
+all the arguments and everything correct.
+
+## Generate metamers
+
+
+
+## Prepare for experiment
+
+## Run experiment
+
+
+
+## Analyze experiment output
+
+*In progress*
 
 ## IPD calibration
 
