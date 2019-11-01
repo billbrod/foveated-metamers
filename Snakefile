@@ -335,14 +335,16 @@ rule preproc_textures:
         from glob import glob
         import os.path as op
         import os
+        from skimage import color
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 os.makedirs(output[0])
                 for i in glob(op.join(input[0], '*.jpg')):
-                    im = imageio.imread(i, as_gray=True)
-                    # when loaded in, the range of this will be 0 to 255, we
-                    # want to convert it to 0 to 1
-                    im = im / 255
+                    im = imageio.imread(i)
+                    im = im / np.iinfo(im.dtype).max
+                    if im.ndim == 3:
+                        # then it's a color image, and we need to make it grayscale
+                        im = color.rgb2gray(im)
                     if 'degamma' in wildcards.preproc:
                         # 1/2.2 is the standard encoding gamma for jpegs, so we
                         # raise this to its reciprocal, 2.2, in order to reverse
