@@ -545,19 +545,19 @@ def get_batches(wildcards):
         return 1
 
 
-def get_ref_image(wildcards):
+def get_ref_image(image_name):
     r"""get ref image
     """
-    if 'full' in wildcards.image_name or 'cone' in wildcards.image_name:
+    if 'full' in image_name or 'cone' in image_name:
         template = REF_IMAGE_TEMPLATE_PATH.replace('ref_images', 'ref_images_preproc')
     else:
         template = REF_IMAGE_TEMPLATE_PATH
-    return template.format(image_name=wildcards.image_name)
+    return template.format(image_name=image_name)
 
 
 rule create_metamers:
     input:
-        ref_image = get_ref_image,
+        ref_image = lambda wildcards: get_ref_image(wildcards.image_name),
         windows = get_windows,
         norm_dict = get_norm_dict,
     output:
@@ -675,6 +675,9 @@ rule dummy_metamer_gen:
 rule collect_metamers:
     input:
         lambda wildcards: get_all_metamers(**wildcards),
+        # we don't want the "cone_full" images, we want the "full"
+        # images.
+        lambda wildcards: [get_ref_image(i.replace('cone_', '')) for i in IMAGES]
     output:
         # we collect across image_name and scaling, and don't care about
         # learning_rate, max_iter, loss_thresh
