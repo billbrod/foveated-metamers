@@ -705,7 +705,8 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                   loss_change_fraction=loss_change_fraction, initial_image=initial_image_type,
                   num_gpus=num_gpus, min_ecc=min_ecc, max_ecc=max_ecc, max_iter=max_iter,
                   loss_thresh_thresh=loss_thresh, scaling=scaling, clamper=clamper_name,
-                  clamp_each_iter=clamp_each_iter, clip_grad_norm=clip_grad_norm)
+                  clamp_each_iter=clamp_each_iter, clip_grad_norm=clip_grad_norm,
+                  image_name=op.basename(image_name).replace('.pgm', '').replace('.png', ''))
         save(save_path, metamer, animate_figsize, rep_figsize, img_zoom)
     if save_progress:
         os.remove(save_path.replace('.pt', '_inprogress.pt'))

@@ -129,8 +129,16 @@ def create_metamer_df(image_paths, save_path=None):
     r"""Create dataframe summarizing metamer information
 
     We do this by loading in and concatenating the summary.csv files
-    created as one of the outputs of metamer creation. We also add one
-    more column, the image_name
+    created as one of the outputs of metamer creation.
+
+    We also add one more column, `'image_name_original'`. This is
+    because we use the `'image_name'` column to determine what images
+    form trials in the experiment; the original `'image_name'` value
+    comes from `'target_image'` and might have `"cone_"` in it, which we
+    don't want to use for the experiment. So `'image_name_original`'
+    will be the original value of `'image_name'`, and `'image_name'` in
+    the output `df` will be that with `'cone_'` removed, if it was
+    there.
 
     Parameters
     ----------
@@ -158,10 +166,11 @@ def create_metamer_df(image_paths, save_path=None):
             # above failed
             tmp = pd.DataFrame({'target_image': p}, index=[0])
         # all target_images are .pgm files and each tmp df will only contain value
-        if len(tmp.target_image.unique()) > 1:
-            raise Exception("Somehow we have more than one target image for metamer %s" % p)
-        # target image can be either a pgm or png file
-        tmp['image_name'] = op.basename(tmp.target_image.unique()[0]).replace('.pgm', '').replace('.png', '')
+        if len(tmp.image_name.unique()) > 1:
+            raise Exception("Somehow we have more than one image_name for metamer %s" % p)
+        tmp['image_name_original'] = tmp.image_name
+        if 'cone' in tmp.image_name.unique()[0]:
+            tmp.image_name = tmp.image_name.unique()[0].replace('cone_', '')
         metamer_info.append(tmp)
     df = pd.concat(metamer_info)
     if save_path is not None:
