@@ -28,8 +28,19 @@ need it.
 
 # Requirements
 
+This has only been tested on Linux, both Ubuntu 18.04 and
+Fedora 29. It will probably work with minimal to no changes on OSX,
+but there's no guarantee, and we definitely don't support Windows.
+
 Need to make sure you have ffmpeg on your path when creating the
 metamers, so make sure it's installed.
+
+For demosaicing the raw images we use as inputs, you'll need to
+install [dcraw](https://www.dechifro.org/dcraw/). If you're on Linux,
+you can probably install it directly from your package manager. See
+these [instructions](http://macappstore.org/dcraw/) for OSX. If you're
+fine using the demosaiced `.tiff` files we provide, then you won't
+need it.
 
 When running on NYU's prince cluster, can use `module load
 ffmpeg/intel/3.2.2` or, if `module` isn't working (like when using the
