@@ -629,6 +629,7 @@ rule postproc_metamers:
         OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'windowed.png'),
         OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'metamer-16.png'),
         OUTPUT_TEMPLATE_PATH,
+        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'metamer_gamma-corrected.png'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'postproc_metamers', '{model_name}',
                 '{image_name}', 'scaling-{scaling}', 'opt-{optimizer}',
@@ -662,6 +663,20 @@ rule postproc_metamers:
                     else:
                         print("Copy file %s to %s" % (f, output[i]))
                         shutil.copy(f, output[i])
+                    if f.endswith('metamer.png'):
+                        if ('degamma' in wildcards.image_name or
+                            any([i in wildcards.image_name for i in LINEAR_IMAGES])):
+                            print("Saving gamma-corrected image %s" % output[-1])
+                            im = imageio.imread(f)
+                            dtype = im.dtype
+                            print("Retaining image dtype %s" % dtype)
+                            im = np.array(im, dtype=np.float32) / np.iinfo(dtype).max
+                            im = im ** (1/2.2)
+                            im = im * np.iinfo(dtype).max
+                            imageio.imwrite(output[-1], im.astype(dtype))
+                        else:
+                            print("Image already gamma-corrected, copying to %s" % output[-1])
+                            shutil.copy(f, output[-1])
 
 
 rule dummy_metamer_gen:
