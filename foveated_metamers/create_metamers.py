@@ -88,10 +88,51 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
     We initialize the model, with the specified parameters, and return
     it with the appropriate figsizes.
 
+    `model_name` is constructed of several parts, for which you have
+    several chocies:
+    `'{visual_area}_cone-{cone_power}{options}_{window_type}'`:
+    - `visual_area`: which visual area we're modeling.`'RGC'` (retinal
+      ganglion cells, `plenoptic.simul.RetinalGanglionCells` class) or
+      `'V1'` (primary visual cortex,
+      `plenoptic.simul.PrimaryVisualCortex` class)
+    - `cone_power`: first step fo the model is to raise every pixel in
+      the image to a power, specified here. It can be any float or the
+      strs `'phys'` (1/3, the approximately correct physiological value
+      for cones) or `'gamma'` (1/2.2, the standard gamma value, so that
+      the model basically gamma-corrects the image itself). Metamer
+      synthesis has difficulty with non-convex powers here
+      (`cone_power<1`), so we apply `cone_power=1/3` to the image, build
+      the model with `cone_power=1.0`, and then raise the pixels of the
+      resulting image to `3` at the end (this all happens in
+      `Snakefile`, not this script).
+    - `options`: only for the `V1` models, you can additionally include
+      the following strs, separated by `_`:
+      - `'norm'`: if included, we normalize the models' `cone_responses`
+        and `complex_cell_responses` attributes. In this case,
+        `normalize_dict` must also be set (and include those two
+        keys). If not included, the model is not normalized
+        (normalization makes the optimization easier because the
+        different scales of the steerable pyramid have different
+        magnitudes).
+      - `s#`, where `#` is an integer. The number of scales to inlude in
+        the steerable pyramid that forms the basis fo the `V1`
+        models. If not included, will use 4.
+    - `window_type`: `'gaussian'` or `'cosine'`. whether to build the
+      model with gaussian or raised-cosine windows. Regardless, scaling
+      will always give the ratio between the FWHM and eccentricity of
+      the windows, but the gaussian windows are much tighter packed, and
+      so require more windows (and thus more memory), but also seem to
+      have fewer aliasing issues.
+
+    The recommended model_name values are: `RGC_cone-1.0_gaussian` and
+    `V1_cone-1.0_norm_s6_gaussian` (see above for why we use `cone-1.0`
+    for synthesis).
+
     Parameters
     ----------
-    model_name : {'RGC', 'V1', 'V1_norm'}
-        Which type of model to create.
+    model_name : str
+        str specifying which of the `VentralModel` models we should
+        initialize. See above for more details.
     scaling : float
         The scaling parameter for the model
     image : torch.tensor or np.array
@@ -536,10 +577,51 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     optimization parameters, we do our best to synthesize a metamer,
     saving the outputs after it finishes.
 
+    `model_name` is constructed of several parts, for which you have
+    several chocies:
+    `'{visual_area}_cone-{cone_power}{options}_{window_type}'`:
+    - `visual_area`: which visual area we're modeling.`'RGC'` (retinal
+      ganglion cells, `plenoptic.simul.RetinalGanglionCells` class) or
+      `'V1'` (primary visual cortex,
+      `plenoptic.simul.PrimaryVisualCortex` class)
+    - `cone_power`: first step fo the model is to raise every pixel in
+      the image to a power, specified here. It can be any float or the
+      strs `'phys'` (1/3, the approximately correct physiological value
+      for cones) or `'gamma'` (1/2.2, the standard gamma value, so that
+      the model basically gamma-corrects the image itself). Metamer
+      synthesis has difficulty with non-convex powers here
+      (`cone_power<1`), so we apply `cone_power=1/3` to the image, build
+      the model with `cone_power=1.0`, and then raise the pixels of the
+      resulting image to `3` at the end (this all happens in
+      `Snakefile`, not this script).
+    - `options`: only for the `V1` models, you can additionally include
+      the following strs, separated by `_`:
+      - `'norm'`: if included, we normalize the models' `cone_responses`
+        and `complex_cell_responses` attributes. In this case,
+        `normalize_dict` must also be set (and include those two
+        keys). If not included, the model is not normalized
+        (normalization makes the optimization easier because the
+        different scales of the steerable pyramid have different
+        magnitudes).
+      - `s#`, where `#` is an integer. The number of scales to inlude in
+        the steerable pyramid that forms the basis fo the `V1`
+        models. If not included, will use 4.
+    - `window_type`: `'gaussian'` or `'cosine'`. whether to build the
+      model with gaussian or raised-cosine windows. Regardless, scaling
+      will always give the ratio between the FWHM and eccentricity of
+      the windows, but the gaussian windows are much tighter packed, and
+      so require more windows (and thus more memory), but also seem to
+      have fewer aliasing issues.
+
+    The recommended model_name values are: `RGC_cone-1.0_gaussian` and
+    `V1_cone-1.0_norm_s6_gaussian` (see above for why we use `cone-1.0`
+    for synthesis).
+
     Parameters
     ----------
-    model_name : {'RGC', 'V1', 'V1_norm'}
-        Which type of model to create.
+    model_name : str
+        str specifying which of the `VentralModel` models we should
+        initialize. See above for more details.
     scaling : float
         The scaling parameter for the model
     image : str or array_like
