@@ -60,19 +60,23 @@ def get_all_metamers(min_idx=0, max_idx=-1, model_name=None):
     rgc_metamers = [OUTPUT_TEMPLATE_PATH.format(model_name=MODELS[0], image_name=i, scaling=sc,
                                                 optimizer='Adam', fract_removed=0, loss_fract=1,
                                                 coarse_to_fine=0, seed=s, init_type='white',
-                                                learning_rate=1, min_ecc=3.71, max_ecc=41,
-                                                max_iter=750, loss_thresh=1e-8, gpu=0,
+                                                learning_rate=.1, min_ecc=3.71, max_ecc=41,
+                                                max_iter=750, loss_thresh=1e-8, gpu=1,
                                                 clamp='clamp2', clamp_each_iter=True)
-                    for sc in rgc_scaling for i in IMAGES for s in range(3)]
+                    for sc in rgc_scaling for i in [IMAGES[2]] for s in range(1)]
+                    # for sc in rgc_scaling for i in IMAGES for s in range(3)]
+    rgc_metamers += [m.replace('clamp2', 'clamp') for m in rgc_metamers]
     v1_scaling = [.075, .095, .12, .15, .19, .25, .31, .39, .5]
     v1_metamers = [OUTPUT_TEMPLATE_PATH.format(model_name=MODELS[1], image_name=i, scaling=sc,
                                                optimizer='Adam', fract_removed=0, loss_fract=1,
                                                coarse_to_fine=1e-2, seed=s, init_type='white',
                                                learning_rate={.075: 1}.get(sc, .1), min_ecc=.5,
-                                               max_ecc=41, max_iter={.075: 7500}.get(sc, 5000),
+                                               max_ecc=41, max_iter=5000,
                                                loss_thresh=1e-8, gpu=1, clamp='clamp2',
                                                clamp_each_iter=True)
-                    for sc in v1_scaling for i in IMAGES for s in range(3)]
+                    for sc in v1_scaling for i in [IMAGES[2]] for s in range(1)]
+                    # for sc in v1_scaling for i in IMAGES for s in range(3)]
+    v1_metamers += [m.replace('clamp2', 'clamp') for m in v1_metamers]
     if model_name is None:
         all_metamers = rgc_metamers + v1_metamers
     elif model_name == MODELS[0]:
