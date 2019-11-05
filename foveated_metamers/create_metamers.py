@@ -648,7 +648,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         if num_gpus > 1:
             # in this case, we put the model on multiple gpus, but keep
             # everything else on the cpu
-            gpus = GPUtil.getAvailable(maxLoad=.1, maxMemory=.1, limit=num_gpus, order='first')
+            gpus = GPUtil.getAvailable(maxLoad=.3, maxMemory=.3, limit=num_gpus, order='first')
             print("Will put model in %d batch(es) on multiple gpus: %s" % (num_batches, gpus))
             model = model.parallel(gpus, num_batches)
             # this makes sure we get the non-PoolingWindows onto the
