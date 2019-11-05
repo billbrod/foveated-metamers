@@ -651,6 +651,10 @@ rule postproc_metamers:
                             dtype = im.dtype
                             print("Retaining image dtype %s" % dtype)
                             im = np.array(im, dtype=np.float32) / np.iinfo(dtype).max
+                            # need to first de-cone the image, then
+                            # gamma-correct it
+                            if 'cone' in wildcards.image_name:
+                                im = im ** 3
                             im = im ** (1/2.2)
                             im = im * np.iinfo(dtype).max
                             imageio.imwrite(output[-1], im.astype(dtype))
