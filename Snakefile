@@ -27,10 +27,9 @@ wildcard_constraints:
     bits="[0-9]+",
     img_preproc="full|cone|cone_full|degamma_cone",
     preproc_image_name="azulejos|tiles|market|flower|einstein",
-    pixabay_image_name="trees|sheep|refuge|japan|street",
     preproc="|_degamma|_degamma_cone|_cone|degamma|degamma_cone|cone"
 ruleorder:
-    preproc_image > crop_image > generate_image > degamma_image > prep_pixabay
+    preproc_image > crop_image > generate_image > degamma_image
 
 
 LINEAR_IMAGES = ['azulejos', 'tiles', 'market', 'flower']
@@ -147,31 +146,8 @@ rule all_refs:
         [REF_IMAGE_TEMPLATE_PATH.format(image_name=i) for i in IMAGES]
 
 
-rule prep_pixabay:
-    input:
-        # all the pixabay images have a string of integers after the
-        # name, which we want to ignore
-        lambda wildcards: glob(op.join(config["PIXABAY_DIR"], '{pixabay_image_name}-*.jpg').format(**wildcards))
-    output:
-        op.join(config["DATA_DIR"], 'ref_images', '{pixabay_image_name}.png')
-    log:
-        op.join(config["DATA_DIR"], 'logs', 'ref_images', '{pixabay_image_name}.log')
-    benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'ref_images', '{pixabay_image_name}_benchmark.txt')
-    run:
-        import imageio
-        import contextlib
-        with open(log[0], 'w', buffering=1) as log_file:
-            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                im = imageio.imread(input[0], as_gray=True)
-                curr_shape = np.array(im.shape)
-                target_shape = np.array([2048, 3528])
-                crop_amt = curr_shape - target_shape
-                cropped_im = im[crop_amt[0]//2:-crop_amt[0]//2, crop_amt[1]//2:-crop_amt[1]//2]
-                imageio.imwrite(output[0], cropped_im)
-
-
-# most of our input images are jpegs, which have already had a gamma
+# for this project, our input images are linear images, but if you want
+# to run this process on standard images, they have had a gamma
 # correction applied to them. since we'll be displaying them on a linear
 # display, we want to remove this correction (see
 # https://www.cambridgeincolour.com/tutorials/gamma-correction.htm for
