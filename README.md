@@ -124,6 +124,25 @@ and install it with `pip install path/to/your/wxpython.whl`.
 
 Everything should then hopefully work.
 
+# Data dictionaries
+
+Several pandas DataFrames are created during the course of this
+experiment and saved as `.csv` files. In order to explain what the
+different fields they have mean, I've put together some data
+dictionaries, in the `data_dictionaries` directory. I tried to follow
+[these
+guidelines](https://help.osf.io/hc/en-us/articles/360019739054-How-to-Make-a-Data-Dictionary)
+from the OSF. They are `.tsv` files and so can be viewed in Excel,
+Google Sheets, a text editor, LibreOffice Calc, or loaded in to pandas
+(`data_dict = pd.read_csv(data_dictionaries/metamer_summary.tsv,
+'\t')`)
+
+ - `metamer_summary.tsv`: during metamer synthesis, we save out a
+   `summary.csv` file, which contains a DataFrame with one row,
+   describing the metamer generated and some information about its
+   synthesis. This data dictionary describes the columns in that
+   DataFrame.
+
 # Usage
 
 The general structure of the research project this repo describes is
@@ -164,7 +183,13 @@ In order to generate these metamers in a reasonable time, you'll need
 to have GPUs availabe. Without it, the code will not work; it could be
 modified trivially by replacing the `gpu=1` with `gpu=0` in the
 `get_all_metamers` function at the top of `Snakefile`, but generating
-all the metamers would take far too much time to be realistic.
+all the metamers would take far too much time to be
+realistic. Additionally, PyTorch [does not
+guarantee](https://pytorch.org/docs/stable/notes/randomness.html)
+reproducible results between CPU and GPU executions, even with the
+same seed, so you generating metamers on the CPU will not result in an
+identical set of images, though (assuming the loss gets low enough),
+they should still be valid metamers.
 
 Decide where you want to place the metamers and data for this
 project. For this README, it will be

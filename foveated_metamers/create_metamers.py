@@ -463,16 +463,15 @@ def setup_initial_image(initial_image_type, model, image):
 
     Parameters
     ----------
-    initial_image_type : {'white', 'pink', 'gray', 'blue'}
+    initial_image_type : {'white', 'pink', 'gray', 'blue'} or path to file
         What to use for the initial image. If 'white', we use white
         noise. If 'pink', we use pink noise
         (``pyrtools.synthetic_images.pink_noise(fract_dim=1)``). If
         'blue', we use blue noise
         (``pyrtools.synthetic_images.blue_noise(fract_dim=1)``). If
-        'gray', we use a flat image with values of .5 everywhere (note
-        that this one should only be used for the RGC model; it will
-        immediately break the V1 and V2 models, since it has no energy
-        at many frequencies)
+        'gray', we use a flat image with values of .5 everywhere. If
+        path to a file, that's what we use as our initial image (and so
+        the seed will have no effect on this).
     model : plenoptic.simul.VentralStream
         The model used to create the metamer. Specifically, we need its
         windows attribute
@@ -649,16 +648,15 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         If a str, the path to the file to save the metamer object to. If
         None, we don't save the synthesis output (that's probably a bad
         idea)
-    initial_image_type : {'white', 'pink', 'gray', 'blue'}
+    initial_image_type : {'white', 'pink', 'gray', 'blue'} or path to a file
         What to use for the initial image. If 'white', we use white
         noise. If 'pink', we use pink noise
         (``pyrtools.synthetic_images.pink_noise(fract_dim=1)``). If
         'blue', we use blue noise
         (``pyrtools.synthetic_images.blue_noise(fract_dim=1)``). If
-        'gray', we use a flat image with values of .5 everywhere (note
-        that this one should only be used for the RGC model; it will
-        immediately break the V1 and V2 models, since it has no energy
-        at many frequencies)
+        'gray', we use a flat image with values of .5 everywhere. If
+        path to a file, that's what we use as our initial image (and so
+        the seed will have no effect on this).
     use_cuda : bool, optional
         If True and if torch.cuda.is_available(), we try to use find a
         gpu we can use. We do this with GPUtil. else, we use the cpu
