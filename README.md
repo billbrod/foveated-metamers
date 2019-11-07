@@ -33,7 +33,11 @@ Fedora 29. It will probably work with minimal to no changes on OSX,
 but there's no guarantee, and we definitely don't support Windows.
 
 Need to make sure you have ffmpeg on your path when creating the
-metamers, so make sure it's installed.
+metamers, so make sure it's installed and on your path. When running
+on NYU's prince cluster, can use `module load ffmpeg/intel/3.2.2` or,
+if `module` isn't working (like when using the `fish` shell), just add
+it to your path manually (e.g., on fish: `set -x PATH
+/share/apps/ffmpeg/3.2.2/intel/bin $PATH`)
 
 For demosaicing the raw images we use as inputs, you'll need to
 install [dcraw](https://www.dechifro.org/dcraw/). If you're on Linux,
@@ -41,11 +45,6 @@ you can probably install it directly from your package manager. See
 these [instructions](http://macappstore.org/dcraw/) for OSX. If you're
 fine using the demosaiced `.tiff` files we provide, then you won't
 need it.
-
-When running on NYU's prince cluster, can use `module load
-ffmpeg/intel/3.2.2` or, if `module` isn't working (like when using the
-`fish` shell), just add it to your path manually (e.g., on fish: `set
--x PATH /share/apps/ffmpeg/3.2.2/intel/bin $PATH`)
 
 For running the experiment, need to install `glfw` from your package
 manager.
@@ -221,7 +220,7 @@ format) images: `azulejos`, `flower`, `tiles`, and
 `market`. `norm_stats` should contain a single `.pt` (pytorch) file:
 `V1_cone-1.0_texture_degamma_cone_norm_stats.pt`. `ref_images` should
 contain `einstein_size-256,256.png`, which we'll use for testing the
-setup.
+setup, as well as `.tiff` versions of the four raw images.
 
 ## Test setup
 
@@ -254,20 +253,17 @@ If you wanted to generate all of your metamers at once, this is very
 easy: simply running
 
 ```
-snakemake -j n --resources gpu=n -prk
---restart-times 3 --ri
-~/Desktop/metamers_display/dummy_RGC_cone-1.0_gaussian_0_-1.txt
-~/Desktop/metamers_display/dummy_V1_cone-1.0_norm_s6_gaussian_0_-1.txt
+snakemake -j n --resources gpu=n -prk --restart-times 3 --ri ~/Desktop/metamers_display/dummy_RGC_cone-1.0_gaussian_0_-1.txt ~/Desktop/metamers_display/dummy_V1_cone-1.0_norm_s6_gaussian_0_-1.txt
 ```
 
-will do this (where you should replace both `n` with the number to
-tell of GPUs you have; this is how many jobs we run
-simultaneously. Assuming everything is working correctly, you could
-increase the `n` after `-j` to be greater than the one after
-`--resources gpu=`, and snakemake should be able to figure everything
-out, but I've had mixed success with this). `snakemake` will create
-the DAG of jobs necessary to create those two txt files, which are
-just placeholders that require all the metamers as their input.
+will do this (where you should replace both `n` with the number of
+GPUs you have; this is how many jobs we run simultaneously; assuming
+everything is working correctly, you could increase the `n` after `-j`
+to be greater than the one after `--resources gpu=`, and snakemake
+should be able to figure everything out, but I've had mixed success
+with this). `snakemake` will create the directed acyclic graph (DAG)
+of jobs necessary to create those two txt files, which are just
+placeholders that require all the metamers as their input.
 
 However, you probably can't create all metamers at once on one
 machine, because that would take too much time. You probably want to
@@ -327,7 +323,7 @@ respectively.
 Note that I couldn't figure out any clever way to schedule jobs across
 different GPUs, so the way I decided to handle it is to let jobs grab
 the first GPU they think is available (available meaning that at most
-10% of the its memory is being used, as determined by `GPUtil`). If
+30% of the its memory is being used, as determined by `GPUtil`). If
 two jobs start at almost exactly the same time, one of them will
 likely fail because it ran out of memory. To handle this, I recommend
 adding the `--restart-times 3` flag to the snakemake call, as I do
@@ -369,7 +365,13 @@ You can generate your own, novel presentation indices by running
 replacing `{model_name}` with one of `'RGC_cone-1.0_gaussian',
 'V1_cone-1.0_norm_s6_gaussian'`, `{subject}` must be of the format
 `sub-##`, where `##` is some integer (ideally zero-padded, but this
-isn't required), and `{num}` must also be an integer.
+isn't required), and `{num}` must also be an integer (this is because
+we use the number in the subject name and session number to determine
+the seed for randomizing the presentation order; if you'd like to
+change this, see the snakemake rule `generate_experiment_idx`, and how
+the parameter `seed` is determined; as long as you modify this so that
+each subject/session combination gets a unique seed, everything should
+be fine).
 
 ## Run experiment
 
