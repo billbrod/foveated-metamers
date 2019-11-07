@@ -142,6 +142,14 @@ Google Sheets, a text editor, LibreOffice Calc, or loaded in to pandas
    describing the metamer generated and some information about its
    synthesis. This data dictionary describes the columns in that
    DataFrame.
+   
+ - `all_metamer_summary.tsv`: in order to create the indices that
+   determine the trias in the experiment, we gather together and
+   concatenate all the `summary.csv` files and add one additional
+   column, `image_name_for_expt`, then save the resulting DataFrame as
+   `stimuli_description.csv`. This data dictionary describes that
+   DataFrame's columns, which are identical to those in `summary.csv`,
+   except for the addition.
 
 # Usage
 

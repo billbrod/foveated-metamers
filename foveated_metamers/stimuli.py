@@ -131,14 +131,10 @@ def create_metamer_df(image_paths, save_path=None):
     We do this by loading in and concatenating the summary.csv files
     created as one of the outputs of metamer creation.
 
-    We also add one more column, `'image_name_original'`. This is
-    because we use the `'image_name'` column to determine what images
-    form trials in the experiment; the original `'image_name'` value
-    comes from `'target_image'` and might have `"cone_"` in it, which we
-    don't want to use for the experiment. So `'image_name_original`'
-    will be the original value of `'image_name'`, and `'image_name'` in
-    the output `df` will be that with `'cone_'` removed, if it was
-    there.
+    We also add one more column, `'image_name_for_expt'`. This is the
+    column we use to determine what images form trials in the
+    experiment; it will be the same as the value in `'image_name'` but
+    with `'cone_'` removed, if it was there.
 
     Parameters
     ----------
@@ -168,9 +164,9 @@ def create_metamer_df(image_paths, save_path=None):
         # all target_images are .pgm files and each tmp df will only contain value
         if len(tmp.image_name.unique()) > 1:
             raise Exception("Somehow we have more than one image_name for metamer %s" % p)
-        tmp['image_name_original'] = tmp.image_name
-        if 'cone' in tmp.image_name.unique()[0]:
-            tmp.image_name = tmp.image_name.unique()[0].replace('cone_', '')
+        tmp['image_name_for_expt'] = tmp.image_name
+        if 'cone' in tmp.image_name_for_expt.unique()[0]:
+            tmp.image_name_for_expt = tmp.image_name_for_expt.unique()[0].replace('cone_', '')
         metamer_info.append(tmp)
     df = pd.concat(metamer_info)
     if save_path is not None:
@@ -210,7 +206,7 @@ def generate_indices(df, seed, save_path=None):
     trials_dict = {}
     # Here we find the unique (non-None) values for the three fields
     # that determine each trial
-    for k in ['scaling', 'image_name', 'model']:
+    for k in ['scaling', 'image_name_for_expt', 'model']:
         v = [i for i in df[k].unique() if i != 'None']
         trials_dict[k] = v
     # Now go through and find the indices for each unique combination of
@@ -218,8 +214,8 @@ def generate_indices(df, seed, save_path=None):
     # the different seeds used) and then add the reference image
     trial_types = []
     for s, i, m in itertools.product(*trials_dict.values()):
-        t = df.query('scaling==@s & image_name==@i & model==@m').index
-        t = t.append(df.query('scaling=="None" & image_name==@i & model=="None"').index)
+        t = df.query('scaling==@s & image_name_for_expt==@i & model==@m').index
+        t = t.append(df.query('scaling=="None" & image_name_for_expt==@i & model=="None"').index)
         trial_types.append(t)
     trial_types = np.array(trial_types)
     # Now generate the indices for the trial. At the end of this, trials
