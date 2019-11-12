@@ -29,7 +29,7 @@ wildcard_constraints:
     preproc_image_name="azulejos|tiles|market|flower|einstein",
     preproc="|_degamma|_degamma_cone|_cone|degamma|degamma_cone|cone"
 ruleorder:
-    preproc_image > crop_image > generate_image > degamma_image
+    demosaic_image > preproc_image > crop_image > generate_image > degamma_image
 
 
 LINEAR_IMAGES = ['azulejos', 'tiles', 'market', 'flower']
@@ -141,7 +141,9 @@ rule test_setup:
 
 rule all_refs:
     input:
-        [REF_IMAGE_TEMPLATE_PATH.format(image_name=i) for i in IMAGES]
+        [op.join(config['DATA_DIR'], 'ref_images_preproc', i + '.png') for i in IMAGES],
+        [op.join(config['DATA_DIR'], 'ref_images_preproc', i.replace('cone_', '') + '.png')
+         for i in IMAGES],
 
 
 # for this project, our input images are linear images, but if you want
