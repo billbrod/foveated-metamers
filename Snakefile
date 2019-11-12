@@ -535,6 +535,41 @@ def get_ref_image(image_name):
     return template.format(image_name=image_name)
 
 
+def get_mem_estimate(wildcards):
+    r"""estimate the amount of memory that this will need, in GB
+    """
+    if 'size-2048,3528' in wildcards.image_name:
+        if 'gaussian' in wildcards.model_name:
+            if 'V1' in wildcards.model_name:
+                if float(wildcards.scaling) >= .31:
+                    return 16
+                elif float(wildcards.scaling) >= .15:
+                    return 32
+                elif float(wildcards.scaling) >= .095:
+                    return 64
+                else:
+                    return 96
+            if 'RGC' in wildcards.model_name:
+                # this is an approximation of the size of their windows,
+                # and if you have at least 3 times this memory, you're
+                # good
+                window_size = 1.17430726 / float(wildcards.scaling)
+                return int(3 * window_size)
+        if 'cosine' in wildcards.model_name:
+            if 'V1' in wildcards.model_name:
+                # most it will need is 32 GB
+                return 32
+            if 'RGC' in wildcards.model_name:
+                # this is an approximation of the size of their windows,
+                # and if you have at least 3 times this memory, you're
+                # good
+                window_size = 0.49238059 / float(wildcards.scaling)
+                return int(3 * window_size)
+    else:
+        # don't have a good estimate for these
+        return 16
+
+
 rule create_metamers:
     input:
         ref_image = lambda wildcards: get_ref_image(wildcards.image_name),
@@ -562,6 +597,7 @@ rule create_metamers:
                 '_gpu-{gpu}_benchmark.txt')
     resources:
         gpu = lambda wildcards: int(wildcards.gpu.split(':')[0]),
+        mem = get_mem_estimate,
     params:
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
         num_batches = get_batches,
