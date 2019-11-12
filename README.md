@@ -114,12 +114,15 @@ minumum number of things possible, the following should allow you to
 run this experiment. Create a new virtual environment and then:
 
 ```
-pip install psychopy==3.1.5 pyglet==1.3.2 numpy h5py glfw
+pip install psychopy==3.1.5 pyglet==1.3.2 numpy==1.17.0 h5py==2.9.0 glfw==1.8.2
 ```
 
 And then if you're on Linux, fetch the wxPython wheel for you platform
 from [here](https://extras.wxpython.org/wxPython4/extras/linux/gtk3/)
-and install it with `pip install path/to/your/wxpython.whl`.
+(for my setup, I used `wxPython-4.0.6-cp37-cp37m-linux_x86_64.whl`;
+the `cp37` refers to python 3.7, I'm pretty sure, so that's very
+important; not sure if the specific version of wxPython matters) and
+install it with `pip install path/to/your/wxpython.whl`.
 
 Everything should then hopefully work.
 
