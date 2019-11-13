@@ -53,6 +53,8 @@ reproducibility. We provide built Docker images for the same reason:
 
 ## Experiment
 
+## Experiment environment
+
 For running the experiment, need to install `glfw` from your package
 manager.
 
@@ -67,7 +69,7 @@ conda install -f environment-psychopy.yml
 
 Then, to activate, run `conda activate psypy`.
 
-## Everything else
+## Environment everything else
 
 To setup the environment for everything else:
 
@@ -232,7 +234,11 @@ format) images: `azulejos`, `flower`, `tiles`, and
 `market`. `norm_stats` should contain a single `.pt` (pytorch) file:
 `V1_cone-1.0_texture_degamma_cone_norm_stats.pt`. `ref_images` should
 contain `einstein_size-256,256.png`, which we'll use for testing the
-setup, as well as `.tiff` versions of the four raw images.
+setup, as well as `.tiff` versions of the four raw images (the raw
+images are provided in case you want to try a different demosaicing
+algorithm than the one I did; if you're fine with that step, you can
+ignore them and everything further will use the `.tiff` files found in
+`ref_images`).
 
 ## Test setup
 
@@ -265,7 +271,7 @@ If you wanted to generate all of your metamers at once, this is very
 easy: simply running
 
 ```
-snakemake -j n --resources gpu=n -prk --restart-times 3 --ri ~/Desktop/metamers_display/dummy_RGC_cone-1.0_gaussian_0_-1.txt ~/Desktop/metamers_display/dummy_V1_cone-1.0_norm_s6_gaussian_0_-1.txt
+snakemake -j n --resources gpu=n mem=m -prk --restart-times 3 --ri ~/Desktop/metamers_display/dummy_RGC_cone-1.0_gaussian_0_-1.txt ~/Desktop/metamers_display/dummy_V1_cone-1.0_norm_s6_gaussian_0_-1.txt
 ```
 
 will do this (where you should replace both `n` with the number of
@@ -273,7 +279,8 @@ GPUs you have; this is how many jobs we run simultaneously; assuming
 everything is working correctly, you could increase the `n` after `-j`
 to be greater than the one after `--resources gpu=`, and snakemake
 should be able to figure everything out, but I've had mixed success
-with this). `snakemake` will create the directed acyclic graph (DAG)
+with this; you should also replace `m` with the GB of RAM you have
+available). `snakemake` will create the directed acyclic graph (DAG)
 of jobs necessary to create those two txt files, which are just
 placeholders that require all the metamers as their input.
 
@@ -299,8 +306,8 @@ that's probably the most variable is the final line, gpus):
     {
 	"nodes": 1,
 	"tasks_per_node": 1,
-	"mem": "48GB",
-	"time": "12:00:00",
+	"mem": "{resources.mem}GB",
+	"time": "36:00:00",
 	"job_name": "{rule}.{wildcards}",
 	"cpus_per_task": 1,
 	"output": "{log}",
@@ -309,6 +316,17 @@ that's probably the most variable is the final line, gpus):
     }
 }
 ```
+
+Every `create_metamers` job will use a certain number of gpus, as
+given by `resources.gpu` for that job. In the snippet above, you can
+see that we use it to determine how many gpus to request from the job
+scheduler. On a local machine, `snakemake` will similarly use it to
+make sure you don't run two jobs that require 3 gpus each if you only
+have 4 gpus total, for example. Similarly, `resources.mem` provides an
+estimate of how much memory (in GB) the job will use, which we use
+similarly when requesting resources above. This is just an estimate
+and, if you find yourself running out of RAM, you may need to increase
+it in the `get_mem_estimate` function in `Snakefile.`
 
 If you don't have a cluster available and instead have several
 machines with GPUs so you can split up the jobs, that `dummy.txt` file
@@ -384,6 +402,18 @@ change this, see the snakemake rule `generate_experiment_idx`, and how
 the parameter `seed` is determined; as long as you modify this so that
 each subject/session combination gets a unique seed, everything should
 be fine).
+
+### Demo / test experiment
+
+If you want to put together a quick demo, either to show someone what
+the experiment looks like or to teach someone how to run the
+experiment, a rule is provided for this. If you run `snakemake -prk
+~/Desktop/metamers/stimuli/RGC_demo/sub-00_idx_sess-00.npy`, we'll
+create a small stimulus array (it contains one image per scaling value
+of the `azulejos` reference image, all with random seed 0) and the
+indices necessary to present them. You can then follow the
+instructions in the following section to run the experiment, using
+`model_name=RGC_demo`, `subject=sub-00`, and `num=0`.
 
 ## Run experiment
 
