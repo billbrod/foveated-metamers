@@ -29,7 +29,7 @@ wildcard_constraints:
     preproc_image_name="azulejos|tiles|market|flower|einstein",
     preproc="|_degamma|_degamma_cone|_cone|degamma|degamma_cone|cone"
 ruleorder:
-    demosaic_image > preproc_image > crop_image > generate_image > degamma_image
+    collect_metamers_example > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image
 
 
 LINEAR_IMAGES = ['azulejos', 'tiles', 'market', 'flower']
@@ -707,6 +707,34 @@ rule dummy_metamer_gen:
         op.join(config['DATA_DIR'], 'metamers_display', 'dummy_{model_name}_{min_idx}_{max_idx}.txt')
     shell:
         "touch {output}"
+
+
+def get_metamers_for_example(wildcards):
+    metamers = get_all_metamers(model_name=MODELS[0])
+    return [m for m in metamers if 'azulejos' in m if 'seed-0' in m]
+
+
+rule collect_metamers_example:
+    # this is for a shorter version of the experiment, the goal is to
+    # create a test version for teaching someone how to run the
+    # experiment or for demos
+    input:
+        get_metamers_for_example,
+        [get_ref_image(IMAGES[0].replace('cone_', ''))],
+    output:
+        op.join(config["DATA_DIR"], 'stimuli', 'RGC_demo', 'stimuli.npy'),
+        op.join(config["DATA_DIR"], 'stimuli', 'RGC_demo', 'stimuli_description.csv'),
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', 'RGC_demo', 'stimuli.log'),
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', 'RGC_demo', 'stimuli_benchmark.txt'),
+    run:
+        import foveated_metamers as met
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                met.stimuli.collect_images(input, output[0])
+                met.stimuli.create_metamer_df(input, output[1])
 
 
 rule collect_metamers:
