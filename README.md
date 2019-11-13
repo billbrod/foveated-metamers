@@ -178,6 +178,14 @@ Google Sheets, a text editor, LibreOffice Calc, or loaded in to pandas
   `experiment_df`. We have two separate functions in `stimulus.py` for
   generating the DataFrame with and without subject response info, but
   we only save the completed version to disk.
+  
+- `summary_df.tsv`: In order to plot our psychophysical curves, we
+  want to get the proportion of correct responses in each
+  condition. That's what this summary DataFrame contains. This is the
+  "least combined" way of looking at it: we have not collapsed across
+  images, trial types, sessions, or, subjects (the `n_trials` column
+  will be useful to correctly weight the average if you want to
+  collapse across them).
 
 # Usage
 

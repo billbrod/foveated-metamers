@@ -168,7 +168,7 @@ def add_response_info(expt_df, trials, subject_name, session_number):
         columns. See above for description
 
     """
-    # just in case it was an incomplete trial
+    # just in case it was an incomplete session
     expt_df = expt_df.iloc[:len(trials)]
     subj_answers = trials[:, 2].astype(int)
     expt_df['subject_response'] = subj_answers
@@ -185,11 +185,11 @@ def summarize_expt(expt_df, dep_variables=['scaling', 'trial_type']):
     Here, we take the ``expt_df`` summarizing the experiment's trials
     and the subject's responses, and we compute the proportion correct
     on each trial type. We end up with a DataFrame that has the columns
-    ``['subject_name', 'session_number', 'image_name_for_expt', 'model']
-    + dep_variables`` from ``expt_df``, as well as two new columns:
-    ``'n_trials'`` (which gives the number of trials in that condition)
-    and ``'proportion_correct'`` (which gives the proportion of time the
-    subject was correct in that condition).
+    ``['subject_name', 'session_number', 'image_name_for_expt', 'model',
+    'trial_type'] + dep_variables`` from ``expt_df``, as well as two new
+    columns: ``'n_trials'`` (which gives the number of trials in that
+    condition) and ``'proportion_correct'`` (which gives the proportion
+    of time the subject was correct in that condition).
 
     Parameters
     ----------
@@ -209,8 +209,8 @@ def summarize_expt(expt_df, dep_variables=['scaling', 'trial_type']):
     expt_df = expt_df.copy()
     expt_df['hit_or_miss'] = expt_df.hit_or_miss.apply(lambda x: {'hit': 1, 'miss': 0}[x])
 
-    gb = expt_df.groupby(['subject_name', 'session_number', 'image_name_for_expt', 'model'] +
-                         dep_variables)
+    gb = expt_df.groupby(['subject_name', 'session_number', 'image_name_for_expt', 'model',
+                          'trial_type'] + dep_variables)
     summary_df = gb.count()['image_1'].reset_index()
     summary_df = summary_df.merge(gb.hit_or_miss.mean().reset_index())
     summary_df = summary_df.rename(columns={'image_1': 'n_trials',
