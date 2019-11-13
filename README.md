@@ -46,6 +46,13 @@ these [instructions](http://macappstore.org/dcraw/) for OSX. If you're
 fine using the demosaiced `.tiff` files we provide, then you won't
 need it.
 
+Both provided conda environment files pin the versions of all the
+python packages required to those used for the experiment. That's
+probably not necessary, but is provided as a step to improve
+reproducibility. We provide built Docker images for the same reason: 
+
+## Experiment
+
 For running the experiment, need to install `glfw` from your package
 manager.
 
@@ -59,6 +66,8 @@ conda install -f environment-psychopy.yml
 ```
 
 Then, to activate, run `conda activate psypy`.
+
+## Everything else
 
 To setup the environment for everything else:
 
