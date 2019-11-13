@@ -163,6 +163,21 @@ Google Sheets, a text editor, LibreOffice Calc, or loaded in to pandas
    `stimuli_description.csv`. This data dictionary describes that
    DataFrame's columns, which are identical to those in `summary.csv`,
    except for the addition.
+   
+- `experiment_df.tsv`: in order to analyze the data, we want to
+  examine the images presented in each trial, what the correct answers
+  was, and what button the subject pressed. We do this using
+  `experiment_df.csv`, which we create for each experimental session
+  (in a given session, one subject will see all trials for a given
+  model; each subject, session pair has a different random seed used
+  to generate the presentation index). Most of the DataFrame can be
+  generated before the experiment is run (but after the index has been
+  generated), but the final four columns (`subject_response,
+  hit_or_miss, subject_name and session_number`) are only added when
+  combining the subject's response information with the pre-existing
+  `experiment_df`. We have two separate functions in `stimulus.py` for
+  generating the DataFrame with and without subject response info, but
+  we only save the completed version to disk.
 
 # Usage
 
