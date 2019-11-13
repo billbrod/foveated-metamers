@@ -394,8 +394,7 @@ def expt(stimuli_path, subj_name, sess_num, output_dir="data/raw_behavioral", ey
                         (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name))
     edf_path = op.join(output_dir, model_name, "%s_%s_sess{sess:02d}.EDF" %
                        (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name))
-    idx_path = stimuli_path.replace('_stimuli.npy', '_idx_sess-%02d.npy' % sess_num)
-    idx_path = idx_path.replace('e0', '%s_e0' % subj_name)
+    idx_path = stimuli_path.replace('stimuli.npy', '%s_idx_sess-%02d.npy' % (subj_name, sess_num))
     save_path = save_path.format(sess=sess_num)
     if os.path.isfile(save_path):
         print("Existing save data %s found! Will load in and append results" % save_path)
@@ -486,8 +485,9 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
     take_break = not args.pop('no_break')
     flip = not args.pop('no_flip')
-    if op.exists(args['ipd_csv']):
-        ipd_csv = pd.read_csv(args.pop('ipd_csv'))
+    ipd_csv = args.pop('ipd_csv')
+    if op.exists(ipd_csv):
+        ipd_csv = pd.read_csv(ipd_csv)
     else:
         warnings.warn("Can't find ipd_csv, using zero binocular offset!")
         ipd_csv = None
