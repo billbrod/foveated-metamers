@@ -719,11 +719,11 @@ rule continue_metamers:
 
 rule postproc_metamers:
     input:
-        lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'metamer-16.png'),
-        lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'windowed.png'),
-        lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'rep.png'),
-        lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'synthesis.mp4'),
         lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'summary.csv'),
+        lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'synthesis.mp4'),
+        lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'rep.png'),
+        lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'windowed.png'),
+        lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'metamer-16.png'),
         lambda wildcards: find_attempts(wildcards),
     output:
         OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'summary.csv'),
