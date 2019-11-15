@@ -100,23 +100,14 @@ for anything outside the experiment itself.
 
 ## Source images
 
-We use the
-[LIVE-NFLX-II](http://live.ece.utexas.edu/research/LIVE_NFLX_II/live_nflx_plus.html)
-data set to get some input images. We provide the images (which are
-frames from some of these movies, with some processing: converting to
-grayscale, cropped appropriately, and saved as pgm) in our
-[ref_images](https://osf.io/5t4ju) tarball, but the link is presented
-here if you wish to examine the rest of the data set.
-
-We also use several images from pixabay. Similar to the LIVE-NFLX-II,
-these images have had some processing done to them, but the links to
-the originals are presented here:
-[japan](https://pixabay.com/photos/japan-travel-nature-asia-plant-4141578/),
-[sheep](https://pixabay.com/photos/sheep-agriculture-animals-17482/),
-[street](https://pixabay.com/photos/street-people-road-many-3279061/),
-[refuge](https://pixabay.com/photos/refuge-dolomites-fog-prato-steep-4457275/),
-[trees](https://pixabay.com/photos/trees-fir-forest-nature-conifers-3410830/).
-
+We use images from the authors' personal collection as the targets for
+our metamer generation. This is because we need images that are large,
+linear (i.e., their pixel intensities are proportional to photon
+count, as you get from an image that has not been processed in any
+way), and openly-licensed. See the [Setup](#setup) section for details
+on how to obtain the images from the Open Science Foundation website
+for this project, along with the statistics used to normalize the V1
+model and a small image of Albert Einstein for testing the setup.
 
 ## Minimal experiment install
 
@@ -248,10 +239,13 @@ images and normalizing statistics, and unzip it into that directory:
 ```
 mkdir /home/billbrod/Desktop/metamers
 cd /home/billbrod/Desktop/metamers
-wget -O- https://osf.io/5t4ju/download | tar xvz -C .
+wget -O- https://osf.io/td3ea/download | tar xvz -C .
 ```
 
-You should now have two directories here: `raw_images`, `ref_images`
+NOTE: the OSF project is currently private and so the above will
+fail. need to remember to make it public for that to work
+
+You should now have three directories here: `raw_images`, `ref_images`
 and `norm_stats`. `raw_images` should contain four `.NEF` (Nikon's raw
 format) images: `azulejos`, `flower`, `tiles`, and
 `market`. `norm_stats` should contain a single `.pt` (pytorch) file:
