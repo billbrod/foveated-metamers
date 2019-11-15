@@ -569,7 +569,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
          loss_thresh=1e-4, save_path=None, initial_image_type='white', use_cuda=False,
          cache_dir=None, normalize_dict=None, num_gpus=0, optimizer='SGD', fraction_removed=0,
          loss_change_fraction=1, coarse_to_fine=0, num_batches=1, clamper_name='clamp',
-         clamp_each_iter=True):
+         clamp_each_iter=True, continue_path=None):
     r"""create metamers!
 
     Given a model_name, model parameters, a target image, and some
@@ -615,6 +615,21 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     The recommended model_name values are: `RGC_cone-1.0_gaussian` and
     `V1_cone-1.0_norm_s6_gaussian` (see above for why we use `cone-1.0`
     for synthesis).
+
+    If you want to resume synthesis from an earlier run that didn't
+    finish, set `continue_path` to the path of the `.pt` file created by
+    that earlier run. We will then load it in and continue. For right
+    now, we don't do anything to make sure that the arguments you pass
+    to the function are the same as the first time, we just use the ones
+    passed in. Generally, they should be identical, with the exception
+    of learning_rate (which can be None to resume where you left off)
+    and max_iter (which gives the number of extra iterations you want to
+    do). Specifically, I think things might get weird if you do this
+    initially on a GPU and then try to resume on a CPU (or vice versa),
+    for example. When resuming, there's always a slight increase in the
+    loss that, as far as I can tell, is unavoidable; it goes away
+    quickly (and the loss continues its earlier trend) and so I don't
+    think is an issue.
 
     Parameters
     ----------
@@ -703,6 +718,13 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         Whether we call the clamper each iteration of the optimization
         or only at the end. True, the default, is recommended, and is
         necessary for fractional values of cone_power
+    continue_path : str or None, optional
+        If None, we synthesize a new metamer. If str, this should be the
+        path to a previous synthesis run, which we are resuming. In that
+        case, you may set learning_rate to None (in which case we resume
+        where we left off) and set max_iter to a different value (the
+        number of extra iterations to run) otherwise the rest of the
+        arguments should be the same as the first run.
 
     """
     print("Using seed %s" % seed)
@@ -742,7 +764,12 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         clamper = po.FourMomentsClamper(image)
     elif clamper_name == 'remap':
         clamper = po.RangeRemapper((0, 1))
-    metamer = po.synth.Metamer(image, model)
+    if continue_path is None:
+        metamer = po.synth.Metamer(image, model)
+    else:
+        print("Resuming synthesis saved at %s" % continue_path)
+        metamer = po.synth.Metamer.load(continue_path, model.from_state_dict_reduced)
+        initial_image = None
     if save_path is not None:
         if max_iter < 200:
             # no sense when it's this short

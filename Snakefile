@@ -48,6 +48,13 @@ OUTPUT_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers_display', '{model_n
                                'seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc}_em-'
                                '{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}_'
                                'metamer.png')
+CONTINUE_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers_continue', '{model_name}',
+                                 '{image_name}', 'scaling-{scaling}', 'opt-{optimizer}',
+                                 'fr-{fract_removed}_lc-{loss_fract}_cf-{coarse_to_fine}_{clamp}-'
+                                 '{clamp_each_iter}', 'attempt-{num}_iter-{extra_iter}',
+                                 'seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc}_em-'
+                                 '{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}_'
+                                 'metamer.png')
 REF_IMAGE_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'ref_images', '{image_name}.png')
 SUBJECTS = ['sub-%02d' % i for i in range(1, 31)]
 SESSIONS = [0, 1, 2]
@@ -630,14 +637,94 @@ rule create_metamers:
                                          wildcards.clamp, clamp_each_iter)
 
 
+def find_attempts(wildcards):
+    wildcards = dict(wildcards)
+    num = wildcards.pop('num', None)
+    wildcards.pop('extra_iter', None)
+    i = 0
+    while len(glob(CONTINUE_TEMPLATE_PATH.format(num=i, extra_iter='*', **wildcards))) > 0:
+        i += 1
+    # I would like to ensure that num is i, but to make the DAG we have
+    # to go backwards and check each attempt, so this function does not
+    # only get called for the rule the user calls
+    if num is not None and int(num) > i:
+        raise Exception("attempts at continuing metamers need to use strictly increasing num")
+    if i > 0:
+        return glob(CONTINUE_TEMPLATE_PATH.format(num=i-1, extra_iter='*', **wildcards))[0]
+    else:
+        return METAMER_TEMPLATE_PATH.format(**wildcards)
+
+
+rule continue_metamers:
+    input:
+        ref_image = lambda wildcards: get_ref_image(wildcards.image_name),
+        norm_dict = get_norm_dict,
+        continue_path = lambda wildcards: find_attempts(wildcards).replace('_metamer.png', '.pt'),
+    output:
+        CONTINUE_TEMPLATE_PATH.replace('_metamer.png', '.pt'),
+        CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'summary.csv'),
+        CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'synthesis.mp4'),
+        CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'rep.png'),
+        CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'windowed.png'),
+        CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'metamer-16.png'),
+        CONTINUE_TEMPLATE_PATH,
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'metamers_continue', '{model_name}', '{image_name}',
+                'scaling-{scaling}', 'opt-{optimizer}', 'fr-{fract_removed}_lc-{loss_fract}_'
+                'cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}', 'attempt-{num}_iter-{extra_iter}',
+                'seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-'
+                '{max_iter}_thresh-{loss_thresh}_gpu-{gpu}.log')
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'metamers_continue', '{model_name}', '{image_name}',
+                'scaling-{scaling}', 'opt-{optimizer}', 'fr-{fract_removed}_lc-{loss_fract}_'
+                'cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}', 'attempt-{num}_iter-{extra_iter}',
+                'seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-'
+                '{max_iter}_thresh-{loss_thresh}_gpu-{gpu}_benchmark.txt')
+    resources:
+        gpu = lambda wildcards: int(wildcards.gpu.split(':')[0]),
+        mem = get_mem_estimate,
+    params:
+        cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
+        num_batches = get_batches,
+    run:
+        import foveated_metamers as met
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                # bool('False') == True, so we do this to avoid that
+                # situation
+                if wildcards.clamp_each_iter == 'True':
+                    clamp_each_iter = True
+                elif wildcards.clamp_each_iter == 'False':
+                    clamp_each_iter = False
+                if wildcards.init_type not in ['white', 'blue', 'pink', 'gray']:
+                    init_type = REF_IMAGE_TEMPLATE_PATH.format(image_name=wildcards.init_type)
+                else:
+                    init_type = wildcards.init_type
+                # this is the same as the original call in the
+                # create_metamers rule, except we replace max_iter with
+                # extra_iter, set learning_rate to None, and add the
+                # input continue_path at the end
+                met.create_metamers.main(wildcards.model_name, float(wildcards.scaling),
+                                         input.ref_image, int(wildcards.seed), float(wildcards.min_ecc),
+                                         float(wildcards.max_ecc), None,
+                                         int(wildcards.extra_iter), float(wildcards.loss_thresh),
+                                         output[0], init_type, resources.gpu>0,
+                                         params.cache_dir, input.norm_dict, resources.gpu,
+                                         wildcards.optimizer, float(wildcards.fract_removed),
+                                         float(wildcards.loss_fract),
+                                         float(wildcards.coarse_to_fine), int(params.num_batches),
+                                         wildcards.clamp, clamp_each_iter, input.continue_path)
+
+
 rule postproc_metamers:
     input:
-        METAMER_TEMPLATE_PATH.replace('metamer.png', 'summary.csv'),
-        METAMER_TEMPLATE_PATH.replace('metamer.png', 'synthesis.mp4'),
-        METAMER_TEMPLATE_PATH.replace('metamer.png', 'rep.png'),
-        METAMER_TEMPLATE_PATH.replace('metamer.png', 'windowed.png'),
-        METAMER_TEMPLATE_PATH.replace('metamer.png', 'metamer-16.png'),
-        METAMER_TEMPLATE_PATH,
+        lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'metamer-16.png'),
+        lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'windowed.png'),
+        lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'rep.png'),
+        lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'synthesis.mp4'),
+        lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'summary.csv'),
+        lambda wildcards: find_attempts(wildcards),
     output:
         OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'summary.csv'),
         OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'synthesis.mp4'),
