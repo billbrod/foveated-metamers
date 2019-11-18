@@ -798,7 +798,8 @@ rule dummy_metamer_gen:
 
 def get_metamers_for_example(wildcards):
     metamers = get_all_metamers(model_name=MODELS[0])
-    return [m for m in metamers if 'azulejos' in m if 'seed-0' in m]
+    return [m.replace('metamer.png', 'metamer-16.png') for m in metamers if 'azulejos' in m
+            if 'seed-0' in m]
 
 
 rule collect_metamers_example:
@@ -826,7 +827,8 @@ rule collect_metamers_example:
 
 rule collect_metamers:
     input:
-        lambda wildcards: get_all_metamers(**wildcards),
+        lambda wildcards: [m.replace('metamer.png', 'metamer-16.png') for m in
+                           get_all_metamers(**wildcards)],
         # we don't want the "cone_full" images, we want the "full"
         # images.
         lambda wildcards: [get_ref_image(i.replace('cone_', '')) for i in IMAGES]

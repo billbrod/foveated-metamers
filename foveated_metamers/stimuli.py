@@ -117,9 +117,14 @@ def collect_images(image_paths, save_path=None):
     """
     images = []
     for i in image_paths:
-        images.append(imageio.imread(i))
+        im = imageio.imread(i)
+        # normalize everything to lie between 0 and 1
+        im = im / np.iinfo(im.dtype).max
+        # then properly convert everything to uint8
+        im = (im * np.iinfo(np.uint8).max).astype(np.uint8)
+        images.append(im)
     # want our images to be indexed along the first dimension
-    images = np.einsum('ijk -> kij', np.dstack(images)).astype(np.uint8)
+    images = np.einsum('ijk -> kij', np.dstack(images))
     if save_path is not None:
         np.save(save_path, images)
     return images
