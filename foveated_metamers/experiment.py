@@ -285,6 +285,7 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
         [w.flip() for w in win]
         core.wait(.1)
         all_keys = event.getKeys(keyList=['space', 'q', 'escape', 'esc'], timeStamped=expt_clock)
+    clear_events(win)
     if save_frames is not None:
         [w.getMovieFrame() for w in win]
 
