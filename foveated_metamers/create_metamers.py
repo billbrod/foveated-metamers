@@ -16,6 +16,7 @@ import os.path as op
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from skimage import color
+from .utils import convert_im_to_float, convert_im_to_int
 # by default matplotlib uses the TK gui toolkit which can cause problems
 # when I'm trying to render an image into a file, see
 # https://stackoverflow.com/questions/27147300/matplotlib-tcl-asyncdelete-async-handler-deleted-by-the-wrong-thread
@@ -61,10 +62,10 @@ def setup_image(image):
         image = imageio.imread(image)
     if image.dtype == np.uint8:
         warnings.warn("Image is int8, with range (0, 255)")
-        image = image / np.iinfo(np.uint8).max
+        image = convert_im_to_float(image)
     elif image.dtype == np.uint16:
         warnings.warn("Image is int16 , with range (0, 65535)")
-        image = image / np.iinfo(np.uint16).max
+        image = convert_im_to_float(image)
     else:
         warnings.warn("Image is float 32, so we assume image range is (0, 1)")
         if image.max() > 1:
@@ -441,10 +442,10 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
     metamer_path = op.splitext(save_path)[0] + "_metamer.png"
     print("Saving metamer image at %s" % metamer_path)
     metamer_image = po.to_numpy(metamer.matched_image).squeeze()
-    imageio.imwrite(metamer_path, metamer_image)
+    imageio.imwrite(metamer_path, convert_im_to_int(metamer_image))
     print("Saving 16-bit metamer image at %s" % metamer_path.replace('.png', '-16.png'))
     imageio.imwrite(metamer_path.replace('.png', '-16.png'),
-                    (metamer_image * np.iinfo(np.uint16).max).astype(np.uint16))
+                    convert_im_to_int(metamer_image, np.uint16))
     video_path = op.splitext(save_path)[0] + "_synthesis.mp4"
     rep_fig, windowed_fig = summary_plots(metamer, rep_image_figsize, img_zoom)
     rep_path = op.splitext(save_path)[0] + "_rep.png"
@@ -505,7 +506,7 @@ def setup_initial_image(initial_image_type, model, image):
     elif op.isfile(initial_image_type):
         warnings.warn("Using image %s as initial image!" % initial_image_type)
         initial_image = imageio.imread(initial_image_type)
-        initial_image = initial_image / np.iinfo(initial_image.dtype).max
+        initial_image = convert_im_to_float(initial_image)
         initial_image = torch.tensor(initial_image, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
     else:
         raise Exception("Don't know how to handle initial_image_type %s! Must be one of {'white',"

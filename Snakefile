@@ -172,18 +172,22 @@ rule degamma_image:
     run:
         import imageio
         import contextlib
+        import foveated_metamers as met
+        from skimage import color
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                im = imageio.imread(input[0], as_gray=True)
+                im = imageio.imread(input[0])
                 # when loaded in, the range of this will be 0 to 255, we
                 # want to convert it to 0 to 1
-                im = im / 255
+                im = met.utils.convert_im_to_float(im)
+                # convert to grayscale
+                im = color.rgb2gray(im)
                 # 1/2.2 is the standard encoding gamma for jpegs, so we
                 # raise this to its reciprocal, 2.2, in order to reverse
                 # it
                 im = im**2.2
                 dtype = eval('np.uint%s' % wildcards.bits)
-                imageio.imwrite(output[0], (im * np.iinfo(dtype).max).astype(dtype))
+                imageio.imwrite(output[0], met.utils.convert_im_to_int(im, dtype))
 
 
 rule demosaic_image:
@@ -215,6 +219,7 @@ rule crop_image:
         import imageio
         import contextlib
         from skimage import color
+        import foveated_metamers as met
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 im = imageio.imread(input[0])
@@ -226,7 +231,7 @@ rule crop_image:
                 crop_amt = curr_shape - target_shape
                 cropped_im = im[crop_amt[0]//2:-crop_amt[0]//2, crop_amt[1]//2:-crop_amt[1]//2]
                 cropped_im = color.rgb2gray(cropped_im)
-                imageio.imwrite(output[0], (cropped_im * np.iinfo(np.uint16).max).astype(np.uint16))
+                imageio.imwrite(output[0], met.utils.convert_im_to_int(cropped_im, np.uint16))
                 # tiffs can't be read in using the as_gray arg, so we
                 # save it as a png, and then read it back in as_gray and
                 # save it back out
@@ -249,6 +254,7 @@ rule preproc_image:
         import imageio
         import contextlib
         import numpy as np
+        import foveated_metamers as met
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 im = imageio.imread(input[0])
@@ -272,8 +278,8 @@ rule preproc_image:
                     im = im ** (1/2.2)
                 # always save it as 16 bit
                 print("Saving as 16 bit")
-                im = im * np.iinfo(np.uint16).max
-                imageio.imwrite(output[0], im.astype(np.uint16))
+                im = met.utils.convert_im_to_int(im, np.uint16)
+                imageio.imwrite(output[0], im)
 
 
 rule pad_image:
@@ -326,12 +332,13 @@ rule preproc_textures:
         import os.path as op
         import os
         from skimage import color
+        import foveated_metamers as met
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 os.makedirs(output[0])
                 for i in glob(op.join(input[0], '*.jpg')):
                     im = imageio.imread(i)
-                    im = im / np.iinfo(im.dtype).max
+                    im = met.utils.convert_im_to_float(im)
                     if im.ndim == 3:
                         # then it's a color image, and we need to make it grayscale
                         im = color.rgb2gray(im)
@@ -343,7 +350,7 @@ rule preproc_textures:
                     if 'cone' in wildcards.preproc:
                         im = im ** (1/3)
                     # save as a 16 bit png
-                    im = (im * np.iinfo(np.uint16).max).astype(np.uint16)
+                    im = convert_im_to_int(im, np.uint16)
                     imageio.imwrite(op.join(output[0], op.split(i)[-1].replace('jpg', 'png')), im)
 
 
@@ -753,6 +760,7 @@ rule postproc_metamers:
         import contextlib
         import numpy as np
         import shutil
+        import foveated_metamers as met
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 for i, f in enumerate(input):
@@ -762,10 +770,10 @@ rule postproc_metamers:
                         im = imageio.imread(f)
                         dtype = im.dtype
                         print("Retaining image dtype %s" % dtype)
-                        im = np.array(im, dtype=np.float32) / np.iinfo(dtype).max
+                        im = met.utils.convert_im_to_float(im)
                         im = im ** 3
-                        im = im * np.iinfo(dtype).max
-                        imageio.imwrite(output[i], im.astype(dtype))
+                        im = met.utils.convert_im_to_int(im, dtype)
+                        imageio.imwrite(output[i], im)
                     else:
                         print("Copy file %s to %s" % (f, output[i]))
                         shutil.copy(f, output[i])
@@ -776,14 +784,14 @@ rule postproc_metamers:
                             im = imageio.imread(f)
                             dtype = im.dtype
                             print("Retaining image dtype %s" % dtype)
-                            im = np.array(im, dtype=np.float32) / np.iinfo(dtype).max
+                            im = met.utils.convert_im_to_float(im)
                             # need to first de-cone the image, then
                             # gamma-correct it
                             if 'cone' in wildcards.image_name:
                                 im = im ** 3
                             im = im ** (1/2.2)
-                            im = im * np.iinfo(dtype).max
-                            imageio.imwrite(output[-1], im.astype(dtype))
+                            im = met.utils.convert_im_to_int(im, dtype)
+                            imageio.imwrite(output[-1], im)
                         else:
                             print("Image already gamma-corrected, copying to %s" % output[-1])
                             shutil.copy(f, output[-1])

@@ -7,7 +7,8 @@ import numpy as np
 import pyrtools as pt
 import pandas as pd
 import os.path as op
-from skimage import util
+from skimage import util, color
+from .utils import convert_im_to_float, convert_im_to_int
 
 
 def create_image(image_type, image_size, save_path=None, period=4):
@@ -79,13 +80,16 @@ def pad_image(image, pad_mode, save_path=None, constant_values=.5, **pad_kwargs)
 
     """
     if isinstance(image, str):
-        image = imageio.imread(image, as_gray=True)
+        image = imageio.imread(image)
     else:
         if image.ndim > 2:
             raise Exception("We need image to be grayscale!")
     if image.max() > 1:
         warnings.warn("Assuming image range is (0, 255)")
-        image /= 255
+        image = convert_im_to_float(image)
+    if image.ndim == 3:
+        # then it's a color image, and we need to make it grayscale
+        image = color.rgb2gray(image)
     if pad_mode == 'constant':
         pad_kwargs['constant_values'] = constant_values
     image = util.pad(image, int(image.shape[0]/2), pad_mode, **pad_kwargs)
@@ -119,9 +123,9 @@ def collect_images(image_paths, save_path=None):
     for i in image_paths:
         im = imageio.imread(i)
         # normalize everything to lie between 0 and 1
-        im = im / np.iinfo(im.dtype).max
+        im = convert_im_to_float(im)
         # then properly convert everything to uint8
-        im = (im * np.iinfo(np.uint8).max).astype(np.uint8)
+        im = convert_im_to_int(im)
         images.append(im)
     # want our images to be indexed along the first dimension
     images = np.einsum('ijk -> kij', np.dstack(images))
