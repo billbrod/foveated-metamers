@@ -157,7 +157,9 @@ def create_metamer_df(image_paths, save_path=None):
     """
     metamer_info = []
     for p in image_paths:
-        csv_path = p.replace('metamer.png', 'summary.csv')
+        # images can end in either metamer.png (8 bit) or metamer-16.png
+        # (16 bit)
+        csv_path = p.replace('metamer.png', 'summary.csv').replace('metamer-16.png', 'summary.csv')
         if csv_path.endswith('csv'):
             # then this was a metamer image and the replace above
             # completed successfully
