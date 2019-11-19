@@ -25,7 +25,7 @@ wildcard_constraints:
     period="[0-9]+",
     size="[0-9,]+",
     bits="[0-9]+",
-    img_preproc="full|cone|cone_full|degamma_cone",
+    img_preproc="full|cone|cone_full|degamma_cone|gamma-corrected|gamma-corrected_full",
     preproc_image_name="azulejos|tiles|market|flower|einstein",
     preproc="|_degamma|_degamma_cone|_cone|degamma|degamma_cone|cone"
 ruleorder:
@@ -267,6 +267,9 @@ rule preproc_image:
                 if 'cone' in wildcards.img_preproc:
                     print("Raising image to the 1/3, to approximate cone response")
                     im = im ** (1/3)
+                if 'gamma-corrected' in wildcards.img_preproc:
+                    print("Raising image to 1/2.2, to gamma correct it")
+                    im = im ** (1/2.2)
                 # always save it as 16 bit
                 print("Saving as 16 bit")
                 im = im * np.iinfo(np.uint16).max
