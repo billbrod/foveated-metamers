@@ -798,8 +798,8 @@ rule dummy_metamer_gen:
 
 def get_metamers_for_example(wildcards):
     metamers = get_all_metamers(model_name=MODELS[0])
-    return [m.replace('metamer.png', 'metamer-16.png') for m in metamers if 'azulejos' in m
-            if 'seed-0' in m]
+    return [m.replace('metamer.png', 'metamer-16.png') for m in metamers if 'market' in m
+            if 'seed-2' not in m]
 
 
 rule collect_metamers_example:
