@@ -808,7 +808,7 @@ rule collect_metamers_example:
     # experiment or for demos
     input:
         get_metamers_for_example,
-        [get_ref_image(IMAGES[0].replace('cone_', ''))],
+        [get_ref_image(IMAGES[2].replace('cone_', ''))],
     output:
         op.join(config["DATA_DIR"], 'stimuli', 'RGC_demo', 'stimuli.npy'),
         op.join(config["DATA_DIR"], 'stimuli', 'RGC_demo', 'stimuli_description.csv'),
