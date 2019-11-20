@@ -98,7 +98,9 @@ def scaling_comparison_figure(image_name, scaling_vals, seed, window_size=400,
     periphery = [im[fovea_bounds[0]-periphery_offset[0]:fovea_bounds[1]-periphery_offset[0],
                     fovea_bounds[2]-periphery_offset[1]:fovea_bounds[3]-periphery_offset[1]]
                  for im in images]
-    pix_to_deg = max_ecc / max(images.shape[1:])
+    # max_ecc is the distance from the center to the edge of the image,
+    # so we want double this to get the full width of the image
+    pix_to_deg = (2 * max_ecc) / max(images.shape[1:])
     window_extent_deg = (window_size//2) * pix_to_deg
     periphery_ctr_deg = np.sqrt(np.sum([(s*pix_to_deg)**2 for s in periphery_offset]))
     fig = pt.imshow(fovea+periphery, vrange=(0, 1), title=None, col_wrap=len(fovea))
