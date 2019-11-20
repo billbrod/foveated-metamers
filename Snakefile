@@ -58,29 +58,29 @@ CONTINUE_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers_continue', '{mode
 REF_IMAGE_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'ref_images', '{image_name}.png')
 SUBJECTS = ['sub-%02d' % i for i in range(1, 31)]
 SESSIONS = [0, 1, 2]
+RGC_SCALING = [.01, .013, .017, .021, .027, .035, .045, .058, .075]
+V1_SCALING = [.075, .095, .12, .15, .19, .25, .31, .39, .5]
+V1_LR_DICT = {.075: 1, .095: 1, .12: 1}
+V1_ITER_DICT = {.075: 8500, .095: 7500, .12: 7500}
+V1_GPU_DICT = {.075: 3, .095: 2, .12: 2}
 
 
 def get_all_metamers(min_idx=0, max_idx=-1, model_name=None):
-    rgc_scaling = [.01, .013, .017, .021, .027, .035, .045, .058, .075]
     rgc_metamers = [OUTPUT_TEMPLATE_PATH.format(model_name=MODELS[0], image_name=i, scaling=sc,
                                                 optimizer='Adam', fract_removed=0, loss_fract=1,
                                                 coarse_to_fine=0, seed=s, init_type='white',
                                                 learning_rate=.1, min_ecc=3.71, max_ecc=41,
                                                 max_iter=750, loss_thresh=1e-8, gpu=0,
                                                 clamp='clamp', clamp_each_iter=True)
-                    for sc in rgc_scaling for i in IMAGES for s in range(3)]
-    v1_scaling = [.075, .095, .12, .15, .19, .25, .31, .39, .5]
-    v1_lr_dict = {.075: 1, .095: 1, .12: 1}
-    v1_iter_dict = {.075: 8500, .095: 7500, .12: 7500}
-    v1_gpu_dict = {.075: 3, .095: 2, .12: 2}
+                    for sc in RGC_SCALING for i in IMAGES for s in range(3)]
     v1_metamers = [OUTPUT_TEMPLATE_PATH.format(model_name=MODELS[1], image_name=i, scaling=sc,
                                                optimizer='Adam', fract_removed=0, loss_fract=1,
                                                coarse_to_fine=1e-2, seed=s, init_type='white',
-                                               learning_rate=v1_lr_dict.get(sc, .1), min_ecc=.5,
-                                               max_ecc=41, max_iter=v1_iter_dict.get(sc, 5000),
-                                               loss_thresh=1e-8, gpu=v1_gpu_dict.get(sc, 1),
+                                               learning_rate=V1_LR_DICT.get(sc, .1), min_ecc=.5,
+                                               max_ecc=41, max_iter=V1_ITER_DICT.get(sc, 5000),
+                                               loss_thresh=1e-8, gpu=V1_GPU_DICT.get(sc, 1),
                                                clamp='clamp', clamp_each_iter=True)
-                    for sc in v1_scaling for i in IMAGES for s in range(3)]
+                    for sc in V1_SCALING for i in IMAGES for s in range(3)]
     if model_name is None:
         all_metamers = rgc_metamers + v1_metamers
     elif model_name == MODELS[0]:
@@ -547,7 +547,7 @@ def get_batches(wildcards):
 def get_ref_image(image_name):
     r"""get ref image
     """
-    if 'full' in image_name or 'cone' in image_name:
+    if 'full' in image_name or 'cone' in image_name or 'gamma-corrected' in image_name:
         template = REF_IMAGE_TEMPLATE_PATH.replace('ref_images', 'ref_images_preproc')
     else:
         template = REF_IMAGE_TEMPLATE_PATH
@@ -894,3 +894,55 @@ rule gen_all_idx:
         [op.join(config["DATA_DIR"], 'stimuli', '{model_name}', '{subject}_idx_sess-'
                  '{num}.npy').format(model_name=m, subject=s, num=n)
          for s in SUBJECTS for n in SESSIONS for m in MODELS],
+
+
+rule scaling_comparison_figure:
+    input:
+        lambda wildcards: [m.replace('metamer.png', 'metamer_gamma-corrected.png') for m in
+                           get_all_metamers(model_name=wildcards.model_name)
+                           if wildcards.image_name in m if 'seed-%s' % wildcards.seed in m],
+        lambda wildcards: get_ref_image(wildcards.image_name.replace('cone_', 'gamma-corrected_'))
+    output:
+        op.join(config['DATA_DIR'], 'figures', '{context}', '{model_name}',
+                '{image_name}_seed-{seed}_scaling.svg')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
+                '{image_name}_seed-{seed}_scaling.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
+                '{image_name}_seed-{seed}_scaling_benchmark.txt')
+    run:
+        import foveated_metamers as met
+        import seaborn as sns
+        import contextlib
+        import re
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                font_scale = {'poster': 1.7}.get(wildcards.context, 1)
+                template_path = input[0].replace(wildcards.image_name, '{image_name}')
+                for key in ['seed', 'scaling']:
+                    template_path = re.sub(f'{key}-[0-9.]+', f'{key}-{{{key}}}', template_path)
+                max_ecc = int(re.findall('em-([0-9]+)', template_path)[0])
+                ref_path = input[-1].replace(wildcards.image_name.replace('cone_', 'gamma-corrected_'),
+                                             '{image_name}')
+                with sns.plotting_context(wildcards.context, font_scale=font_scale):
+                    if wildcards.model_name == MODELS[0]:
+                        fig = met.figures.scaling_comparison_figure(
+                            wildcards.image_name, RGC_SCALING, wildcards.seed, max_ecc=max_ecc,
+                            ref_template_path=ref_path, metamer_template_path=template_path)
+                    elif wildcards.model_name == MODELS[1]:
+                        for key in ['lr', 'iter', 'gpu']:
+                            template_path = re.sub(f'{key}-[0-9.]+', f'{key}-{{{key}}}',
+                                                   template_path)
+                        gpu_dict = V1_GPU_DICT.copy()
+                        lr_dict = V1_LR_DICT.copy()
+                        iter_dict = V1_ITER_DICT.copy()
+                        for sc in V1_SCALING:
+                            gpu_dict.setdefault(sc, 1)
+                            lr_dict.setdefault(sc, .1)
+                            iter_dict.setdefault(sc, 5000)
+                        fig = met.figures.scaling_comparison_figure(
+                            wildcards.image_name, V1_SCALING, wildcards.seed, gpu=gpu_dict,
+                            lr=lr_dict, iter=iter_dict, max_ecc=max_ecc,
+                            ref_template_path=ref_path, metamer_template_path=template_path)
+                    fig.savefig(output[0], bbox_inches='tight')
