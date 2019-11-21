@@ -51,7 +51,7 @@ python packages required to those used for the experiment. That's
 probably not necessary, but is provided as a step to improve
 reproducibility. We provide built Docker images for the same reason: 
 
-## Experiment
+TODO: ADD DOCKER IMAGES
 
 ## Experiment environment
 
@@ -280,7 +280,8 @@ metamers require more memory and time than the RGC ones, but the RGC
 metamers required for the experiment all have much smaller scaling
 values. For the smallest of these, they require too much memory to fit
 on a single GPU, and thus the length it takes increases drastically,
-up to about 8 hours. For the V1 images, the max is about three hours.
+up to about 8 hours. For the V1 images, the max is about three
+hours. -- TODO: UPDATE THESE ESTIMATES
 
 The more GPUs you have available, the better.
 
