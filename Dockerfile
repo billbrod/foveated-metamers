@@ -18,8 +18,7 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -
 RUN bash /src/miniconda.sh -b -p /src/miniconda
 ENV PATH /src/miniconda/bin:$PATH
 
-# set up our conda environment (since we grabbed the miniconda docker
-# image, we already have conda installed)
+# set up our conda environment
 ADD foveated-metamers/environment.yml /tmp/environment.yml
 RUN conda env create -f /tmp/environment.yml
 RUN echo "source activate $conda_env" > ~/.bashrc
