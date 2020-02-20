@@ -350,7 +350,7 @@ rule preproc_textures:
                     if 'cone' in wildcards.preproc:
                         im = im ** (1/3)
                     # save as a 16 bit png
-                    im = convert_im_to_int(im, np.uint16)
+                    im = met.utils.convert_im_to_int(im, np.uint16)
                     imageio.imwrite(op.join(output[0], op.split(i)[-1].replace('jpg', 'png')), im)
 
 
