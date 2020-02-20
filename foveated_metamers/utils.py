@@ -1,6 +1,7 @@
 """various utilities
 """
 import numpy as np
+import warnings
 
 
 def convert_im_to_float(im):
@@ -56,5 +57,10 @@ def convert_im_to_int(im, dtype=np.uint8):
 
     """
     if im.max() > 1:
-        raise Exception("all values of im must lie between 0 and 1, but max is %s" % im.max())
+        if im.max() - 1 < 1e-4:
+            warnings.warn("There was a precision/rounding error somewhere and im.max is "
+                          f"{im.max()}. Setting that to 1 and converting anyway")
+            im = np.clip(im, 0, 1)
+        else:
+            raise Exception("all values of im must lie between 0 and 1, but max is %s" % im.max())
     return (im * np.iinfo(dtype).max).astype(dtype)
