@@ -9,5 +9,13 @@
 	"cpus_per_task": 1,
 	"output": "{log}",
 	"error": "{log}"
+    },
+    "create_metamers":
+    {
+	"gres": "gpu:{resources.gpu}"
+    },
+    "continue_metamers":
+    {
+	"gres": "gpu:{resources.gpu}"
     }
 }
