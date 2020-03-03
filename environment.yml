@@ -19,7 +19,7 @@ dependencies:
   - pip:
       - pytest==5.0.1
       - torchvision==0.3.0
-      - torch==1.1
+      - torch==1.4
       - pyrtools==0.9.3
       - gputil==1.4.0
       # - plenoptic
