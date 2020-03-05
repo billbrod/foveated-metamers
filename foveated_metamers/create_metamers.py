@@ -83,7 +83,8 @@ def setup_image(image):
     return image
 
 
-def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normalize_dict=None):
+def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normalize_dict=None,
+                utilize_symmetry=False):
     r"""setup the model
 
     We initialize the model, with the specified parameters, and return
@@ -155,6 +156,16 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
         None, we don't normalize. This can only be set (and must be set)
         if the model is "V1_norm". In any other case, we'll throw an
         Exception.
+    utilize_symmetry : bool, optional
+        we can take advantage of the fact that there's a simple 4-fold
+        rotational symmetry in polar angle and only generate a quarter
+        of the windows and, at run time, just rotate the windows as
+        necessary (using the ``rotate_image`` function). this means we
+        don't have to hold them all in memory but, since we'll need a
+        for loop, it will be slightly slower than if we were holding all
+        of them in memory. Therefore, you should only use this if you
+        can fit the model on a single GPU using this, but wouldn't be
+        able to without it.
 
     Returns
     -------
@@ -200,7 +211,8 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
         model = po.simul.RetinalGanglionCells(scaling, image.shape[-2:], min_eccentricity=min_ecc,
                                               max_eccentricity=max_ecc, window_type=window_type,
                                               transition_region_width=t_width, cache_dir=cache_dir,
-                                              cone_power=cone_power, std_dev=std_dev)
+                                              cone_power=cone_power, std_dev=std_dev,
+                                              utilize_symmetry=utilize_symmetry)
         animate_figsize = (17, 5)
         rep_image_figsize = (4, 13)
         # default figsize arguments work for an image that is 256x256,
@@ -234,7 +246,8 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
                                              cache_dir=cache_dir, normalize_dict=normalize_dict,
                                              half_octave_pyramid=half_oct, num_scales=num_scales,
                                              cone_power=cone_power, window_type=window_type,
-                                             include_highpass=include_highpass)
+                                             include_highpass=include_highpass,
+                                             utilize_symmetry=utilize_symmetry)
         animate_figsize = (35, 11)
         # we need about 11 per plot (and we have one of those per scale,
         # plus one for the mean luminance)
@@ -570,7 +583,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
          loss_thresh=1e-4, save_path=None, initial_image_type='white', use_cuda=False,
          cache_dir=None, normalize_dict=None, num_gpus=0, optimizer='SGD', fraction_removed=0,
          loss_change_fraction=1, coarse_to_fine=0, num_batches=1, clamper_name='clamp',
-         clamp_each_iter=True, continue_path=None):
+         clamp_each_iter=True, continue_path=None, utilize_symmetry=False):
     r"""create metamers!
 
     Given a model_name, model parameters, a target image, and some
@@ -726,6 +739,16 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         where we left off) and set max_iter to a different value (the
         number of extra iterations to run) otherwise the rest of the
         arguments should be the same as the first run.
+    utilize_symmetry : bool, optional
+        we can take advantage of the fact that there's a simple 4-fold
+        rotational symmetry in polar angle and only generate a quarter
+        of the windows and, at run time, just rotate the windows as
+        necessary (using the ``rotate_image`` function). this means we
+        don't have to hold them all in memory but, since we'll need a
+        for loop, it will be slightly slower than if we were holding all
+        of them in memory. Therefore, you should only use this if you
+        can fit the model on a single GPU using this, but wouldn't be
+        able to without it.
 
     """
     print("Using seed %s" % seed)
@@ -738,7 +761,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         normalize_dict = torch.load(normalize_dict)
     model, animate_figsize, rep_figsize, img_zoom = setup_model(model_name, scaling, image,
                                                                 min_ecc, max_ecc, cache_dir,
-                                                                normalize_dict)
+                                                                normalize_dict, utilize_symmetry)
     print("Using model %s from %.02f degrees to %.02f degrees" % (model_name, min_ecc, max_ecc))
     print("Using learning rate %s, loss_thresh %s, and max_iter %s" % (learning_rate, loss_thresh,
                                                                        max_iter))
