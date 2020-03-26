@@ -186,6 +186,9 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
     except IndexError:
         # default is 1, linear response
         cone_power = 1
+    surround_std_dev = None
+    center_surround_ratio = None
+    transition_x = None
     if 'gaussian' in model_name:
         window_type = 'gaussian'
         t_width = None
@@ -194,15 +197,33 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
         window_type = 'cosine'
         t_width = 1
         std_dev = None
+    elif 'dog' in model_name:
+        # then model_name will also include the center_surround_ratio
+        # and surround_std_dev
+        window_type = 'dog'
+        surround_std_dev = float([n for n in model_name.split('_') if n.startswith('s-')][0].split('-')[-1])
+        center_surround_ratio = float([n for n in model_name.split('_') if n.startswith('r-')][0].split('-')[-1])
+        t_width = None
+        std_dev = 1
+        transition_x = min_ecc
+        min_ecc = None
     if model_name.startswith('RGC'):
         if normalize_dict:
             raise Exception("Cannot normalize RGC model!")
         model = po.simul.RetinalGanglionCells(scaling, image.shape[-2:], min_eccentricity=min_ecc,
                                               max_eccentricity=max_ecc, window_type=window_type,
                                               transition_region_width=t_width, cache_dir=cache_dir,
-                                              cone_power=cone_power, std_dev=std_dev)
+                                              cone_power=cone_power, std_dev=std_dev,
+                                              surround_std_dev=surround_std_dev,
+                                              center_surround_ratio=center_surround_ratio,
+                                              transition_x=transition_x)
         animate_figsize = (17, 5)
-        rep_image_figsize = (4, 13)
+        if model.window_type == 'dog':
+            # then our rep_image will include 3 plots, instead of 1, so
+            # we want it to be wider
+            rep_image_figsize = (13, 13)
+        else:
+            rep_image_figsize = [4, 13]
         # default figsize arguments work for an image that is 256x256,
         # may need to expand. we go backwards through figsize because
         # figsize and image shape are backwards of each other:
@@ -312,8 +333,15 @@ def add_center_to_image(model, image, reference_image):
         rep = model.representation['mean_luminance']
     except IndexError:
         rep = model.representation
-    dummy_ones = torch.ones_like(rep)
-    windows = model.PoolingWindows.project(dummy_ones).squeeze().to(image.device)
+    try:
+        dummy_ones = torch.ones_like(rep)
+        windows = model.PoolingWindows.project(dummy_ones).squeeze().to(image.device)
+    except NotImplementedError:
+        # then this model has DoG windows and we need to use project_dog
+        # instead. note that dummy_ones is like the image, not the
+        # representation, here
+        dummy_ones = torch.ones_like(image)
+        windows = model.PoolingWindows.project_dog(dummy_ones).squeeze().to(image.device)
     # for some reason ~ (invert) is not implemented for booleans in
     # pytorch yet, so we do this instead.
     return ((windows * image) + ((1 - windows) * reference_image))
@@ -353,8 +381,6 @@ def summary_plots(metamer, rep_image_figsize, img_zoom):
 
     """
     rep_fig, axes = plt.subplots(3, 1, figsize=rep_image_figsize)
-    images = [metamer.model(metamer.target_image), metamer.model(metamer.matched_image),
-              metamer.representation_error()]
     titles = ['Reference image |', 'Metamer |', 'Error |']
     if metamer.model.state_dict_reduced['model_name'] == 'V1' and metamer.model.normalize_dict:
         # then this is the V1_norm model and so we want to use symmetric
@@ -362,13 +388,25 @@ def summary_plots(metamer, rep_image_figsize, img_zoom):
         vranges = ['indep0', 'indep0', 'indep0']
     else:
         vranges = ['indep1', 'indep1', 'indep0']
+    if metamer.model.window_type == 'dog':
+        # For DoG windows, need to pass not the model called on the image,
+        # but the image itself. for representation error, difference of the
+        # target and matched image will do
+        images = [metamer.target_image, metamer.matched_image,
+                  metamer.target_image - metamer.matched_image]
+    else:
+        images = [metamer.model(metamer.target_image), metamer.model(metamer.matched_image),
+                  metamer.representation_error()]
     for i, (im, t, vr) in enumerate(zip(images, titles, vranges)):
         metamer.model.plot_representation_image(ax=axes[i], data=im, title=t, vrange=vr,
                                                 zoom=img_zoom)
     images = [metamer.saved_image[0], metamer.matched_image, metamer.target_image]
     images = 2*[po.to_numpy(i.to(torch.float32)).squeeze() for i in images]
     titles = ['Initial image', 'Metamer', 'Reference image']
-    titles += ['Windowed '+t for t in titles]
+    if metamer.model.window_type == 'dog':
+        titles += ['Windowed (center) '+t for t in titles]
+    else:
+        titles += ['Windowed '+t for t in titles]
     windowed_fig = pt.imshow(images, col_wrap=3, title=titles, vrange=(0, 1), zoom=img_zoom)
     for ax in windowed_fig.axes[3:]:
         metamer.model.plot_windows(ax)

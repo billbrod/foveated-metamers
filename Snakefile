@@ -33,7 +33,7 @@ ruleorder:
 
 
 LINEAR_IMAGES = ['azulejos', 'tiles', 'market', 'flower']
-MODELS = ['RGC_cone-1.0_gaussian', 'V1_cone-1.0_norm_s6_gaussian']
+MODELS = ['RGC_cone-1.0_dog_s-3.0_r-0.53', 'V1_cone-1.0_norm_s6_gaussian']
 IMAGES = ['azulejos_cone_full_size-2048,3528', 'tiles_cone_full_size-2048,3528',
           'market_cone_full_size-2048,3528', 'flower_cone_full_size-2048,3528']
 METAMER_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers', '{model_name}', '{image_name}',
@@ -69,7 +69,7 @@ def get_all_metamers(min_idx=0, max_idx=-1, model_name=None):
     rgc_metamers = [OUTPUT_TEMPLATE_PATH.format(model_name=MODELS[0], image_name=i, scaling=sc,
                                                 optimizer='Adam', fract_removed=0, loss_fract=1,
                                                 coarse_to_fine=0, seed=s, init_type='white',
-                                                learning_rate=.1, min_ecc=3.71, max_ecc=41,
+                                                learning_rate=.1, min_ecc=1.0, max_ecc=41,
                                                 max_iter=750, loss_thresh=1e-8, gpu=0,
                                                 clamp='clamp', clamp_each_iter=True)
                     for sc in RGC_SCALING for i in IMAGES for s in range(3)]
@@ -443,16 +443,33 @@ rule cache_windows:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 img_size = [int(i) for i in wildcards.size.split(',')]
+                kwargs = {}
                 if wildcards.window_type == 'cosine':
                     t_width = float(wildcards.t_width)
                     std_dev = None
+                    min_ecc = float(wildcards.min_ecc)
                 elif wildcards.window_type == 'gaussian':
                     std_dev = float(wildcards.t_width)
                     t_width = None
-                po.simul.PoolingWindows(float(wildcards.scaling), img_size, float(wildcards.min_ecc),
+                    min_ecc = float(wildcards.min_ecc)
+                elif wildcards.window_type == 'dog':
+                    # in this case, the t_width wildcard will be a bit
+                    # more complicated, and we need to parse it more
+                    t_width = wildcards.t_width.split('_')
+                    std_dev = float(t_width[0])
+                    if not t_width[1].startswith('s-'):
+                        raise Exception("DoG windows require surround_std_dev!")
+                    kwargs['surround_std_dev'] = float(t_width[1].split('-')[-1])
+                    if not t_width[2].startswith('r-'):
+                        raise Exception("DoG windows require center_surround_ratio!")
+                    kwargs['center_surround_ratio'] = float(t_width[2].split('-')[-1])
+                    t_width = None
+                    min_ecc = None
+                    kwargs['transition_x'] = float(wildcards.min_ecc)
+                po.simul.PoolingWindows(float(wildcards.scaling), img_size, min_ecc,
                                         float(wildcards.max_ecc), cache_dir=op.dirname(output[0]),
                                         transition_region_width=t_width, std_dev=std_dev,
-                                        window_type=wildcards.window_type)
+                                        window_type=wildcards.window_type, **kwargs)
 
 
 def get_norm_dict(wildcards):
@@ -502,6 +519,13 @@ def get_windows(wildcards):
     elif 'gaussian' in wildcards.model_name:
         window_type = 'gaussian'
         t_width = 1.0
+    elif 'dog' in wildcards.model_name:
+        # then model_name will also include the center_surround_ratio
+        # and surround_std_dev
+        window_type = 'dog'
+        surround_std_dev = [n for n in wildcards.model_name.split('_') if n.startswith('s-')][0]
+        center_surround_ratio = [n for n in wildcards.model_name.split('_') if n.startswith('r-')][0]
+        t_width = f'1.0_{surround_std_dev}_{center_surround_ratio}'
     if wildcards.model_name.startswith("RGC"):
         size = ','.join([str(i) for i in im_shape])
         return window_template.format(scaling=wildcards.scaling, size=size,
