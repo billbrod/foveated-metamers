@@ -34,8 +34,8 @@ ruleorder:
 
 LINEAR_IMAGES = ['azulejos', 'tiles', 'market', 'flower']
 MODELS = ['RGC_cone-1.0_dog_s-3.0_r-0.53', 'V1_cone-1.0_norm_s6_gaussian']
-IMAGES = ['azulejos_cone_full_size-2048,3528', 'tiles_cone_full_size-2048,3528',
-          'market_cone_full_size-2048,3528', 'flower_cone_full_size-2048,3528']
+IMAGES = ['azulejos_cone_full_size-2048,2600', 'tiles_cone_full_size-2048,2600',
+          'market_cone_full_size-2048,2600', 'flower_cone_full_size-2048,2600']
 METAMER_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers', '{model_name}', '{image_name}',
                                 'scaling-{scaling}', 'opt-{optimizer}', 'fr-{fract_removed}_lc-'
                                 '{loss_fract}_cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}',
@@ -59,26 +59,22 @@ REF_IMAGE_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'ref_images', '{image_name
 SUBJECTS = ['sub-%02d' % i for i in range(1, 31)]
 SESSIONS = [0, 1, 2]
 RGC_SCALING = [.01, .013, .017, .021, .027, .035, .045, .058, .075]
-V1_SCALING = [.075, .095, .12, .15, .19, .25, .31, .39, .5]
-V1_LR_DICT = {.075: 1, .095: 1, .12: 1}
-V1_ITER_DICT = {.075: 8500, .095: 7500, .12: 7500}
-V1_GPU_DICT = {.075: 3, .095: 2, .12: 2}
+V1_SCALING = [.095, .12, .14, .18, .22, .27, .33, .4, .5]
 
 
 def get_all_metamers(min_idx=0, max_idx=-1, model_name=None):
     rgc_metamers = [OUTPUT_TEMPLATE_PATH.format(model_name=MODELS[0], image_name=i, scaling=sc,
                                                 optimizer='Adam', fract_removed=0, loss_fract=1,
                                                 coarse_to_fine=0, seed=s, init_type='white',
-                                                learning_rate=.1, min_ecc=1.0, max_ecc=41,
+                                                learning_rate=.1, min_ecc=1.0, max_ecc=30.2,
                                                 max_iter=750, loss_thresh=1e-8, gpu=0,
                                                 clamp='clamp', clamp_each_iter=True)
                     for sc in RGC_SCALING for i in IMAGES for s in range(3)]
     v1_metamers = [OUTPUT_TEMPLATE_PATH.format(model_name=MODELS[1], image_name=i, scaling=sc,
                                                optimizer='Adam', fract_removed=0, loss_fract=1,
-                                               coarse_to_fine=1e-2, seed=s, init_type='white',
-                                               learning_rate=V1_LR_DICT.get(sc, .1), min_ecc=.5,
-                                               max_ecc=41, max_iter=V1_ITER_DICT.get(sc, 5000),
-                                               loss_thresh=1e-8, gpu=V1_GPU_DICT.get(sc, 1),
+                                               coarse_to_fine=1e-2, seed=s, inixt_type='white',
+                                               learning_rate=.1, min_ecc=.5, max_ecc=30.2,
+                                               max_iter=5000, loss_thresh=1e-8, gpu=1,
                                                clamp='clamp', clamp_each_iter=True)
                     for sc in V1_SCALING for i in IMAGES for s in range(3)]
     if model_name is None:
@@ -581,22 +577,17 @@ def get_ref_image(image_name):
 def get_mem_estimate(wildcards):
     r"""estimate the amount of memory that this will need, in GB
     """
-    if 'size-2048,3528' in wildcards.image_name:
+    if 'size-2048,2600' in wildcards.image_name:
         if 'gaussian' in wildcards.model_name:
             if 'V1' in wildcards.model_name:
-                if float(wildcards.scaling) >= .31:
-                    return 16
-                elif float(wildcards.scaling) >= .15:
-                    return 32
-                elif float(wildcards.scaling) >= .095:
-                    return 64
-                else:
-                    return 96
+                return 16
             if 'RGC' in wildcards.model_name:
                 # this is an approximation of the size of their windows,
                 # and if you have at least 3 times this memory, you're
-                # good
-                window_size = 1.17430726 / float(wildcards.scaling)
+                # good. double-check this value -- the 1.36 is for
+                # converting form 2048,3528 (which the numbers came
+                # from) to 2048,2600 (which has 1.36x fewer pixels)
+                window_size = 1.17430726 / (1.36*float(wildcards.scaling))
                 return int(3 * window_size)
         if 'cosine' in wildcards.model_name:
             if 'V1' in wildcards.model_name:
@@ -950,23 +941,7 @@ rule scaling_comparison_figure:
                 ref_path = input[-1].replace(wildcards.image_name.replace('cone_', 'gamma-corrected_'),
                                              '{image_name}')
                 with sns.plotting_context(wildcards.context, font_scale=font_scale):
-                    if wildcards.model_name == MODELS[0]:
-                        fig = met.figures.scaling_comparison_figure(
-                            wildcards.image_name, RGC_SCALING, wildcards.seed, max_ecc=max_ecc,
-                            ref_template_path=ref_path, metamer_template_path=template_path)
-                    elif wildcards.model_name == MODELS[1]:
-                        for key in ['lr', 'iter', 'gpu']:
-                            template_path = re.sub(f'{key}-[0-9.]+', f'{key}-{{{key}}}',
-                                                   template_path)
-                        gpu_dict = V1_GPU_DICT.copy()
-                        lr_dict = V1_LR_DICT.copy()
-                        iter_dict = V1_ITER_DICT.copy()
-                        for sc in V1_SCALING:
-                            gpu_dict.setdefault(sc, 1)
-                            lr_dict.setdefault(sc, .1)
-                            iter_dict.setdefault(sc, 5000)
-                        fig = met.figures.scaling_comparison_figure(
-                            wildcards.image_name, V1_SCALING, wildcards.seed, gpu=gpu_dict,
-                            lr=lr_dict, iter=iter_dict, max_ecc=max_ecc,
-                            ref_template_path=ref_path, metamer_template_path=template_path)
+                    fig = met.figures.scaling_comparison_figure(
+                        wildcards.image_name, RGC_SCALING, wildcards.seed, max_ecc=max_ecc,
+                        ref_template_path=ref_path, metamer_template_path=template_path)
                     fig.savefig(output[0], bbox_inches='tight')
