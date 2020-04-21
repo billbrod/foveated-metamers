@@ -616,7 +616,7 @@ rule create_metamers:
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'rep.png'),
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'windowed.png'),
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'metamer-16.png'),
-        METAMER_TEMPLATE_PATH,
+        report(METAMER_TEMPLATE_PATH),
     log:
         op.join(config["DATA_DIR"], 'logs', 'metamers', '{model_name}', '{image_name}',
                 'scaling-{scaling}', 'opt-{optimizer}', 'fr-{fract_removed}_lc-{loss_fract}_'
@@ -692,7 +692,7 @@ rule continue_metamers:
         CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'rep.png'),
         CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'windowed.png'),
         CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'metamer-16.png'),
-        CONTINUE_TEMPLATE_PATH,
+        report(CONTINUE_TEMPLATE_PATH),
     log:
         op.join(config["DATA_DIR"], 'logs', 'metamers_continue', '{model_name}', '{image_name}',
                 'scaling-{scaling}', 'opt-{optimizer}', 'fr-{fract_removed}_lc-{loss_fract}_'
@@ -757,7 +757,7 @@ rule postproc_metamers:
         OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'windowed.png'),
         OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'metamer-16.png'),
         OUTPUT_TEMPLATE_PATH,
-        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'metamer_gamma-corrected.png'),
+        report(OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'metamer_gamma-corrected.png')),
     log:
         op.join(config["DATA_DIR"], 'logs', 'postproc_metamers', '{model_name}',
                 '{image_name}', 'scaling-{scaling}', 'opt-{optimizer}',
