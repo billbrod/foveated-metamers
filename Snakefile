@@ -837,7 +837,7 @@ rule collect_metamers_example:
         [get_ref_image(IMAGES[2].replace('cone_', ''))],
     output:
         op.join(config["DATA_DIR"], 'stimuli', 'RGC_demo', 'stimuli.npy'),
-        op.join(config["DATA_DIR"], 'stimuli', 'RGC_demo', 'stimuli_description.csv'),
+        report(op.join(config["DATA_DIR"], 'stimuli', 'RGC_demo', 'stimuli_description.csv')),
     log:
         op.join(config["DATA_DIR"], 'logs', 'stimuli', 'RGC_demo', 'stimuli.log'),
     benchmark:
@@ -862,7 +862,7 @@ rule collect_metamers:
         # we collect across image_name and scaling, and don't care about
         # learning_rate, max_iter, loss_thresh
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli.npy'),
-        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description.csv'),
+        report(op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description.csv')),
     log:
         op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'stimuli.log'),
     benchmark:
@@ -880,7 +880,7 @@ rule generate_experiment_idx:
     input:
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description.csv'),
     output:
-        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', '{subject}_idx_sess-{num}.npy'),
+        report(op.join(config["DATA_DIR"], 'stimuli', '{model_name}', '{subject}_idx_sess-{num}.npy')),
     log:
         op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', '{subject}_idx_sess-{num}'
                 '.log'),
@@ -918,8 +918,8 @@ rule scaling_comparison_figure:
                            if wildcards.image_name in m if 'seed-%s' % wildcards.seed in m],
         lambda wildcards: get_ref_image(wildcards.image_name.replace('cone_', 'gamma-corrected_'))
     output:
-        op.join(config['DATA_DIR'], 'figures', '{context}', '{model_name}',
-                '{image_name}_seed-{seed}_scaling.svg')
+        report(op.join(config['DATA_DIR'], 'figures', '{context}', '{model_name}',
+                       '{image_name}_seed-{seed}_scaling.svg'))
     log:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
                 '{image_name}_seed-{seed}_scaling.log')
