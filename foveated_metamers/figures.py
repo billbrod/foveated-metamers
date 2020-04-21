@@ -9,18 +9,18 @@ from .utils import convert_im_to_float
 V1_TEMPLATE_PATH = op.join('/home/billbrod/Desktop/metamers', 'metamers_display', 'V1_cone-1.0_'
                            'norm_s6_gaussian', '{image_name}', 'scaling-{scaling}', 'opt-Adam',
                            'fr-0_lc-1_cf-0.01_clamp-True', 'seed-{seed}_init-white_lr-{learning_'
-                           'rate}_e0-0.5_em-41_iter-{max_iter}_thresh-1e-08_gpu-{gpu}_metamer_'
+                           'rate}_e0-0.5_em-30.2_iter-{max_iter}_thresh-1e-08_gpu-{gpu}_metamer_'
                            'gamma-corrected.png')
 RGC_TEMPLATE_PATH = op.join('/home/billbrod/Desktop/metamers', 'metamers_display', 'RGC_cone-1.0_'
                             'gaussian', '{image_name}', 'scaling-{scaling}', 'opt-Adam', 'fr-0_lc-'
-                            '1_cf-0_clamp-True', 'seed-{seed}_init-white_lr-0.1_e0-3.71_em-41_iter'
-                            '-750_thresh-1e-08_gpu-0_metamer_gamma-corrected.png')
+                            '1_cf-0_clamp-True', 'seed-{seed}_init-white_lr-0.1_e0-3.71_em-30.2_'
+                            'iter-750_thresh-1e-08_gpu-0_metamer_gamma-corrected.png')
 REFERENCE_PATH = op.join('/home/billbrod/Desktop/metamers', 'ref_images_preproc',
                          '{image_name}.png')
 
 
 def scaling_comparison_figure(image_name, scaling_vals, seed, window_size=400,
-                              periphery_offset=(-800, -1000), max_ecc=41,
+                              periphery_offset=(-800, -1000), max_ecc=30.2,
                               ref_template_path=REFERENCE_PATH,
                               metamer_template_path=V1_TEMPLATE_PATH, **template_kwargs):
     r"""Create a figure showing cut-out views of all scaling values
@@ -50,15 +50,15 @@ def scaling_comparison_figure(image_name, scaling_vals, seed, window_size=400,
         cut-out to be. The order of this is the same as that returned by
         image.shape. Can be positive or negative depending on which
         direction you want to go
-    max_ecc : float
+    max_ecc : float, optional
         The maximum eccentricity of the metamers, as passed to the
         model. Used to convert from pixels to degrees so we know the
         extent and location of the cut-out views in degrees.
-    ref_template_path : str
+    ref_template_path : str, optional
         Template path to the reference image, should contain
         '{image_name}'. See figures.REFERENCE_PATH global variable for
         an example (and recommended version)
-    metamer_template_path : str
+    metamer_template_path : str, optional
         Template path to gamma-corrected metamers, should contain
         '{image_name}', '{scaling}', '{seed}'. It can contain more
         format strs, in which case you should pass dictionaries as

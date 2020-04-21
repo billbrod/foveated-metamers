@@ -941,7 +941,8 @@ rule scaling_comparison_figure:
                 ref_path = input[-1].replace(wildcards.image_name.replace('cone_', 'gamma-corrected_'),
                                              '{image_name}')
                 with sns.plotting_context(wildcards.context, font_scale=font_scale):
+                    scaling = {MODELS[0]: RGC_SCALING, MODELS[1]: V1_SCALING}[wildcards.model_name]
                     fig = met.figures.scaling_comparison_figure(
-                        wildcards.image_name, RGC_SCALING, wildcards.seed, max_ecc=max_ecc,
+                        wildcards.image_name, scaling, wildcards.seed, max_ecc=max_ecc,
                         ref_template_path=ref_path, metamer_template_path=template_path)
                     fig.savefig(output[0], bbox_inches='tight')
