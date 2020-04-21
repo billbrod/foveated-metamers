@@ -72,7 +72,7 @@ def get_all_metamers(min_idx=0, max_idx=-1, model_name=None):
                     for sc in RGC_SCALING for i in IMAGES for s in range(3)]
     v1_metamers = [OUTPUT_TEMPLATE_PATH.format(model_name=MODELS[1], image_name=i, scaling=sc,
                                                optimizer='Adam', fract_removed=0, loss_fract=1,
-                                               coarse_to_fine=1e-2, seed=s, inixt_type='white',
+                                               coarse_to_fine=1e-2, seed=s, init_type='white',
                                                learning_rate=.1, min_ecc=.5, max_ecc=30.2,
                                                max_iter=5000, loss_thresh=1e-8, gpu=1,
                                                clamp='clamp', clamp_each_iter=True)
