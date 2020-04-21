@@ -99,7 +99,7 @@ rule test_setup:
                                      image_name='einstein_degamma_cone_size-256,256',
                                      scaling=.1, optimizer='Adam', fract_removed=0, loss_fract=1,
                                      coarse_to_fine=0, seed=0, init_type='white',
-                                     learning_rate=1, min_ecc=2, max_ecc=15,
+                                     learning_rate=1, min_ecc=1, max_ecc=15,
                                      max_iter=100, loss_thresh=1e-8, gpu=0,
                                      clamp='clamp', clamp_each_iter=True),
         METAMER_TEMPLATE_PATH.format(model_name=MODELS[1],
@@ -113,7 +113,7 @@ rule test_setup:
                                      image_name='einstein_degamma_cone_size-256,256',
                                      scaling=.1, optimizer='Adam', fract_removed=0, loss_fract=1,
                                      coarse_to_fine=0, seed=0, init_type='white',
-                                     learning_rate=1, min_ecc=2, max_ecc=15,
+                                     learning_rate=1, min_ecc=1, max_ecc=15,
                                      max_iter=100, loss_thresh=1e-8, gpu=1,
                                      clamp='clamp', clamp_each_iter=True),
         METAMER_TEMPLATE_PATH.format(model_name=MODELS[1],
@@ -136,10 +136,10 @@ rule test_setup:
         import os.path as op
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                print("Moving outputs from %s to %s" % (op.dirname(input[0]), output[0]))
-                shutil.move(op.dirname(input[0]), output[0])
-                print("Moving outputs from %s to %s" % (op.dirname(input[1]), output[1]))
-                shutil.move(op.dirname(input[1]), output[1])
+                print("Copying outputs from %s to %s" % (op.dirname(input[0]), output[0]))
+                shutil.copytree(op.dirname(input[0]), output[0])
+                print("Copying outputs from %s to %s" % (op.dirname(input[1]), output[1]))
+                shutil.copytree(op.dirname(input[1]), output[1])
 
 
 rule all_refs:
