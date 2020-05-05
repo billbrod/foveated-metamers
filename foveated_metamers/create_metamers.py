@@ -336,15 +336,17 @@ def add_center_to_image(model, image, reference_image):
     try:
         dummy_ones = torch.ones_like(rep)
         windows = model.PoolingWindows.project(dummy_ones).squeeze().to(image.device)
+        # these aren't exactly zero, so we can't convert it to boolean
+        anti_windows = 1 - windows
     except NotImplementedError:
         # then this model has DoG windows and we need to use project_dog
         # instead. note that dummy_ones is like the image, not the
         # representation, here
         dummy_ones = torch.ones_like(image)
-        windows = model.PoolingWindows.project_dog(dummy_ones).squeeze().to(image.device)
-    # for some reason ~ (invert) is not implemented for booleans in
-    # pytorch yet, so we do this instead.
-    return ((windows * image) + ((1 - windows) * reference_image))
+        windows = model.PoolingWindows.project_dog(dummy_ones, ones_flag=True).squeeze()
+        windows = windows.to(bool).to(image.device)
+        anti_windows = ~windows
+    return ((windows * image) + (anti_windows * reference_image))
 
 
 def summary_plots(metamer, rep_image_figsize, img_zoom):
