@@ -339,11 +339,11 @@ def add_center_to_image(model, image, reference_image):
         # these aren't exactly zero, so we can't convert it to boolean
         anti_windows = 1 - windows
     except NotImplementedError:
-        # then this model has DoG windows and we need to use project_dog
-        # instead. note that dummy_ones is like the image, not the
-        # representation, here
-        dummy_ones = torch.ones_like(image)
-        windows = model.PoolingWindows.project_dog(dummy_ones, ones_flag=True).squeeze()
+        # then this model has DoG windows. the portion that the DoG
+        # windows don't cover is the same as the portion the center
+        # windows don't cover (if we do this boolean conversion)
+        dummy_ones = torch.ones_like(model.PoolingWindows.forward(image, windows_key='center'))
+        windows = model.PoolingWindows.project(dummy_ones, windows_key='center').squeeze()
         windows = windows.to(bool).to(image.device)
         anti_windows = ~windows
     return ((windows * image) + (anti_windows * reference_image))
