@@ -499,7 +499,7 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
     print("Saving synthesis video at %s" % video_path)
     anim = metamer.animate(figsize=animate_figsize, imshow_zoom=img_zoom)
     anim.save(video_path)
-    angle_n = np.linspace(0, metamer.model.n_polar_windows, 8, dtype=int)
+    angle_n = np.linspace(0, metamer.model.n_polar_windows, 8, dtype=int, endpoint=False)
     fig = metamer.model.PoolingWindows.plot_window_checks(angle_n)
     window_check_path = op.splitext(save_path)[0] + "_window_check.svg"
     print(f"Saving window_check image at {window_check_path}")
