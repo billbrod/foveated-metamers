@@ -448,6 +448,8 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
     - The video showing synthesis progress at
       ``os.path.splitext(save_path)[0] + "_synthesis.mp4"``. We use this
       to visualize the optimization progress.
+    - The window normalization check plot for some angle slices at
+      ``os.path.splitext(save_path)[0] + "_window_check.svg"``
 
     Parameters
     ----------
@@ -497,6 +499,11 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
     print("Saving synthesis video at %s" % video_path)
     anim = metamer.animate(figsize=animate_figsize, imshow_zoom=img_zoom)
     anim.save(video_path)
+    angle_n = np.linspace(0, metamer.model.n_polar_windows, 8, dtype=int)
+    fig = metamer.model.PoolingWindows.plot_window_checks(angle_n)
+    window_check_path = op.splitext(save_path)[0] + "_window_check.svg"
+    print(f"Saving window_check image at {window_check_path}")
+    fig.savefig(window_check_path)
 
 
 def setup_initial_image(initial_image_type, model, image):
