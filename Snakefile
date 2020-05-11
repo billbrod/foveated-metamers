@@ -25,7 +25,7 @@ wildcard_constraints:
     period="[0-9]+",
     size="[0-9,]+",
     bits="[0-9]+",
-    img_preproc="full|cone|cone_full|degamma_cone|gamma-corrected|gamma-corrected_full",
+    img_preproc="full|cone|cone_full|degamma_cone|gamma-corrected|gamma-corrected_full|range-[,.0-9]+",
     preproc_image_name="azulejos|tiles|market|flower|einstein",
     preproc="|_degamma|_degamma_cone|_cone|degamma|degamma_cone|cone"
 ruleorder:
@@ -263,6 +263,19 @@ rule preproc_image:
                     im = im - im.min()
                     # set the maximum value to 1
                     im = im / im.max()
+                elif 'range' in wildcards.img_preproc:
+                    a, b = re.findall('range-([.0-9]+),([.0-9]+)', wildcards.img_preproc)[0]
+                    a, b = float(a), float(b)
+                    print(f"Setting range to {a:02f}, {b:02f}")
+                    if a > b:
+                        raise Exception("For consistency, with range-a,b preprocessing, b must be"
+                                        " greater than a, but got {a} > {b}!")
+                    # set the minimum value to 0
+                    im = im - im.min()
+                    # set the maximum value to 1
+                    im = im / im.max()
+                    # and then rescale
+                    im = im * (b - a) + a
                 else:
                     print("Image will *not* use full dynamic range")
                     im = im / np.iinfo(dtype).max
