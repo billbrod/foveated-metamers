@@ -580,7 +580,7 @@ def get_batches(wildcards):
 def get_ref_image(image_name):
     r"""get ref image
     """
-    if 'full' in image_name or 'cone' in image_name or 'gamma-corrected' in image_name:
+    if 'full' in image_name or 'cone' in image_name or 'gamma-corrected' in image_name or 'range' in image_name:
         template = REF_IMAGE_TEMPLATE_PATH.replace('ref_images', 'ref_images_preproc')
     else:
         template = REF_IMAGE_TEMPLATE_PATH
