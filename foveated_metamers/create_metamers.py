@@ -812,6 +812,8 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         clamper = po.FourMomentsClamper(image)
     elif clamper_name == 'remap':
         clamper = po.RangeRemapper((0, 1))
+    else:
+        clamper = None
     if continue_path is None:
         metamer = po.synth.Metamer(image, model)
     else:
