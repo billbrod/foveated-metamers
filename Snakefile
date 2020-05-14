@@ -630,6 +630,7 @@ rule create_metamers:
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'rep.png'),
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'windowed.png'),
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'metamer-16.png'),
+        METAMER_TEMPLATE_PATH.replace('.png', '.npy'),
         report(METAMER_TEMPLATE_PATH),
     log:
         op.join(config["DATA_DIR"], 'logs', 'metamers', '{model_name}', '{image_name}',
@@ -707,6 +708,7 @@ rule continue_metamers:
         CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'rep.png'),
         CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'windowed.png'),
         CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'metamer-16.png'),
+        CONTINUE_TEMPLATE_PATH.replace('.png', '.npy'),
         report(CONTINUE_TEMPLATE_PATH),
     log:
         op.join(config["DATA_DIR"], 'logs', 'metamers_continue', '{model_name}', '{image_name}',
@@ -766,6 +768,7 @@ rule postproc_metamers:
         lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'windowed.png'),
         lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'metamer-16.png'),
         lambda wildcards: find_attempts(wildcards),
+        float32_array = lambda wildcards: find_attempts(wildcards).replace('.png', '.npy'),
     output:
         OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'summary.csv'),
         OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'synthesis.mp4'),
@@ -774,6 +777,7 @@ rule postproc_metamers:
         OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'windowed.png'),
         OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'metamer-16.png'),
         OUTPUT_TEMPLATE_PATH,
+        OUTPUT_TEMPLATE_PATH.replace('.png', '.npy'),
         report(OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'metamer_gamma-corrected.png')),
     log:
         op.join(config["DATA_DIR"], 'logs', 'postproc_metamers', '{model_name}',
@@ -795,38 +799,36 @@ rule postproc_metamers:
         import foveated_metamers as met
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                for i, f in enumerate(input):
+                for i, f in enumerate(output):
                     if ('cone' in wildcards.image_name and
                         (f.endswith('metamer.png') or f.endswith('metamer-16.png'))):
-                        print("De-conifying image %s, saving at %s" % (f, output[i]))
-                        im = imageio.imread(f)
-                        dtype = im.dtype
-                        print("Retaining image dtype %s" % dtype)
-                        im = met.utils.convert_im_to_float(im)
+                        print("De-conifying image %s, saving at %s" % (input.float32_array, f))
+                        im = np.load(input.float32_array)
+                        dtype = {False: np.uint8, True: np.uint16}['16' in f]
+                        print("Saving as image dtype %s" % dtype)
                         im = im ** 3
                         im = met.utils.convert_im_to_int(im, dtype)
-                        imageio.imwrite(output[i], im)
-                    else:
-                        print("Copy file %s to %s" % (f, output[i]))
-                        shutil.copy(f, output[i])
-                    if f.endswith('metamer.png'):
+                        imageio.imwrite(f, im)
+                    elif f.endswith('metamer_gamma-corrected.png'):
                         if ('degamma' in wildcards.image_name or
                             any([i in wildcards.image_name for i in LINEAR_IMAGES])):
-                            print("Saving gamma-corrected image %s" % output[-1])
-                            im = imageio.imread(f)
-                            dtype = im.dtype
+                            print("Saving gamma-corrected image %s" % f)
+                            im = np.load(input.float32_array)
+                            dtype = np.uint8
                             print("Retaining image dtype %s" % dtype)
-                            im = met.utils.convert_im_to_float(im)
                             # need to first de-cone the image, then
                             # gamma-correct it
                             if 'cone' in wildcards.image_name:
                                 im = im ** 3
                             im = im ** (1/2.2)
                             im = met.utils.convert_im_to_int(im, dtype)
-                            imageio.imwrite(output[-1], im)
+                            imageio.imwrite(f, im)
                         else:
-                            print("Image already gamma-corrected, copying to %s" % output[-1])
-                            shutil.copy(f, output[-1])
+                            print("Image already gamma-corrected, copying to %s" % f)
+                            shutil.copy(f.replace('_gamma-corrected', ''), f)
+                    else:
+                        print("Copy file %s to %s" % (input[i], f))
+                        shutil.copy(input[i], f)
 
 
 rule dummy_metamer_gen:

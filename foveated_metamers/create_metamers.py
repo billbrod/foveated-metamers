@@ -438,8 +438,13 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
     - The metamer object itself, at ``save_path``. This contains, among
       other things, the saved image and representation over the course
       of synthesis.
-    - The finished metamer image, at ``os.path.splitext(save_path)[0] +
-      "_metamer.png"``.
+    - The finished metamer image in its original float32 format (with
+      values between 0 and 1, as a numpy array), at
+      ``os.path.splitext(save_path)[0] + "_metamer.npy"``.
+    - The finished metamer 8-bit image, at
+      ``os.path.splitext(save_path)[0] + "_metamer.png"``.
+    - The finished metamer 8-bit image, at
+      ``os.path.splitext(save_path)[0] + "_metamer-16.png"``.
     - The 'rep_image', at ``os.path.splitext(save_path)[0]+"_rep.png"``.
       See ``summary_plots()`` docstring for a description of this plot.
     - The 'windowed_image', at ``os.path.splitext(save_path)[0] +
@@ -482,8 +487,10 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
     metamer.save(save_path, save_model_reduced=True)
     # save png of metamer
     metamer_path = op.splitext(save_path)[0] + "_metamer.png"
-    print("Saving metamer image at %s" % metamer_path)
     metamer_image = po.to_numpy(metamer.matched_image).squeeze()
+    print("Saving metamer float32 array at %s" % metamer_path.replace('.png', '.npy'))
+    np.save(metamer_path.replace('.png', '.npy'), metamer_image)
+    print("Saving metamer image at %s" % metamer_path)
     imageio.imwrite(metamer_path, convert_im_to_int(metamer_image))
     print("Saving 16-bit metamer image at %s" % metamer_path.replace('.png', '-16.png'))
     imageio.imwrite(metamer_path.replace('.png', '-16.png'),
