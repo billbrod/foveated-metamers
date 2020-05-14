@@ -25,7 +25,7 @@ wildcard_constraints:
     period="[0-9]+",
     size="[0-9,]+",
     bits="[0-9]+",
-    img_preproc="full|cone|cone_full|degamma_cone|gamma-corrected|gamma-corrected_full|range-[,.0-9]+",
+    img_preproc="full|cone|cone_full|degamma_cone|gamma-corrected|gamma-corrected_full|range-[,.0-9]+|gamma-corrected_range-[,.0-9]+",
     preproc_image_name="azulejos|tiles|market|flower|einstein",
     preproc="|_degamma|_degamma_cone|_cone|degamma|degamma_cone|cone"
 ruleorder:
