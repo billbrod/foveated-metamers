@@ -570,13 +570,6 @@ def get_windows(wildcards):
         return windows
 
 
-def get_batches(wildcards):
-    if len(wildcards.gpu.split(':')) > 1:
-        return int(wildcards.gpu.split(':')[1])
-    else:
-        return 1
-
-
 def get_ref_image(image_name):
     r"""get ref image
     """
@@ -645,11 +638,10 @@ rule create_metamers:
                 'lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}'
                 '_gpu-{gpu}_benchmark.txt')
     resources:
-        gpu = lambda wildcards: int(wildcards.gpu.split(':')[0]),
+        gpu = lambda wildcards: int(wildcards.gpu),
         mem = get_mem_estimate,
     params:
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
-        num_batches = get_batches,
     run:
         import foveated_metamers as met
         import contextlib
@@ -665,16 +657,23 @@ rule create_metamers:
                     init_type = REF_IMAGE_TEMPLATE_PATH.format(image_name=wildcards.init_type)
                 else:
                     init_type = wildcards.init_type
-                met.create_metamers.main(wildcards.model_name, float(wildcards.scaling),
-                                         input.ref_image, int(wildcards.seed), float(wildcards.min_ecc),
-                                         float(wildcards.max_ecc), float(wildcards.learning_rate),
-                                         int(wildcards.max_iter), float(wildcards.loss_thresh),
-                                         output[0], init_type, resources.gpu>0,
-                                         params.cache_dir, input.norm_dict, resources.gpu,
-                                         wildcards.optimizer, float(wildcards.fract_removed),
-                                         float(wildcards.loss_fract),
-                                         float(wildcards.coarse_to_fine), int(params.num_batches),
-                                         wildcards.clamp, clamp_each_iter)
+                if resources.gpu == 1:
+                    get_gid = True
+                elif resources.gpu == 0:
+                    get_gid = False
+                else:
+                    raise Exception("Multiple gpus are not supported!")
+                with met.utils.get_gpu_id(get_gid) as gpu_id:
+                    met.create_metamers.main(wildcards.model_name, float(wildcards.scaling),
+                                             input.ref_image, int(wildcards.seed), float(wildcards.min_ecc),
+                                             float(wildcards.max_ecc), float(wildcards.learning_rate),
+                                             int(wildcards.max_iter), float(wildcards.loss_thresh),
+                                             output[0], init_type, gpu_id,
+                                             params.cache_dir, input.norm_dict,
+                                             wildcards.optimizer, float(wildcards.fract_removed),
+                                             float(wildcards.loss_fract),
+                                             float(wildcards.coarse_to_fine),
+                                             wildcards.clamp, clamp_each_iter)
 
 
 def find_attempts(wildcards):
@@ -723,11 +722,10 @@ rule continue_metamers:
                 'seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-'
                 '{max_iter}_thresh-{loss_thresh}_gpu-{gpu}_benchmark.txt')
     resources:
-        gpu = lambda wildcards: int(wildcards.gpu.split(':')[0]),
+        gpu = lambda wildcards: int(wildcards.gpu),
         mem = get_mem_estimate,
     params:
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
-        num_batches = get_batches,
     run:
         import foveated_metamers as met
         import contextlib
@@ -743,20 +741,27 @@ rule continue_metamers:
                     init_type = REF_IMAGE_TEMPLATE_PATH.format(image_name=wildcards.init_type)
                 else:
                     init_type = wildcards.init_type
-                # this is the same as the original call in the
-                # create_metamers rule, except we replace max_iter with
-                # extra_iter, set learning_rate to None, and add the
-                # input continue_path at the end
-                met.create_metamers.main(wildcards.model_name, float(wildcards.scaling),
-                                         input.ref_image, int(wildcards.seed), float(wildcards.min_ecc),
-                                         float(wildcards.max_ecc), None,
-                                         int(wildcards.extra_iter), float(wildcards.loss_thresh),
-                                         output[0], init_type, resources.gpu>0,
-                                         params.cache_dir, input.norm_dict, resources.gpu,
-                                         wildcards.optimizer, float(wildcards.fract_removed),
-                                         float(wildcards.loss_fract),
-                                         float(wildcards.coarse_to_fine), int(params.num_batches),
-                                         wildcards.clamp, clamp_each_iter, input.continue_path)
+                if resources.gpu == 1:
+                    get_gid = True
+                elif resources.gpu == 0:
+                    get_gid = False
+                else:
+                    raise Exception("Multiple gpus are not supported!")
+                with met.utils.get_gpu_id(get_gid) as gpu_id:
+                    # this is the same as the original call in the
+                    # create_metamers rule, except we replace max_iter with
+                    # extra_iter, set learning_rate to None, and add the
+                    # input continue_path at the end
+                    met.create_metamers.main(wildcards.model_name, float(wildcards.scaling),
+                                             input.ref_image, int(wildcards.seed), float(wildcards.min_ecc),
+                                             float(wildcards.max_ecc), None,
+                                             int(wildcards.extra_iter), float(wildcards.loss_thresh),
+                                             output[0], init_type, gpu_id,
+                                             params.cache_dir, input.norm_dict,
+                                             wildcards.optimizer, float(wildcards.fract_removed),
+                                             float(wildcards.loss_fract),
+                                             float(wildcards.coarse_to_fine),
+                                             wildcards.clamp, clamp_each_iter, input.continue_path)
 
 
 rule postproc_metamers:

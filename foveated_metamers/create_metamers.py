@@ -3,7 +3,6 @@
 """
 import torch
 import re
-import GPUtil
 import imageio
 import warnings
 import os
@@ -569,13 +568,11 @@ def setup_initial_image(initial_image_type, model, image):
     return torch.nn.Parameter(initial_image)
 
 
-def setup_device(*args, use_cuda=False):
+def setup_device(*args, gpu_id=None):
     r"""Setup device and get everything onto it
 
     This simple function checks whether ``torch.cuda.is_available()``
-    and ``use_cuda`` are True and, if so, uses GPUtil to try and find
-    the first available and un-used one. If not, we use the cpu as the
-    device
+    and ``gpu_id`` is not None. If not, we use the cpu as the device
 
     We then call a.to(device) for every a in args (so this can be called
     with an arbitrary number of objects, each of which just needs to have
@@ -584,7 +581,7 @@ def setup_device(*args, use_cuda=False):
     Note that we always return a list (even if you only pass one item),
     so if you pass a single object, you'll need to either grab it
     specifically, either by doing ``im = setup_device(im,
-    use_cuda=True)[0]`` or ``im, = setup_device(im)`` (notice the
+    gpu_id=0)[0]`` or ``im, = setup_device(im)`` (notice the
     comma).
 
     Parameters
@@ -592,10 +589,14 @@ def setup_device(*args, use_cuda=False):
     args :
         Some number of torch objects that we want to get on the proper
         device
-    use_cuda : bool, optional
-        Whether to try and use the GPU or not. Note that, to set this,
-        you must set it as a keyword, i.e., ``setup_device(im, True)``
-        won't work but ``setup_device(im, use_cuda=True)`` will (this is
+    gpu_id : int or None, optional
+        If not None, the GPU we will use. If None, we run on CPU. We
+        don't do anything clever to handle that here, but the
+        contextmanager utils.get_gpu_id does, so you should use that to
+        make sure you're using a GPU that exists and is available (see
+        Snakefile for example). Note that, to set this,
+        you must set it as a keyword, i.e., ``setup_device(im, 0)``
+        won't work but ``setup_device(im, gpu_id=True)`` will (this is
         because the ``*args`` in our function signature will greedily
         grab every non-keyword argument).
 
@@ -603,12 +604,12 @@ def setup_device(*args, use_cuda=False):
     -------
     args : list
         Every item we were passed in arg, now on the proper device
+
     """
-    if use_cuda:
+    if gpu_id:
         if not torch.cuda.is_available():
-            raise Exception("CUDA is not available but use_cuda is True!")
-        gpu_num = GPUtil.getAvailable(order='first', maxLoad=.1, maxMemory=.1, includeNan=False)[0]
-        device = torch.device("cuda:%s" % gpu_num)
+            raise Exception("CUDA is not available but gpu_id is not None!")
+        device = torch.device("cuda:%s" % gpu_id)
         dtype = torch.float32
     else:
         device = torch.device("cpu")
@@ -621,10 +622,10 @@ def setup_device(*args, use_cuda=False):
 
 
 def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_rate=1, max_iter=100,
-         loss_thresh=1e-4, save_path=None, initial_image_type='white', use_cuda=False,
-         cache_dir=None, normalize_dict=None, num_gpus=0, optimizer='SGD', fraction_removed=0,
-         loss_change_fraction=1, coarse_to_fine=0, num_batches=1, clamper_name='clamp',
-         clamp_each_iter=True, continue_path=None):
+         loss_thresh=1e-4, save_path=None, initial_image_type='white', gpu_id=None,
+         cache_dir=None, normalize_dict=None, optimizer='SGD', fraction_removed=0,
+         loss_change_fraction=1, coarse_to_fine=0, clamper_name='clamp', clamp_each_iter=True,
+         continue_path=None):
     r"""create metamers!
 
     Given a model_name, model parameters, a target image, and some
@@ -727,9 +728,12 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         'gray', we use a flat image with values of .5 everywhere. If
         path to a file, that's what we use as our initial image (and so
         the seed will have no effect on this).
-    use_cuda : bool, optional
-        If True and if torch.cuda.is_available(), we try to use find a
-        gpu we can use. We do this with GPUtil. else, we use the cpu
+    gpu_id : int or None, optional
+        If not None, the GPU we will use. If None, we run on CPU. We
+        don't do anything clever to handle that here, but the
+        contextmanager utils.get_gpu_id does, so you should use that to
+        make sure you're using a GPU that exists and is available (see
+        Snakefile for example)
     cache_dir : str or None, optional
         The directory to cache the windows tensor in. If set, we'll look
         there for cached versions of the windows we create, load them if
@@ -738,9 +742,6 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     normalize_dict : str or None, optional
         If a str, the path to the dictionary containing the statistics
         to use for normalization. If None, we don't normalize anything
-    num_gpus : int, optional
-        The number of gpus to use. If use_cuda is False, this must be
-        0. Otherwise, if it's greater than 1
     optimizer: {'Adam', 'SGD', 'LBFGS'}
         The choice of optimization algorithm
     fraction_removed: float, optional
@@ -758,11 +759,6 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         optimization (see Metamer.synthesize) for more details, passing
         coarse_to_fine=True and loss_change_thresh as this value. If 0,
         we set coarse_to_fine=False (and loss_change_thresh=.1)
-    num_batches : int, optional
-        The number of batches to further split the angle windows into
-        during the PoolingWindows forward call. The larger this number,
-        the less memory the forward pass will take but the slower it
-        will be. Only used when ``num_gpus > 1``
     clamper_name : {'clamp', 'remap'}, optional
         For the image to make sense, its range must lie between 0 and
         1. We can enforce that in two ways: clamping (in which case we
@@ -797,20 +793,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     print("Using learning rate %s, loss_thresh %s, and max_iter %s" % (learning_rate, loss_thresh,
                                                                        max_iter))
     initial_image = setup_initial_image(initial_image_type, model, image)
-    if num_gpus <= 1:
-        image, initial_image, model = setup_device(image, initial_image, model, use_cuda=use_cuda)
-    if num_gpus > 0:
-        if not use_cuda:
-            raise Exception("Can only use GPUs if use_cuda is True!")
-        if num_gpus > 1:
-            # in this case, we put the model on multiple gpus, but keep
-            # everything else on the cpu
-            gpus = GPUtil.getAvailable(maxLoad=.3, maxMemory=.3, limit=num_gpus, order='first')
-            print("Will put model in %d batch(es) on multiple gpus: %s" % (num_batches, gpus))
-            model = model.parallel(gpus, num_batches)
-            # this makes sure we get the non-PoolingWindows onto the
-            # same device as the image
-            model = model.to(image.device, do_windows=False)
+    image, initial_image, model = setup_device(image, initial_image, model, gpu_id=gpu_id)
     if clamper_name == 'clamp':
         clamper = po.RangeClamper((0, 1))
     elif clamper_name == 'clamp2':
@@ -867,7 +850,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                   target_image=image_name, seed=seed, learning_rate=learning_rate,
                   loss_change_thresh=loss_change_thresh, coarse_to_fine=coarse_to_fine,
                   loss_change_fraction=loss_change_fraction, initial_image=initial_image_type,
-                  num_gpus=num_gpus, min_ecc=min_ecc, max_ecc=max_ecc, max_iter=max_iter,
+                  min_ecc=min_ecc, max_ecc=max_ecc, max_iter=max_iter, gpu_id=gpu_id,
                   loss_thresh=loss_thresh, scaling=scaling, clamper=clamper_name,
                   clamp_each_iter=clamp_each_iter, clip_grad_norm=clip_grad_norm,
                   image_name=op.basename(image_name).replace('.pgm', '').replace('.png', ''))

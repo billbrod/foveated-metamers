@@ -51,6 +51,10 @@ python packages required to those used for the experiment. That's
 probably not necessary, but is provided as a step to improve
 reproducibility. We provide built Docker images for the same reason: 
 
+If you're using GPUs to create images, you'll also need `dotlockfile`
+on your machine in order to create the lockfiles we use to prevent
+multiple jobs using the same GPU.
+
 TODO: ADD DOCKER IMAGES
 
 ## Experiment environment
@@ -339,7 +343,7 @@ Every `create_metamers` job will use a certain number of gpus, as
 given by `resources.gpu` for that job. In the snippet above, you can
 see that we use it to determine how many gpus to request from the job
 scheduler. On a local machine, `snakemake` will similarly use it to
-make sure you don't run two jobs that require 3 gpus each if you only
+make sure you don't run five jobs that require 1 gpus each if you only
 have 4 gpus total, for example. Similarly, `resources.mem` provides an
 estimate of how much memory (in GB) the job will use, which we use
 similarly when requesting resources above. This is just an estimate
@@ -368,18 +372,13 @@ to the `-j n` and `--resources gpu=n` flags, which tell snakemake how
 many jobs to run at once and how many GPUs you have available,
 respectively.
 
-Note that I couldn't figure out any clever way to schedule jobs across
-different GPUs, so the way I decided to handle it is to let jobs grab
-the first GPU they think is available (available meaning that at most
-30% of the its memory is being used, as determined by `GPUtil`). If
-two jobs start at almost exactly the same time, one of them will
-likely fail because it ran out of memory. To handle this, I recommend
-adding the `--restart-times 3` flag to the snakemake call, as I do
-above, which tells snakemake to try re-submitting a job up to 3 times
-if it fails. Hopefully, the second time a job is submitted, it won't
-have a similar problem. But it might require running the `snakemake`
-command a small number of times in order to get everything
-straightened out.
+Note that I'm using dotlockfile to handle scheduling jobs across
+different GPUs. I think this will work, but I recommend adding the
+`--restart-times 3` flag to the snakemake call, as I do above, which
+tells snakemake to try re-submitting a job up to 3 times if it
+fails. Hopefully, the second time a job is submitted, it won't have a
+similar problem. But it might require running the `snakemake` command
+a small number of times in order to get everything straightened out.
 
 ## Prepare for experiment
 

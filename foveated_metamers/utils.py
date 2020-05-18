@@ -1,7 +1,11 @@
 """various utilities
 """
-import numpy as np
+import os
 import warnings
+from contextlib import contextmanager
+from itertools import cycle
+import GPUtil
+import numpy as np
 
 
 def convert_im_to_float(im):
@@ -64,3 +68,43 @@ def convert_im_to_int(im, dtype=np.uint8):
         else:
             raise Exception("all values of im must lie between 0 and 1, but max is %s" % im.max())
     return (im * np.iinfo(dtype).max).astype(dtype)
+
+
+@contextmanager
+def get_gpu_id(get_gid=True, n_gpus=4):
+    """get next available GPU and lock it
+
+    Note that the lock file created will be at
+    /tmp/LCK_gpu_{allocated_gid}.lock
+
+    This is based on the solution proposed at
+    https://github.com/snakemake/snakemake/issues/281#issuecomment-610796104
+    and then modified slightly
+
+    Parameters
+    ----------
+    get_gid : bool, optional
+        if True, return the ID of the first available GPU. If False,
+        return None. This weirdness is to allow us to still use this
+        contextmanager when we don't actually want to create a lockfile
+    n_gpus : int, optional
+        number of GPUs on this device
+
+    Returns
+    -------
+    allocated_gid : int
+        the ID of the GPU to use
+
+    """
+    allocated_gid = None
+    avail_gpus = GPUtil.getAvailable(order='memory', maxLoad=.1, maxMemory=.1, includeNan=False,
+                                     limit=n_gpus)
+    if not get_gid:
+        avail_gpus = []
+    for gid in cycle(avail_gpus):
+        # then we've successfully created the lockfile
+        if os.system(f"dotlockfile -r 1 /tmp/LCK_gpu_{gid}.lock") == 0:
+            allocated_gid = gid
+            break
+    yield allocated_gid
+    os.system(f"dotlockfile -u /tmp/LCK_gpu_{allocated_gid}.lock")
