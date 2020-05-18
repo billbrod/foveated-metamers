@@ -813,6 +813,9 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
             model = model.to(image.device, do_windows=False)
     if clamper_name == 'clamp':
         clamper = po.RangeClamper((0, 1))
+    elif clamper_name.startswith('clamp.'):
+        a, b = re.findall('clamp([.0-9]+),([.0-9]+)', clamper_name)[0]
+        clamper = po.RangeClamper((float(a), float(b)))
     elif clamper_name == 'clamp2':
         clamper = po.TwoMomentsClamper(image)
     elif clamper_name == 'clamp4':
