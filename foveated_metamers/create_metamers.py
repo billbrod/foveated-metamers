@@ -606,7 +606,7 @@ def setup_device(*args, gpu_id=None):
         Every item we were passed in arg, now on the proper device
 
     """
-    if gpu_id:
+    if gpu_id is not None:
         if not torch.cuda.is_available():
             raise Exception("CUDA is not available but gpu_id is not None!")
         device = torch.device("cuda:%s" % gpu_id)
