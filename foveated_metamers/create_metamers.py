@@ -420,8 +420,7 @@ def summarize(metamer, save_path, **kwargs):
     loss = metamer.loss[-1]
     if np.isnan(loss):
         loss = metamer.loss[-2]
-    data = {'normalized_representation_mse': metamer.normalized_mse().item(),
-            'num_iterations': len(metamer.loss), 'loss': loss,
+    data = {'num_iterations': len(metamer.loss), 'loss': loss,
             'num_statistics': metamer.target_representation.numel(),
             'image_mse': torch.pow(metamer.target_image - metamer.matched_image, 2).mean().item()}
     data.update(kwargs)
