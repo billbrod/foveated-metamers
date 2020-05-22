@@ -624,7 +624,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
          loss_thresh=1e-4, save_path=None, initial_image_type='white', gpu_id=None,
          cache_dir=None, normalize_dict=None, optimizer='SGD', fraction_removed=0,
          loss_change_fraction=1, coarse_to_fine=0, clamper_name='clamp', clamp_each_iter=True,
-         continue_path=None):
+         loss_func='l2', continue_path=None):
     r"""create metamers!
 
     Given a model_name, model parameters, a target image, and some
@@ -758,16 +758,27 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         optimization (see Metamer.synthesize) for more details, passing
         coarse_to_fine=True and loss_change_thresh as this value. If 0,
         we set coarse_to_fine=False (and loss_change_thresh=.1)
-    clamper_name : {'clamp', 'remap'}, optional
+    clamper_name : {'clamp', 'remap', 'clamp{a},{b}', 'clamp2', 'clamp4'}, optional
         For the image to make sense, its range must lie between 0 and
         1. We can enforce that in two ways: clamping (in which case we
         send everything below 0 to 0 and everything above 1 to 1) or
         remapping (in which case we subtract away the minimum and divide
-        by the max)
+        by the max). 'clamp{a},{b}`, where a,b are both flotas, clamps
+        instead to the range (a, b). 'clamp2' clamps the range, mean,
+        and variance to match that of the target image. 'clamp4' clamps
+        the range and the first four moments to that of the target
+        image.
     clamp_each_iter : bool, optional
         Whether we call the clamper each iteration of the optimization
         or only at the end. True, the default, is recommended, and is
         necessary for fractional values of cone_power
+    loss_func : {'l2', 'l2_range-{a},{b}_beta-{c}'}
+        where a,b,c are all floats. what loss function to use. If 'l2',
+        then we use the L2-norm of the difference between the model
+        representations of the synthesized and reference image. if
+        'l2_range-a,b_beta-c', then we use a weighted average of that
+        (weight given by c) and a quadratic penalty on all pixels in
+        synthesized image whose values are below a or above b.
     continue_path : str or None, optional
         If None, we synthesize a new metamer. If str, this should be the
         path to a previous synthesis run, which we are resuming. In that
@@ -789,8 +800,6 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                                                                 min_ecc, max_ecc, cache_dir,
                                                                 normalize_dict)
     print("Using model %s from %.02f degrees to %.02f degrees" % (model_name, min_ecc, max_ecc))
-    print("Using learning rate %s, loss_thresh %s, and max_iter %s" % (learning_rate, loss_thresh,
-                                                                       max_iter))
     initial_image = setup_initial_image(initial_image_type, model, image)
     image, initial_image, model = setup_device(image, initial_image, model, gpu_id=gpu_id)
     if clamper_name == 'clamp':
@@ -806,12 +815,22 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         clamper = po.RangeRemapper((0, 1))
     else:
         clamper = None
+    if loss_func == 'l2':
+        loss = po.optim.l2_norm
+        loss_kwargs = {}
+    else:
+        a, b, c = re.findall('l2_range-([.0-9]+),([.0-9]+)_beta-([.0-9]+)', loss_func)[0]
+        loss = po.optim.l2_and_penalize_range
+        loss_kwargs = {'allowed_range': (float(a), float(b)), 'beta': float(c)}
     if continue_path is None:
-        metamer = po.synth.Metamer(image, model)
+        metamer = po.synth.Metamer(image, model, loss_function=loss, loss_kwargs=loss_kwargs)
     else:
         print("Resuming synthesis saved at %s" % continue_path)
         metamer = po.synth.Metamer.load(continue_path, model.from_state_dict_reduced)
         initial_image = None
+        learning_rate = None
+    print("Using learning rate %s, loss_thresh %s, and max_iter %s" % (learning_rate, loss_thresh,
+                                                                       max_iter))
     if save_path is not None:
         if max_iter < 200:
             # no sense when it's this short
@@ -855,7 +874,8 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                   min_ecc=min_ecc, max_ecc=max_ecc, max_iter=max_iter, gpu_id=gpu_id,
                   loss_thresh=loss_thresh, scaling=scaling, clamper=clamper_name,
                   clamp_each_iter=clamp_each_iter, clip_grad_norm=clip_grad_norm,
-                  image_name=op.basename(image_name).replace('.pgm', '').replace('.png', ''))
+                  image_name=op.basename(image_name).replace('.pgm', '').replace('.png', ''),
+                  loss_function=loss_func)
         save(save_path, metamer, animate_figsize, rep_figsize, img_zoom)
     if save_progress:
         os.remove(save_path.replace('.pt', '_inprogress.pt'))
