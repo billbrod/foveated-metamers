@@ -106,5 +106,7 @@ def get_gpu_id(get_gid=True, n_gpus=4):
         if os.system(f"dotlockfile -r 1 /tmp/LCK_gpu_{gid}.lock") == 0:
             allocated_gid = gid
             break
-    yield allocated_gid
-    os.system(f"dotlockfile -u /tmp/LCK_gpu_{allocated_gid}.lock")
+    try:
+        yield allocated_gid
+    finally:
+        os.system(f"dotlockfile -u /tmp/LCK_gpu_{allocated_gid}.lock")
