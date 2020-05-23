@@ -823,7 +823,8 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         loss = po.optim.l2_and_penalize_range
         loss_kwargs = {'allowed_range': (float(a), float(b)), 'beta': float(c)}
     if continue_path is None:
-        metamer = po.synth.Metamer(image, model, loss_function=loss, loss_kwargs=loss_kwargs)
+        metamer = po.synth.Metamer(image, model, loss_function=loss,
+                                   loss_function_kwargs=loss_kwargs)
     else:
         print("Resuming synthesis saved at %s" % continue_path)
         metamer = po.synth.Metamer.load(continue_path, model.from_state_dict_reduced)
