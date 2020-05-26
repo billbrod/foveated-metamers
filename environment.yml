@@ -18,7 +18,7 @@ dependencies:
   - h5py==2.9.0
   - pip:
       - pytest==5.0.1
-      - torchvision==0.3.0
+      - torchvision==0.5.0
       - torch==1.4
       - pyrtools==0.9.3
       - gputil==1.4.0
