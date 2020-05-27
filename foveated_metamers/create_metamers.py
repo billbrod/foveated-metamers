@@ -849,8 +849,11 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         clip_grad_norm = 1
     else:
         clip_grad_norm = False
+    # don't want to store too often, otherwise we slow down and use too
+    # much memory. this way we store at most 500 time points
+    store_progress = max(10, max_iter//500)
     start_time = time.time()
-    matched_im, matched_rep = metamer.synthesize(clamper=clamper, store_progress=10,
+    matched_im, matched_rep = metamer.synthesize(clamper=clamper, store_progress=store_progress,
                                                  learning_rate=learning_rate, max_iter=max_iter,
                                                  loss_thresh=loss_thresh, seed=seed,
                                                  initial_image=initial_image,
