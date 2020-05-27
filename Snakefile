@@ -34,7 +34,7 @@ ruleorder:
 
 
 LINEAR_IMAGES = ['azulejos', 'tiles', 'market', 'flower']
-MODELS = ['RGC_cone-1.0_dog_s-3.0_r-0.53', 'V1_cone-1.0_norm_s6_gaussian']
+MODELS = ['RGC_cone-1.0_gaussian', 'V1_cone-1.0_norm_s6_gaussian']
 IMAGES = ['azulejos_cone_full_size-2048,2600', 'tiles_cone_full_size-2048,2600',
           'market_cone_full_size-2048,2600', 'flower_cone_full_size-2048,2600']
 METAMER_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers', '{model_name}', '{image_name}',
