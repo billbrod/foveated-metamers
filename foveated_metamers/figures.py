@@ -19,8 +19,47 @@ REFERENCE_PATH = op.join('/home/billbrod/Desktop/metamers', 'ref_images_preproc'
                          '{image_name}.png')
 
 
-def cutout_figure(images, window_size=400, periphery_offset=(-800, -1000), max_ecc=30.2):
+def get_image_cutout(images, window_size=400, periphery_offset=(-800, -1000)):
+    """get foveal and peripheral cutouts from images
+
+    Parameters
+    ----------
+    images : array_like
+        images to plot (different images should be indexed along first
+        dimension)
+    window_size : int
+        The size of the cut-out to plot, in pixels (this is the length
+        of one side of the square).
+    periphery_offset : tuple
+        Tuple of ints. How far from the fovea we want our peripheral
+        cut-out to be. The order of this is the same as that returned by
+        image.shape. Can be positive or negative depending on which
+        direction you want to go
+
+    Returns
+    -------
+    fovea, periphery : list
+        lists of foveal and peripheral cutouts from images
+
+    """
+    if images.ndim == 2:
+        images = images[None, :]
+    im_ctr = [s//2 for s in images.shape[-2:]]
+    fovea_bounds = [im_ctr[0]-window_size//2, im_ctr[0]+window_size//2,
+                    im_ctr[1]-window_size//2, im_ctr[1]+window_size//2]
+    fovea = [im[fovea_bounds[0]:fovea_bounds[1], fovea_bounds[2]:fovea_bounds[3]] for im in images]
+    periphery = [im[fovea_bounds[0]-periphery_offset[0]:fovea_bounds[1]-periphery_offset[0],
+                    fovea_bounds[2]-periphery_offset[1]:fovea_bounds[3]-periphery_offset[1]]
+                 for im in images]
+    return fovea, periphery
+
+
+def cutout_figure(images, window_size=400, periphery_offset=(-800, -1000), max_ecc=30.2,
+                  plot_fovea=True, plot_periphery=True):
     """create figure showing cutout views of different images
+
+    if both `plot_fovea` and `plot_periphery` are False, this just
+    returns None
 
     Parameters
     ----------
@@ -39,6 +78,10 @@ def cutout_figure(images, window_size=400, periphery_offset=(-800, -1000), max_e
         The maximum eccentricity of the metamers, as passed to the
         model. Used to convert from pixels to degrees so we know the
         extent and location of the cut-out views in degrees.
+    plot_fovea : bool, optional
+        whether to plot the foveal cutout
+    plot_periphery : bool, optional
+        whether to plot peripheral cutout
 
     Returns
     -------
@@ -46,22 +89,29 @@ def cutout_figure(images, window_size=400, periphery_offset=(-800, -1000), max_e
         The matplotlib figure with the cutouts plotted on it
 
     """
-    im_ctr = [s//2 for s in images.shape[1:]]
-    fovea_bounds = [im_ctr[0]-window_size//2, im_ctr[0]+window_size//2,
-                    im_ctr[1]-window_size//2, im_ctr[1]+window_size//2]
-    fovea = [im[fovea_bounds[0]:fovea_bounds[1], fovea_bounds[2]:fovea_bounds[3]] for im in images]
-    periphery = [im[fovea_bounds[0]-periphery_offset[0]:fovea_bounds[1]-periphery_offset[0],
-                    fovea_bounds[2]-periphery_offset[1]:fovea_bounds[3]-periphery_offset[1]]
-                 for im in images]
+    if not plot_fovea and not plot_periphery:
+        return None
+    fovea, periphery = get_image_cutout(images, window_size, periphery_offset)
     # max_ecc is the distance from the center to the edge of the image,
     # so we want double this to get the full width of the image
-    pix_to_deg = (2 * max_ecc) / max(images.shape[1:])
+    pix_to_deg = (2 * max_ecc) / max(images.shape[-2:])
     window_extent_deg = (window_size//2) * pix_to_deg
     periphery_ctr_deg = np.sqrt(np.sum([(s*pix_to_deg)**2 for s in periphery_offset]))
-    fig = pt.imshow(fovea+periphery, vrange=(0, 1), title=None, col_wrap=len(fovea))
-    fig.axes[0].set(ylabel='Fovea\n($\pm$%.01f deg)' % window_extent_deg)
-    fig.axes[len(fovea)].set(ylabel='Periphery\n(%.01f$\pm$%.01f deg)' % (periphery_ctr_deg,
-                                                                          window_extent_deg))
+    imgs_to_plot = []
+    if plot_fovea:
+        imgs_to_plot += fovea
+    if plot_periphery:
+        imgs_to_plot += periphery
+        if plot_fovea:
+            periphery_ax_idx = len(fovea)
+        else:
+            periphery_ax_idx = 0
+    fig = pt.imshow(imgs_to_plot, vrange=(0, 1), title=None, col_wrap=len(fovea))
+    if plot_fovea:
+        fig.axes[0].set(ylabel='Fovea\n($\pm$%.01f deg)' % window_extent_deg)
+    if plot_periphery:
+        ylabel = 'Periphery\n(%.01f$\pm$%.01f deg)' % (periphery_ctr_deg, window_extent_deg)
+        fig.axes[periphery_ax_idx].set(ylabel=ylabel)
     return fig
 
 
