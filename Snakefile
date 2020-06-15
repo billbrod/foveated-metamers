@@ -67,7 +67,7 @@ def get_all_metamers(min_idx=0, max_idx=-1, model_name=None):
     rgc_metamers = [OUTPUT_TEMPLATE_PATH.format(model_name=MODELS[0], image_name=i, scaling=sc,
                                                 optimizer='Adam', fract_removed=0, loss_fract=1,
                                                 coarse_to_fine=False, loss_change_thresh=.1, seed=s,
-                                                init_type='white', learning_rate=.1, min_ecc=1.0,
+                                                init_type='white', learning_rate=.1, min_ecc=.5,
                                                 max_ecc=30.2, max_iter=750, loss_thresh=1e-8, gpu=0,
                                                 clamp='clamp', clamp_each_iter=True, loss='l2')
                     for sc in RGC_SCALING for i in IMAGES for s in range(3)]
@@ -102,7 +102,7 @@ rule test_setup:
                                      image_name='einstein_degamma_cone_size-256,256',
                                      scaling=.1, optimizer='Adam', fract_removed=0, loss_fract=1,
                                      coarse_to_fine=False, seed=0, init_type='white',
-                                     learning_rate=1, min_ecc=1, max_ecc=15,
+                                     learning_rate=1, min_ecc=.5, max_ecc=15,
                                      max_iter=100, loss_thresh=1e-8, gpu=0,
                                      clamp='clamp', clamp_each_iter=True, loss='l2',
                                      loss_change_thresh=.1),
@@ -117,7 +117,7 @@ rule test_setup:
                                      image_name='einstein_degamma_cone_size-256,256',
                                      scaling=.1, optimizer='Adam', fract_removed=0, loss_fract=1,
                                      coarse_to_fine=False, seed=0, init_type='white',
-                                     learning_rate=1, min_ecc=1, max_ecc=15,
+                                     learning_rate=1, min_ecc=.5, max_ecc=15,
                                      max_iter=100, loss_thresh=1e-8, gpu=1,
                                      clamp='clamp', clamp_each_iter=True, loss='l2',
                                      loss_change_thresh=.1),
