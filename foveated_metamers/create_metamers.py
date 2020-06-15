@@ -623,8 +623,8 @@ def setup_device(*args, gpu_id=None):
 def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_rate=1, max_iter=100,
          loss_thresh=1e-4, save_path=None, initial_image_type='white', gpu_id=None,
          cache_dir=None, normalize_dict=None, optimizer='SGD', fraction_removed=0,
-         loss_change_fraction=1, coarse_to_fine=0, clamper_name='clamp', clamp_each_iter=True,
-         loss_func='l2', continue_path=None):
+         loss_change_fraction=1, loss_change_thresh=.1, coarse_to_fine=False, clamper_name='clamp',
+         clamp_each_iter=True, loss_func='l2', continue_path=None):
     r"""create metamers!
 
     Given a model_name, model parameters, a target image, and some
@@ -753,11 +753,21 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         If we think the loss has stopped decreasing, the fraction of
         the representation with the highest loss that we use to
         calculate the gradients
-    coarse_to_fine : float, optional
-        A positive float or 0. If a positive float, we do coarse-to-fine
-        optimization (see Metamer.synthesize) for more details, passing
-        coarse_to_fine=True and loss_change_thresh as this value. If 0,
-        we set coarse_to_fine=False (and loss_change_thresh=.1)
+    loss_change_thresh : float, optional
+        the threshold we use to see if the loss has stopped changing
+        (for either loss_change_fraction or coarse_to_fine). If
+        coarse_to_fine is False, this should be .1; else, you'll have to
+        play around and find the best value
+    coarse_to_fine : { 'together', 'separate', False}, optional
+        If False, don't do coarse-to-fine optimization. Else, there
+        are two options for how to do it:
+        - 'together': start with the coarsest scale, then gradually
+          add each finer scale. this is like blurring the objective
+          function and then gradually adding details and is probably
+          what you want.
+        - 'separate': compute the gradient with respect to each
+          scale separately (ignoring the others), then with respect
+          to all of them at the end.
     clamper_name : {'clamp', 'remap', 'clamp{a},{b}', 'clamp2', 'clamp4'}, optional
         For the image to make sense, its range must lie between 0 and
         1. We can enforce that in two ways: clamping (in which case we
@@ -851,11 +861,6 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
             save_progress = max(200, max_iter//10)
     else:
         save_progress = False
-    if coarse_to_fine > 0:
-        loss_change_thresh = coarse_to_fine
-        coarse_to_fine = True
-    else:
-        loss_change_thresh = .1
     if model.cone_power < 1:
         clip_grad_norm = 1
     else:
