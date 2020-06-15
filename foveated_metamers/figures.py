@@ -19,6 +19,85 @@ REFERENCE_PATH = op.join('/home/billbrod/Desktop/metamers', 'ref_images_preproc'
                          '{image_name}.png')
 
 
+def add_cutout_box(axes, window_size=400, periphery_offset=(-800, -1000), colors='r',
+                   linestyles='--', plot_fovea=True, plot_periphery=True, **kwargs):
+    """add square to axes to show where the cutout comes from
+
+    Parameters
+    ----------
+    axes : array_like
+        arrays to add square to (different images should be indexed
+        along first dimension)
+    window_size : int
+        The size of the cut-out to plot, in pixels (this is the length
+        of one side of the square).
+    periphery_offset : tuple
+        Tuple of ints. How far from the fovea we want our peripheral
+        cut-out to be. The order of this is the same as that returned by
+        image.shape. Can be positive or negative depending on which
+        direction you want to go
+    colors, linestyle : str, optional
+        color and linestyle to use for cutout box, see `plt.vlines()`
+        and `plt.hlines()` for details
+    plot_fovea : bool, optional
+        whether to plot the foveal box
+    plot_periphery : bool, optional
+        whether to plot peripheral box
+    kwargs :
+        passed to `plt.vlines()` and `plt.hlines()`
+
+    """
+    axes = np.array(axes).flatten()
+    for ax in axes:
+        if len(ax.images) != 1:
+            raise Exception("axis should only have one image on it!")
+        im = ax.images[0]
+        im_ctr = [s//2 for s in im.get_size()]
+        fovea_bounds = np.array([im_ctr[0]-window_size//2, im_ctr[0]+window_size//2,
+                                 im_ctr[1]-window_size//2, im_ctr[1]+window_size//2])
+        if plot_fovea:
+            ax.vlines(fovea_bounds[2:], fovea_bounds[0], fovea_bounds[1], colors=colors,
+                      linestyles=linestyles, **kwargs)
+            ax.hlines(fovea_bounds[:2], fovea_bounds[2], fovea_bounds[3], colors=colors,
+                      linestyles=linestyles, **kwargs)
+        if plot_periphery:
+            ax.vlines(fovea_bounds[2:]-periphery_offset[1], fovea_bounds[0]-periphery_offset[0],
+                      fovea_bounds[1]-periphery_offset[0], colors=colors,
+                      linestyles=linestyles, **kwargs)
+            ax.hlines(fovea_bounds[:2]-periphery_offset[0], fovea_bounds[2]-periphery_offset[1],
+                      fovea_bounds[3]-periphery_offset[1], colors=colors,
+                      linestyles=linestyles, **kwargs)
+
+
+def add_fixation_cross(axes, cross_size=50, colors='r', linestyles='-', **kwargs):
+    """add fixation cross to center of axes
+
+    Parameters
+    ----------
+    axes : array_like
+        arrays to add square to (different images should be indexed
+        along first dimension)
+    cross_size : int, optional
+        total size of the lines in the cross, in pixels
+    colors, linestyle : str, optional
+        color and linestyle to use for cutout box, see `plt.vlines()`
+        and `plt.hlines()` for details
+    kwargs :
+        passed to `plt.vlines()` and `plt.hlines()`
+
+    """
+    axes = np.array(axes).flatten()
+    for ax in axes:
+        if len(ax.images) != 1:
+            raise Exception("axis should only have one image on it!")
+        im = ax.images[0]
+        im_ctr = [s//2 for s in im.get_size()]
+        ax.vlines(im_ctr[1], im_ctr[0]-cross_size/2, im_ctr[0]+cross_size/2, colors=colors,
+                  linestyles=linestyles, **kwargs)
+        ax.hlines(im_ctr[0], im_ctr[1]-cross_size/2, im_ctr[1]+cross_size/2, colors=colors,
+                  linestyles=linestyles, **kwargs)
+
+
 def get_image_cutout(images, window_size=400, periphery_offset=(-800, -1000)):
     """get foveal and peripheral cutouts from images
 
