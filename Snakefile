@@ -554,24 +554,10 @@ def get_windows(wildcards):
             num_scales = 4
         for i in range(num_scales):
             output_size = ','.join([str(int(np.ceil(j / 2**i))) for j in im_shape])
-            min_ecc, _ = pooling.calc_min_eccentricity(float(wildcards.scaling),
-                                                       [np.ceil(j / 2**i) for j in im_shape],
-                                                       float(wildcards.max_ecc))
-            # don't do this for the lowest scale
-            if i > 0 and min_ecc > float(wildcards.min_ecc):
-                # this makes sure that whatever that third decimal place
-                # is, we're always one above it. e.g., if min_ecc was
-                # 1.3442, we want to use 1.345, and this will ensure
-                # that
-                min_ecc *= 1e3
-                min_ecc -= min_ecc % 1
-                min_ecc = (min_ecc+1) / 1e3
-            else:
-                min_ecc = float(wildcards.min_ecc)
             windows.append(window_template.format(scaling=wildcards.scaling, size=output_size,
                                                   max_ecc=float(wildcards.max_ecc),
-                                                  min_ecc=min_ecc, t_width=t_width,
-                                                  window_type=window_type))
+                                                  min_ecc=float(wildcards.min_ecc),
+                                                  t_width=t_width, window_type=window_type))
         return windows
 
 
