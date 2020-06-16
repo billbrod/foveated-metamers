@@ -216,7 +216,7 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
                                               surround_std_dev=surround_std_dev,
                                               center_surround_ratio=center_surround_ratio,
                                               transition_x=transition_x)
-        animate_figsize = (17, 5)
+        animate_figsize = (22, 5)
         if model.window_type == 'dog':
             # then our rep_image will include 3 plots, instead of 1, so
             # we want it to be wider
@@ -255,7 +255,7 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
                                              half_octave_pyramid=half_oct, num_scales=num_scales,
                                              cone_power=cone_power, window_type=window_type,
                                              include_highpass=include_highpass)
-        animate_figsize = (35, 11)
+        animate_figsize = (40, 11)
         # we need about 11 per plot (and we have one of those per scale,
         # plus one for the mean luminance)
         rep_image_figsize = [11 * (num_scales+1), 30]
@@ -424,6 +424,15 @@ def summarize(metamer, save_path, **kwargs):
             'num_statistics': metamer.target_representation.numel(),
             'image_mse': torch.pow(metamer.target_image - metamer.matched_image, 2).mean().item()}
     data.update(kwargs)
+    summarized_rep = metamer.model.summarize_representation(metamer.representation_error(),
+                                                            by_angle=True)
+    new_summarized_rep = {}
+    for k, v in summarized_rep.items():
+        if isinstance(k[0], str):
+            new_summarized_rep['error_' + '_'.join(k)] = v
+        else:
+            new_summarized_rep["error_scale_{}_band_{}_{}".format(*k[0], k[1])] = v
+    data.update(new_summarized_rep)
     summary = pd.DataFrame(data, index=[0])
     summary.to_csv(save_path, index=False)
     return summary
@@ -502,7 +511,7 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
     print("Saving windowed image at %s" % windowed_path)
     windowed_fig.savefig(windowed_path)
     print("Saving synthesis video at %s" % video_path)
-    anim = metamer.animate(figsize=animate_figsize, imshow_zoom=img_zoom)
+    anim = metamer.animate(figsize=animate_figsize, imshow_zoom=img_zoom, plot_image_hist=True)
     anim.save(video_path)
     angle_n = np.linspace(0, metamer.model.n_polar_windows, 8, dtype=int, endpoint=False)
     fig = metamer.model.PoolingWindows.plot_window_checks(angle_n)
