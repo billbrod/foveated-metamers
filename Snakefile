@@ -399,8 +399,8 @@ rule gen_norm_stats:
                 v1 = po.simul.PrimaryVisualCortex(1, (512, 512), half_octave_pyramid=True,
                                                   num_scales=6, cone_power=cone_power,
                                                   include_highpass=True)
-                po.simul.non_linearities.generate_norm_stats(v1, input[0], output[0], (512, 512),
-                                                             index=params.index)
+                po.optim.generate_norm_stats(v1, input[0], output[0], (512, 512),
+                                             index=params.index)
 
 
 # we need to generate the stats in blocks, and then want to re-combine them
