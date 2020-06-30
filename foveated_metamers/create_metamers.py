@@ -419,8 +419,135 @@ def summary_plots(metamer, rep_image_figsize, img_zoom):
     return rep_fig, windowed_fig
 
 
+def _transform_summarized_rep(summarized_rep):
+    """change around the keys of the summarized_representation dictionary
+
+    This makes them more readable
+
+    This function makes strong assumptions about what the keys look like
+    (see VentralModels.summarize_representation for more info on this):
+    tuples of the form `(a, b)` or `((a, b), c)`, where all of `a,b,c`
+    are strings. We convert them as follows:
+    - `(a, b) -> error_a_b`
+    - `((a, b), c) -> error_scale_a_band_b_c`
+
+    Parameters
+    ----------
+    summarized_rep : dict
+        the dictionary whose keys we want to remap.
+
+    Returns
+    -------
+    summarized_rep : dict
+        dictionary with keys remapped
+
+    """
+    new_summarized_rep = {}
+    for k, v in summarized_rep.items():
+        if isinstance(k[0], str):
+            new_summarized_rep['error_' + '_'.join(k)] = v
+        else:
+            new_summarized_rep["error_scale_{}_band_{}_{}".format(*k[0], k[1])] = v
+    return new_summarized_rep
+
+
+def summarize_history(metamer, save_path, **kwargs):
+    r"""Generate and save summary of synthesis history
+
+    In addition the `key=value` pairs passed as kwargs, we also save the
+    following on each iteration:
+
+    - iteration: the current iteration
+
+    - loss: the loss on this iteration
+
+    - num_statistics: the number of statistics in the model's
+      representation
+
+    - image_mse: the mean-squared error between the reference and
+      synthesized images
+
+    - error terms: the summarized error terms, as returned by
+      `metamer.model.summarize_representation(metamer.representation_error(),
+      by_angle=True)`. This will be the error at each scale, each band,
+      and each of four quadrants
+
+    Parameters
+    ----------
+    metamer : po.synth.Metamer
+        Metamer object to summarize
+    save_path : str
+        path to the csv where we should save the DataFrame we create
+    kwargs :
+        other values to save in this DataFrame. They should all be
+        scalars
+
+    Returns
+    -------
+    summary : pd.DataFrame
+        The summary dataframe 
+
+    """
+    num_saves = metamer.saved_image.shape[0]
+    summary = []
+    for i in range(1, num_saves):
+        it = (i-1) * metamer.store_progress
+        rep_error = metamer.representation_error(i)
+        loss = metamer.loss[it]
+        image_mse = torch.pow(metamer.target_image - metamer.saved_image[i], 2).mean().item()
+        summarized_rep = metamer.model.summarize_representation(rep_error, by_angle=True)
+        summarized_rep = _transform_summarized_rep(summarized_rep)
+        data = {'loss': loss, 'image_mse': image_mse, 'iteration': it,
+                'num_statistics': metamer.target_representation.numel()}
+        data.update(summarized_rep)
+        data.update(kwargs)
+        summary.append(pd.DataFrame(data, index=[i]))
+    summary = pd.concat(summary)
+    summary.to_csv(save_path, index=False)
+    return summary
+
+
 def summarize(metamer, save_path, **kwargs):
-    r"""Generate and save some summaries
+    """Generate and save a summary of performance
+
+    In addition the `key=value` pairs passed as kwargs, we also save the
+    following:
+
+    - num_iterations: the number of iterations synthesis ran for, which
+      we grab from the length of the loss (note this means it can be
+      less than the target number of iterations)
+
+    - loss: the last (non-NaN) loss of synthesis
+
+    - num_statistics: the number of statistics in the model's
+      representation
+
+    - image_mse: the mean-squared error between the reference and
+      synthesized images
+
+    - error terms: the summarized error terms, as returned by
+      `metamer.model.summarize_representation(metamer.representation_error(),
+      by_angle=True)`. This will be the error at each scale, each band,
+      and each of four quadrants
+
+    - window  sizes:  the  summarized   window  sizes,  as  returned  by
+      `metamer.model.summarize_window_sizes()`
+
+    Parameters
+    ----------
+    metamer : po.synth.Metamer
+        Metamer object to summarize
+    save_path : str
+        path to the csv where we should save the DataFrame we create
+    kwargs :
+        other values to save in this DataFrame. They should all be
+        scalars
+
+    Returns
+    -------
+    summary : pd.DataFrame
+        The summary dataframe
+
     """
     loss = metamer.loss[-1]
     if np.isnan(loss):
@@ -431,13 +558,9 @@ def summarize(metamer, save_path, **kwargs):
     data.update(kwargs)
     summarized_rep = metamer.model.summarize_representation(metamer.representation_error(),
                                                             by_angle=True)
-    new_summarized_rep = {}
-    for k, v in summarized_rep.items():
-        if isinstance(k[0], str):
-            new_summarized_rep['error_' + '_'.join(k)] = v
-        else:
-            new_summarized_rep["error_scale_{}_band_{}_{}".format(*k[0], k[1])] = v
-    data.update(new_summarized_rep)
+    summarized_rep = _transform_summarized_rep(summarized_rep)
+    data.update(summarized_rep)
+    data.update(metamer.model.summarize_window_sizes())
     summary = pd.DataFrame(data, index=[0])
     summary.to_csv(save_path, index=False)
     return summary
@@ -910,6 +1033,17 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                   clamp_each_iter=clamp_each_iter, clip_grad_norm=clip_grad_norm,
                   image_name=op.basename(image_name).replace('.pgm', '').replace('.png', ''),
                   loss_function=loss_func)
+        summarize_history(metamer, save_path.replace('.pt', '_history.csv'),
+                          duration_human_readable=convert_seconds_to_str(duration), duration=duration,
+                          optimizer=optimizer, fraction_removed=fraction_removed, model=model_name,
+                          target_image=image_name, seed=seed, learning_rate=learning_rate,
+                          loss_change_thresh=loss_change_thresh, coarse_to_fine=coarse_to_fine,
+                          loss_change_fraction=loss_change_fraction, initial_image=initial_image_type,
+                          min_ecc=min_ecc, max_ecc=max_ecc, max_iter=max_iter, gpu_id=gpu_id,
+                          loss_thresh=loss_thresh, scaling=scaling, clamper=clamper_name,
+                          clamp_each_iter=clamp_each_iter, clip_grad_norm=clip_grad_norm,
+                          image_name=op.basename(image_name).replace('.pgm', '').replace('.png', ''),
+                          loss_function=loss_func)
         save(save_path, metamer, animate_figsize, rep_figsize, img_zoom)
     if save_progress:
         os.remove(save_path.replace('.pt', '_inprogress.pt'))
