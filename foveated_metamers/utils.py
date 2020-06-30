@@ -97,10 +97,11 @@ def get_gpu_id(get_gid=True, n_gpus=4):
 
     """
     allocated_gid = None
-    avail_gpus = GPUtil.getAvailable(order='memory', maxLoad=.1, maxMemory=.1, includeNan=False,
-                                     limit=n_gpus)
     if not get_gid:
         avail_gpus = []
+    else:
+        avail_gpus = GPUtil.getAvailable(order='memory', maxLoad=.1, maxMemory=.1,
+                                         includeNan=False, limit=n_gpus)
     for gid in cycle(avail_gpus):
         # then we've successfully created the lockfile
         if os.system(f"dotlockfile -r 1 /tmp/LCK_gpu_{gid}.lock") == 0:
