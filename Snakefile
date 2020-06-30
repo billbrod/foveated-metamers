@@ -487,7 +487,7 @@ rule cache_windows:
 
 
 def get_norm_dict(wildcards):
-    if 'norm' in wildcards.model_name and 'V1' in wildcards.model_name:
+    if 'norm' in wildcards.model_name:
         preproc = ''
         # lienar images should also use the degamma'd textures
         if 'degamma' in wildcards.image_name or any([i in wildcards.image_name for i in LINEAR_IMAGES]):

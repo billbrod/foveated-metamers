@@ -105,17 +105,17 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
       the model with `cone_power=1.0`, and then raise the pixels of the
       resulting image to `3` at the end (this all happens in
       `Snakefile`, not this script).
-    - `options`: only for the `V1` models, you can additionally include
-      the following strs, separated by `_`:
+    - `options`: you can additionally include the following strs,
+      separated by `_`:
       - `'norm'`: if included, we normalize the models' `cone_responses`
-        and `complex_cell_responses` attributes. In this case,
+        and (if V1) `complex_cell_responses` attributes. In this case,
         `normalize_dict` must also be set (and include those two
         keys). If not included, the model is not normalized
         (normalization makes the optimization easier because the
         different scales of the steerable pyramid have different
         magnitudes).
-      - `s#`, where `#` is an integer. The number of scales to inlude in
-        the steerable pyramid that forms the basis fo the `V1`
+      - `s#` (V1 only), where `#` is an integer. The number of scales to
+        inlude in the steerable pyramid that forms the basis fo the `V1`
         models. If not included, will use 4.
     - `window_type`: `'gaussian'` or `'cosine'`. whether to build the
       model with gaussian or raised-cosine windows. Regardless, scaling
@@ -207,15 +207,20 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
         transition_x = min_ecc
         min_ecc = None
     if model_name.startswith('RGC'):
-        if normalize_dict:
-            raise Exception("Cannot normalize RGC model!")
+        if 'norm' not in model_name:
+            if normalize_dict:
+                raise Exception("Cannot normalize RGC model (must be RGC_norm)!")
+            normalize_dict = {}
+        if not normalize_dict and 'norm' in model_name:
+            raise Exception("If model_name is RGC_norm, normalize_dict must be set!")
         model = po.simul.RetinalGanglionCells(scaling, image.shape[-2:], min_eccentricity=min_ecc,
                                               max_eccentricity=max_ecc, window_type=window_type,
                                               transition_region_width=t_width, cache_dir=cache_dir,
                                               cone_power=cone_power, std_dev=std_dev,
                                               surround_std_dev=surround_std_dev,
                                               center_surround_ratio=center_surround_ratio,
-                                              transition_x=transition_x)
+                                              transition_x=transition_x,
+                                              normalize_dict=normalize_dict)
         animate_figsize = (22, 5)
         if model.window_type == 'dog':
             # then our rep_image will include 3 plots, instead of 1, so
@@ -383,9 +388,9 @@ def summary_plots(metamer, rep_image_figsize, img_zoom):
     """
     rep_fig, axes = plt.subplots(3, 1, figsize=rep_image_figsize)
     titles = ['Reference image |', 'Metamer |', 'Error |']
-    if metamer.model.state_dict_reduced['model_name'] == 'V1' and metamer.model.normalize_dict:
-        # then this is the V1_norm model and so we want to use symmetric
-        # color maps for all of them
+    if metamer.model.normalize_dict:
+        # then we've z-scored the statistics and so they can be
+        # negative. thus we want to use a symmetric colormap
         vranges = ['indep0', 'indep0', 'indep0']
     else:
         vranges = ['indep1', 'indep1', 'indep0']
