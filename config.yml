@@ -1,2 +1,105 @@
 DATA_DIR: "/home/billbrod/Desktop/metamers/"
 TEXTURE_DIR: "/home/billbrod/Desktop/textures/cropped512-gray-jpg"
+
+REF_IMAGE_TEMPLATE_PATH: "{DATA_DIR}/ref_images/{image_name}.png"
+METAMER_TEMPLATE_PATH: "{DATA_DIR}/metamers/{model_name}/{image_name}/scaling-{scaling}/opt-{optimizer}_loss-{loss}/fr-{fract_removed}_lc-{loss_fract}_lt-{loss_change_thresh}_cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}/seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc:.03f}_em-{max_ecc:.03f}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}_metamer.png"
+LINEAR_IMAGES:
+  - 'azulejos'
+  - 'tiles'
+  - 'market'
+  - 'flower'
+
+DEFAULT_METAMERS:
+  image_name:
+    - 'azulejos_range-.05,.95_size-2048,2600'
+    - 'tiles_range-.05,.95_size-2048,2600'
+    - 'market_range-.05,.95_size-2048,2600'
+    - 'flower_range-.05,.95_size-2048,2600'
+  seed:
+    - 0
+    - 1
+    - 2
+  optimizer: 'Adam'
+  loss: 'mse'
+  fract_removed: 0
+  loss_fract: 1
+  loss_change_thresh: 1e-4
+  coarse_to_fine: False
+  clamp: 'clamp'
+  clamp_each_iter: True
+  init_type: 'white'
+  learning_rate: .1
+  min_ecc: 0.5
+  max_ecc: 30.2
+  loss_thresh: 1e-8
+  gpu: 0
+
+RGC:
+  model_name: 'RGC_cone-1.0_norm_gaussian'
+  scaling:
+    - .01
+    - .013
+    - .017
+    - .021
+    - .027
+    - .035
+    - .045
+    - .058
+    - .075
+  max_iter: 750
+
+V1:
+  model_name: 'V1_cone-1.0_norm_s6_gaussian'
+  scaling:
+    - .095
+    - .12
+    - .14
+    - .18
+    - .22
+    - .27
+    - .33
+    - .4
+    - .5
+  loss: 'mse_range-0,1_beta-0.5'
+  coarse_to_fine: True
+  clamp_each_iter: False
+  max_iter: 10000
+  gpu: 1
+
+PSYCHOPHYSICS:
+  SESSIONS:
+    - 0
+    - 1
+    - 2
+  SUBJECTS:
+    - 'sub-01'
+    - 'sub-02'
+    - 'sub-03'
+    - 'sub-04'
+    - 'sub-05'
+    - 'sub-06'
+    - 'sub-07'
+    - 'sub-08'
+    - 'sub-09'
+    - 'sub-10'
+    - 'sub-11'
+    - 'sub-12'
+    - 'sub-13'
+    - 'sub-14'
+    - 'sub-15'
+    - 'sub-16'
+    - 'sub-17'
+    - 'sub-18'
+    - 'sub-19'
+    - 'sub-20'
+    - 'sub-21'
+    - 'sub-22'
+    - 'sub-23'
+    - 'sub-24'
+    - 'sub-25'
+    - 'sub-26'
+    - 'sub-27'
+    - 'sub-28'
+    - 'sub-29'
+    - 'sub-30'
+

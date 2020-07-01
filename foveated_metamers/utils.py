@@ -1,11 +1,17 @@
 """various utilities
 """
 import os
+import re
+import copy
+import os.path as op
+import yaml
+import argparse
 import warnings
 from contextlib import contextmanager
-from itertools import cycle
+from itertools import cycle, product
 import GPUtil
 import numpy as np
+from collections import OrderedDict
 
 
 def convert_im_to_float(im):
@@ -111,3 +117,153 @@ def get_gpu_id(get_gid=True, n_gpus=4):
         yield allocated_gid
     finally:
         os.system(f"dotlockfile -u /tmp/LCK_gpu_{allocated_gid}.lock")
+
+
+def _find_img_size(image_name):
+    """use regex to grab size from image_name
+
+    We look for the pattern "_size-([0-9]+,[0-9]+)", grab the first one,
+    and will raise an exception if no matches are found
+
+    Parameters
+    ----------
+    image_name : str
+        name of the reference image, as used in the Snakefile. will
+        contain the base image, any preprocessing (cone power, degamma,
+        changing the range), and size
+
+    Returns
+    -------
+    image_size : np.array
+        array with 2 ints, giving the size of the image
+
+    """
+    image_size = re.findall("_size-([0-9]+,[0-9]+)", image_name)[0]
+    return np.array(image_size.split(',')).astype(int)
+
+
+def generate_metamer_paths(model_name, **kwargs):
+    """Generate metamer paths in a programmatic way
+
+    This generates paths to the metamer.png files found in the
+    metamer_display folder in a programmatic way. The intended use case
+    is to call this script from the command-line and pipe the output to
+    snakemake.
+
+    We use the values found in config.yml, which give the metamers used
+    in the experiment. To over-write them, and therefore generate a
+    different set, you should pass extra `key=value` pairs, where `key`
+    are the format strings from METAMER_TEMPLATE_PATH (found in
+    config.yml) and `value` can be either a single value or a list. For
+    any `key` not passed, we'll use the model-specific defaults from
+    config.yml
+
+    Parameters
+    ----------
+    model_name : str
+        Name(s) of the model(s) to run. Must begin with either V1 or
+        RGC. If model name is just 'RGC' or just 'V1', we will use the
+        default model name for that brain area from config.yml
+    kwargs :
+        keys must be configurable options for METAMER_TEMPLATE_PATH, as
+        found in config.yml. If an option is *not* set, we'll use the
+        model-specific default value from that yml file. values can be
+        either a single value or a list
+
+    Parameters
+    ----------
+    paths : list
+        list of strs, containing the absolute paths to the metamer.png
+        files found in the metamer_display folder
+
+    """
+    if not isinstance(model_name, list):
+        model_name = [model_name]
+    with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
+        defaults = yaml.safe_load(f)
+    default_img_size = _find_img_size(defaults['DEFAULT_METAMERS']['image_name'][0])
+    pix_to_deg = float(defaults['DEFAULT_METAMERS']['max_ecc']) / default_img_size.max()
+    images = kwargs.pop('image_name', defaults['DEFAULT_METAMERS'].pop('image_name'))
+    if not isinstance(images, list):
+        images = [images]
+    args = {}
+    paths = []
+    template_path = defaults['METAMER_TEMPLATE_PATH'].replace('metamers/{model_name}',
+                                                              'metamers_display/{model_name}')
+    for im in images:
+        for model in model_name:
+            args.update(copy.deepcopy(defaults['DEFAULT_METAMERS']))
+            if 'max_ecc' not in kwargs.keys():
+                img_size = _find_img_size(im)
+                args['max_ecc'] = img_size.max() * pix_to_deg
+            if model.startswith('RGC'):
+                args.update(defaults['RGC'])
+                if model == 'RGC':
+                    model = defaults['RGC']['model_name']
+            elif model.startswith('V1'):
+                args.update(defaults['V1'])
+                if model == 'V1':
+                    model = defaults['V1']['model_name']
+            args['DATA_DIR'] = defaults['DATA_DIR']
+            # by putting this last, we'll over-write the defaults
+            args.update(kwargs)
+            args.update({'model_name': model, 'image_name': im})
+            # we want to handle lists differently, iterating through them. we
+            # use an ordered dict because we want the keys and values to have
+            # the same ordering when we iterate through them separately
+            list_args = OrderedDict({k: v for k, v in args.items() if isinstance(v, list)})
+            for k in list_args.keys():
+                args.pop(k)
+            for vals in product(*list_args.values()):
+                tmp = dict(zip(list_args.keys(), vals))
+                p = template_path.format(**tmp, **args)
+                p = op.join(*p.split('/'))
+                paths.append(p)
+    return paths
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description=("Generate metamer paths in a programmatic way, for passing to snakemake. "
+                     "With the exception of model_name, --print, and --save_path, all other "
+                     "arguments are the various configurable options from the metamer template "
+                     "path, which control synthesis behavior. All arguments can take multiple "
+                     "values, in which case we'll generate all possible combinations. If a value "
+                     "is unset, we'll use the model-specific defaults from config.yml."))
+    with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
+        defaults = yaml.safe_load(f)
+    template_path = defaults['METAMER_TEMPLATE_PATH']
+    possible_args = re.findall('{([A-Za-z_]+?)}', template_path)
+    parser.add_argument('--print', '-p', action='store_true',
+                        help="Print out the paths. Note either this or --save_path must be set")
+    parser.add_argument('--save_path', '-s', default='',
+                        help=("Path to a .txt file to save the paths at. If not set, will not "
+                              "save. Note either this or --print must be set"))
+    for k in possible_args:
+        nargs = {'DATA_DIR': 1}.get(k, '+')
+        if k == 'model_name':
+            parser.add_argument("model_name", nargs=nargs,
+                                help=("Name(s) of the model(s) to run. Must begin with either "
+                                      "V1 or RGC. If model name is just 'RGC' or just 'V1', we "
+                                      "will use the default model name for that brain area from"
+                                      f" config.yml ({defaults['RGC']['model_name']} or "
+                                      f"{defaults['V1']['model_name']}, respectively)"))
+        else:
+            parser.add_argument(f"--{k}", default=None, nargs=nargs)
+    args = vars(parser.parse_args())
+    print_output = args.pop('print')
+    save_path = args.pop('save_path')
+    args = {k: v for k, v in args.items() if v is not None}
+    if not save_path and not print_output:
+        raise Exception("Either --save or --print must be true!")
+    if save_path and not save_path.endswith('.txt'):
+        raise Exception("--save must point towards a .txt file")
+    paths = generate_metamer_paths(**args)
+    # need to do a bit of string manipulation to get this in the right
+    # format
+    paths = os.sep + f' {os.sep}'.join(paths)
+    if print_output:
+        print(paths)
+    if save_path:
+        with open(save_path, 'w') as f:
+            f.write(paths)
