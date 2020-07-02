@@ -259,7 +259,7 @@ def generate_metamer_paths(model_name, **kwargs):
             for vals in product(*list_args.values()):
                 tmp = dict(zip(list_args.keys(), vals))
                 p = template_path.format(**tmp, **args)
-                p = op.join(*p.split('/'))
+                p = os.sep + op.join(*p.split('/'))
                 paths.append(p)
     return paths
 
@@ -317,7 +317,7 @@ if __name__ == '__main__':
     paths = generate_metamer_paths(**args)
     # need to do a bit of string manipulation to get this in the right
     # format
-    paths = os.sep + f' {os.sep}'.join(paths)
+    paths = ' '.join(paths)
     if print_output:
         print(paths)
     if save_path:
