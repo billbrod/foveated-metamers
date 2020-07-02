@@ -310,7 +310,6 @@ if __name__ == '__main__':
         args['image_name'].extend(images)
     else:
         args['image_name'] = images
-    print(args)
     if not save_path and not print_output:
         raise Exception("Either --save or --print must be true!")
     if save_path and not save_path.endswith('.txt'):
