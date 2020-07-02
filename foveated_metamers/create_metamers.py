@@ -493,16 +493,20 @@ def summarize_history(metamer, save_path, **kwargs):
     for i in range(1, num_saves):
         it = (i-1) * metamer.store_progress
         rep_error = metamer.representation_error(i)
-        loss = metamer.loss[it]
         image_mse = torch.pow(metamer.target_image - metamer.saved_image[i], 2).mean().item()
         summarized_rep = metamer.model.summarize_representation(rep_error, by_angle=True)
         summarized_rep = _transform_summarized_rep(summarized_rep)
-        data = {'loss': loss, 'image_mse': image_mse, 'iteration': it,
+        data = {'loss': metamer.loss[it], 'image_mse': image_mse, 'iteration': it,
+                'learning_rate': metamer.learning_rate[it], 'gradient_norm': metamer.gradient[it],
                 'num_statistics': metamer.target_representation.numel()}
         data.update(summarized_rep)
         data.update(kwargs)
         summary.append(pd.DataFrame(data, index=[i]))
     summary = pd.concat(summary)
+    # get the amount the synthesized image changed from
+    # iteration-to-iteration, in pixel MSE
+    hist = torch.pow(metamer.saved_image[1:] - metamer.saved_image[:-1], 2).mean((-1, -2)).squeeze()
+    summary['pixel_mse_change'] = hist
     summary.to_csv(save_path, index=False)
     return summary
 
