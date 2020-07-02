@@ -142,6 +142,56 @@ def _find_img_size(image_name):
     return np.array(image_size.split(',')).astype(int)
 
 
+def get_ref_image_full_path(image_name, preproc_methods=['full', 'cone', 'gamma-corrected',
+                                                         'range']):
+    """check whether image is in ref_image or ref_image_preproc dir
+
+    Parameters
+    ----------
+    image_name : str
+        name of the (e.g., like those seen in `config.yml:
+        DEFAULT_METAMERS: image_name`)
+    preproc_methods : list, optional
+        list of preproc methods we may have applied. probably shouldn't
+        change this
+
+    Returns
+    -------
+    path : str
+        full path to the reference image
+
+    """
+    with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
+        defaults = yaml.safe_load(f)
+        template = defaults['REF_IMAGE_TEMPLATE_PATH']
+        DATA_DIR = defaults['DATA_DIR']
+    if any([i in image_name for i in preproc_methods]):
+        template = template.replace('ref_images', 'ref_images_preproc')
+    template = template.format(image_name=image_name, DATA_DIR=DATA_DIR)
+    return os.sep + op.join(*template.split('/'))
+
+
+def get_gamma_corrected_ref_image(image_name):
+    """get name of gamma-corrected reference image
+
+    Parameters
+    ----------
+    image_name : str
+        name of the (e.g., like those seen in `config.yml:
+        DEFAULT_METAMERS: image_name`)
+
+    Returns
+    -------
+    path : str
+        full path to the gamma-corrected reference image
+
+    """
+    image_name = image_name.replace('cone_', '')
+    image_name = image_name.split('_')
+    image_name = '_'.join([image_name[0]] + ['gamma-corrected'] + image_name[1:])
+    return image_name
+
+
 def generate_image_names(ref_image=None, preproc=None, size=None):
     """Generate image names in a programmatic way
 

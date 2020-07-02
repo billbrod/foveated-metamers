@@ -6,10 +6,11 @@ import os.path as op
 import numpy as np
 from glob import glob
 from plenoptic.simulate import pooling
+from foveated_metamers import utils
 
 configfile:
     "config.yml"
-if not os.path.isdir(config["DATA_DIR"]):
+if not op.isdir(config["DATA_DIR"]):
     raise Exception("Cannot find the dataset at %s" % config["DATA_DIR"])
 if os.system("module list") == 0:
     # then we're on the cluster
@@ -33,65 +34,19 @@ ruleorder:
     collect_metamers_example > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image
 
 
-LINEAR_IMAGES = ['azulejos', 'tiles', 'market', 'flower']
-MODELS = ['RGC_cone-1.0_gaussian', 'V1_cone-1.0_norm_s6_gaussian']
-IMAGES = ['azulejos_cone_full_size-2048,2600', 'tiles_cone_full_size-2048,2600',
-          'market_cone_full_size-2048,2600', 'flower_cone_full_size-2048,2600']
-METAMER_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers', '{model_name}', '{image_name}',
-                                'scaling-{scaling}', 'opt-{optimizer}_loss-{loss}',
-                                'fr-{fract_removed}_lc-{loss_fract}_lt-{loss_change_thresh}_'
-                                'cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}', 'seed-{seed}_'
-                                'init-{init_type}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_'
-                                'iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}_metamer.png')
-OUTPUT_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers_display', '{model_name}', '{image_name}',
-                               'scaling-{scaling}', 'opt-{optimizer}_loss-{loss}', 'fr-{fract_removed}_lc-'
-                               '{loss_fract}_lt-{loss_change_thresh}_cf-{coarse_to_fine}_{clamp}-'
-                               '{clamp_each_iter}', 'seed-{seed}_init-{init_type}_lr-'
-                               '{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_thresh-'
-                               '{loss_thresh}_gpu-{gpu}_metamer.png')
-CONTINUE_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'metamers_continue', '{model_name}',
-                                 '{image_name}', 'scaling-{scaling}', 'opt-{optimizer}_loss-{loss}',
-                                 'fr-{fract_removed}_lc-{loss_fract}_lt-{loss_change_thresh}_'
-                                 'cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}', 'attempt-{num}_'
-                                 'iter-{extra_iter}', 'seed-{seed}_init-{init_type}_'
-                                 'lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_'
-                                 'thresh-{loss_thresh}_gpu-{gpu}_metamer.png')
-REF_IMAGE_TEMPLATE_PATH = op.join(config['DATA_DIR'], 'ref_images', '{image_name}.png')
-SUBJECTS = ['sub-%02d' % i for i in range(1, 31)]
-SESSIONS = [0, 1, 2]
-RGC_SCALING = [.01, .013, .017, .021, .027, .035, .045, .058, .075]
-V1_SCALING = [.095, .12, .14, .18, .22, .27, .33, .4, .5]
-
-
-def get_all_metamers(min_idx=0, max_idx=-1, model_name=None):
-    rgc_metamers = [OUTPUT_TEMPLATE_PATH.format(model_name=MODELS[0], image_name=i, scaling=sc,
-                                                optimizer='Adam', fract_removed=0, loss_fract=1,
-                                                coarse_to_fine=False, loss_change_thresh=.1, seed=s,
-                                                init_type='white', learning_rate=.1, min_ecc=.5,
-                                                max_ecc=30.2, max_iter=750, loss_thresh=1e-8, gpu=0,
-                                                clamp='clamp', clamp_each_iter=True, loss='l2')
-                    for sc in RGC_SCALING for i in IMAGES for s in range(3)]
-    v1_metamers = [OUTPUT_TEMPLATE_PATH.format(model_name=MODELS[1], image_name=i, scaling=sc,
-                                               optimizer='Adam', fract_removed=0, loss_fract=1,
-                                               loss_change_thresh=1e-2, seed=s, init_type='white',
-                                               learning_rate=.1, min_ecc=.5, max_ecc=30.2,
-                                               max_iter=5000, loss_thresh=1e-8, gpu=1,
-                                               clamp='clamp', clamp_each_iter=True,
-                                               coarse_to_fine='together',
-                                               loss='l2_range-0,1_beta-.5')
-                    for sc in V1_SCALING for i in IMAGES for s in range(3)]
-    if model_name is None:
-        all_metamers = rgc_metamers + v1_metamers
-    elif model_name == MODELS[0]:
-        all_metamers = rgc_metamers
-    elif model_name == MODELS[1]:
-        all_metamers = v1_metamers
-    else:
-        raise Exception("model_name must be one of %s" % MODELS)
-    # we use -1 as a dummy value, ignoring it
-    if max_idx != -1:
-        all_metamers = all_metamers[:max_idx]
-    return all_metamers[min_idx:]
+LINEAR_IMAGES = config['IMAGE_NAME']['ref_image']
+MODELS = [config[i]['model_name'] for i in ['RGC', 'V1']]
+IMAGES = config['DEFAULT_METAMERS']['image_name']
+# this is ugly, but it's easiest way to just replace the one format
+# target while leaving the others alone
+REF_IMAGE_TEMPLATE_PATH = config['REF_IMAGE_TEMPLATE_PATH'].replace("{DATA_DIR}/", config['DATA_DIR'])
+# the regex here removes all string formatting codes from the string,
+# since Snakemake doesn't like them
+METAMER_TEMPLATE_PATH = re.sub(":.*?}", "}", config['METAMER_TEMPLATE_PATH'].replace("{DATA_DIR}/", config['DATA_DIR']))
+OUTPUT_TEMPLATE_PATH = METAMER_TEMPLATE_PATH.replace('metamers/{model_name}',
+                                                     'metamers_display/{model_name}')
+CONTINUE_TEMPLATE_PATH = (METAMER_TEMPLATE_PATH.replace('metamers/{model_name}', 'metamers_continue/{model_name}')
+                          .replace("{clamp_each_iter}/", "{clamp_each_iter}/attempt-{num}_iter-{extra_iter}"))
 
 
 # quick rule to check that there are GPUs available and the environment
@@ -561,16 +516,6 @@ def get_windows(wildcards):
         return windows
 
 
-def get_ref_image(image_name):
-    r"""get ref image
-    """
-    if 'full' in image_name or 'cone' in image_name or 'gamma-corrected' in image_name or 'range' in image_name:
-        template = REF_IMAGE_TEMPLATE_PATH.replace('ref_images', 'ref_images_preproc')
-    else:
-        template = REF_IMAGE_TEMPLATE_PATH
-    return template.format(image_name=image_name)
-
-
 def get_mem_estimate(wildcards):
     r"""estimate the amount of memory that this will need, in GB
     """
@@ -603,7 +548,7 @@ def get_mem_estimate(wildcards):
 
 rule create_metamers:
     input:
-        ref_image = lambda wildcards: get_ref_image(wildcards.image_name),
+        ref_image = lambda wildcards: utils.get_ref_image_full_path(wildcards.image_name),
         windows = get_windows,
         norm_dict = get_norm_dict,
     output:
@@ -692,7 +637,7 @@ def find_attempts(wildcards):
 
 rule continue_metamers:
     input:
-        ref_image = lambda wildcards: get_ref_image(wildcards.image_name),
+        ref_image = lambda wildcards: utils.get_ref_image_full_path(wildcards.image_name),
         norm_dict = get_norm_dict,
         continue_path = lambda wildcards: find_attempts(wildcards).replace('_metamer.png', '.pt'),
     output:
@@ -840,29 +785,14 @@ rule postproc_metamers:
                         shutil.copy(input[i], f)
 
 
-rule dummy_metamer_gen:
-    input:
-        lambda wildcards: get_all_metamers(int(wildcards.min_idx), int(wildcards.max_idx),
-                                           wildcards.model_name),
-    output:
-        op.join(config['DATA_DIR'], 'metamers_display', 'dummy_{model_name}_{min_idx}_{max_idx}.txt')
-    shell:
-        "touch {output}"
-
-
-def get_metamers_for_example(wildcards):
-    metamers = get_all_metamers(model_name=MODELS[0])
-    return [m.replace('metamer.png', 'metamer-16.png') for m in metamers if 'market' in m
-            if 'seed-2' not in m]
-
-
 rule collect_metamers_example:
     # this is for a shorter version of the experiment, the goal is to
     # create a test version for teaching someone how to run the
     # experiment or for demos
     input:
-        get_metamers_for_example,
-        [get_ref_image(IMAGES[2].replace('cone_', ''))],
+        utils.generate_metamer_paths('RGC', seed=2,
+                                     image_name=config['DEFAULT_METAMERS']['image_name'][0]),
+        utils.get_ref_image_full_path(IMAGES[2].replace('cone_', '')),
     output:
         op.join(config["DATA_DIR"], 'stimuli', 'RGC_demo', 'stimuli.npy'),
         report(op.join(config["DATA_DIR"], 'stimuli', 'RGC_demo', 'stimuli_description.csv')),
@@ -882,10 +812,10 @@ rule collect_metamers_example:
 rule collect_metamers:
     input:
         lambda wildcards: [m.replace('metamer.png', 'metamer-16.png') for m in
-                           get_all_metamers(**wildcards)],
+                           utils.generate_metamer_paths(**wildcards)],
         # we don't want the "cone_full" images, we want the "full"
         # images.
-        lambda wildcards: [get_ref_image(i.replace('cone_', '')) for i in IMAGES]
+        lambda wildcards: [utils.get_ref_image_full_path(i.replace('cone_', '')) for i in IMAGES]
     output:
         # we collect across image_name and scaling, and don't care about
         # learning_rate, max_iter, loss_thresh
@@ -936,15 +866,15 @@ rule gen_all_idx:
     input:
         [op.join(config["DATA_DIR"], 'stimuli', '{model_name}', '{subject}_idx_sess-'
                  '{num}.npy').format(model_name=m, subject=s, num=n)
-         for s in SUBJECTS for n in SESSIONS for m in MODELS],
+         for s in config['PSYCHOPHYSICS']['SUBJECTS']
+         for n in config['PSYCHOPHYSICS']['SESSIONS'] for m in MODELS],
 
 
 rule scaling_comparison_figure:
     input:
         lambda wildcards: [m.replace('metamer.png', 'metamer_gamma-corrected.png') for m in
-                           get_all_metamers(model_name=wildcards.model_name)
-                           if wildcards.image_name in m if 'seed-%s' % wildcards.seed in m],
-        lambda wildcards: get_ref_image(wildcards.image_name.replace('cone_', 'gamma-corrected_'))
+                           utils.generate_metamer_paths(**wildcards)],
+        lambda wildcards: utils.get_ref_image_full_path(utils.get_gamma_corrected_ref_image(wildcards.image_name))
     output:
         report(op.join(config['DATA_DIR'], 'figures', '{context}', '{model_name}',
                        '{image_name}_seed-{seed}_scaling.svg'))
