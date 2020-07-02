@@ -142,6 +142,48 @@ def _find_img_size(image_name):
     return np.array(image_size.split(',')).astype(int)
 
 
+def generate_image_names(ref_image=None, preproc=None, size=None):
+    """Generate image names in a programmatic way
+
+    This generates image names, to be passed to
+    generate_metamer_paths. This is much more constrained than that
+    template-following, as we only allow three fields: ref_image,
+    preproc, and size. The template path is `IMAGE_NAME: template`, as
+    found in config.yml
+
+    Parameters
+    ----------
+    ref_image, preproc, size : str, list, or None, optional
+        values to fill in for the three allowed fields. If None, we use
+        the default, as found in `confing.yml: IMAGE_NAME`. If multiple
+        values, we'll do a product, getting all possible combinations of
+        the fields
+
+    Returns
+    -------
+    image_names : list
+        list of generated image names
+
+    """
+    with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
+        defaults = yaml.safe_load(f)['IMAGE_NAME']
+    kwargs = OrderedDict({'ref_image': ref_image, 'preproc': preproc, 'size': size})
+    template = defaults['template']
+    for k, v in kwargs.items():
+        if v is None:
+            v = defaults[k]
+        if not isinstance(v, list):
+            v = [v]
+        kwargs[k] = v
+    image_names = []
+    for vals in product(*kwargs.values()):
+        tmp = dict(zip(kwargs.keys(), vals))
+        im = template.format(**tmp)
+        im = op.join(*im.split('/'))
+        image_names.append(im)
+    return image_names
+
+
 def generate_metamer_paths(model_name, **kwargs):
     """Generate metamer paths in a programmatic way
 
@@ -250,10 +292,25 @@ if __name__ == '__main__':
                                       f"{defaults['V1']['model_name']}, respectively)"))
         else:
             parser.add_argument(f"--{k}", default=None, nargs=nargs)
+    for k in ['ref_image', 'size', 'preproc']:
+        parser.add_argument(f'--{k}', default=None, nargs='+',
+                            help=("These arguments are used to construct "
+                                  "additional image_names using the template "
+                                  f"{defaults['IMAGE_NAME']['template']}. Their defaults are in "
+                                  "the IMAGE_NAME section of config.yml, and any image names "
+                                  "constructed from them will be appended to those passed. If "
+                                  "these are set and image_name is unset, will just use these"))
     args = vars(parser.parse_args())
     print_output = args.pop('print')
     save_path = args.pop('save_path')
+    image_kwargs = {k: args.pop(k) for k in ['ref_image', 'size', 'preproc']}
+    images = generate_image_names(**image_kwargs)
     args = {k: v for k, v in args.items() if v is not None}
+    if 'image_name' in args.keys():
+        args['image_name'].extend(images)
+    else:
+        args['image_name'] = images
+    print(args)
     if not save_path and not print_output:
         raise Exception("Either --save or --print must be true!")
     if save_path and not save_path.endswith('.txt'):
