@@ -506,7 +506,7 @@ def summarize_history(metamer, save_path, **kwargs):
     # get the amount the synthesized image changed from
     # iteration-to-iteration, in pixel MSE
     hist = torch.pow(metamer.saved_image[1:] - metamer.saved_image[:-1], 2).mean((-1, -2)).squeeze()
-    summary['pixel_mse_change'] = hist
+    summary['pixel_mse_change'] = po.to_numpy(hist)
     summary.to_csv(save_path, index=False)
     return summary
 
