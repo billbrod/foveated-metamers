@@ -372,7 +372,6 @@ if __name__ == '__main__':
             except ValueError:
                 # then it's a list of strings, and we keep it as is
                 new_args[k] = v
-    print(new_args)
     if 'image_name' in new_args.keys():
         new_args['image_name'].extend(images)
     else:
