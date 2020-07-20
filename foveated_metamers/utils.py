@@ -355,16 +355,33 @@ if __name__ == '__main__':
     save_path = args.pop('save_path')
     image_kwargs = {k: args.pop(k) for k in ['ref_image', 'size', 'preproc']}
     images = generate_image_names(**image_kwargs)
-    args = {k: v for k, v in args.items() if v is not None}
-    if 'image_name' in args.keys():
-        args['image_name'].extend(images)
+    new_args = {}
+    for k, v in args.items():
+        if v is None:
+            continue
+        if k == 'DATA_DIR':
+            new_args[k] = v
+        elif k == 'seed':
+            # then it's an int
+            new_args[k] = [int(vi) for vi in v]
+        else:
+            try:
+                # everything else is a list. here we try and convert
+                # each item to a float
+                new_args[k] = [float(vi) for vi in v]
+            except ValueError:
+                # then it's a list of strings, and we keep it as is
+                new_args[k] = v
+    print(new_args)
+    if 'image_name' in new_args.keys():
+        new_args['image_name'].extend(images)
     else:
-        args['image_name'] = images
+        new_args['image_name'] = images
     if not save_path and not print_output:
         raise Exception("Either --save or --print must be true!")
     if save_path and not save_path.endswith('.txt'):
         raise Exception("--save must point towards a .txt file")
-    paths = generate_metamer_paths(**args)
+    paths = generate_metamer_paths(**new_args)
     # need to do a bit of string manipulation to get this in the right
     # format
     paths = ' '.join(paths)

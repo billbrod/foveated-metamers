@@ -794,8 +794,8 @@ rule collect_metamers_example:
                                      image_name=config['DEFAULT_METAMERS']['image_name'][0]),
         utils.get_ref_image_full_path(IMAGES[2].replace('cone_', '')),
     output:
-        op.join(config["DATA_DIR"], 'stimuli', 'RGC_demo', 'stimuli.npy'),
-        report(op.join(config["DATA_DIR"], 'stimuli', 'RGC_demo', 'stimuli_description.csv')),
+        op.join(config["DATA_DIR"], 'stimuli', 'RGC_cone-1.0_norm_gaussian_demo', 'stimuli.npy'),
+        report(op.join(config["DATA_DIR"], 'stimuli', 'RGC_cone-1.0_norm_gaussian_demo', 'stimuli_description.csv')),
     log:
         op.join(config["DATA_DIR"], 'logs', 'stimuli', 'RGC_demo', 'stimuli.log'),
     benchmark:
