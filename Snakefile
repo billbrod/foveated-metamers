@@ -47,6 +47,9 @@ OUTPUT_TEMPLATE_PATH = METAMER_TEMPLATE_PATH.replace('metamers/{model_name}',
                                                      'metamers_display/{model_name}')
 CONTINUE_TEMPLATE_PATH = (METAMER_TEMPLATE_PATH.replace('metamers/{model_name}', 'metamers_continue/{model_name}')
                           .replace("{clamp_each_iter}/", "{clamp_each_iter}/attempt-{num}_iter-{extra_iter}"))
+TEXTURE_DIR = config['TEXTURE_DIR']
+if TEXTURE_DIR.endswith(os.sep) or TEXTURE_DIR.endswith('/'):
+    TEXTURE_DIR = TEXTURE_DIR[:-1]
 
 
 # quick rule to check that there are GPUs available and the environment
@@ -287,9 +290,9 @@ rule generate_image:
 
 rule preproc_textures:
     input:
-        config['TEXTURE_DIR']
+        TEXTURE_DIR
     output:
-        directory(config['TEXTURE_DIR'] + "_{preproc}")
+        directory(TEXTURE_DIR + "_{preproc}")
     log:
         op.join(config['DATA_DIR'], 'logs', '{preproc}_textures.log')
     benchmark:
@@ -325,7 +328,7 @@ rule preproc_textures:
 
 rule gen_norm_stats:
     input:
-        config['TEXTURE_DIR'] + "{preproc}"
+        TEXTURE_DIR + "{preproc}"
     output:
         # here V1 and texture could be considered wildcards, but they're
         # the only we're doing this for now
