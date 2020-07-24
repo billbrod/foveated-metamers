@@ -300,11 +300,11 @@ will do this (where you should replace both `n` with the number of
 GPUs you have; this is how many jobs we run simultaneously; assuming
 everything is working correctly, you could increase the `n` after `-j`
 to be greater than the one after `--resources gpu=`, and snakemake
-should be able to figure everything out, but I've had mixed success
-with this; you should also replace `m` with the GB of RAM you have
-available). `snakemake` will create the directed acyclic graph (DAG)
-of jobs necessary to create those two txt files, which are just
-placeholders that require all the metamers as their input.
+should be able to figure everything out; you should also replace `m`
+with the GB of RAM you have available). `snakemake` will create the
+directed acyclic graph (DAG) of jobs necessary to create those two txt
+files, which are just placeholders that require all the metamers as
+their input.
 
 However, you probably can't create all metamers at once on one
 machine, because that would take too much time. You probably want to
