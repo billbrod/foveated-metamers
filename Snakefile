@@ -563,6 +563,7 @@ rule create_metamers:
         METAMER_TEMPLATE_PATH.replace('_metamer.png', '.pt'),
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'summary.csv'),
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'history.csv'),
+        METAMER_TEMPLATE_PATH.replace('metamer.png', 'history.png'),
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'synthesis.mp4'),
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'window_check.svg'),
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'rep.png'),
@@ -652,6 +653,7 @@ rule continue_metamers:
         CONTINUE_TEMPLATE_PATH.replace('_metamer.png', '.pt'),
         CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'summary.csv'),
         CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'history.csv'),
+        CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'history.png'),
         CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'synthesis.mp4'),
         CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'window_check.svg'),
         CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'rep.png'),
@@ -723,6 +725,7 @@ rule postproc_metamers:
     input:
         lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'summary.csv'),
         lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'history.csv'),
+        lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'history.png'),
         lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'synthesis.mp4'),
         lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'window_check.svg'),
         lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'rep.png'),
@@ -733,6 +736,7 @@ rule postproc_metamers:
     output:
         OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'summary.csv'),
         OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'history.csv'),
+        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'history.png'),
         OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'synthesis.mp4'),
         OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'window_check.svg'),
         OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'rep.png'),

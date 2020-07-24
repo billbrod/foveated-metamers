@@ -14,6 +14,7 @@ import pandas as pd
 import os.path as op
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import seaborn as sns
 from skimage import color
 from .utils import convert_im_to_float, convert_im_to_int
 # by default matplotlib uses the TK gui toolkit which can cause problems
@@ -470,7 +471,9 @@ def summarize_history(metamer, save_path, **kwargs):
     r"""Generate and save summary of synthesis history
 
     In addition the `key=value` pairs passed as kwargs, we also save the
-    following on each iteration:
+    following on each saved iteration (we sub-sample by a fair amount,
+    so this will be something like every 40 iterations instead of every
+    1):
 
     - iteration: the current iteration
 
@@ -482,10 +485,23 @@ def summarize_history(metamer, save_path, **kwargs):
     - image_mse: the mean-squared error between the reference and
       synthesized images
 
+    - learning_rate: learning rate on this iteration (this changes
+      because we use a scheduler that reduces it when it looks like our
+      loss has plateaued)
+
+    - gradient_norm: gradient norm on this iteration
+
+    - pixel_change: the max pixel change in the synthesized image from
+      previous iteration to this
+
     - error terms: the summarized error terms, as returned by
       `metamer.model.summarize_representation(metamer.representation_error(),
       by_angle=True)`. This will be the error at each scale, each band,
       and each of four quadrants
+
+    We also create a plot showing the loss, learning_rate,
+    gradient_norm, pixel_change, and image_mse as a function of
+    iterations, saved at `save_path.replace('.csv', '.png')`
 
     Parameters
     ----------
@@ -500,7 +516,11 @@ def summarize_history(metamer, save_path, **kwargs):
     Returns
     -------
     summary : pd.DataFrame
-        The summary dataframe 
+        The summary dataframe
+    g : sns.FacetGrid
+        FacetGrid containing line plots of the loss, learning rate,
+        gradient norm, pixel change, and image mse as functions of
+        iteration
 
     """
     num_saves = metamer.saved_image.shape[0]
@@ -513,17 +533,19 @@ def summarize_history(metamer, save_path, **kwargs):
         summarized_rep = _transform_summarized_rep(summarized_rep)
         data = {'loss': metamer.loss[it], 'image_mse': image_mse, 'iteration': it,
                 'learning_rate': metamer.learning_rate[it], 'gradient_norm': metamer.gradient[it],
-                'num_statistics': metamer.target_representation.numel()}
+                'num_statistics': metamer.target_representation.numel(),
+                'pixel_change': metamer.pixel_change[it]}
         data.update(summarized_rep)
         data.update(kwargs)
         summary.append(pd.DataFrame(data, index=[i]))
     summary = pd.concat(summary)
-    # get the amount the synthesized image changed from
-    # iteration-to-iteration, in pixel MSE
-    hist = torch.pow(metamer.saved_image[1:] - metamer.saved_image[:-1], 2).mean((-1, -2)).squeeze()
-    summary['pixel_mse_change'] = po.to_numpy(hist)
+    melted = pd.melt(summary, ['iteration'], ['loss', 'learning_rate', 'gradient_norm',
+                                              'pixel_change', 'image_mse'])
+    g = sns.FacetGrid(melted, col='variable', sharey=False)
+    g.map(sns.lineplot, 'iteration', 'value').set(yscale='log')
+    g.savefig(save_path.replace('.csv', '.png'))
     summary.to_csv(save_path, index=False)
-    return summary
+    return summary, g
 
 
 def summarize(metamer, save_path, **kwargs):
