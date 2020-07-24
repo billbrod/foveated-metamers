@@ -400,6 +400,58 @@ rule combine_norm_stats:
                 torch.save(combined_stats, output[0])
 
 
+def get_mem_estimate(wildcards):
+    r"""estimate the amount of memory that this will need, in GB
+    """
+    try:
+        if 'size-2048,2600' in wildcards.image_name:
+            if 'gaussian' in wildcards.model_name:
+                if 'V1' in wildcards.model_name:
+                    return 16
+                if 'RGC' in wildcards.model_name:
+                    # this is an approximation of the size of their windows,
+                    # and if you have at least 3 times this memory, you're
+                    # good. double-check this value -- the 1.36 is for
+                    # converting form 2048,3528 (which the numbers came
+                    # from) to 2048,2600 (which has 1.36x fewer pixels)
+                    window_size = 1.17430726 / (1.36*float(wildcards.scaling))
+                    return int(3 * window_size)
+            if 'cosine' in wildcards.model_name:
+                if 'V1' in wildcards.model_name:
+                    # most it will need is 32 GB
+                    return 32
+                if 'RGC' in wildcards.model_name:
+                    # this is an approximation of the size of their windows,
+                    # and if you have at least 3 times this memory, you're
+                    # good
+                    window_size = 0.49238059 / float(wildcards.scaling)
+                    return int(3 * window_size)
+        else:
+            # don't have a good estimate for these
+            return 16
+    except AttributeError:
+        # then we don't have a image_name wildcard (and thus this is
+        # being called by cache_windows)
+        if wildcards.size == '2048,2600':
+            if wildcards.window_type == 'gaussian':
+                # this is an approximation of the size of their windows,
+                # and if you have at least 3 times this memory, you're
+                # good. double-check this value -- the 1.36 is for
+                # converting form 2048,3528 (which the numbers came
+                # from) to 2048,2600 (which has 1.36x fewer pixels)
+                window_size = 1.17430726 / (1.36*float(wildcards.scaling))
+                return int(3 * window_size)
+            elif wildcards.window_type == 'cosine':
+                # this is an approximation of the size of their windows,
+                # and if you have at least 3 times this memory, you're
+                # good
+                window_size = 0.49238059 / float(wildcards.scaling)
+                return int(3 * window_size)
+        else:
+            # don't have a good estimate here
+            return 16
+
+
 rule cache_windows:
     output:
         op.join(config["DATA_DIR"], 'windows_cache', 'scaling-{scaling}_size-{size}_e0-{min_ecc}_'
@@ -410,6 +462,8 @@ rule cache_windows:
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'windows_cache', 'scaling-{scaling}_size-{size}_e0-'
                 '{min_ecc}_em-{max_ecc}_w-{t_width}_{window_type}.benchmark.txt')
+    resources:
+        mem = get_mem_estimate,
     run:
         import contextlib
         import plenoptic as po
@@ -522,36 +576,6 @@ def get_windows(wildcards):
                                                   min_ecc=float(wildcards.min_ecc),
                                                   t_width=t_width, window_type=window_type))
         return windows
-
-
-def get_mem_estimate(wildcards):
-    r"""estimate the amount of memory that this will need, in GB
-    """
-    if 'size-2048,2600' in wildcards.image_name:
-        if 'gaussian' in wildcards.model_name:
-            if 'V1' in wildcards.model_name:
-                return 16
-            if 'RGC' in wildcards.model_name:
-                # this is an approximation of the size of their windows,
-                # and if you have at least 3 times this memory, you're
-                # good. double-check this value -- the 1.36 is for
-                # converting form 2048,3528 (which the numbers came
-                # from) to 2048,2600 (which has 1.36x fewer pixels)
-                window_size = 1.17430726 / (1.36*float(wildcards.scaling))
-                return int(3 * window_size)
-        if 'cosine' in wildcards.model_name:
-            if 'V1' in wildcards.model_name:
-                # most it will need is 32 GB
-                return 32
-            if 'RGC' in wildcards.model_name:
-                # this is an approximation of the size of their windows,
-                # and if you have at least 3 times this memory, you're
-                # good
-                window_size = 0.49238059 / float(wildcards.scaling)
-                return int(3 * window_size)
-    else:
-        # don't have a good estimate for these
-        return 16
 
 
 rule create_metamers:
