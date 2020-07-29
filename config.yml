@@ -11,15 +11,15 @@ IMAGE_NAME:
     - 'tiles'
     - 'market'
     - 'flower'
-  preproc: 'range-.05,.95'
+  preproc: 'full'
   size: '2048,2600'
 
 DEFAULT_METAMERS:
   image_name:
-    - 'azulejos_range-.05,.95_size-2048,2600'
-    - 'tiles_range-.05,.95_size-2048,2600'
-    - 'market_range-.05,.95_size-2048,2600'
-    - 'flower_range-.05,.95_size-2048,2600'
+    - 'azulejos_full_size-2048,2600'
+    - 'tiles_full_size-2048,2600'
+    - 'market_full_size-2048,2600'
+    - 'flower_full_size-2048,2600'
   seed:
     - 0
     - 1
