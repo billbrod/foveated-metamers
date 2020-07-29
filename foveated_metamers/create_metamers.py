@@ -522,6 +522,13 @@ def summarize_history(metamer, save_path, **kwargs):
     """
     num_saves = metamer.saved_image.shape[0]
     summary = []
+    keys = ['loss', 'image_mse', 'iteration', 'learning_rate', 'gradient_norm', 'num_statistics',
+            'pixel_change']
+    for k in keys:
+        if k in kwargs.keys():
+            warnings.warn(f"{k} found in the kwargs to add to history.csv, but we're going to "
+                          "add that ourselves! Removing...")
+            kwargs.pop(k)
     for i in range(1, num_saves):
         it = (i-1) * metamer.store_progress
         rep_error = metamer.representation_error(i)
@@ -1064,14 +1071,13 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         summarize_history(metamer, save_path.replace('.pt', '_history.csv'),
                           duration_human_readable=convert_seconds_to_str(duration), duration=duration,
                           optimizer=optimizer, fraction_removed=fraction_removed, model=model_name,
-                          target_image=image_name, seed=seed, learning_rate=learning_rate,
-                          loss_change_thresh=loss_change_thresh, coarse_to_fine=coarse_to_fine,
-                          loss_change_fraction=loss_change_fraction, initial_image=initial_image_type,
-                          min_ecc=min_ecc, max_ecc=max_ecc, max_iter=max_iter, gpu_id=gpu_id,
-                          loss_thresh=loss_thresh, scaling=scaling, clamper=clamper_name,
-                          clamp_each_iter=clamp_each_iter, clip_grad_norm=clip_grad_norm,
-                          image_name=op.basename(image_name).replace('.pgm', '').replace('.png', ''),
-                          loss_function=loss_func)
+                          target_image=image_name, seed=seed, loss_change_thresh=loss_change_thresh,
+                          coarse_to_fine=coarse_to_fine, loss_change_fraction=loss_change_fraction,
+                          initial_image=initial_image_type, min_ecc=min_ecc, max_ecc=max_ecc,
+                          max_iter=max_iter, gpu_id=gpu_id, loss_thresh=loss_thresh,
+                          scaling=scaling, clamper=clamper_name, clamp_each_iter=clamp_each_iter,
+                          clip_grad_norm=clip_grad_norm, loss_function=loss_func,
+                          image_name=op.basename(image_name).replace('.pgm', '').replace('.png', ''))
         save(save_path, metamer, animate_figsize, rep_figsize, img_zoom)
     if save_progress:
         os.remove(save_path.replace('.pt', '_inprogress.pt'))
