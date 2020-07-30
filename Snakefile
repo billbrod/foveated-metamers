@@ -39,10 +39,13 @@ MODELS = [config[i]['model_name'] for i in ['RGC', 'V1']]
 IMAGES = config['DEFAULT_METAMERS']['image_name']
 # this is ugly, but it's easiest way to just replace the one format
 # target while leaving the others alone
-REF_IMAGE_TEMPLATE_PATH = config['REF_IMAGE_TEMPLATE_PATH'].replace("{DATA_DIR}/", config['DATA_DIR'])
+DATA_DIR = config['DATA_DIR']
+if not DATA_DIR.endswith('/'):
+    DATA_DIR += '/'
+REF_IMAGE_TEMPLATE_PATH = config['REF_IMAGE_TEMPLATE_PATH'].replace("{DATA_DIR}/", DATA_DIR)
 # the regex here removes all string formatting codes from the string,
 # since Snakemake doesn't like them
-METAMER_TEMPLATE_PATH = re.sub(":.*?}", "}", config['METAMER_TEMPLATE_PATH'].replace("{DATA_DIR}/", config['DATA_DIR']))
+METAMER_TEMPLATE_PATH = re.sub(":.*?}", "}", config['METAMER_TEMPLATE_PATH'].replace("{DATA_DIR}/", DATA_DIR))
 OUTPUT_TEMPLATE_PATH = METAMER_TEMPLATE_PATH.replace('metamers/{model_name}',
                                                      'metamers_display/{model_name}')
 CONTINUE_TEMPLATE_PATH = (METAMER_TEMPLATE_PATH.replace('metamers/{model_name}', 'metamers_continue/{model_name}')
