@@ -439,10 +439,12 @@ def _transform_summarized_rep(summarized_rep):
 
     This function makes strong assumptions about what the keys look like
     (see VentralModels.summarize_representation for more info on this):
-    tuples of the form `(a, b)` or `((a, b), c)`, where all of `a,b,c`
-    are strings. We convert them as follows:
+    a single string or tuples of the form `(a, b)`, `(a, b, c), or `((a,
+    b, c), d)`, where all of `a,b,c,d` are strings or ints. We convert
+    them as follows (single strings are untouched):
     - `(a, b) -> error_a_b`
-    - `((a, b), c) -> error_scale_a_band_b_c`
+    - `(a, b, c) -> error_a_scale_b_band_c`
+    - `((a, b, c), d) -> error_a_scale_b_band_c_d`
 
     Parameters
     ----------
@@ -456,11 +458,17 @@ def _transform_summarized_rep(summarized_rep):
 
     """
     new_summarized_rep = {}
+    print(summarized_rep.keys())
     for k, v in summarized_rep.items():
-        if isinstance(k[0], str):
-            new_summarized_rep['error_' + '_'.join(k)] = v
-        else:
+        if not isinstance(k, tuple):
+            new_summarized_rep["error_" + k] = v
+        elif isinstance(k[0], tuple):
             new_summarized_rep["error_{}_scale_{}_band_{}_{}".format(*k[0], k[1])] = v
+        else:
+            if len(k) == 3:
+                new_summarized_rep["error_{}_scale_{}_band_{}".format(*k)] = v
+            else:
+                new_summarized_rep['error_' + '_'.join(k)] = v
     return new_summarized_rep
 
 
@@ -492,9 +500,8 @@ def summarize_history(metamer, save_path, **kwargs):
       previous iteration to this
 
     - error terms: the summarized error terms, as returned by
-      `metamer.model.summarize_representation(metamer.representation_error(),
-      by_angle=True)`. This will be the error at each scale, each band,
-      and each of four quadrants
+      `metamer.model.summarize_representation(metamer.representation_error())`. This
+      will be the error at each scale and each band.
 
     We also create a plot showing the loss, learning_rate,
     gradient_norm, pixel_change, and image_mse as a function of
@@ -533,7 +540,7 @@ def summarize_history(metamer, save_path, **kwargs):
         it = (i-1) * metamer.store_progress
         rep_error = metamer.representation_error(i)
         image_mse = torch.pow(metamer.target_image - metamer.saved_image[i], 2).mean().item()
-        summarized_rep = metamer.model.summarize_representation(rep_error, by_angle=True)
+        summarized_rep = metamer.model.summarize_representation(rep_error)
         summarized_rep = _transform_summarized_rep(summarized_rep)
         data = {'loss': metamer.loss[it], 'image_mse': image_mse, 'iteration': it,
                 'learning_rate': metamer.learning_rate[it], 'gradient_norm': metamer.gradient[it],
@@ -571,9 +578,8 @@ def summarize(metamer, save_path, **kwargs):
       synthesized images
 
     - error terms: the summarized error terms, as returned by
-      `metamer.model.summarize_representation(metamer.representation_error(),
-      by_angle=True)`. This will be the error at each scale, each band,
-      and each of four quadrants
+      `metamer.model.summarize_representation(metamer.representation_error())`. This
+      will be the error at each scale, each band
 
     - window  sizes:  the  summarized   window  sizes,  as  returned  by
       `metamer.model.summarize_window_sizes()`
@@ -601,8 +607,7 @@ def summarize(metamer, save_path, **kwargs):
             'num_statistics': metamer.target_representation.numel(),
             'image_mse': torch.pow(metamer.target_image - metamer.matched_image, 2).mean().item()}
     data.update(kwargs)
-    summarized_rep = metamer.model.summarize_representation(metamer.representation_error(),
-                                                            by_angle=True)
+    summarized_rep = metamer.model.summarize_representation(metamer.representation_error())
     summarized_rep = _transform_summarized_rep(summarized_rep)
     data.update(summarized_rep)
     data.update(metamer.model.summarize_window_sizes())
