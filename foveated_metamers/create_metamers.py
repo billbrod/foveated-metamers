@@ -228,7 +228,7 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
             # we want it to be wider
             rep_image_figsize = (13, 13)
         else:
-            rep_image_figsize = [9, 13]
+            rep_image_figsize = [4, 13]
         # default figsize arguments work for an image that is 256x256,
         # may need to expand. we go backwards through figsize because
         # figsize and image shape are backwards of each other:
@@ -276,8 +276,8 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
                                              cell_types=cell_types, complex_cell_nonlin=nonlin)
         animate_figsize = (40, 11)
         # we need about 11 per plot (and we have one of those per scale,
-        # plus one for the mean luminance and one for foveal pixels)
-        rep_image_figsize = [11 * (num_scales+2), 30]
+        # plus one for the mean luminance)
+        rep_image_figsize = [11 * (num_scales+1), 30]
         if 'half-oct' in model_name:
             # in this case, we have almost twice as many plots to make
             rep_image_figsize[0] *= 2
@@ -659,6 +659,15 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
 
     """
     print("Saving at %s" % save_path)
+    # With the Adam optimizer, it also changes the pixels in the center,
+    # which the model does not see. This appears to be a feature of Adam
+    # (maybe some randomness in how it selects parameters to change?),
+    # since it basically doesn't happen with SGD and the gradient at
+    # those pixels is always zero. So, just to make things look nice, we
+    # add back the center at the end here.
+    metamer.matched_image = torch.nn.Parameter(add_center_to_image(metamer.model,
+                                                                   metamer.matched_image,
+                                                                   metamer.target_image))
     metamer.save(save_path, save_model_reduced=True)
     # save png of metamer
     metamer_path = op.splitext(save_path)[0] + "_metamer.png"
@@ -740,6 +749,7 @@ def setup_initial_image(initial_image_type, model, image):
     else:
         raise Exception("Don't know how to handle initial_image_type %s! Must be one of {'white',"
                         " 'gray', 'pink', 'blue'}" % initial_image_type)
+    initial_image = add_center_to_image(model, initial_image, image)
     return torch.nn.Parameter(initial_image)
 
 
