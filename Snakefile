@@ -335,13 +335,13 @@ rule gen_norm_stats:
     output:
         # here V1 and texture could be considered wildcards, but they're
         # the only we're doing this for now
-        op.join(config['DATA_DIR'], 'norm_stats', 'V1_nl-{nonlin}_cone-{cone}_texture{preproc}_'
+        op.join(config['DATA_DIR'], 'norm_stats', 'V1_cone-{cone}_texture{preproc}_'
                 'norm_stats-{num}.pt' )
     log:
-        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_nl-{nonlin}_cone-{cone}_texture'
+        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_cone-{cone}_texture'
                 '{preproc}_norm_stats-{num}.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_nl-{nonlin}_cone-{cone}_texture'
+        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_cone-{cone}_texture'
                 '{preproc}_norm_stats-{num}_benchmark.txt')
     params:
         index = lambda wildcards: (int(wildcards.num) * 100, (int(wildcards.num)+1) * 100)
@@ -359,8 +359,7 @@ rule gen_norm_stats:
                     cone_power = float(wildcards.cone)
                 v1 = po.simul.PrimaryVisualCortex(1, (512, 512), half_octave_pyramid=True,
                                                   num_scales=6, cone_power=cone_power,
-                                                  include_highpass=True,
-                                                  cell_types=['complex', 'simple_on', 'simple_off'])
+                                                  include_highpass=True)
                 po.optim.generate_norm_stats(v1, input[0], output[0], (512, 512),
                                              index=params.index)
 
@@ -368,16 +367,16 @@ rule gen_norm_stats:
 # we need to generate the stats in blocks, and then want to re-combine them
 rule combine_norm_stats:
     input:
-        lambda wildcards: [op.join(config['DATA_DIR'], 'norm_stats', 'V1_nl-{nonlin}_cone-{cone}_texture'
+        lambda wildcards: [op.join(config['DATA_DIR'], 'norm_stats', 'V1_cone-{cone}_texture'
                                    '{preproc}_norm_stats-{num}.pt').format(num=i, **wildcards)
                            for i in range(9)]
     output:
-        op.join(config['DATA_DIR'], 'norm_stats', 'V1_nl-{nonlin}_cone-{cone}_texture{preproc}_norm_stats.pt' )
+        op.join(config['DATA_DIR'], 'norm_stats', 'V1_cone-{cone}_texture{preproc}_norm_stats.pt' )
     log:
-        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_nl-{nonlin}_cone-{cone}_texture'
+        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_cone-{cone}_texture'
                 '{preproc}_norm_stats.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_nl-{nonlin}_cone-{cone}_texture'
+        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_cone-{cone}_texture'
                 '{preproc}_norm_stats_benchmark.txt')
     run:
         import torch
@@ -520,12 +519,8 @@ def get_norm_dict(wildcards):
         except IndexError:
             # default is 1, linear response
             cone_power = 1
-        try:
-            nonlin = re.findall("_nl-([24]+)_", wildcards.model_name)[0]
-        except (IndexError, ValueError):
-            nonlin = 2
-        return op.join(config['DATA_DIR'], 'norm_stats', 'V1_nl-%s_cone-%s_texture%s_norm_stats.pt'
-                       % (nonlin, cone_power, preproc))
+        return op.join(config['DATA_DIR'], 'norm_stats', f'V1_cone-{cone_power}_texture{prepoc}'
+                       '_norm_stats.pt')
     else:
         return []
 

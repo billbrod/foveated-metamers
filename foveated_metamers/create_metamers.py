@@ -254,26 +254,13 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
             num_scales = int(re.findall('_s([0-9]+)_', model_name)[0])
         except (IndexError, ValueError):
             num_scales = 4
-        try:
-            # have to escape - and +
-            cell_types = re.findall(r'_cell-([c\-\+]+)_', model_name)[0]
-            cell_type_mapper = {'c': 'complex', '-': 'simple_off', '+': 'simple_on'}
-            cell_types = [cell_type_mapper[c] for c in cell_types]
-        except (IndexError, ValueError):
-            cell_types = ['complex']
-        try:
-            nonlin = re.findall("_nl-([24]+)_", model_name)[0]
-            nonlin = {'2': 'square', '22': 'squaresquare', '4': 'fourth'}[nonlin]
-        except (IndexError, ValueError):
-            nonlin = 'square'
         model = po.simul.PrimaryVisualCortex(scaling, image.shape[-2:], min_eccentricity=min_ecc,
                                              max_eccentricity=max_ecc, std_dev=std_dev,
                                              transition_region_width=t_width,
                                              cache_dir=cache_dir, normalize_dict=normalize_dict,
                                              half_octave_pyramid=half_oct, num_scales=num_scales,
                                              cone_power=cone_power, window_type=window_type,
-                                             include_highpass=include_highpass,
-                                             cell_types=cell_types, complex_cell_nonlin=nonlin)
+                                             include_highpass=include_highpass)
         animate_figsize = (40, 11)
         # we need about 11 per plot (and we have one of those per scale,
         # plus one for the mean luminance)
@@ -284,8 +271,6 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
         if 'highpass' in model_name:
             # then we have one more to make
             rep_image_figsize[0] += 11
-        # we'll have a separate row for each cell type
-        rep_image_figsize[1] *= len(cell_types)
         # default figsize arguments work for an image that is 512x512,
         # may need to expand. we go backwards through figsize because
         # figsize and image shape are backwards of each other:
@@ -462,10 +447,10 @@ def _transform_summarized_rep(summarized_rep):
         if not isinstance(k, tuple):
             new_summarized_rep["error_" + k] = v
         elif isinstance(k[0], tuple):
-            new_summarized_rep["error_{}_scale_{}_band_{}_{}".format(*k[0], k[1])] = v
+            new_summarized_rep["error_scale_{}_band_{}_{}".format(*k[0], k[1])] = v
         else:
-            if len(k) == 3:
-                new_summarized_rep["error_{}_scale_{}_band_{}".format(*k)] = v
+            if len(k) == 2:
+                new_summarized_rep["error_scale_{}_band_{}".format(*k)] = v
             else:
                 new_summarized_rep['error_' + '_'.join(k)] = v
     return new_summarized_rep
