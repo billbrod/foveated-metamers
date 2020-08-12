@@ -519,7 +519,7 @@ def get_norm_dict(wildcards):
         except IndexError:
             # default is 1, linear response
             cone_power = 1
-        return op.join(config['DATA_DIR'], 'norm_stats', f'V1_cone-{cone_power}_texture{prepoc}'
+        return op.join(config['DATA_DIR'], 'norm_stats', f'V1_cone-{cone_power}_texture{preproc}'
                        '_norm_stats.pt')
     else:
         return []
