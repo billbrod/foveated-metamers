@@ -458,7 +458,6 @@ def _transform_summarized_rep(summarized_rep):
 
     """
     new_summarized_rep = {}
-    print(summarized_rep.keys())
     for k, v in summarized_rep.items():
         if not isinstance(k, tuple):
             new_summarized_rep["error_" + k] = v
