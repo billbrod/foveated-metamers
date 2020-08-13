@@ -242,10 +242,6 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
             normalize_dict = {}
         if not normalize_dict and 'norm' in model_name:
             raise Exception("If model_name is V1_norm, normalize_dict must be set!")
-        if 'half-oct' in model_name:
-            half_oct = True
-        else:
-            half_oct = False
         try:
             num_scales = int(re.findall('_s([0-9]+)_', model_name)[0])
         except (IndexError, ValueError):
@@ -254,7 +250,7 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
                                              max_eccentricity=max_ecc, std_dev=std_dev,
                                              transition_region_width=t_width,
                                              cache_dir=cache_dir, normalize_dict=normalize_dict,
-                                             half_octave_pyramid=half_oct, num_scales=num_scales,
+                                             num_scales=num_scales,
                                              cone_power=cone_power, window_type=window_type)
         animate_figsize = (40, 11)
         # we need about 11 per plot (and we have one of those per scale,
