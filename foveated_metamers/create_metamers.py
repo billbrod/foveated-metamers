@@ -650,9 +650,9 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
     # since it basically doesn't happen with SGD and the gradient at
     # those pixels is always zero. So, just to make things look nice, we
     # add back the center at the end here.
-    metamer.matched_image = torch.nn.Parameter(add_center_to_image(metamer.model,
-                                                                   metamer.matched_image,
-                                                                   metamer.target_image))
+    # metamer.matched_image = torch.nn.Parameter(add_center_to_image(metamer.model,
+    #                                                                metamer.matched_image,
+    #                                                                metamer.target_image))
     metamer.save(save_path, save_model_reduced=True)
     # save png of metamer
     metamer_path = op.splitext(save_path)[0] + "_metamer.png"
@@ -1037,8 +1037,8 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     else:
         clip_grad_norm = False
     # don't want to store too often, otherwise we slow down and use too
-    # much memory. this way we store at most 500 time points
-    store_progress = max(10, max_iter//500)
+    # much memory. this way we store at most 100 time points
+    store_progress = max(10, max_iter//100)
     start_time = time.time()
     matched_im, matched_rep = metamer.synthesize(clamper=clamper, store_progress=store_progress,
                                                  learning_rate=learning_rate, max_iter=max_iter,
