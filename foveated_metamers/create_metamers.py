@@ -246,10 +246,6 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
             half_oct = True
         else:
             half_oct = False
-        if 'highpass' in model_name:
-            include_highpass = True
-        else:
-            include_highpass = False
         try:
             num_scales = int(re.findall('_s([0-9]+)_', model_name)[0])
         except (IndexError, ValueError):
@@ -259,8 +255,7 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
                                              transition_region_width=t_width,
                                              cache_dir=cache_dir, normalize_dict=normalize_dict,
                                              half_octave_pyramid=half_oct, num_scales=num_scales,
-                                             cone_power=cone_power, window_type=window_type,
-                                             include_highpass=include_highpass)
+                                             cone_power=cone_power, window_type=window_type)
         animate_figsize = (40, 11)
         # we need about 11 per plot (and we have one of those per scale,
         # plus one for the mean luminance)
@@ -268,9 +263,6 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
         if 'half-oct' in model_name:
             # in this case, we have almost twice as many plots to make
             rep_image_figsize[0] *= 2
-        if 'highpass' in model_name:
-            # then we have one more to make
-            rep_image_figsize[0] += 11
         # default figsize arguments work for an image that is 512x512,
         # may need to expand. we go backwards through figsize because
         # figsize and image shape are backwards of each other:
