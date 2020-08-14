@@ -167,8 +167,8 @@ def create_metamer_df(image_paths, save_path=None):
             # then this was one of our original images, and the replace
             # above failed
             image_name = op.basename(p).replace('.pgm', '').replace('.png', '')
-            tmp = pd.DataFrame({'target_image': p, 'image_name': image_name}, index=[0])
-        # all target_images are .pgm files and each tmp df will only contain value
+            tmp = pd.DataFrame({'base_signal': p, 'image_name': image_name}, index=[0])
+        # all base_signals are .pgm files and each tmp df will only contain value
         if len(tmp.image_name.unique()) > 1:
             raise Exception("Somehow we have more than one image_name for metamer %s" % p)
         metamer_info.append(tmp)

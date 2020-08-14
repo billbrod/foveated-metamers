@@ -287,7 +287,7 @@ def add_center_to_image(model, image, reference_image):
         The image to add the center back to
     reference_image : torch.Tensor
         The reference/target image for synthesis
-        (``metamer.target_image``); the center comes from this image.
+        (``metamer.base_signal``); the center comes from this image.
 
     Returns
     -------
@@ -358,15 +358,15 @@ def summary_plots(metamer, rep_image_figsize, img_zoom):
         # For DoG windows, need to pass not the model called on the image,
         # but the image itself. for representation error, difference of the
         # target and matched image will do
-        images = [metamer.target_image, metamer.matched_image,
-                  metamer.target_image - metamer.matched_image]
+        images = [metamer.base_signal, metamer.synthesized_image,
+                  metamer.base_signal - metamer.synthesized_image]
     else:
-        images = [metamer.model(metamer.target_image), metamer.model(metamer.matched_image),
+        images = [metamer.model(metamer.base_signal), metamer.model(metamer.synthesized_image),
                   metamer.representation_error()]
     for i, (im, t, vr) in enumerate(zip(images, titles, vranges)):
         metamer.model.plot_representation_image(ax=axes[i], data=im, title=t, vrange=vr,
                                                 zoom=img_zoom)
-    images = [metamer.saved_image[0], metamer.matched_image, metamer.target_image]
+    images = [metamer.saved_image[0], metamer.synthesized_image, metamer.base_signal]
     images = 2*[po.to_numpy(i.to(torch.float32)).squeeze() for i in images]
     titles = ['Initial image', 'Metamer', 'Reference image']
     if metamer.model.window_type == 'dog':
@@ -485,12 +485,12 @@ def summarize_history(metamer, save_path, **kwargs):
     for i in range(1, num_saves):
         it = (i-1) * metamer.store_progress
         rep_error = metamer.representation_error(i)
-        image_mse = torch.pow(metamer.target_image - metamer.saved_image[i], 2).mean().item()
+        image_mse = torch.pow(metamer.base_signal - metamer.saved_image[i], 2).mean().item()
         summarized_rep = metamer.model.summarize_representation(rep_error)
         summarized_rep = _transform_summarized_rep(summarized_rep)
         data = {'loss': metamer.loss[it], 'image_mse': image_mse, 'iteration': it,
                 'learning_rate': metamer.learning_rate[it], 'gradient_norm': metamer.gradient[it],
-                'num_statistics': metamer.target_representation.numel(),
+                'num_statistics': metamer.base_representation.numel(),
                 'pixel_change': metamer.pixel_change[it]}
         data.update(summarized_rep)
         data.update(kwargs)
@@ -550,8 +550,8 @@ def summarize(metamer, save_path, **kwargs):
     if np.isnan(loss):
         loss = metamer.loss[-2]
     data = {'num_iterations': len(metamer.loss), 'loss': loss,
-            'num_statistics': metamer.target_representation.numel(),
-            'image_mse': torch.pow(metamer.target_image - metamer.matched_image, 2).mean().item()}
+            'num_statistics': metamer.base_representation.numel(),
+            'image_mse': torch.pow(metamer.base_signal - metamer.synthesized_image, 2).mean().item()}
     data.update(kwargs)
     summarized_rep = metamer.model.summarize_representation(metamer.representation_error())
     summarized_rep = _transform_summarized_rep(summarized_rep)
@@ -610,13 +610,13 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
     # exactly zero in the center, and thus those pixels end up getting
     # moved around a little bit. Not entirely sure why, but probably not
     # worth tracing down, since we're interested in the periphery
-    metamer.matched_image = torch.nn.Parameter(add_center_to_image(metamer.model,
-                                                                   metamer.matched_image,
-                                                                   metamer.target_image))
+    metamer.synthesized_image = torch.nn.Parameter(add_center_to_image(metamer.model,
+                                                                   metamer.synthesized_image,
+                                                                   metamer.base_signal))
     metamer.save(save_path, save_model_reduced=True)
     # save png of metamer
     metamer_path = op.splitext(save_path)[0] + "_metamer.png"
-    metamer_image = po.to_numpy(metamer.matched_image).squeeze()
+    metamer_image = po.to_numpy(metamer.synthesized_image).squeeze()
     print("Saving metamer float32 array at %s" % metamer_path.replace('.png', '.npy'))
     np.save(metamer_path.replace('.png', '.npy'), metamer_image)
     print("Saving metamer image at %s" % metamer_path)
@@ -1002,7 +1002,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         summarize(metamer, save_path.replace('.pt', '_summary.csv'),
                   duration_human_readable=convert_seconds_to_str(duration), duration=duration,
                   optimizer=optimizer, fraction_removed=fraction_removed, model=model_name,
-                  target_image=image_name, seed=seed, learning_rate=learning_rate,
+                  base_signal=image_name, seed=seed, learning_rate=learning_rate,
                   loss_change_thresh=loss_change_thresh, coarse_to_fine=coarse_to_fine,
                   loss_change_fraction=loss_change_fraction, initial_image=initial_image_type,
                   min_ecc=min_ecc, max_ecc=max_ecc, max_iter=max_iter, gpu_id=gpu_id,
@@ -1013,7 +1013,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         summarize_history(metamer, save_path.replace('.pt', '_history.csv'),
                           duration_human_readable=convert_seconds_to_str(duration), duration=duration,
                           optimizer=optimizer, fraction_removed=fraction_removed, model=model_name,
-                          target_image=image_name, seed=seed, loss_change_thresh=loss_change_thresh,
+                          base_signal=image_name, seed=seed, loss_change_thresh=loss_change_thresh,
                           coarse_to_fine=coarse_to_fine, loss_change_fraction=loss_change_fraction,
                           initial_image=initial_image_type, min_ecc=min_ecc, max_ecc=max_ecc,
                           max_iter=max_iter, gpu_id=gpu_id, loss_thresh=loss_thresh,
