@@ -606,12 +606,10 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
 
     """
     print("Saving at %s" % save_path)
-    # With the Adam optimizer, it also changes the pixels in the center,
-    # which the model does not see. This appears to be a feature of Adam
-    # (maybe some randomness in how it selects parameters to change?),
-    # since it basically doesn't happen with SGD and the gradient at
-    # those pixels is always zero. So, just to make things look nice, we
-    # add back the center at the end here.
+    # We add the center back at the end because our gradients are not
+    # exactly zero in the center, and thus those pixels end up getting
+    # moved around a little bit. Not entirely sure why, but probably not
+    # worth tracing down, since we're interested in the periphery
     metamer.matched_image = torch.nn.Parameter(add_center_to_image(metamer.model,
                                                                    metamer.matched_image,
                                                                    metamer.target_image))
@@ -983,8 +981,8 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     else:
         save_progress = False
     # don't want to store too often, otherwise we slow down and use too
-    # much memory. this way we store at most 500 time points
-    store_progress = max(10, max_iter//500)
+    # much memory. this way we store at most 100 time points
+    store_progress = max(10, max_iter//100)
     start_time = time.time()
     matched_im, matched_rep = metamer.synthesize(clamper=clamper, store_progress=store_progress,
                                                  learning_rate=learning_rate, max_iter=max_iter,
