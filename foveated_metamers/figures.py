@@ -8,12 +8,12 @@ from . import utils
 
 V1_TEMPLATE_PATH = op.join('/home/billbrod/Desktop/metamers', 'metamers_display', 'V1_norm_s6_'
                            'gaussian', '{image_name}', 'scaling-{scaling}', 'opt-Adam',
-                           'fr-0_lc-1_cf-0.01_clamp-True', 'seed-{seed}_init-white_lr-{learning_'
+                           'fr-0_lc-1_cf-0.01_clamp-True', 'seed-{seed}_init-white_lr-0.01'
                            'rate}_e0-0.5_em-30.2_iter-{max_iter}_thresh-1e-08_gpu-{gpu}_metamer_'
                            'gamma-corrected.png')
 RGC_TEMPLATE_PATH = op.join('/home/billbrod/Desktop/metamers', 'metamers_display', 'RGC_gaussian',
                             '{image_name}', 'scaling-{scaling}', 'opt-Adam', 'fr-0_lc-'
-                            '1_cf-0_clamp-True', 'seed-{seed}_init-white_lr-0.1_e0-3.71_em-30.2_'
+                            '1_cf-0_clamp-True', 'seed-{seed}_init-white_lr-0.01_e0-3.71_em-30.2_'
                             'iter-750_thresh-1e-08_gpu-0_metamer_gamma-corrected.png')
 
 
@@ -192,9 +192,8 @@ def cutout_figure(images, window_size=400, periphery_offset=(-800, -1000), max_e
     return fig
 
 
-def scaling_comparison_figure(image_name, scaling_vals, seed, window_size=400,
-                              periphery_offset=(-800, -1000), max_ecc=30.2,
-                              metamer_template_path=V1_TEMPLATE_PATH, **template_kwargs):
+def scaling_comparison_figure(model_name, image_name, scaling_vals, seed, window_size=400,
+                              periphery_offset=(-800, -1000), max_ecc=30.2, **kwargs):
     r"""Create a figure showing cut-out views of all scaling values
 
     We want to be able to easily visually compare metamers across
@@ -206,6 +205,10 @@ def scaling_comparison_figure(image_name, scaling_vals, seed, window_size=400,
 
     Parameters
     ----------
+    model_name : str
+        Name(s) of the model(s) to run. Must begin with either V1 or
+        RGC. If model name is just 'RGC' or just 'V1', we will use the
+        default model name for that brain area from config.yml
     image_name : str
         The name of the reference image we want to examine
     scaling_vals : list
@@ -226,23 +229,9 @@ def scaling_comparison_figure(image_name, scaling_vals, seed, window_size=400,
         The maximum eccentricity of the metamers, as passed to the
         model. Used to convert from pixels to degrees so we know the
         extent and location of the cut-out views in degrees.
-    metamer_template_path : str, optional
-        Template path to gamma-corrected metamers, should contain
-        '{image_name}', '{scaling}', '{seed}'. It can contain more
-        format strs, in which case you should pass dictionaries as
-        template_kwargs to specify how to fill them in. See
-        figures.RGC_TEMPLATE_PATH or figures.V1_TEMPLATE_PATH for
-        examples (these are the recommended ones)
-    template_kwargs : dict
-        Every additional kwarg should be a dictionary of (scaling, val)
-        pairs (with an entry for each value in ``scaling_vals``) that
-        tells us how to fill in the extra format strs in
-        metamer_template_path. figures.V1_TEMPLATE_PATH contains
-        '{gpu}', and so you'll need to also pass, for example,
-        ``gpu=dict((sc, 1) for sc in scaling_vals)`` (though, since this
-        has the same value for each scaling, it's uninteresting; the
-        point of this is to enable you to have different values for
-        different scaling)
+    kwargs : dict
+        Additional key, value pairs to pass to
+        utils.generate_metamers_path for finding the images to include.
 
     Returns
     -------
@@ -253,11 +242,12 @@ def scaling_comparison_figure(image_name, scaling_vals, seed, window_size=400,
     gamma_corrected_image_name = utils.get_gamma_corrected_ref_image(image_name)
     ref_path = utils.get_ref_image_full_path(gamma_corrected_image_name)
     images = [utils.convert_im_to_float(imageio.imread(ref_path))]
-    for sc in scaling_vals:
-        sc_kwargs = dict((k, v[sc]) for k, v in template_kwargs.items())
-        im_path = metamer_template_path.format(image_name=image_name, seed=seed, scaling=sc,
-                                               **sc_kwargs)
-        images.append(utils.convert_im_to_float(imageio.imread(im_path)))
+    image_paths = utils.generate_metamer_paths(model_name, image_name=image_name,
+                                               scaling=scaling_vals, seed=seed,
+                                               max_ecc=max_ecc, **kwargs)
+    for p in image_paths:
+        corrected_p = p.replace('.png', '_gamma-corrected.png')
+        images.append(utils.convert_im_to_float(imageio.imread(corrected_p)))
     # want our images to be indexed along the first dimension
     images = np.einsum('ijk -> kij', np.dstack(images))
     fig = cutout_figure(images, window_size, periphery_offset, max_ecc)

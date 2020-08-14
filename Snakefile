@@ -884,15 +884,10 @@ rule scaling_comparison_figure:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 font_scale = {'poster': 1.7}.get(wildcards.context, 1)
-                template_path = input[0].replace(wildcards.image_name, '{image_name}')
-                for key in ['seed', 'scaling']:
-                    template_path = re.sub(f'{key}-[0-9.]+', f'{key}-{{{key}}}', template_path)
-                max_ecc = int(re.findall('em-([0-9]+)', template_path)[0])
-                ref_path = input[-1].replace(wildcards.image_name.replace('cone_', 'gamma-corrected_'),
-                                             '{image_name}')
+                max_ecc = float(re.findall('em-([0-9.]+)_', input[0])[0])
                 with sns.plotting_context(wildcards.context, font_scale=font_scale):
-                    scaling = {MODELS[0]: RGC_SCALING, MODELS[1]: V1_SCALING}[wildcards.model_name]
-                    fig = met.figures.scaling_comparison_figure(
-                        wildcards.image_name, scaling, wildcards.seed, max_ecc=max_ecc,
-                        ref_template_path=ref_path, metamer_template_path=template_path)
+                    scaling = {MODELS[0]: config['RGC']['scaling'],
+                               MODELS[1]: config['V1']['scaling']}[wildcards.model_name]
+                    fig = met.figures.scaling_comparison_figure(wildcards.model_name,
+                        wildcards.image_name, scaling, wildcards.seed, max_ecc=max_ecc)
                     fig.savefig(output[0], bbox_inches='tight')
