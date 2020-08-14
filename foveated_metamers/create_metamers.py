@@ -901,15 +901,15 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     clamp_each_iter : bool, optional
         Whether we call the clamper each iteration of the optimization
         or only at the end. True, the default, is recommended
-    loss_func : {'l2', 'l2_range-{a},{b}_beta-{c}', 'mse', 'mse_range-{a},{b}_beta-{c}'}
-        where a,b,c are all floats. what loss function to use. If 'l2',
-        then we use the L2-norm of the difference between the model
-        representations of the synthesized and reference image. if
-        'l2_range-a,b_beta-c', then we use a weighted average of that
-        (weight given by c) and a quadratic penalty on all pixels in
-        synthesized image whose values are below a or above b. If 'mse',
-        we use mean-squared error instead, 'mse_range-a,b_beta-c' is
-        interpreted the same way, just using MSE instead of the L2-norm
+    loss_func : {'l2', 'l2_range-{a},{b}_lmbda-{c}', 'mse', 'mse_range-{a},{b}_lmbda-{c}'}
+        where a,b,c are all floats. what loss function to use. If 'l2', then we
+        use the L2-norm of the difference between the model representations of
+        the synthesized and reference image. if 'l2_range-a,b_lmbda-c', then we
+        use that plus c times a quadratic penalty on all pixels in synthesized
+        image whose values are below a or above b. If 'mse', we use
+        mean-squared error instead, 'mse_range-a,b_lmbda-c' is interpreted the
+        same way as 'l2_range-a,b_lmbda-c', just using MSE instead of the
+        L2-norm
     continue_path : str or None, optional
         If None, we synthesize a new metamer. If str, this should be the
         path to a previous synthesis run, which we are resuming. In that
@@ -953,7 +953,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         loss = po.optim.mse
         loss_kwargs = {}
     else:
-        lf, a, b, c = re.findall('([a-z0-9]+)_range-([.0-9]+),([.0-9]+)_beta-([.0-9]+)',
+        lf, a, b, c = re.findall('([a-z0-9]+)_range-([.0-9]+),([.0-9]+)_lmbda-([.0-9]+)',
                                  loss_func)[0]
         if lf == 'l2':
             loss = po.optim.l2_and_penalize_range
@@ -961,7 +961,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
             loss = po.optim.mse_and_penalize_range
         else:
             raise Exception(f"Don't know how to interpret loss func {loss_func}!")
-        loss_kwargs = {'allowed_range': (float(a), float(b)), 'beta': float(c)}
+        loss_kwargs = {'allowed_range': (float(a), float(b)), 'lmbda': float(c)}
     if continue_path is None:
         metamer = po.synth.Metamer(image, model, loss_function=loss,
                                    loss_function_kwargs=loss_kwargs)

@@ -65,7 +65,7 @@ V1:
     - .33
     - .4
     - .5
-  loss: 'mse_range-0,1_beta-0.5'
+  loss: 'mse_range-0,1_lmbda-0.5'
   coarse_to_fine: 'together'
   clamp_each_iter: False
   max_iter: 10000
