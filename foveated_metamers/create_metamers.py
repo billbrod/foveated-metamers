@@ -366,7 +366,7 @@ def summary_plots(metamer, rep_image_figsize, img_zoom):
     for i, (im, t, vr) in enumerate(zip(images, titles, vranges)):
         metamer.model.plot_representation_image(ax=axes[i], data=im, title=t, vrange=vr,
                                                 zoom=img_zoom)
-    images = [metamer.saved_image[0], metamer.synthesized_signal, metamer.base_signal]
+    images = [metamer.saved_signal[0], metamer.synthesized_signal, metamer.base_signal]
     images = 2*[po.to_numpy(i.to(torch.float32)).squeeze() for i in images]
     titles = ['Initial image', 'Metamer', 'Reference image']
     if metamer.model.window_type == 'dog':
@@ -473,7 +473,7 @@ def summarize_history(metamer, save_path, **kwargs):
         iteration
 
     """
-    num_saves = metamer.saved_image.shape[0]
+    num_saves = metamer.saved_signal.shape[0]
     summary = []
     keys = ['loss', 'image_mse', 'iteration', 'learning_rate', 'gradient_norm', 'num_statistics',
             'pixel_change']
@@ -485,7 +485,7 @@ def summarize_history(metamer, save_path, **kwargs):
     for i in range(1, num_saves):
         it = (i-1) * metamer.store_progress
         rep_error = metamer.representation_error(i)
-        image_mse = torch.pow(metamer.base_signal - metamer.saved_image[i], 2).mean().item()
+        image_mse = torch.pow(metamer.base_signal - metamer.saved_signal[i], 2).mean().item()
         summarized_rep = metamer.model.summarize_representation(rep_error)
         summarized_rep = _transform_summarized_rep(summarized_rep)
         data = {'loss': metamer.loss[it], 'image_mse': image_mse, 'iteration': it,
