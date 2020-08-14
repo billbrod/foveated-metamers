@@ -261,7 +261,7 @@ def generate_metamer_paths(model_name, **kwargs):
         model-specific default value from that yml file. values can be
         either a single value or a list
 
-    Parameters
+    Returns
     ----------
     paths : list
         list of strs, containing the absolute paths to the metamer.png
