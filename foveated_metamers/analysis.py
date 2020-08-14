@@ -55,10 +55,8 @@ def create_experiment_df(df, presentation_idx, dep_variables=['scaling']):
     presentation indices, and some dependent variables, and creates a
     dataframe summarizing each trial in the experiment. We have the
     following columns:
-    - 'image_name_for_expt': the name of the reference image to compare
-      against this metamer in the experiment (this is the same as the
-      reference image for metamer synthesis, except with "cone_" removed
-      if present).
+    - 'image_name': the name of the reference image to compare
+      against this metamer in the experiment
     - 'image_1': the seed of the first image presented
     - 'image_2': the seed of the second image presented
     - 'image_X': the seed of the third image presented
@@ -99,7 +97,7 @@ def create_experiment_df(df, presentation_idx, dep_variables=['scaling']):
         The experiment information dataframe, see above for description
 
     """
-    sub_df = df[['image_name_for_expt']]
+    sub_df = df[['image_name']]
     dep_variables.append('model')
     correct_answers = np.where(presentation_idx[:, 2] == presentation_idx[:, 0], 1, 2)
     expt_df = []
@@ -182,14 +180,13 @@ def add_response_info(expt_df, trials, subject_name, session_number):
 def summarize_expt(expt_df, dep_variables=['scaling', 'trial_type']):
     r"""Summarize expt_df to get proportion correct
 
-    Here, we take the ``expt_df`` summarizing the experiment's trials
-    and the subject's responses, and we compute the proportion correct
-    on each trial type. We end up with a DataFrame that has the columns
-    ``['subject_name', 'session_number', 'image_name_for_expt', 'model',
-    'trial_type'] + dep_variables`` from ``expt_df``, as well as two new
-    columns: ``'n_trials'`` (which gives the number of trials in that
-    condition) and ``'proportion_correct'`` (which gives the proportion
-    of time the subject was correct in that condition).
+    Here, we take the ``expt_df`` summarizing the experiment's trials and the
+    subject's responses, and we compute the proportion correct on each trial
+    type. We end up with a DataFrame that has the columns ``['subject_name',
+    'session_number', 'image_name', 'model', 'trial_type'] + dep_variables``
+    from ``expt_df``, as well as two new columns: ``'n_trials'`` (which gives
+    the number of trials in that condition) and ``'proportion_correct'`` (which
+    gives the proportion of time the subject was correct in that condition).
 
     Parameters
     ----------
@@ -209,7 +206,7 @@ def summarize_expt(expt_df, dep_variables=['scaling', 'trial_type']):
     expt_df = expt_df.copy()
     expt_df['hit_or_miss'] = expt_df.hit_or_miss.apply(lambda x: {'hit': 1, 'miss': 0}[x])
 
-    gb = expt_df.groupby(['subject_name', 'session_number', 'image_name_for_expt', 'model',
+    gb = expt_df.groupby(['subject_name', 'session_number', 'image_name', 'model',
                           'trial_type'] + dep_variables)
     summary_df = gb.count()['image_1'].reset_index()
     summary_df = summary_df.merge(gb.hit_or_miss.mean().reset_index())

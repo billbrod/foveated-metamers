@@ -91,21 +91,11 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
 
     `model_name` is constructed of several parts, for which you have
     several chocies:
-    `'{visual_area}_cone-{cone_power}{options}_{window_type}'`:
+    `'{visual_area}{options}_{window_type}'`:
     - `visual_area`: which visual area we're modeling.`'RGC'` (retinal
-      ganglion cells, `plenoptic.simul.RetinalGanglionCells` class) or
+      ganglion cells, `plenoptic.simul.PooledRGC` class) or
       `'V1'` (primary visual cortex,
       `plenoptic.simul.PrimaryVisualCortex` class)
-    - `cone_power`: first step fo the model is to raise every pixel in
-      the image to a power, specified here. It can be any float or the
-      strs `'phys'` (1/3, the approximately correct physiological value
-      for cones) or `'gamma'` (1/2.2, the standard gamma value, so that
-      the model basically gamma-corrects the image itself). Metamer
-      synthesis has difficulty with non-convex powers here
-      (`cone_power<1`), so we apply `cone_power=1/3` to the image, build
-      the model with `cone_power=1.0`, and then raise the pixels of the
-      resulting image to `3` at the end (this all happens in
-      `Snakefile`, not this script).
     - `options`: you can additionally include the following strs,
       separated by `_`:
       - `'norm'`: if included, we normalize the models' `cone_responses`
@@ -125,14 +115,13 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
       so require more windows (and thus more memory), but also seem to
       have fewer aliasing issues.
 
-    The recommended model_name values are: `RGC_cone-1.0_gaussian` and
-    `V1_cone-1.0_norm_s6_gaussian` (see above for why we use `cone-1.0`
-    for synthesis).
+    The recommended model_name values are: `RGC_gaussian` and
+    `V1_norm_s6_gaussian`.
 
     Parameters
     ----------
     model_name : str
-        str specifying which of the `VentralModel` models we should
+        str specifying which of the `PooledVentralStream` models we should
         initialize. See above for more details.
     scaling : float
         The scaling parameter for the model
@@ -171,21 +160,6 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
         images by in the plots we'll create
 
     """
-    try:
-        # cone_power must be a float, but we can't have / in a path (it
-        # separates directories), so in order to work around that, we
-        # have to special repeating decimal floats we want to be able to
-        # get: 1/2.2 (the standard gamma value) and 1/3 (the standard
-        # approximation of cone physiology).
-        if 'cone-gamma' in model_name:
-            cone_power = 1/2.2
-        elif 'cone-phys' in model_name:
-            cone_power = 1/3
-        else:
-            cone_power = float(re.findall('cone-([.0-9]+)', model_name)[0])
-    except IndexError:
-        # default is 1, linear response
-        cone_power = 1
     surround_std_dev = None
     center_surround_ratio = None
     transition_x = None
@@ -214,10 +188,10 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
             normalize_dict = {}
         if not normalize_dict and 'norm' in model_name:
             raise Exception("If model_name is RGC_norm, normalize_dict must be set!")
-        model = po.simul.RetinalGanglionCells(scaling, image.shape[-2:], min_eccentricity=min_ecc,
+        model = po.simul.PooledRGC(scaling, image.shape[-2:], min_eccentricity=min_ecc,
                                               max_eccentricity=max_ecc, window_type=window_type,
                                               transition_region_width=t_width, cache_dir=cache_dir,
-                                              cone_power=cone_power, std_dev=std_dev,
+                                              std_dev=std_dev,
                                               surround_std_dev=surround_std_dev,
                                               center_surround_ratio=center_surround_ratio,
                                               transition_x=transition_x,
@@ -246,12 +220,12 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
             num_scales = int(re.findall('_s([0-9]+)_', model_name)[0])
         except (IndexError, ValueError):
             num_scales = 4
-        model = po.simul.PrimaryVisualCortex(scaling, image.shape[-2:], min_eccentricity=min_ecc,
+        model = po.simul.PooledV1(scaling, image.shape[-2:], min_eccentricity=min_ecc,
                                              max_eccentricity=max_ecc, std_dev=std_dev,
                                              transition_region_width=t_width,
                                              cache_dir=cache_dir, normalize_dict=normalize_dict,
                                              num_scales=num_scales,
-                                             cone_power=cone_power, window_type=window_type)
+                                             window_type=window_type)
         animate_figsize = (40, 11)
         # we need about 11 per plot (and we have one of those per scale,
         # plus one for the mean luminance)
@@ -411,7 +385,7 @@ def _transform_summarized_rep(summarized_rep):
     This makes them more readable
 
     This function makes strong assumptions about what the keys look like
-    (see VentralModels.summarize_representation for more info on this):
+    (see PooledVentralStreams.summarize_representation for more info on this):
     a single string or tuples of the form `(a, b)`, `(a, b, c), or `((a,
     b, c), d)`, where all of `a,b,c,d` are strings or ints. We convert
     them as follows (single strings are untouched):
@@ -792,21 +766,11 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
 
     `model_name` is constructed of several parts, for which you have
     several chocies:
-    `'{visual_area}_cone-{cone_power}{options}_{window_type}'`:
+    `'{visual_area}_{window_type}'`:
     - `visual_area`: which visual area we're modeling.`'RGC'` (retinal
-      ganglion cells, `plenoptic.simul.RetinalGanglionCells` class) or
+      ganglion cells, `plenoptic.simul.PooledRGC` class) or
       `'V1'` (primary visual cortex,
-      `plenoptic.simul.PrimaryVisualCortex` class)
-    - `cone_power`: first step fo the model is to raise every pixel in
-      the image to a power, specified here. It can be any float or the
-      strs `'phys'` (1/3, the approximately correct physiological value
-      for cones) or `'gamma'` (1/2.2, the standard gamma value, so that
-      the model basically gamma-corrects the image itself). Metamer
-      synthesis has difficulty with non-convex powers here
-      (`cone_power<1`), so we apply `cone_power=1/3` to the image, build
-      the model with `cone_power=1.0`, and then raise the pixels of the
-      resulting image to `3` at the end (this all happens in
-      `Snakefile`, not this script).
+      `plenoptic.simul.PooledV1` class)
     - `options`: only for the `V1` models, you can additionally include
       the following strs, separated by `_`:
       - `'norm'`: if included, we normalize the models' `cone_responses`
@@ -826,9 +790,8 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
       so require more windows (and thus more memory), but also seem to
       have fewer aliasing issues.
 
-    The recommended model_name values are: `RGC_cone-1.0_gaussian` and
-    `V1_cone-1.0_norm_s6_gaussian` (see above for why we use `cone-1.0`
-    for synthesis).
+    The recommended model_name values are: `RGC_gaussian` and
+    `V1_norm_s6_gaussian`.
 
     If you want to resume synthesis from an earlier run that didn't
     finish, set `continue_path` to the path of the `.pt` file created by
@@ -848,7 +811,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     Parameters
     ----------
     model_name : str
-        str specifying which of the `VentralModel` models we should
+        str specifying which of the `PooledVentralStream` models we should
         initialize. See above for more details.
     scaling : float
         The scaling parameter for the model
@@ -939,8 +902,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         image.
     clamp_each_iter : bool, optional
         Whether we call the clamper each iteration of the optimization
-        or only at the end. True, the default, is recommended, and is
-        necessary for fractional values of cone_power
+        or only at the end. True, the default, is recommended
     loss_func : {'l2', 'l2_range-{a},{b}_beta-{c}', 'mse', 'mse_range-{a},{b}_beta-{c}'}
         where a,b,c are all floats. what loss function to use. If 'l2',
         then we use the L2-norm of the difference between the model
@@ -1020,10 +982,6 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
             save_progress = max(200, max_iter//10)
     else:
         save_progress = False
-    if model.cone_power < 1:
-        clip_grad_norm = 1
-    else:
-        clip_grad_norm = False
     # don't want to store too often, otherwise we slow down and use too
     # much memory. this way we store at most 500 time points
     store_progress = max(10, max_iter//500)
@@ -1038,7 +996,6 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                                                  loss_change_fraction=loss_change_fraction,
                                                  loss_change_thresh=loss_change_thresh,
                                                  coarse_to_fine=coarse_to_fine,
-                                                 clip_grad_norm=clip_grad_norm,
                                                  save_path=save_path.replace('.pt', '_inprogress.pt'))
     duration = time.time() - start_time
     # make sure everything's on the cpu for saving
@@ -1052,7 +1009,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                   loss_change_fraction=loss_change_fraction, initial_image=initial_image_type,
                   min_ecc=min_ecc, max_ecc=max_ecc, max_iter=max_iter, gpu_id=gpu_id,
                   loss_thresh=loss_thresh, scaling=scaling, clamper=clamper_name,
-                  clamp_each_iter=clamp_each_iter, clip_grad_norm=clip_grad_norm,
+                  clamp_each_iter=clamp_each_iter,
                   image_name=op.basename(image_name).replace('.pgm', '').replace('.png', ''),
                   loss_function=loss_func)
         summarize_history(metamer, save_path.replace('.pt', '_history.csv'),
@@ -1063,7 +1020,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                           initial_image=initial_image_type, min_ecc=min_ecc, max_ecc=max_ecc,
                           max_iter=max_iter, gpu_id=gpu_id, loss_thresh=loss_thresh,
                           scaling=scaling, clamper=clamper_name, clamp_each_iter=clamp_each_iter,
-                          clip_grad_norm=clip_grad_norm, loss_function=loss_func,
+                          loss_function=loss_func,
                           image_name=op.basename(image_name).replace('.pgm', '').replace('.png', ''))
         save(save_path, metamer, animate_figsize, rep_figsize, img_zoom)
     if save_progress:

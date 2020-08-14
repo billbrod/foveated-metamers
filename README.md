@@ -151,13 +151,11 @@ Google Sheets, a text editor, LibreOffice Calc, or loaded in to pandas
    synthesis. This data dictionary describes the columns in that
    DataFrame.
    
- - `all_metamer_summary.tsv`: in order to create the indices that
-   determine the trias in the experiment, we gather together and
-   concatenate all the `summary.csv` files and add one additional
-   column, `image_name_for_expt`, then save the resulting DataFrame as
-   `stimuli_description.csv`. This data dictionary describes that
-   DataFrame's columns, which are identical to those in `summary.csv`,
-   except for the addition.
+ - `all_metamer_summary.tsv`: in order to create the indices that determine the
+   trias in the experiment, we gather together and concatenate all the
+   `summary.csv` files, then save the resulting DataFrame as
+   `stimuli_description.csv`. This data dictionary describes that DataFrame's
+   columns, which are identical to those in `summary.csv`.
    
 - `experiment_df.tsv`: in order to analyze the data, we want to
   examine the images presented in each trial, what the correct answers
@@ -249,17 +247,15 @@ wget -O- https://osf.io/td3ea/download | tar xvz -C .
 NOTE: the OSF project is currently private and so the above will
 fail. need to remember to make it public for that to work
 
-You should now have three directories here: `raw_images`, `ref_images`
-and `norm_stats`. `raw_images` should contain four `.NEF` (Nikon's raw
-format) images: `azulejos`, `flower`, `tiles`, and
-`market`. `norm_stats` should contain a single `.pt` (pytorch) file:
-`V1_cone-1.0_texture_degamma_cone_norm_stats.pt`. `ref_images` should
-contain `einstein_size-256,256.png`, which we'll use for testing the
-setup, as well as `.tiff` versions of the four raw images (the raw
-images are provided in case you want to try a different demosaicing
-algorithm than the one I did; if you're fine with that step, you can
-ignore them and everything further will use the `.tiff` files found in
-`ref_images`).
+You should now have three directories here: `raw_images`, `ref_images` and
+`norm_stats`. `raw_images` should contain four `.NEF` (Nikon's raw format)
+images: `azulejos`, `flower`, `tiles`, and `market`. `norm_stats` should contain
+a single `.pt` (pytorch) file: `V1_texture_degamma_norm_stats.pt`. `ref_images`
+should contain `einstein_size-256,256.png`, which we'll use for testing the
+setup, as well as `.tiff` versions of the four raw images (the raw images are
+provided in case you want to try a different demosaicing algorithm than the one
+I did; if you're fine with that step, you can ignore them and everything further
+will use the `.tiff` files found in `ref_images`).
 
 ## Test setup
 
@@ -293,7 +289,7 @@ If you wanted to generate all of your metamers at once, this is very
 easy: simply running
 
 ```
-snakemake -j n --resources gpu=n mem=m -prk --restart-times 3 --ri ~/Desktop/metamers_display/dummy_RGC_cone-1.0_gaussian_0_-1.txt ~/Desktop/metamers_display/dummy_V1_cone-1.0_norm_s6_gaussian_0_-1.txt
+snakemake -j n --resources gpu=n mem=m -prk --restart-times 3 --ri ~/Desktop/metamers_display/dummy_RGC_gaussian_0_-1.txt ~/Desktop/metamers_display/dummy_V1_norm_s6_gaussian_0_-1.txt
 ```
 
 will do this (where you should replace both `n` with the number of
@@ -406,19 +402,16 @@ which contains information about the metamers and their
 optimization. It's used to generate the presentation indices as well
 as to analyze the data.
 
-You can generate your own, novel presentation indices by running
-`snakemake -prk
-~/Desktop/metamers/stimuli/{model_name}/{subject}_idx_sess-{num}.npy`,
-replacing `{model_name}` with one of `'RGC_cone-1.0_gaussian',
-'V1_cone-1.0_norm_s6_gaussian'`, `{subject}` must be of the format
-`sub-##`, where `##` is some integer (ideally zero-padded, but this
-isn't required), and `{num}` must also be an integer (this is because
-we use the number in the subject name and session number to determine
-the seed for randomizing the presentation order; if you'd like to
-change this, see the snakemake rule `generate_experiment_idx`, and how
-the parameter `seed` is determined; as long as you modify this so that
-each subject/session combination gets a unique seed, everything should
-be fine).
+You can generate your own, novel presentation indices by running `snakemake -prk
+~/Desktop/metamers/stimuli/{model_name}/{subject}_idx_sess-{num}.npy`, replacing
+`{model_name}` with one of `'RGC_gaussian', 'V1_norm_s6_gaussian'`, `{subject}`
+must be of the format `sub-##`, where `##` is some integer (ideally zero-padded,
+but this isn't required), and `{num}` must also be an integer (this is because
+we use the number in the subject name and session number to determine the seed
+for randomizing the presentation order; if you'd like to change this, see the
+snakemake rule `generate_experiment_idx`, and how the parameter `seed` is
+determined; as long as you modify this so that each subject/session combination
+gets a unique seed, everything should be fine).
 
 ### Demo / test experiment
 

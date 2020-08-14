@@ -26,9 +26,9 @@ wildcard_constraints:
     period="[0-9]+",
     size="[0-9,]+",
     bits="[0-9]+",
-    img_preproc="full|cone|cone_full|degamma_cone|gamma-corrected|gamma-corrected_full|range-[,.0-9]+|gamma-corrected_range-[,.0-9]+",
+    img_preproc="full|degamma|gamma-corrected|gamma-corrected_full|range-[,.0-9]+|gamma-corrected_range-[,.0-9]+",
     preproc_image_name="azulejos|tiles|market|flower|einstein",
-    preproc="|_degamma|_degamma_cone|_cone|degamma|degamma_cone|cone",
+    preproc="|_degamma|degamma",
     gpu="0|1",
 ruleorder:
     collect_metamers_example > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image
@@ -60,7 +60,7 @@ if TEXTURE_DIR.endswith(os.sep) or TEXTURE_DIR.endswith('/'):
 rule test_setup:
     input:
         METAMER_TEMPLATE_PATH.format(model_name=MODELS[0],
-                                     image_name='einstein_degamma_cone_size-256,256',
+                                     image_name='einstein_degamma_size-256,256',
                                      scaling=.1, optimizer='Adam', fract_removed=0, loss_fract=1,
                                      coarse_to_fine=False, seed=0, init_type='white',
                                      learning_rate=1, min_ecc=.5, max_ecc=15,
@@ -68,14 +68,14 @@ rule test_setup:
                                      clamp='clamp', clamp_each_iter=True, loss='l2',
                                      loss_change_thresh=.1),
         METAMER_TEMPLATE_PATH.format(model_name=MODELS[1],
-                                     image_name='einstein_degamma_cone_size-256,256',
+                                     image_name='einstein_degamma_size-256,256',
                                      scaling=.5, optimizer='Adam', fract_removed=0, loss_fract=1,
                                      loss_change_thresh=0.01, seed=0, init_type='white',
                                      learning_rate=.1, min_ecc=.5, max_ecc=15, max_iter=100,
                                      loss_thresh=1e-8, gpu=0, coarse_to_fine='together',
                                      clamp='clamp', clamp_each_iter=True, loss='l2'),
         METAMER_TEMPLATE_PATH.format(model_name=MODELS[0],
-                                     image_name='einstein_degamma_cone_size-256,256',
+                                     image_name='einstein_degamma_size-256,256',
                                      scaling=.1, optimizer='Adam', fract_removed=0, loss_fract=1,
                                      coarse_to_fine=False, seed=0, init_type='white',
                                      learning_rate=1, min_ecc=.5, max_ecc=15,
@@ -83,7 +83,7 @@ rule test_setup:
                                      clamp='clamp', clamp_each_iter=True, loss='l2',
                                      loss_change_thresh=.1),
         METAMER_TEMPLATE_PATH.format(model_name=MODELS[1],
-                                     image_name='einstein_degamma_cone_size-256,256',
+                                     image_name='einstein_degamma_size-256,256',
                                      scaling=.5, optimizer='Adam', fract_removed=0, loss_fract=1,
                                      loss_change_thresh=0.01, seed=0, init_type='white',
                                      learning_rate=.1, min_ecc=.5, max_ecc=15,
@@ -111,8 +111,6 @@ rule test_setup:
 rule all_refs:
     input:
         [op.join(config['DATA_DIR'], 'ref_images_preproc', i + '.png') for i in IMAGES],
-        [op.join(config['DATA_DIR'], 'ref_images_preproc', i.replace('cone_', '') + '.png')
-         for i in IMAGES],
 
 
 # for this project, our input images are linear images, but if you want
@@ -245,9 +243,6 @@ rule preproc_image:
                 else:
                     print("Image will *not* use full dynamic range")
                     im = im / np.iinfo(dtype).max
-                if 'cone' in wildcards.img_preproc:
-                    print("Raising image to the 1/3, to approximate cone response")
-                    im = im ** (1/3)
                 if 'gamma-corrected' in wildcards.img_preproc:
                     print("Raising image to 1/2.2, to gamma correct it")
                     im = im ** (1/2.2)
@@ -322,8 +317,6 @@ rule preproc_textures:
                         # raise this to its reciprocal, 2.2, in order to reverse
                         # it
                         im = im ** 2.2
-                    if 'cone' in wildcards.preproc:
-                        im = im ** (1/3)
                     # save as a 16 bit png
                     im = met.utils.convert_im_to_int(im, np.uint16)
                     imageio.imwrite(op.join(output[0], op.split(i)[-1].replace('jpg', 'png')), im)
@@ -335,13 +328,13 @@ rule gen_norm_stats:
     output:
         # here V1 and texture could be considered wildcards, but they're
         # the only we're doing this for now
-        op.join(config['DATA_DIR'], 'norm_stats', 'V1_cone-{cone}_texture{preproc}_'
+        op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture{preproc}_'
                 'norm_stats-{num}.pt' )
     log:
-        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_cone-{cone}_texture'
+        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_texture'
                 '{preproc}_norm_stats-{num}.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_cone-{cone}_texture'
+        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_texture'
                 '{preproc}_norm_stats-{num}_benchmark.txt')
     params:
         index = lambda wildcards: (int(wildcards.num) * 100, (int(wildcards.num)+1) * 100)
@@ -351,14 +344,7 @@ rule gen_norm_stats:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 # scaling doesn't matter here
-                if 'gamma' == wildcards.cone:
-                    cone_power = 1/2.2
-                elif 'phys' == wildcards.cone:
-                    cone_power = 1/3
-                else:
-                    cone_power = float(wildcards.cone)
-                v1 = po.simul.PrimaryVisualCortex(1, (512, 512),
-                                                  num_scales=6, cone_power=cone_power)
+                v1 = po.simul.PooledV1(1, (512, 512), num_scales=6)
                 po.optim.generate_norm_stats(v1, input[0], output[0], (512, 512),
                                              index=params.index)
 
@@ -366,16 +352,16 @@ rule gen_norm_stats:
 # we need to generate the stats in blocks, and then want to re-combine them
 rule combine_norm_stats:
     input:
-        lambda wildcards: [op.join(config['DATA_DIR'], 'norm_stats', 'V1_cone-{cone}_texture'
+        lambda wildcards: [op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture'
                                    '{preproc}_norm_stats-{num}.pt').format(num=i, **wildcards)
                            for i in range(9)]
     output:
-        op.join(config['DATA_DIR'], 'norm_stats', 'V1_cone-{cone}_texture{preproc}_norm_stats.pt' )
+        op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture{preproc}_norm_stats.pt' )
     log:
-        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_cone-{cone}_texture'
+        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_texture'
                 '{preproc}_norm_stats.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_cone-{cone}_texture'
+        op.join(config['DATA_DIR'], 'logs', 'norm_stats', 'V1_texture'
                 '{preproc}_norm_stats_benchmark.txt')
     run:
         import torch
@@ -506,19 +492,7 @@ def get_norm_dict(wildcards):
         # lienar images should also use the degamma'd textures
         if 'degamma' in wildcards.image_name or any([i in wildcards.image_name for i in LINEAR_IMAGES]):
             preproc += '_degamma'
-        if 'cone' in wildcards.image_name:
-            preproc += '_cone'
-        try:
-            if 'cone-gamma' in wildcards.model_name:
-                cone_power = 'gamma'
-            elif 'cone-phys' in wildcards.model_name:
-                cone_power = 'phys'
-            else:
-                cone_power = float(re.findall('cone-([.0-9]+)', wildcards.model_name)[0])
-        except IndexError:
-            # default is 1, linear response
-            cone_power = 1
-        return op.join(config['DATA_DIR'], 'norm_stats', f'V1_cone-{cone_power}_texture{preproc}'
+        return op.join(config['DATA_DIR'], 'norm_stats', f'V1_texture{preproc}'
                        '_norm_stats.pt')
     else:
         return []
@@ -787,26 +761,13 @@ rule postproc_metamers:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 for i, f in enumerate(output):
-                    if ('cone' in wildcards.image_name and
-                        (f.endswith('metamer.png') or f.endswith('metamer-16.png'))):
-                        print("De-conifying image %s, saving at %s" % (input.float32_array, f))
-                        im = np.load(input.float32_array)
-                        dtype = {False: np.uint8, True: np.uint16}['16' in f]
-                        print("Saving as image dtype %s" % dtype)
-                        im = im ** 3
-                        im = met.utils.convert_im_to_int(im, dtype)
-                        imageio.imwrite(f, im)
-                    elif f.endswith('metamer_gamma-corrected.png'):
+                    if f.endswith('metamer_gamma-corrected.png'):
                         if ('degamma' in wildcards.image_name or
                             any([i in wildcards.image_name for i in LINEAR_IMAGES])):
                             print("Saving gamma-corrected image %s" % f)
                             im = np.load(input.float32_array)
                             dtype = np.uint8
                             print("Retaining image dtype %s" % dtype)
-                            # need to first de-cone the image, then
-                            # gamma-correct it
-                            if 'cone' in wildcards.image_name:
-                                im = im ** 3
                             im = im ** (1/2.2)
                             im = met.utils.convert_im_to_int(im, dtype)
                             imageio.imwrite(f, im)
@@ -825,10 +786,10 @@ rule collect_metamers_example:
     input:
         utils.generate_metamer_paths('RGC', seed=2,
                                      image_name=config['DEFAULT_METAMERS']['image_name'][0]),
-        utils.get_ref_image_full_path(IMAGES[2].replace('cone_', '')),
+        utils.get_ref_image_full_path(IMAGES[2]),
     output:
-        op.join(config["DATA_DIR"], 'stimuli', 'RGC_cone-1.0_norm_gaussian_demo', 'stimuli.npy'),
-        report(op.join(config["DATA_DIR"], 'stimuli', 'RGC_cone-1.0_norm_gaussian_demo', 'stimuli_description.csv')),
+        op.join(config["DATA_DIR"], 'stimuli', 'RGC_norm_gaussian_demo', 'stimuli.npy'),
+        report(op.join(config["DATA_DIR"], 'stimuli', 'RGC_norm_gaussian_demo', 'stimuli_description.csv')),
     log:
         op.join(config["DATA_DIR"], 'logs', 'stimuli', 'RGC_demo', 'stimuli.log'),
     benchmark:
@@ -846,9 +807,7 @@ rule collect_metamers:
     input:
         lambda wildcards: [m.replace('metamer.png', 'metamer-16.png') for m in
                            utils.generate_metamer_paths(**wildcards)],
-        # we don't want the "cone_full" images, we want the "full"
-        # images.
-        lambda wildcards: [utils.get_ref_image_full_path(i.replace('cone_', '')) for i in IMAGES]
+        lambda wildcards: [utils.get_ref_image_full_path(i) for i in IMAGES]
     output:
         # we collect across image_name and scaling, and don't care about
         # learning_rate, max_iter, loss_thresh

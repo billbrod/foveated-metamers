@@ -128,9 +128,8 @@ def _find_img_size(image_name):
     Parameters
     ----------
     image_name : str
-        name of the reference image, as used in the Snakefile. will
-        contain the base image, any preprocessing (cone power, degamma,
-        changing the range), and size
+        name of the reference image, as used in the Snakefile. will contain the
+        base image, any preprocessing (degamma, changing the range), and size
 
     Returns
     -------
@@ -142,8 +141,9 @@ def _find_img_size(image_name):
     return np.array(image_size.split(',')).astype(int)
 
 
-def get_ref_image_full_path(image_name, preproc_methods=['full', 'cone', 'gamma-corrected',
-                                                         'range']):
+def get_ref_image_full_path(image_name,
+                            preproc_methods=['full', 'gamma-corrected',
+                                             'range']):
     """check whether image is in ref_image or ref_image_preproc dir
 
     Parameters
@@ -186,7 +186,6 @@ def get_gamma_corrected_ref_image(image_name):
         full path to the gamma-corrected reference image
 
     """
-    image_name = image_name.replace('cone_', '')
     image_name = image_name.split('_')
     image_name = '_'.join([image_name[0]] + ['gamma-corrected'] + image_name[1:])
     return image_name

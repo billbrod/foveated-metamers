@@ -40,7 +40,7 @@ DEFAULT_METAMERS:
   gpu: 0
 
 RGC:
-  model_name: 'RGC_cone-1.0_norm_gaussian'
+  model_name: 'RGC_norm_gaussian'
   scaling:
     - .01
     - .013
@@ -54,7 +54,7 @@ RGC:
   max_iter: 750
 
 V1:
-  model_name: 'V1_cone-1.0_norm_s6_gaussian'
+  model_name: 'V1_norm_s6_gaussian'
   scaling:
     - .095
     - .12
