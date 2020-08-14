@@ -358,15 +358,15 @@ def summary_plots(metamer, rep_image_figsize, img_zoom):
         # For DoG windows, need to pass not the model called on the image,
         # but the image itself. for representation error, difference of the
         # target and matched image will do
-        images = [metamer.base_signal, metamer.synthesized_image,
-                  metamer.base_signal - metamer.synthesized_image]
+        images = [metamer.base_signal, metamer.synthesized_signal,
+                  metamer.base_signal - metamer.synthesized_signal]
     else:
-        images = [metamer.model(metamer.base_signal), metamer.model(metamer.synthesized_image),
+        images = [metamer.model(metamer.base_signal), metamer.model(metamer.synthesized_signal),
                   metamer.representation_error()]
     for i, (im, t, vr) in enumerate(zip(images, titles, vranges)):
         metamer.model.plot_representation_image(ax=axes[i], data=im, title=t, vrange=vr,
                                                 zoom=img_zoom)
-    images = [metamer.saved_image[0], metamer.synthesized_image, metamer.base_signal]
+    images = [metamer.saved_image[0], metamer.synthesized_signal, metamer.base_signal]
     images = 2*[po.to_numpy(i.to(torch.float32)).squeeze() for i in images]
     titles = ['Initial image', 'Metamer', 'Reference image']
     if metamer.model.window_type == 'dog':
@@ -551,7 +551,7 @@ def summarize(metamer, save_path, **kwargs):
         loss = metamer.loss[-2]
     data = {'num_iterations': len(metamer.loss), 'loss': loss,
             'num_statistics': metamer.base_representation.numel(),
-            'image_mse': torch.pow(metamer.base_signal - metamer.synthesized_image, 2).mean().item()}
+            'image_mse': torch.pow(metamer.base_signal - metamer.synthesized_signal, 2).mean().item()}
     data.update(kwargs)
     summarized_rep = metamer.model.summarize_representation(metamer.representation_error())
     summarized_rep = _transform_summarized_rep(summarized_rep)
@@ -610,13 +610,13 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
     # exactly zero in the center, and thus those pixels end up getting
     # moved around a little bit. Not entirely sure why, but probably not
     # worth tracing down, since we're interested in the periphery
-    metamer.synthesized_image = torch.nn.Parameter(add_center_to_image(metamer.model,
-                                                                   metamer.synthesized_image,
+    metamer.synthesized_signal = torch.nn.Parameter(add_center_to_image(metamer.model,
+                                                                   metamer.synthesized_signal,
                                                                    metamer.base_signal))
     metamer.save(save_path, save_model_reduced=True)
     # save png of metamer
     metamer_path = op.splitext(save_path)[0] + "_metamer.png"
-    metamer_image = po.to_numpy(metamer.synthesized_image).squeeze()
+    metamer_image = po.to_numpy(metamer.synthesized_signal).squeeze()
     print("Saving metamer float32 array at %s" % metamer_path.replace('.png', '.npy'))
     np.save(metamer_path.replace('.png', '.npy'), metamer_image)
     print("Saving metamer image at %s" % metamer_path)
