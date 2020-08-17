@@ -115,7 +115,7 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
       so require more windows (and thus more memory), but also seem to
       have fewer aliasing issues.
 
-    The recommended model_name values are: `RGC_gaussian` and
+    The recommended model_name values are: `RGC_norm_gaussian` and
     `V1_norm_s6_gaussian`.
 
     Parameters
@@ -188,14 +188,17 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
             normalize_dict = {}
         if not normalize_dict and 'norm' in model_name:
             raise Exception("If model_name is RGC_norm, normalize_dict must be set!")
-        model = po.simul.PooledRGC(scaling, image.shape[-2:], min_eccentricity=min_ecc,
-                                              max_eccentricity=max_ecc, window_type=window_type,
-                                              transition_region_width=t_width, cache_dir=cache_dir,
-                                              std_dev=std_dev,
-                                              surround_std_dev=surround_std_dev,
-                                              center_surround_ratio=center_surround_ratio,
-                                              transition_x=transition_x,
-                                              normalize_dict=normalize_dict)
+        model = po.simul.PooledRGC(scaling, image.shape[-2:],
+                                   min_eccentricity=min_ecc,
+                                   max_eccentricity=max_ecc,
+                                   window_type=window_type,
+                                   transition_region_width=t_width,
+                                   cache_dir=cache_dir,
+                                   std_dev=std_dev,
+                                   surround_std_dev=surround_std_dev,
+                                   center_surround_ratio=center_surround_ratio,
+                                   transition_x=transition_x,
+                                   normalize_dict=normalize_dict)
         animate_figsize = (22, 5)
         if model.window_type == 'dog':
             # then our rep_image will include 3 plots, instead of 1, so
@@ -220,19 +223,19 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
             num_scales = int(re.findall('_s([0-9]+)_', model_name)[0])
         except (IndexError, ValueError):
             num_scales = 4
-        model = po.simul.PooledV1(scaling, image.shape[-2:], min_eccentricity=min_ecc,
-                                             max_eccentricity=max_ecc, std_dev=std_dev,
-                                             transition_region_width=t_width,
-                                             cache_dir=cache_dir, normalize_dict=normalize_dict,
-                                             num_scales=num_scales,
-                                             window_type=window_type)
+        model = po.simul.PooledV1(scaling, image.shape[-2:],
+                                  min_eccentricity=min_ecc,
+                                  max_eccentricity=max_ecc,
+                                  std_dev=std_dev,
+                                  transition_region_width=t_width,
+                                  cache_dir=cache_dir,
+                                  normalize_dict=normalize_dict,
+                                  num_scales=num_scales,
+                                  window_type=window_type)
         animate_figsize = (40, 11)
         # we need about 11 per plot (and we have one of those per scale,
         # plus one for the mean luminance)
         rep_image_figsize = [11 * (num_scales+1), 30]
-        if 'half-oct' in model_name:
-            # in this case, we have almost twice as many plots to make
-            rep_image_figsize[0] *= 2
         # default figsize arguments work for an image that is 512x512,
         # may need to expand. we go backwards through figsize because
         # figsize and image shape are backwards of each other:
@@ -764,7 +767,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
 
     `model_name` is constructed of several parts, for which you have
     several chocies:
-    `'{visual_area}_{window_type}'`:
+    `'{visual_area}{options}_{window_type}'`:
     - `visual_area`: which visual area we're modeling.`'RGC'` (retinal
       ganglion cells, `plenoptic.simul.PooledRGC` class) or
       `'V1'` (primary visual cortex,
@@ -788,7 +791,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
       so require more windows (and thus more memory), but also seem to
       have fewer aliasing issues.
 
-    The recommended model_name values are: `RGC_gaussian` and
+    The recommended model_name values are: `RGC_norm_gaussian` and
     `V1_norm_s6_gaussian`.
 
     If you want to resume synthesis from an earlier run that didn't
