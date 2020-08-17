@@ -36,7 +36,7 @@ DEFAULT_METAMERS:
   learning_rate: .01
   min_ecc: 0.5
   max_ecc: 30.2
-  loss_thresh: 1e-12
+  loss_thresh: 1e-6
   gpu: 0
 
 RGC:
@@ -51,7 +51,7 @@ RGC:
     - .045
     - .058
     - .075
-  max_iter: 750
+  max_iter: 1500
 
 V1:
   model_name: 'V1_norm_s6_gaussian'
@@ -65,10 +65,10 @@ V1:
     - .33
     - .4
     - .5
-  loss: 'mse_range-0,1_lmbda-0.5'
+  loss: 'mse_range-0,1_lmbda-0.1'
   coarse_to_fine: 'together'
   clamp_each_iter: False
-  max_iter: 10000
+  max_iter: 15000
   gpu: 1
 
 PSYCHOPHYSICS:
