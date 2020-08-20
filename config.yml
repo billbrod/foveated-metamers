@@ -1,8 +1,8 @@
-DATA_DIR: "/home/billbrod/Desktop/metamers/"
+DATA_DIR: "/home/billbrod/Desktop/metamers_compare/"
 TEXTURE_DIR: "/home/billbrod/Desktop/textures/cropped512-gray-jpg"
 
 REF_IMAGE_TEMPLATE_PATH: "{DATA_DIR}/ref_images/{image_name}.png"
-METAMER_TEMPLATE_PATH: "{DATA_DIR}/metamers/{model_name}/{image_name}/scaling-{scaling}/opt-{optimizer}_loss-{loss}/fr-{fract_removed}_lc-{loss_fract}_lt-{loss_change_thresh}_cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}/seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc:.03f}_em-{max_ecc:.03f}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}_metamer.png"
+METAMER_TEMPLATE_PATH: "{DATA_DIR}/metamers/{model_name}/{image_name}/scaling-{scaling}/opt-{optimizer}_loss-{loss}/fr-{fract_removed}_lc-{loss_fract}_lt-{loss_change_thresh}_li-{loss_change_iter}_cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}/seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc:.03f}_em-{max_ecc:.03f}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}_metamer.png"
 
 IMAGE_NAME:
   template: "{ref_image}_{preproc}_size-{size}"
@@ -37,6 +37,8 @@ DEFAULT_METAMERS:
   min_ecc: 0.5
   max_ecc: 30.2
   loss_thresh: 1e-6
+  loss_change_iter: 200
+  max_iter: 15000
   gpu: 0
 
 RGC:
@@ -51,7 +53,6 @@ RGC:
     - .045
     - .058
     - .075
-  max_iter: 3000
 
 V1:
   model_name: 'V1_norm_s6_gaussian'
@@ -68,7 +69,6 @@ V1:
   loss: 'mse_range-0,1_lmbda-0.1'
   coarse_to_fine: 'together'
   clamp_each_iter: False
-  max_iter: 15000
   gpu: 1
 
 PSYCHOPHYSICS:

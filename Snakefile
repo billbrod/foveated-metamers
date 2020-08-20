@@ -46,10 +46,13 @@ REF_IMAGE_TEMPLATE_PATH = config['REF_IMAGE_TEMPLATE_PATH'].replace("{DATA_DIR}/
 # the regex here removes all string formatting codes from the string,
 # since Snakemake doesn't like them
 METAMER_TEMPLATE_PATH = re.sub(":.*?}", "}", config['METAMER_TEMPLATE_PATH'].replace("{DATA_DIR}/", DATA_DIR))
+METAMER_LOG_PATH = METAMER_TEMPLATE_PATH.replace('metamers/{model_name}', 'logs/metamers/{model_name}').replace('_metamer.png', '.log')
 OUTPUT_TEMPLATE_PATH = METAMER_TEMPLATE_PATH.replace('metamers/{model_name}',
                                                      'metamers_display/{model_name}')
+OUTPUT_LOG_PATH = METAMER_LOG_PATH.replace('logs/metamers', 'logs/postproc_metamers')
 CONTINUE_TEMPLATE_PATH = (METAMER_TEMPLATE_PATH.replace('metamers/{model_name}', 'metamers_continue/{model_name}')
                           .replace("{clamp_each_iter}/", "{clamp_each_iter}/attempt-{num}_iter-{extra_iter}"))
+CONTINUE_LOG_PATH = CONTINUE_TEMPLATE_PATH.replace('metamers_continue/{model_name}', 'logs/metamers_continue/{model_name}').replace('_metamer.png', '.log')
 TEXTURE_DIR = config['TEXTURE_DIR']
 if TEXTURE_DIR.endswith(os.sep) or TEXTURE_DIR.endswith('/'):
     TEXTURE_DIR = TEXTURE_DIR[:-1]
@@ -66,14 +69,15 @@ rule test_setup:
                                      learning_rate=1, min_ecc=.5, max_ecc=15,
                                      max_iter=100, loss_thresh=1e-8, gpu=0,
                                      clamp='clamp', clamp_each_iter=True, loss='l2',
-                                     loss_change_thresh=.1),
+                                     loss_change_thresh=.1, loss_change_iter=50),
         METAMER_TEMPLATE_PATH.format(model_name=MODELS[1],
                                      image_name='einstein_degamma_size-256,256',
                                      scaling=.5, optimizer='Adam', fract_removed=0, loss_fract=1,
                                      loss_change_thresh=0.01, seed=0, init_type='white',
                                      learning_rate=.1, min_ecc=.5, max_ecc=15, max_iter=100,
                                      loss_thresh=1e-8, gpu=0, coarse_to_fine='together',
-                                     clamp='clamp', clamp_each_iter=True, loss='l2'),
+                                     clamp='clamp', clamp_each_iter=True, loss='l2',
+                                     loss_change_iter=50),
         METAMER_TEMPLATE_PATH.format(model_name=MODELS[0],
                                      image_name='einstein_degamma_size-256,256',
                                      scaling=.1, optimizer='Adam', fract_removed=0, loss_fract=1,
@@ -81,14 +85,15 @@ rule test_setup:
                                      learning_rate=1, min_ecc=.5, max_ecc=15,
                                      max_iter=100, loss_thresh=1e-8, gpu=1,
                                      clamp='clamp', clamp_each_iter=True, loss='l2',
-                                     loss_change_thresh=.1),
+                                     loss_change_thresh=.1, loss_change_iter=50),
         METAMER_TEMPLATE_PATH.format(model_name=MODELS[1],
                                      image_name='einstein_degamma_size-256,256',
                                      scaling=.5, optimizer='Adam', fract_removed=0, loss_fract=1,
                                      loss_change_thresh=0.01, seed=0, init_type='white',
                                      learning_rate=.1, min_ecc=.5, max_ecc=15,
                                      max_iter=100, loss_thresh=1e-8, gpu=1, clamp='clamp',
-                                     clamp_each_iter=True, loss='l2', coarse_to_fine='together'),
+                                     clamp_each_iter=True, loss='l2', coarse_to_fine='together',
+                                     loss_change_iter=50),
     output:
         directory(op.join(config['DATA_DIR'], 'test_setup', MODELS[0], 'einstein')),
         directory(op.join(config['DATA_DIR'], 'test_setup', MODELS[1], 'einstein'))
@@ -567,17 +572,9 @@ rule create_metamers:
         METAMER_TEMPLATE_PATH.replace('.png', '.npy'),
         report(METAMER_TEMPLATE_PATH),
     log:
-        op.join(config["DATA_DIR"], 'logs', 'metamers', '{model_name}', '{image_name}',
-                'scaling-{scaling}', 'opt-{optimizer}_loss-{loss}', 'fr-{fract_removed}_lc-{loss_fract}_'
-                'lt-{loss_change_thresh}_cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}',
-                'seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-'
-                '{max_iter}_thresh-{loss_thresh}_gpu-{gpu}.log')
+        METAMER_LOG_PATH,
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'metamers', '{model_name}', '{image_name}',
-                'scaling-{scaling}', 'opt-{optimizer}_loss-{loss}', 'fr-{fract_removed}_lc-{loss_fract}_'
-                'lt-{loss_change_thresh}_cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}',
-                'seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-'
-                '{max_iter}_thresh-{loss_thresh}_gpu-{gpu}_benchmark.txt')
+        METAMER_LOG_PATH.replace('.log', '_benchmark.txt'),
     resources:
         gpu = lambda wildcards: int(wildcards.gpu),
         mem = get_mem_estimate,
@@ -613,8 +610,8 @@ rule create_metamers:
                                              input.ref_image, int(wildcards.seed), float(wildcards.min_ecc),
                                              float(wildcards.max_ecc), float(wildcards.learning_rate),
                                              int(wildcards.max_iter), float(wildcards.loss_thresh),
-                                             output[0], init_type, gpu_id,
-                                             params.cache_dir, input.norm_dict,
+                                             float(wildcards.loss_change_iter), output[0],
+                                             init_type, gpu_id, params.cache_dir, input.norm_dict,
                                              wildcards.optimizer, float(wildcards.fract_removed),
                                              float(wildcards.loss_fract),
                                              float(wildcards.loss_change_thresh), coarse_to_fine,
@@ -657,17 +654,9 @@ rule continue_metamers:
         CONTINUE_TEMPLATE_PATH.replace('.png', '.npy'),
         report(CONTINUE_TEMPLATE_PATH),
     log:
-        op.join(config["DATA_DIR"], 'logs', 'metamers_continue', '{model_name}', '{image_name}',
-                'scaling-{scaling}', 'opt-{optimizer}_loss-{loss}', 'fr-{fract_removed}_lc-{loss_fract}_'
-                'lt-{loss_change_thresh}_cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}',
-                'attempt-{num}_iter-{extra_iter}', 'seed-{seed}_init-{init_type}_lr-'
-                '{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}.log')
+        CONTINUE_LOG_PATH,
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'metamers_continue', '{model_name}', '{image_name}',
-                'scaling-{scaling}', 'opt-{optimizer}_loss-{loss}', 'fr-{fract_removed}_lc-{loss_fract}_'
-                'lt-{loss_change_thresh}_cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}',
-                'attempt-{num}_iter-{extra_iter}', 'seed-{seed}_init-{init_type}_lr-'
-                '{learning_rate}_e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}_benchmark.txt')
+        CONTINUE_LOG_PATH.replace('.log', '_benchmark.txt'),
     resources:
         gpu = lambda wildcards: int(wildcards.gpu),
         mem = get_mem_estimate,
@@ -707,8 +696,8 @@ rule continue_metamers:
                                              input.ref_image, int(wildcards.seed), float(wildcards.min_ecc),
                                              float(wildcards.max_ecc), None,
                                              int(wildcards.extra_iter), float(wildcards.loss_thresh),
-                                             output[0], init_type, gpu_id,
-                                             params.cache_dir, input.norm_dict,
+                                             float(wildcards.loss_change_iter), output[0],
+                                             init_type, gpu_id, params.cache_dir, input.norm_dict,
                                              wildcards.optimizer, float(wildcards.fract_removed),
                                              float(wildcards.loss_fract),
                                              float(wildcards.loss_change_thresh), coarse_to_fine,
@@ -741,17 +730,9 @@ rule postproc_metamers:
         OUTPUT_TEMPLATE_PATH.replace('.png', '.npy'),
         report(OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'metamer_gamma-corrected.png')),
     log:
-        op.join(config["DATA_DIR"], 'logs', 'postproc_metamers', '{model_name}',
-                '{image_name}', 'scaling-{scaling}', 'opt-{optimizer}_loss-{loss}',
-                'fr-{fract_removed}_lc-{loss_fract}_lt-{loss_change_thresh}_cf-{coarse_to_fine}_'
-                '{clamp}-{clamp_each_iter}',  'seed-{seed}_init-{init_type}_lr-{learning_rate}_'
-                'e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}.log')
+        OUTPUT_LOG_PATH,
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'postproc_metamers', '{model_name}',
-                '{image_name}', 'scaling-{scaling}', 'opt-{optimizer}_loss-{loss}',
-                'fr-{fract_removed}_lc-{loss_fract}_lt-{loss_change_thresh}_cf-{coarse_to_fine}_'
-                '{clamp}-{clamp_each_iter}', 'seed-{seed}_init-{init_type}_lr-{learning_rate}_'
-                'e0-{min_ecc}_em-{max_ecc}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}_benchmark.txt')
+        OUTPUT_LOG_PATH.replace('.log', '_benchmark.txt'),
     run:
         import foveated_metamers as met
         import contextlib

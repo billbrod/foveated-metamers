@@ -755,8 +755,8 @@ def setup_device(*args, gpu_id=None):
 
 
 def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_rate=1, max_iter=100,
-         loss_thresh=1e-4, save_path=None, initial_image_type='white', gpu_id=None,
-         cache_dir=None, normalize_dict=None, optimizer='SGD', fraction_removed=0,
+         loss_thresh=1e-4, loss_change_iter=50, save_path=None, initial_image_type='white',
+         gpu_id=None, cache_dir=None, normalize_dict=None, optimizer='SGD', fraction_removed=0,
          loss_change_fraction=1, loss_change_thresh=.1, coarse_to_fine=False, clamper_name='clamp',
          clamp_each_iter=True, loss_func='l2', continue_path=None):
     r"""create metamers!
@@ -836,7 +836,11 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         optimization to run for
     loss_thresh : float, optional
         The loss threshold. If the loss has changed by less than this
-        over the past 50 iterations, we quit out.
+        over the past loss_change_iter iterations, we quit out.
+    loss_change_iter : int, optional
+        How many iterations back to check in order to see if the loss
+        has stopped decreasing (for both loss_change_iter and
+        coarse-to-fine optimization)
     save_path : str or None, optional
         If a str, the path to the file to save the metamer object to. If
         None, we don't save the synthesis output (that's probably a bad
@@ -973,8 +977,8 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         metamer = po.synth.Metamer.load(continue_path, model.from_state_dict_reduced)
         initial_image = None
         learning_rate = None
-    print("Using learning rate %s, loss_thresh %s, and max_iter %s" % (learning_rate, loss_thresh,
-                                                                       max_iter))
+    print(f"Using learning rate {learning_rate}, loss_thresh {loss_thresh} (loss_change_iter "
+          f"{loss_change_iter}), and max_iter {max_iter}")
     if save_path is not None:
         if max_iter < 200:
             # no sense when it's this short
@@ -987,17 +991,23 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     # much memory. this way we store at most 100 time points
     store_progress = max(10, max_iter//100)
     start_time = time.time()
-    matched_im, matched_rep = metamer.synthesize(clamper=clamper, store_progress=store_progress,
-                                                 learning_rate=learning_rate, max_iter=max_iter,
-                                                 loss_thresh=loss_thresh, seed=seed,
+    matched_im, matched_rep = metamer.synthesize(clamper=clamper,
+                                                 store_progress=store_progress,
+                                                 learning_rate=learning_rate,
+                                                 max_iter=max_iter,
+                                                 loss_thresh=loss_thresh,
+                                                 loss_change_iter=loss_change_iter,
+                                                 seed=seed,
                                                  initial_image=initial_image,
                                                  clamp_each_iter=clamp_each_iter,
                                                  save_progress=save_progress,
-                                                 optimizer=optimizer, fraction_removed=fraction_removed,
+                                                 optimizer=optimizer,
+                                                 fraction_removed=fraction_removed,
                                                  loss_change_fraction=loss_change_fraction,
                                                  loss_change_thresh=loss_change_thresh,
                                                  coarse_to_fine=coarse_to_fine,
-                                                 save_path=save_path.replace('.pt', '_inprogress.pt'))
+                                                 save_path=save_path.replace('.pt',
+                                                                             '_inprogress.pt'))
     duration = time.time() - start_time
     # make sure everything's on the cpu for saving
     metamer = metamer.to('cpu')
@@ -1010,7 +1020,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                   loss_change_fraction=loss_change_fraction, initial_image=initial_image_type,
                   min_ecc=min_ecc, max_ecc=max_ecc, max_iter=max_iter, gpu_id=gpu_id,
                   loss_thresh=loss_thresh, scaling=scaling, clamper=clamper_name,
-                  clamp_each_iter=clamp_each_iter,
+                  clamp_each_iter=clamp_each_iter, loss_change_iter=loss_change_iter,
                   image_name=op.basename(image_name).replace('.pgm', '').replace('.png', ''),
                   loss_function=loss_func)
         summarize_history(metamer, save_path.replace('.pt', '_history.csv'),
@@ -1021,7 +1031,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                           initial_image=initial_image_type, min_ecc=min_ecc, max_ecc=max_ecc,
                           max_iter=max_iter, gpu_id=gpu_id, loss_thresh=loss_thresh,
                           scaling=scaling, clamper=clamper_name, clamp_each_iter=clamp_each_iter,
-                          loss_function=loss_func,
+                          loss_function=loss_func,loss_change_iter=loss_change_iter,
                           image_name=op.basename(image_name).replace('.pgm', '').replace('.png', ''))
         save(save_path, metamer, animate_figsize, rep_figsize, img_zoom)
     if save_progress:
