@@ -143,7 +143,7 @@ def _find_img_size(image_name):
 
 def get_ref_image_full_path(image_name,
                             preproc_methods=['full', 'gamma-corrected',
-                                             'range']):
+                                             'range', 'degamma']):
     """check whether image is in ref_image or ref_image_preproc dir
 
     Parameters
