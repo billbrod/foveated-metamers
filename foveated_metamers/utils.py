@@ -360,7 +360,7 @@ if __name__ == '__main__':
             continue
         if k == 'DATA_DIR':
             new_args[k] = v
-        elif k in ['seed', 'max_iter', 'gpu']:
+        elif k in ['seed', 'max_iter', 'gpu', 'loss_change_iter']:
             # then it's an int
             new_args[k] = [int(vi) for vi in v]
         else:
