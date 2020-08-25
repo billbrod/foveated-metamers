@@ -28,7 +28,7 @@ DEFAULT_METAMERS:
   loss: 'mse'
   fract_removed: 0
   loss_fract: 1
-  loss_change_thresh: 1e-4
+  loss_change_thresh: 1e-04
   coarse_to_fine: False
   clamp: 'clamp'
   clamp_each_iter: True
@@ -36,7 +36,7 @@ DEFAULT_METAMERS:
   learning_rate: .01
   min_ecc: 0.5
   max_ecc: 30.2
-  loss_thresh: 1e-6
+  loss_thresh: 1e-06
   loss_change_iter: 200
   max_iter: 15000
   gpu: 0
