@@ -24,7 +24,7 @@ wildcard_constraints:
     size="[0-9,]+",
     bits="[0-9]+",
     img_preproc="full|degamma|gamma-corrected|gamma-corrected_full|range-[,.0-9]+|gamma-corrected_range-[,.0-9]+",
-    preproc_image_name="azulejos|tiles|market|flower|einstein",
+    preproc_image_name="azulejos|tiles|market|flower|einstein|bike|dubrovnik|goats|graffiti|house|llama|rooves|santorini|split|store|terraces|yarn",
     preproc="|_degamma|degamma",
     gpu="0|1",
 ruleorder:
