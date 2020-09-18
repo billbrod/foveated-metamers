@@ -627,7 +627,6 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
     print("Saving 16-bit metamer image at %s" % metamer_path.replace('.png', '-16.png'))
     imageio.imwrite(metamer_path.replace('.png', '-16.png'),
                     convert_im_to_int(metamer_image, np.uint16))
-    video_path = op.splitext(save_path)[0] + "_synthesis.mp4"
     rep_fig, windowed_fig = summary_plots(metamer, rep_image_figsize, img_zoom)
     rep_path = op.splitext(save_path)[0] + "_rep.png"
     print("Saving representation image at %s" % rep_path)
@@ -635,9 +634,15 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
     windowed_path = op.splitext(save_path)[0] + "_windowed.png"
     print("Saving windowed image at %s" % windowed_path)
     windowed_fig.savefig(windowed_path)
-    print("Saving synthesis video at %s" % video_path)
-    anim = metamer.animate(figsize=animate_figsize, imshow_zoom=img_zoom, plot_image_hist=True)
-    anim.save(video_path)
+    # video_path = op.splitext(save_path)[0] + "_synthesis.mp4"
+    # print("Saving synthesis video at %s" % video_path)
+    # anim = metamer.animate(figsize=animate_figsize, imshow_zoom=img_zoom, plot_image_hist=True)
+    # anim.save(video_path)
+    synthesis_path = op.splitext(save_path)[0] + "_synthesis.png"
+    print(f"Saving synthesis image at {synthesis_path}")
+    fig = metamer.plot_synthesis_status(figsize=animate_figsize, imshow_zoom=img_zoom,
+                                        plot_image_hist=True)
+    fig.savefig(synthesis_path)
     angle_n = np.linspace(0, metamer.model.n_polar_windows, 8, dtype=int, endpoint=False)
     fig = metamer.model.PoolingWindows.plot_window_checks(angle_n)
     window_check_path = op.splitext(save_path)[0] + "_window_check.svg"
