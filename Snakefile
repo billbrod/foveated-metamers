@@ -15,9 +15,6 @@ if not op.isdir(config["DATA_DIR"]):
 if os.system("module list") == 0:
     # then we're on the cluster
     ON_CLUSTER = True
-    # need ffmpeg and our conda environment
-    shell.prefix(". /share/apps/anaconda3/5.3.1/etc/profile.d/conda.sh; conda activate metamers; "
-                 "module load ffmpeg/intel/3.2.2; ")
 else:
     ON_CLUSTER = False
 wildcard_constraints:
@@ -605,7 +602,7 @@ rule create_metamers:
                     get_gid = False
                 else:
                     raise Exception("Multiple gpus are not supported!")
-                with met.utils.get_gpu_id(get_gid) as gpu_id:
+                with met.utils.get_gpu_id(get_gid, on_cluster=ON_CLUSTER) as gpu_id:
                     met.create_metamers.main(wildcards.model_name, float(wildcards.scaling),
                                              input.ref_image, int(wildcards.seed), float(wildcards.min_ecc),
                                              float(wildcards.max_ecc), float(wildcards.learning_rate),
