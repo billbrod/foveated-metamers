@@ -4,18 +4,24 @@
 	"nodes": 1,
 	"tasks_per_node": 1,
 	"mem": "48GB",
-	"time": "12:00:00",
+	"time": "140:00:00",
 	"job_name": "{rule}.{wildcards}",
 	"cpus_per_task": 1,
-	"output": "{log}",
-	"error": "{log}"
+	"output": "{log}-%j",
+	"error": "{log}-%j"
     },
     "create_metamers":
     {
-	"gres": "gpu:{resources.gpu}"
+	"gres": "gpu:{resources.gpu}",
+	"mem": "{resources.mem}GB"
     },
     "continue_metamers":
     {
-	"gres": "gpu:{resources.gpu}"
+	"gres": "gpu:{resources.gpu}",
+	"mem": "{resources.mem}GB"
+    },
+    "cache_windows":
+    {
+	"mem": "{resources.mem}GB"
     }
 }
