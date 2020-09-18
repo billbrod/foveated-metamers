@@ -974,6 +974,13 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         else:
             raise Exception(f"Don't know how to interpret loss func {loss_func}!")
         loss_kwargs = {'allowed_range': (float(a), float(b)), 'lmbda': float(c)}
+    if '-' in optimizer:
+        optimizer = optimizer.split('-')[0]
+        swa = True
+        swa_kwargs = {'swa_start': 10, 'swa_freq': 1, 'swa_lr': learning_rate/2}
+    else:
+        swa = False
+        swa_kwargs = {}
     if continue_path is None:
         metamer = po.synth.Metamer(image, model, loss_function=loss,
                                    loss_function_kwargs=loss_kwargs)
@@ -1007,6 +1014,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                                                  clamp_each_iter=clamp_each_iter,
                                                  save_progress=save_progress,
                                                  optimizer=optimizer,
+                                                 swa=swa, swa_kwargs=swa_kwargs,
                                                  fraction_removed=fraction_removed,
                                                  loss_change_fraction=loss_change_fraction,
                                                  loss_change_thresh=loss_change_thresh,
