@@ -980,12 +980,23 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
             raise Exception(f"Don't know how to interpret loss func {loss_func}!")
         loss_kwargs = {'allowed_range': (float(a), float(b)), 'lmbda': float(c)}
     if '-' in optimizer:
-        optimizer = optimizer.split('-')[0]
-        swa = True
+        # we allow two possible addenda to SWA, s-S and f-F, where S is the
+        # value for swa-start and F is the value for swa_freq, respectively. if
+        # not present, we use 10 and 1, respectively. using the non-capturing
+        # group (with the `?:` syntax) means this will always have two values
+        kwarg_vals = re.findall('SWA(?:_s-([\d]+))?(?:_f-([\d]+))?', optimizer)[0]
         swa_kwargs = {'swa_start': 10, 'swa_freq': 1, 'swa_lr': learning_rate/2}
+        for k, v in zip(['swa_start', 'swa_freq'], kwarg_vals):
+            if v:
+                swa_kwargs[k] = int(v)
+        swa = True
+        swa_str = f", with SWA and kwargs {swa_kwargs}"
+        optimizer = optimizer.split('-')[0]
     else:
         swa = False
         swa_kwargs = {}
+        swa_str = ""
+    print(f"Using optimizer {optimizer}{swa_str}")
     if continue_path is None:
         metamer = po.synth.Metamer(image, model, loss_function=loss,
                                    loss_function_kwargs=loss_kwargs)
