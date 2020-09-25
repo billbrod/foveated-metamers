@@ -9,20 +9,12 @@ IMAGE_NAME:
   ref_image:
     - 'azulejos'
     - 'tiles'
-    - 'market'
-    - 'flower'
     - 'bike'
-    - 'dubrovnik'
-    - 'goats'
     - 'graffiti'
-    - 'house'
     - 'llama'
     - 'rooves'
-    - 'santorini'
-    - 'split'
     - 'store'
     - 'terraces'
-    - 'yarn'
   preproc: 'full'
   size: '2048,2600'
 
@@ -47,7 +39,10 @@ DEFAULT_METAMERS:
   init_type: 'white'
   learning_rate: .01
   min_ecc: 0.5
-  max_ecc: 30.2
+  # this is for the haploscope set up from FRL
+  # max_ecc: 27.8
+  # this is for single monitor (with chin rest) pilot set up at NYU
+  max_ecc: 26.8
   loss_thresh: 1e-06
   loss_change_iter: 200
   max_iter: 15000
