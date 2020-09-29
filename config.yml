@@ -15,7 +15,7 @@ IMAGE_NAME:
     - 'rooves'
     - 'store'
     - 'terraces'
-  preproc: 'full'
+  preproc: 'range-.05,.95'
   size: '2048,2600'
 
 DEFAULT_METAMERS:
