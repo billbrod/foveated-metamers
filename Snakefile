@@ -576,9 +576,9 @@ rule create_metamers:
     resources:
         gpu = lambda wildcards: int(wildcards.gpu),
         mem = get_mem_estimate,
-        partition = lambda wildcards: {0: 'gen'}.get(int(wildcards.gpu), 'gpu')
     params:
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
+        partition = lambda wildcards: {0: 'gen'}.get(int(wildcards.gpu), 'gpu')
     run:
         import foveated_metamers as met
         import contextlib
