@@ -48,7 +48,7 @@ DEFAULT_METAMERS:
   # this is for single monitor (with chin rest) pilot set up at NYU
   max_ecc: 26.8
   loss_thresh: 1e-09
-  loss_change_iter: 200
+  loss_change_iter: 50
   max_iter: 15000
   gpu: 0
 
