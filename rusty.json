@@ -1,0 +1,30 @@
+{
+    "__default__":
+    {
+	"nodes": 1,
+	"tasks_per_node": 1,
+	"mem": "48GB",
+	"time": "140:00:00",
+	"job_name": "{rule}.{wildcards}",
+	"cpus_per_task": 1,
+	"output": "{log}-%j",
+	"error": "{log}-%j",
+	"partition": "gen"
+    },
+    "create_metamers":
+    {
+	"gres": "gpu:v100-32gb:{resources.gpu}",
+	"mem": "{resources.mem}GB",
+	"partition": "{params.partition}"
+    },
+    "continue_metamers":
+    {
+	"gres": "gpu:v100-32gb:{resources.gpu}",
+	"mem": "{resources.mem}GB",
+	"partition": "{params.partition}"
+    },
+    "cache_windows":
+    {
+	"mem": "{resources.mem}GB"
+    }
+}
