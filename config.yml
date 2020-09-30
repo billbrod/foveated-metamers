@@ -20,10 +20,14 @@ IMAGE_NAME:
 
 DEFAULT_METAMERS:
   image_name:
-    - 'azulejos_full_size-2048,2600'
-    - 'tiles_full_size-2048,2600'
-    - 'market_full_size-2048,2600'
-    - 'flower_full_size-2048,2600'
+    - 'azulejos_range-.05,.95_size-2048,2600'
+    - 'tiles_range-.05,.95_size-2048,2600'
+    - 'bike_range-.05,.95_size-2048,2600'
+    - 'graffiti_range-.05,.95_size-2048,2600'
+    - 'llama_range-.05,.95_size-2048,2600'
+    - 'rooves_range-.05,.95_size-2048,2600'
+    - 'store_range-.05,.95_size-2048,2600'
+    - 'terraces_range-.05,.95_size-2048,2600'
   seed:
     - 0
     - 1
@@ -43,7 +47,7 @@ DEFAULT_METAMERS:
   # max_ecc: 27.8
   # this is for single monitor (with chin rest) pilot set up at NYU
   max_ecc: 26.8
-  loss_thresh: 1e-06
+  loss_thresh: 1e-09
   loss_change_iter: 200
   max_iter: 15000
   gpu: 0
@@ -73,7 +77,8 @@ V1:
     - .33
     - .4
     - .5
-  loss: 'mse_range-0,1_lmbda-0.1'
+  loss: 'mse_range-0,1_lmbda-0.01'
+  optimizer: 'Adam-SWA_s-50_f-5'
   coarse_to_fine: 'together'
   clamp_each_iter: False
   gpu: 1

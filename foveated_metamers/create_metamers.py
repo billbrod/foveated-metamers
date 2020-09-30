@@ -573,7 +573,7 @@ def summarize(metamer, save_path, **kwargs):
 def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
     r"""save the metamer output
 
-    We save five things here:
+    We save several things here:
     - The metamer object itself, at ``save_path``. This contains, among
       other things, the saved image and representation over the course
       of synthesis.
@@ -592,6 +592,8 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
     - The video showing synthesis progress at
       ``os.path.splitext(save_path)[0] + "_synthesis.mp4"``. We use this
       to visualize the optimization progress.
+    - Picture showing synthesis progress summary at
+      ``os.path.splitext(save_path)[0] + "_synthesis.png"``.
     - The window normalization check plot for some angle slices at
       ``os.path.splitext(save_path)[0] + "_window_check.svg"``
 
@@ -639,10 +641,10 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
     windowed_path = op.splitext(save_path)[0] + "_windowed.png"
     print("Saving windowed image at %s" % windowed_path)
     windowed_fig.savefig(windowed_path)
-    # video_path = op.splitext(save_path)[0] + "_synthesis.mp4"
-    # print("Saving synthesis video at %s" % video_path)
-    # anim = metamer.animate(figsize=animate_figsize, imshow_zoom=img_zoom, plot_image_hist=True)
-    # anim.save(video_path)
+    video_path = op.splitext(save_path)[0] + "_synthesis.mp4"
+    print("Saving synthesis video at %s" % video_path)
+    anim = metamer.animate(figsize=animate_figsize, imshow_zoom=img_zoom, plot_image_hist=True)
+    anim.save(video_path)
     synthesis_path = op.splitext(save_path)[0] + "_synthesis.png"
     print(f"Saving synthesis image at {synthesis_path}")
     fig = metamer.plot_synthesis_status(figsize=animate_figsize, imshow_zoom=img_zoom,
