@@ -259,8 +259,10 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
         while ((np.array(image.shape[::-1][:2]) * img_zoom) > (default_imgsize*zoom_factor)).any():
             img_zoom /= 2
         zoom_factor = np.array([max(1, img_zoom*image.shape[::-1][i]/default_imgsize) for i in range(2)])
-    plot_shapes = np.array([img_zoom * np.array(v.shape[-2:]) for v in
-                            model.PoolingWindows.angle_windows.values()])
+    # img_zoom applies to the first image and then will increase by a factor of
+    # 2 for all successive scales
+    plot_shapes = np.array([img_zoom * 2**k * np.array(v.shape[-2:]) for k, v in
+                            model.PoolingWindows.angle_windows.items()])
     if (plot_shapes.astype(int) != plot_shapes).any():
         raise Exception("At least one of the model scales will have a fractional image size. "
                         "Make your image size closer to a power of 2. Debug info: "
