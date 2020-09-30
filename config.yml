@@ -64,6 +64,7 @@ RGC:
     - .045
     - .058
     - .075
+  max_iter: 5000
 
 V1:
   model_name: 'V1_norm_s6_gaussian'

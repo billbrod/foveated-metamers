@@ -578,7 +578,7 @@ rule create_metamers:
         mem = get_mem_estimate,
     params:
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
-        time = lambda wildcards: {'V1': '12:00:00', 'RGC': '10-00:00:00'}[wildcards.model_name.split('_')[0]],
+        time = lambda wildcards: {'V1': '12:00:00', 'RGC': '5-00:00:00'}[wildcards.model_name.split('_')[0]],
         partition = lambda wildcards: {0: 'gen'}.get(int(wildcards.gpu), 'gpu')
     run:
         import foveated_metamers as met
@@ -663,7 +663,7 @@ rule continue_metamers:
         mem = get_mem_estimate,
     params:
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
-        time = lambda wildcards: {'V1': '12:00:00', 'RGC': '10-00:00:00'}[wildcards.model_name.split('_')[0]],
+        time = lambda wildcards: {'V1': '12:00:00', 'RGC': '5-00:00:00'}[wildcards.model_name.split('_')[0]],
         partition = lambda wildcards: {0: 'gen'}.get(int(wildcards.gpu), 'gpu')
     run:
         import foveated_metamers as met
