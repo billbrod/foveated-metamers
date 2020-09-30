@@ -263,7 +263,8 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
                             model.PoolingWindows.angle_windows.values()])
     if (plot_shapes.astype(int) != plot_shapes).any():
         raise Exception("At least one of the model scales will have a fractional image size. "
-                        "Make your image size closer to a power of 2")
+                        "Make your image size closer to a power of 2. Debug info: "
+                        f"img_zoom: {img_zoom}, plot_shapes: {plot_shapes}")
     # and then update the figsizes appropriately
     animate_figsize = tuple([s*zoom_factor[i] for i, s in enumerate(animate_figsize)])
     rep_image_figsize = tuple([s*zoom_factor[i] for i, s in enumerate(rep_image_figsize)])
