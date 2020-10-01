@@ -15,14 +15,14 @@
     {
         "gres": "gpu:v100-32gb:{resources.gpu}",
         "mem": "{resources.mem}GB",
-        "partition": "{params.partition}",
+        "partition": "{params.rusty_partition}",
         "time": "{params.time}"
     },
     "continue_metamers":
     {
         "gres": "gpu:v100-32gb:{resources.gpu}",
         "mem": "{resources.mem}GB",
-        "partition": "{params.partition}",
+        "partition": "{params.rusty_partition}",
         "time": "{params.time}"
     },
     "cache_windows":
