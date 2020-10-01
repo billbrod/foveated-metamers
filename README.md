@@ -32,12 +32,11 @@ This has only been tested on Linux, both Ubuntu 18.04 and
 Fedora 29. It will probably work with minimal to no changes on OSX,
 but there's no guarantee, and we definitely don't support Windows.
 
-Need to make sure you have ffmpeg on your path when creating the
-metamers, so make sure it's installed and on your path. When running
-on NYU's prince cluster, can use `module load ffmpeg/intel/3.2.2` or,
-if `module` isn't working (like when using the `fish` shell), just add
-it to your path manually (e.g., on fish: `set -x PATH
-/share/apps/ffmpeg/3.2.2/intel/bin $PATH`)
+Need to make sure you have ffmpeg on your path when creating the metamers, so
+make sure it's installed and on your path. I have had a lot of trouble using
+`module` to load the ffmpeg present on NYU prince, and so recommend installing
+[a static build](https://www.johnvansickle.com/ffmpeg/faq/) and using that
+directly.
 
 For demosaicing the raw images we use as inputs, you'll need to
 install [dcraw](https://www.dechifro.org/dcraw/). If you're on Linux,
