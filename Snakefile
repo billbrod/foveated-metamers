@@ -396,7 +396,7 @@ def get_mem_estimate(wildcards):
         if 'size-2048,2600' in wildcards.image_name:
             if 'gaussian' in wildcards.model_name:
                 if 'V1' in wildcards.model_name:
-                    return 16
+                    return 32
                 if 'RGC' in wildcards.model_name:
                     # this is an approximation of the size of their windows,
                     # and if you have at least 3 times this memory, you're
@@ -550,6 +550,9 @@ def get_windows(wildcards):
                                                   t_width=t_width, window_type=window_type))
         return windows
 
+# def get_gpu_type(wildcards):
+    # if our V1 scaling value is small enough, we need a V100 and must specify
+    # it. otherwise, we can use any GPU, because they'll all have enough memory
 
 rule create_metamers:
     input:
