@@ -603,8 +603,8 @@ rule create_metamers:
     params:
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
         time = lambda wildcards: {'V1': '12:00:00', 'RGC': '5-00:00:00'}[wildcards.model_name.split('_')[0]],
-        rusty_partition = lamda wilcards: get_partition(wildcards, 'rusty'),
-        prince_partition = lamda wilcards: get_partition(wildcards, 'prince'),
+        rusty_partition = lamda wildcards: get_partition(wildcards, 'rusty'),
+        prince_partition = lamda wildcards: get_partition(wildcards, 'prince'),
     run:
         import foveated_metamers as met
         import contextlib
@@ -689,8 +689,8 @@ rule continue_metamers:
     params:
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
         time = lambda wildcards: {'V1': '12:00:00', 'RGC': '5-00:00:00'}[wildcards.model_name.split('_')[0]],
-        rusty_partition = lamda wilcards: get_partition(wildcards, 'rusty'),
-        prince_partition = lamda wilcards: get_partition(wildcards, 'prince'),
+        rusty_partition = lamda wildcards: get_partition(wildcards, 'rusty'),
+        prince_partition = lamda wildcards: get_partition(wildcards, 'prince'),
     run:
         import foveated_metamers as met
         import contextlib
