@@ -396,7 +396,10 @@ def get_mem_estimate(wildcards):
         if 'size-2048,2600' in wildcards.image_name:
             if 'gaussian' in wildcards.model_name:
                 if 'V1' in wildcards.model_name:
-                    return 32
+                    if wildcards.scaling < .01:
+                        return 64
+                    else:
+                        return 32
                 if 'RGC' in wildcards.model_name:
                     # this is an approximation of the size of their windows,
                     # and if you have at least 3 times this memory, you're
