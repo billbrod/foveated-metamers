@@ -15,6 +15,7 @@
     {
         "gres": "gpu:{resources.gpu}",
         "partition": "{params.rusty_partition}",
+	"mem": "",
         "constraint": "{params.rusty_constraint}",
         "time": "{params.time}"
     },
@@ -22,6 +23,7 @@
     {
         "gres": "gpu:{resources.gpu}",
         "partition": "{params.rusty_partition}",
+	"mem": "",
         "constraint": "{params.rusty_constraint}",
         "time": "{params.time}"
     },
