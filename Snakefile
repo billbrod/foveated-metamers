@@ -397,9 +397,9 @@ def get_mem_estimate(wildcards):
             if 'gaussian' in wildcards.model_name:
                 if 'V1' in wildcards.model_name:
                     if float(wildcards.scaling) < .01:
-                        return 64
+                        return 128
                     else:
-                        return 32
+                        return 64
                 if 'RGC' in wildcards.model_name:
                     # this is an approximation of the size of their windows,
                     # and if you have at least 3 times this memory, you're
