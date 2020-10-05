@@ -14,7 +14,6 @@
     "create_metamers":
     {
         "gres": "gpu:{resources.gpu}",
-        "mem": "{resources.mem}GB",
         "partition": "{params.rusty_partition}",
         "constraint": "v100-32gb",
         "time": "{params.time}"
@@ -22,7 +21,6 @@
     "continue_metamers":
     {
         "gres": "gpu:{resources.gpu}",
-        "mem": "{resources.mem}GB",
         "partition": "{params.rusty_partition}",
         "constraint": "v100-32gb",
         "time": "{params.time}"
