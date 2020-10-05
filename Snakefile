@@ -579,7 +579,7 @@ def get_partition(wildcards, cluster):
             return part
 
 def get_constraint(wildcards, cluster):
-    if wildcards.gpu > 0 and cluster == 'rusty':
+    if int(wildcards.gpu) > 0 and cluster == 'rusty':
         return 'v100-32gb'
     else:
         return ''
