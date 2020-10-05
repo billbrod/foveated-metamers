@@ -407,7 +407,7 @@ def get_mem_estimate(wildcards):
                     # converting form 2048,3528 (which the numbers came
                     # from) to 2048,2600 (which has 1.36x fewer pixels)
                     window_size = 1.17430726 / (1.36*float(wildcards.scaling))
-                    return int(3 * window_size)
+                    return int(4 * window_size)
             if 'cosine' in wildcards.model_name:
                 if 'V1' in wildcards.model_name:
                     # most it will need is 32 GB
@@ -417,7 +417,7 @@ def get_mem_estimate(wildcards):
                     # and if you have at least 3 times this memory, you're
                     # good
                     window_size = 0.49238059 / float(wildcards.scaling)
-                    return int(3 * window_size)
+                    return int(4 * window_size)
         else:
             # don't have a good estimate for these
             return 16
