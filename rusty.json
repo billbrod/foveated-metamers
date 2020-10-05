@@ -15,14 +15,14 @@
     {
         "gres": "gpu:{resources.gpu}",
         "partition": "{params.rusty_partition}",
-        "constraint": "v100-32gb",
+        "constraint": "{params.rusty_constraint}",
         "time": "{params.time}"
     },
     "continue_metamers":
     {
         "gres": "gpu:{resources.gpu}",
         "partition": "{params.rusty_partition}",
-        "constraint": "v100-32gb",
+        "constraint": "{params.rusty_constraint}",
         "time": "{params.time}"
     },
     "cache_windows":

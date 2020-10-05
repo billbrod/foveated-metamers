@@ -578,6 +578,12 @@ def get_partition(wildcards, cluster):
                 part += ',p100_4'
             return part
 
+def get_constraint(wildcards, cluster):
+    if wildcards.gpu > 0 and cluster == 'rusty':
+        return 'v100-32gb'
+    else:
+        return ''
+
 rule create_metamers:
     input:
         ref_image = lambda wildcards: utils.get_ref_image_full_path(wildcards.image_name),
@@ -608,6 +614,7 @@ rule create_metamers:
         time = lambda wildcards: {'V1': '12:00:00', 'RGC': '5-00:00:00'}[wildcards.model_name.split('_')[0]],
         rusty_partition = lambda wildcards: get_partition(wildcards, 'rusty'),
         prince_partition = lambda wildcards: get_partition(wildcards, 'prince'),
+        rusty_constraint = lambda wildcards: get_constraitn(wildcards, 'rusty'),
     run:
         import foveated_metamers as met
         import contextlib
@@ -694,6 +701,7 @@ rule continue_metamers:
         time = lambda wildcards: {'V1': '12:00:00', 'RGC': '5-00:00:00'}[wildcards.model_name.split('_')[0]],
         rusty_partition = lambda wildcards: get_partition(wildcards, 'rusty'),
         prince_partition = lambda wildcards: get_partition(wildcards, 'prince'),
+        rusty_constraint = lambda wildcards: get_constraitn(wildcards, 'rusty'),
     run:
         import foveated_metamers as met
         import contextlib
