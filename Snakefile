@@ -614,7 +614,7 @@ rule create_metamers:
         time = lambda wildcards: {'V1': '12:00:00', 'RGC': '5-00:00:00'}[wildcards.model_name.split('_')[0]],
         rusty_partition = lambda wildcards: get_partition(wildcards, 'rusty'),
         prince_partition = lambda wildcards: get_partition(wildcards, 'prince'),
-        rusty_constraint = lambda wildcards: get_constraitn(wildcards, 'rusty'),
+        rusty_constraint = lambda wildcards: get_constraint(wildcards, 'rusty'),
     run:
         import foveated_metamers as met
         import contextlib
@@ -701,7 +701,7 @@ rule continue_metamers:
         time = lambda wildcards: {'V1': '12:00:00', 'RGC': '5-00:00:00'}[wildcards.model_name.split('_')[0]],
         rusty_partition = lambda wildcards: get_partition(wildcards, 'rusty'),
         prince_partition = lambda wildcards: get_partition(wildcards, 'prince'),
-        rusty_constraint = lambda wildcards: get_constraitn(wildcards, 'rusty'),
+        rusty_constraint = lambda wildcards: get_constraint(wildcards, 'rusty'),
     run:
         import foveated_metamers as met
         import contextlib
