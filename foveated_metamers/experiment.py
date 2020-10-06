@@ -167,7 +167,10 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
     For fixation, we show a simple red dot whose size (in degrees) is
     specified by ``fix_deg_size``
 
-    All stimuli loaded in from stimuli_path will be shown.
+    We load the arrays saved at stimuli_path and idx_path, and show the stimuli
+    whose indices are found in the index array. So if `idx=np.array([0, 4,
+    2])`, we would only show the 1st, 3rd, and 5th elements. This can be used
+    to show a subset of all stimuli
 
     Arguments
     ============
@@ -212,6 +215,7 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
         should come from the calibration, run before this experiment.
     flip_text : bool
         Whether to flip the text horizontally or not
+
     """
     stimuli, idx, expt_params, monitor_kwargs = _set_params(stimuli_path, idx_path,
                                                             **monitor_kwargs)

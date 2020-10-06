@@ -853,12 +853,12 @@ rule generate_experiment_idx:
     input:
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description.csv'),
     output:
-        report(op.join(config["DATA_DIR"], 'stimuli', '{model_name}', '{subject}_idx_sess-{num}.npy')),
+        report(op.join(config["DATA_DIR"], 'stimuli', '{model_name}', '{subject}_idx_sess-{num}_im-{im_num}.npy')),
     log:
-        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', '{subject}_idx_sess-{num}'
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', '{subject}_idx_sess-{num}_im-{im_num}'
                 '.log'),
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', '{subject}_idx_sess-{num}'
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', '{subject}_idx_sess-{num}_im-{im_num}'
                 '_benchmark.txt'),
     params:
         # the number from subject will be a number from 1 to 30, which
@@ -874,14 +874,28 @@ rule generate_experiment_idx:
         import contextlib
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                met.stimuli.generate_indices(pd.read_csv(input[0]), params.seed, output[0])
+                # want to pick 2 of the 8 reference images per run
+                np.random.seed(int(wildcards.subject.replace('sub-', '')))
+                # this subject was run while we were still generating all the
+                # images, so we split up the reference images differently
+                if wildcards.subject == 'sub-01':
+                    ref_image_idx = np.concatenate([np.random.permutation(np.arange(4)),
+                                                    np.random.permutation(np.arange(4, 8))])
+                    ref_image_idx = ref_image_idx[2*int(wildcards.im_num):2*(int(wildcards.im_num)+1)]
+                else:
+                    ref_image_idx = np.random.permutation(np.arange(8))[2*int(wildcards.im_num):2*(int(wildcards.im_num)+1)]
+                stim_df = pd.read_csv(input[0])
+                ref_image_to_include = stim_df.image_name.unique()[ref_image_idx]
+                stim_df = stim_df.query("image_name in @ref_image_to_include")
+                met.stimuli.generate_indices(stim_df, params.seed, output[0])
 
 
 rule gen_all_idx:
     input:
         [op.join(config["DATA_DIR"], 'stimuli', '{model_name}', '{subject}_idx_sess-'
-                 '{num}.npy').format(model_name=m, subject=s, num=n)
+                 '{num}_im-{im_num}.npy').format(model_name=m, subject=s, num=n, im_num=i)
          for s in config['PSYCHOPHYSICS']['SUBJECTS']
+         for i in config['PSYCHOPHYSICS']['IMAGE_NUMBERS']
          for n in config['PSYCHOPHYSICS']['SESSIONS'] for m in MODELS],
 
 
