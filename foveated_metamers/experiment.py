@@ -52,7 +52,7 @@ def _insert_into_hdf5(f, key, value):
     """
     try:
         f.create_dataset(key, data=value)
-    except RuntimeError:
+    except (RuntimeError, OSError):
         # then it already exists
         f.pop(key)
         f.create_dataset(key, data=value)
@@ -379,7 +379,7 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
     return keys_pressed, timings, expt_params, idx
 
 
-def expt(stimuli_path, subj_name, sess_num, output_dir="data/raw_behavioral", eyetrack=False,
+def expt(stimuli_path, subj_name, sess_num, im_num, output_dir="data/raw_behavioral", eyetrack=False,
          screen_size_pix=[1920, 1080], screen_size_deg=60, take_break=True, ipd_csv=None,
          flip_text=True, **kwargs):
     """run a full experiment
@@ -395,12 +395,12 @@ def expt(stimuli_path, subj_name, sess_num, output_dir="data/raw_behavioral", ey
     model_name = op.split(op.dirname(stimuli_path))[-1]
     if not op.exists(op.join(output_dir, model_name)):
         os.makedirs(op.join(output_dir, model_name))
-    save_path = op.join(output_dir, model_name, "%s_%s_sess{sess:02d}.hdf5" %
+    save_path = op.join(output_dir, model_name, "%s_%s_sess{sess:02d}_im-{im:02d}.hdf5" %
                         (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name))
-    edf_path = op.join(output_dir, model_name, "%s_%s_sess{sess:02d}.EDF" %
+    edf_path = op.join(output_dir, model_name, "%s_%s_sess{sess:02d}_im-{im:02d}.EDF" %
                        (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name))
-    idx_path = stimuli_path.replace('stimuli.npy', '%s_idx_sess-%02d.npy' % (subj_name, sess_num))
-    save_path = save_path.format(sess=sess_num)
+    idx_path = stimuli_path.replace('stimuli.npy', '%s_idx_sess-%02d_im-%02d.npy' % (subj_name, sess_num, im_num))
+    save_path = save_path.format(sess=sess_num, im=im_num)
     if os.path.isfile(save_path):
         print("Existing save data %s found! Will load in and append results" % save_path)
         f = h5py.File(save_path)
@@ -446,7 +446,7 @@ def expt(stimuli_path, subj_name, sess_num, output_dir="data/raw_behavioral", ey
                                           screen_size_deg=screen_size_deg,
                                           start_from_stim=start_from_stim, flip_text=flip_text,
                                           binocular_offset=binocular_offset,
-                                          edf_path=edf_path.format(sess=sess_num),
+                                          edf_path=edf_path.format(sess=sess_num, im=im_num),
                                           keys_pressed=keys, timings=timings, **kwargs)
     save(save_path, stimuli_path, idx_path, keys, timings, expt_params, idx, **kwargs)
     if eyetracker is not None:
@@ -467,6 +467,7 @@ if __name__ == '__main__':
     parser.add_argument("stimuli_path", help="Path to your unshuffled stimuli.")
     parser.add_argument("subj_name", help="Name of the subject")
     parser.add_argument("sess_num", help=("Session number"), type=int)
+    parser.add_argument("im_num", help=("Image set number"), type=int)
     parser.add_argument("--ipd_csv", '-i', help="Path to the csv containing ipd correction info",
                         default=op.expanduser('~/Desktop/metamers/ipd/ipd_correction.csv'))
     parser.add_argument("--output_dir", '-o', help="directory to place output in",

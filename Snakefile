@@ -27,6 +27,8 @@ wildcard_constraints:
     preproc_image_name="azulejos|tiles|market|flower|einstein|bike|dubrovnik|goats|graffiti|house|llama|rooves|santorini|split|store|terraces|yarn",
     preproc="|_degamma|degamma",
     gpu="0|1",
+    sess_num="|".join([f'{i:02d}' for i in range(3)]),
+    im_num="|".join([f'{i:02d}' for i in range(4)]),
 ruleorder:
     collect_metamers_example > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image
 
@@ -853,12 +855,12 @@ rule generate_experiment_idx:
     input:
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description.csv'),
     output:
-        report(op.join(config["DATA_DIR"], 'stimuli', '{model_name}', '{subject}_idx_sess-{num}_im-{im_num}.npy')),
+        report(op.join(config["DATA_DIR"], 'stimuli', '{model_name}', '{subject}_idx_sess-{sess_num}_im-{im_num}.npy')),
     log:
-        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', '{subject}_idx_sess-{num}_im-{im_num}'
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', '{subject}_idx_sess-{sess_num}_im-{im_num}'
                 '.log'),
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', '{subject}_idx_sess-{num}_im-{im_num}'
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', '{subject}_idx_sess-{sess_num}_im-{im_num}'
                 '_benchmark.txt'),
     params:
         # the number from subject will be a number from 1 to 30, which
@@ -867,7 +869,7 @@ rule generate_experiment_idx:
         # the ones place. we use the same seed for different model
         # stimuli, since those will be completely different sets of
         # images.
-        seed = lambda wildcards: 10*int(wildcards.subject.replace('sub-', '')) + int(wildcards.num)
+        seed = lambda wildcards: 10*int(wildcards.subject.replace('sub-', '')) + int(wildcards.sess_num)
     run:
         import foveated_metamers as met
         import pandas as pd
