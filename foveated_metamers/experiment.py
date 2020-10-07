@@ -346,7 +346,9 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
                 break
         if all_keys:
             keys_pressed.extend([(key[0], key[1]) for key in all_keys])
-        if check_for_keys(all_keys, ['space']) or (take_break and i == break_time):
+        # python is 0-indexed, so add 1 to i in order to determine which trial
+        # we're on
+        if check_for_keys(all_keys, ['space']) or (take_break and i+1 == break_time):
             timings.append(('pause', 'start', expt_clock.getTime()))
             if take_break and i == break_time:
                 break_text = [visual.TextStim(w, "Break time!", pos=p, flipHoriz=flip_text)
@@ -354,7 +356,7 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
                 [text.draw() for text in break_text]
                 [w.flip() for w in win]
                 core.wait(2)
-            paused_keys = pause(i, len(stimuli), win, img_pos, expt_clock, flip_text)
+            paused_keys = pause(i+1, len(stimuli), win, img_pos, expt_clock, flip_text)
             timings.append(('pause', 'stop', expt_clock.getTime()))
             keys_pressed.extend(paused_keys)
         else:
