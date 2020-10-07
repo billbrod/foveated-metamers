@@ -72,6 +72,17 @@ conda install -f environment-psychopy.yml
 
 Then, to activate, run `conda activate psypy`.
 
+PsychoPy provides multiple backends. I'm now using the `pyglet` backend, but
+I've occasionally had issues with a weird [`XF86VidModeGetGammaRamp failed`
+error](https://github.com/psychopy/psychopy/issues/2061). If you get that error
+and are unable to fix it, switching to the `glfw` backend will probably work (if
+you followed the above install instructions, you'll have the requirements for
+both on your machine). I've also had issues with `glfw` where it doesn't record
+the key presses before the pause and run end during the experiment, which means
+those trials aren't counted and may mess up how `analysis.summarize_trials`
+determines which keypress corresponds to which trial. If you switch to `glfw`,
+you should carefully check that.
+
 ## Environment everything else
 
 To setup the environment for everything else:

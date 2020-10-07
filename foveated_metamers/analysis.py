@@ -12,15 +12,17 @@ def summarize_trials(raw_behavioral_path):
     structure: [trial number, time of trial end, button pressed, time
     button press was recorded].
 
-    Because of how psychopy records the button presses, the button a
-    subject presses during the response period will be time-stamped to
-    line up with the beginning of the *next* trial; this is what we
-    assume here. Therefore, if everything is working correctly, the 2nd
-    and 4th columns of this array should b basically identical, only
-    differing by msecs.
+    Because of how psychopy records the button presses, the button a subject
+    presses during the response period will be time-stamped to line up with the
+    beginning of the *next* event; this is what we assume here. Therefore, if
+    everything is working correctly, the 2nd and 4th columns of this array
+    should be basically identical, only differing by msecs.
 
     This array is used by the get_responses function to grab the data
     necessary for making the psychophysical curve
+
+    NOTE: I think whether this works depends on the PsychoPy mode (e.g.,
+    pyglet, glfw) you use, so if you change that double-check this
 
     Parameters
     ----------
@@ -42,7 +44,16 @@ def summarize_trials(raw_behavioral_path):
     # they're all byte strings
     button_mask = [b[0] not in [b'5', b'q', b'esc', b'escape', b'space'] for b in button_presses]
     button_presses = button_presses[button_mask]
-    for i, trial_beg in enumerate(f['timing_data'][()][7::6][:, 2].astype(float)):
+    # grab the timing events corresponding to the events immediately after the
+    # button press at the end of each trial: beginning of every event (except
+    # the first and those after each pause, deleted on the next line), any
+    # pauses, and the end of the run.
+    timing_data = np.array([t for t in f['timing_data'][()] if (b'-0' in t[0] and b'on' in t[1])
+                            or (b'pause' in t[0] and b'start' in t[1]) or (b'run_end' in t[0])])[1:]
+    # remove events corresponding to the beginning of the trial after each
+    # pause.
+    timing_data = np.delete(timing_data, np.where([b'pause' in t[0] for t in timing_data])[0]+1, 0)
+    for i, trial_beg in enumerate(timing_data[:, 2].astype(float)):
         button_where = np.abs(trial_beg - button_presses[:, 1].astype(float)).argmin()
         trials.append([i, trial_beg, *button_presses[button_where]])
     f.close()

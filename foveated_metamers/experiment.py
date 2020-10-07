@@ -225,7 +225,7 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
     if len(monitor_kwargs['screen']) == 1:
         screen = monitor_kwargs.pop('screen')[0]
         print('Doing single-monitor mode on screen %s' % screen)
-        win = [visual.Window(winType='glfw', screen=screen, **monitor_kwargs)]
+        win = [visual.Window(winType='pyglet', screen=screen, **monitor_kwargs)]
         img_pos = [(0, 0)]
     elif len(monitor_kwargs['screen']) == 2:
         screen = monitor_kwargs.pop('screen')
@@ -235,12 +235,13 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
         img_pos = [[int(-o // 2) for o in binocular_offset],
                    [int(o // 2) for o in binocular_offset]]
         print("Using binocular offsets: %s" % img_pos)
-        win = [visual.Window(winType='glfw', screen=screen[0], swapInterval=1, **monitor_kwargs)]
+        win = [visual.Window(winType='pyglet', screen=screen[0], swapInterval=1, **monitor_kwargs)]
         # see here for the explanation of swapInterval and share args
-        # (basically, in order to make glfw correctly update the two
+        # (basically, in order to make PsychoPy correctly update the two
         # monitors together):
         # https://discourse.psychopy.org/t/strange-behavior-with-retina-displays-external-monitors-in-1-90-2-py2/5485/5
-        win.append(visual.Window(winType='glfw', screen=screen[1], swapInterval=0, share=win[0],
+        # I know this works for glfw, need to double-check it works for pyglet
+        win.append(visual.Window(winType='pyglet', screen=screen[1], swapInterval=0, share=win[0],
                                  **monitor_kwargs))
     else:
         raise Exception("Can't handle %s screens!" % len(monitor_kwargs['screen']))
