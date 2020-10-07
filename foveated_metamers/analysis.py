@@ -45,6 +45,7 @@ def summarize_trials(raw_behavioral_path):
     for i, trial_beg in enumerate(f['timing_data'][()][7::6][:, 2].astype(float)):
         button_where = np.abs(trial_beg - button_presses[:, 1].astype(float)).argmin()
         trials.append([i, trial_beg, *button_presses[button_where]])
+    f.close()
     return np.array(trials).astype(float)
 
 
@@ -137,17 +138,17 @@ def create_experiment_df(df, presentation_idx, dep_variables=['scaling']):
     return expt_df
 
 
-def add_response_info(expt_df, trials, subject_name, session_number):
+def add_response_info(expt_df, trials, subject_name, session_number, image_set_number):
     r"""Add information about subject's response and correctness to expt_df
 
     This function takes the expt_df, which summarizes the trials of the
-    experiment, and adds three additional columns: 'subject_response',
-    which gives the number (1 or 2) the subject pressed on this trial,
-    'hit_or_miss', which contains either 'hit' or 'miss', describing
-    whether the subject was correct or not, 'subject_name', which
-    contains the name of the subject corresponding to the trials array,
-    and 'session_number', which gives the number of this experimental
-    session.
+    experiment, and adds three additional columns: 'subject_response', which
+    gives the number (1 or 2) the subject pressed on this trial, 'hit_or_miss',
+    which contains either 'hit' or 'miss', describing whether the subject was
+    correct or not, 'subject_name', which contains the name of the subject
+    corresponding to the trials array, 'session_number', which gives the number
+    of this experimental session, and 'image_set_number', which gives the
+    number of this image set (determines which image_name values were used).
 
     Parameters
     ----------
@@ -158,6 +159,10 @@ def add_response_info(expt_df, trials, subject_name, session_number):
         The n_trials by 4 array created by analysis.summarize_trials
     subject_name : str
         The name of this subject
+    session_number : int
+        Session number
+    image_set_number : int
+        Image set number
 
     Returns
     -------
@@ -174,6 +179,7 @@ def add_response_info(expt_df, trials, subject_name, session_number):
                                       'miss')
     expt_df['subject_name'] = subject_name
     expt_df['session_number'] = session_number
+    expt_df['image_set_number'] = image_set_number
     return expt_df
 
 
@@ -206,8 +212,8 @@ def summarize_expt(expt_df, dep_variables=['scaling', 'trial_type']):
     expt_df = expt_df.copy()
     expt_df['hit_or_miss'] = expt_df.hit_or_miss.apply(lambda x: {'hit': 1, 'miss': 0}[x])
 
-    gb = expt_df.groupby(['subject_name', 'session_number', 'image_name', 'model',
-                          'trial_type'] + dep_variables)
+    gb = expt_df.groupby(['subject_name', 'session_number', 'image_set_number',
+                          'image_name', 'model'] + dep_variables)
     summary_df = gb.count()['image_1'].reset_index()
     summary_df = summary_df.merge(gb.hit_or_miss.mean().reset_index())
     summary_df = summary_df.rename(columns={'image_1': 'n_trials',

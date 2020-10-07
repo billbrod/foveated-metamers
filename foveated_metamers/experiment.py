@@ -135,8 +135,8 @@ def check_for_keys(all_keys, keys_to_check=['q', 'esc', 'escape']):
     return any([k in all_keys for k in keys_to_check])
 
 
-def pause(win, img_pos, expt_clock, flip_text=True):
-    pause_text = [visual.TextStim(w, "space to resume\nq or esc to quit",
+def pause(current_i, total_imgs, win, img_pos, expt_clock, flip_text=True):
+    pause_text = [visual.TextStim(w, f"{current_i}/{total_imgs}\nspace to resume\nq or esc to quit",
                                   pos=p, flipHoriz=flip_text) for w, p in zip(win, img_pos)]
     all_keys = []
     while not all_keys:
@@ -333,8 +333,10 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
                     im.image = imagetools.array2image(stim[j+1])
                 except IndexError:
                     # or, if we've gone through all those, we load the first
-                    # image for the next trial
-                    im.image = imagetools.array2image(stimuli[i+1][0])
+                    # image for the next trial. if i+1==len(stimuli), then we've
+                    # gone through all images and will quit out
+                    if i+1 < len(stimuli):
+                        im.image = imagetools.array2image(stimuli[i+1][0])
             if save_frames is not None:
                 [w.getMovieFrame() for w in win]
             timer.complete()
@@ -352,7 +354,7 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
                 [text.draw() for text in break_text]
                 [w.flip() for w in win]
                 core.wait(2)
-            paused_keys = pause(win, img_pos, expt_clock, flip_text)
+            paused_keys = pause(i, len(stimuli), win, img_pos, expt_clock, flip_text)
             timings.append(('pause', 'stop', expt_clock.getTime()))
             keys_pressed.extend(paused_keys)
         else:
