@@ -397,9 +397,9 @@ def expt(stimuli_path, subj_name, sess_num, im_num, output_dir="data/raw_behavio
     model_name = op.split(op.dirname(stimuli_path))[-1]
     if not op.exists(op.join(output_dir, model_name)):
         os.makedirs(op.join(output_dir, model_name))
-    save_path = op.join(output_dir, model_name, "%s_%s_sess{sess:02d}_im-{im:02d}.hdf5" %
+    save_path = op.join(output_dir, model_name, "%s_%s_sess-{sess:02d}_im-{im:02d}.hdf5" %
                         (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name))
-    edf_path = op.join(output_dir, model_name, "%s_%s_sess{sess:02d}_im-{im:02d}.EDF" %
+    edf_path = op.join(output_dir, model_name, "%s_%s_sess-{sess:02d}_im-{im:02d}.EDF" %
                        (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name))
     idx_path = stimuli_path.replace('stimuli.npy', '%s_idx_sess-%02d_im-%02d.npy' % (subj_name, sess_num, im_num))
     save_path = save_path.format(sess=sess_num, im=im_num)
