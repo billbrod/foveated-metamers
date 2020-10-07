@@ -834,8 +834,6 @@ rule collect_metamers:
                            utils.generate_metamer_paths(**wildcards)],
         lambda wildcards: [utils.get_ref_image_full_path(i) for i in IMAGES]
     output:
-        # we collect across image_name and scaling, and don't care about
-        # learning_rate, max_iter, loss_thresh
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli.npy'),
         report(op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description.csv')),
     log:
