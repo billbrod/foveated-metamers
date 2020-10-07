@@ -849,6 +849,20 @@ rule collect_metamers:
                 met.stimuli.create_metamer_df(input, output[1])
 
 
+def get_experiment_seed(wildcards):
+    # the number from subject will be a number from 1 to 30, which we multiply
+    # by 10 in order to get the tens/hundreds place, and the session number
+    # will be between 0 and 2, which we use for the ones place. we use the same
+    # seed for different model stimuli, since those will be completely
+    # different sets of images.
+    try:
+        seed = 10*int(wildcards.subject.replace('sub-', '')) + int(wildcards.sess_num)
+    except ValueError:
+        # then this is the training subject and seed doesn't really matter
+        seed = 0
+    return seed
+
+
 rule generate_experiment_idx:
     input:
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description.csv'),
@@ -861,30 +875,30 @@ rule generate_experiment_idx:
         op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', '{subject}_idx_sess-{sess_num}_im-{im_num}'
                 '_benchmark.txt'),
     params:
-        # the number from subject will be a number from 1 to 30, which
-        # we multiply by 10 in order to get the tens/hundreds place, and
-        # the session number will be between 0 and 2, which we use for
-        # the ones place. we use the same seed for different model
-        # stimuli, since those will be completely different sets of
-        # images.
-        seed = lambda wildcards: 10*int(wildcards.subject.replace('sub-', '')) + int(wildcards.sess_num)
+        seed = get_experiment_seed,
     run:
         import foveated_metamers as met
         import pandas as pd
         import contextlib
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                # want to pick 2 of the 8 reference images per run
-                np.random.seed(int(wildcards.subject.replace('sub-', '')))
-                # this subject was run while we were still generating all the
-                # images, so we split up the reference images differently
-                if wildcards.subject == 'sub-01':
-                    ref_image_idx = np.concatenate([np.random.permutation(np.arange(4)),
-                                                    np.random.permutation(np.arange(4, 8))])
-                    ref_image_idx = ref_image_idx[2*int(wildcards.im_num):2*(int(wildcards.im_num)+1)]
-                else:
-                    ref_image_idx = np.random.permutation(np.arange(8))[2*int(wildcards.im_num):2*(int(wildcards.im_num)+1)]
                 stim_df = pd.read_csv(input[0])
+                try:
+                    # want to pick 2 of the 8 reference images per run
+                    np.random.seed(int(wildcards.subject.replace('sub-', '')))
+                    # this subject was run while we were still generating all the
+                    # images, so we split up the reference images differently
+                    if wildcards.subject == 'sub-01':
+                        ref_image_idx = np.concatenate([np.random.permutation(np.arange(4)),
+                                                        np.random.permutation(np.arange(4, 8))])
+                        ref_image_idx = ref_image_idx[2*int(wildcards.im_num):2*(int(wildcards.im_num)+1)]
+                    else:
+                        ref_image_idx = np.random.permutation(np.arange(8))[2*int(wildcards.im_num):2*(int(wildcards.im_num)+1)]
+                except ValueError:
+                    # then this is the test subject
+                    ref_image_idx = [0]
+                    scaling_val = config[wildcards.model_name.split('_')[0]]['scaling'][-1]
+                    stim_df = stim_df.fillna('None').query("scaling in [@scaling_val, 'None']")
                 ref_image_to_include = stim_df.image_name.unique()[ref_image_idx]
                 stim_df = stim_df.query("image_name in @ref_image_to_include")
                 met.stimuli.generate_indices(stim_df, params.seed, output[0])
