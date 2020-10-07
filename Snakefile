@@ -909,7 +909,7 @@ rule gen_all_idx:
         [op.join(config["DATA_DIR"], 'stimuli', '{model_name}', '{subject}_idx_sess-'
                  '{num}_im-{im_num}.npy').format(model_name=m, subject=s, num=n, im_num=i)
          for s in config['PSYCHOPHYSICS']['SUBJECTS']
-         for i in config['PSYCHOPHYSICS']['IMAGE_NUMBERS']
+         for i in config['PSYCHOPHYSICS']['IMAGE_SET_NUMBERS']
          for n in config['PSYCHOPHYSICS']['SESSIONS'] for m in MODELS],
 
 
