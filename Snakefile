@@ -589,17 +589,18 @@ def get_constraint(wildcards, cluster):
 def get_cpu_num(wildcards):
     if int(wildcards.gpu) > 0:
         # then we're using the GPU and so don't really need CPUs
-        return 1
+        cpus = 1
     else:
         # these are all based on estimates from rusty (which automatically
         # gives each job 28 nodes), and checking seff to see CPU usage
         if wildcards.model_name == 'RGC':
             if float(wildcards.scaling) > .06:
-                return 21
+                cpus = 21
             elif float(wildcards.scaling) > .03:
-                return 26
+                cpus = 26
             else:
-                return 28
+                cpus = 28
+    return cpus
 
 rule create_metamers:
     input:
