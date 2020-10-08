@@ -135,9 +135,10 @@ def check_for_keys(all_keys, keys_to_check=['q', 'esc', 'escape']):
     return any([k in all_keys for k in keys_to_check])
 
 
-def pause(current_i, total_imgs, win, img_pos, expt_clock, flip_text=True):
+def pause(current_i, total_imgs, win, img_pos, expt_clock, flip_text=True, text_height=50):
     pause_text = [visual.TextStim(w, f"{current_i}/{total_imgs}\nspace to resume\nq or esc to quit",
-                                  pos=p, flipHoriz=flip_text) for w, p in zip(win, img_pos)]
+                                  pos=p, flipHoriz=flip_text, height=text_height)
+                  for w, p in zip(win, img_pos)]
     all_keys = []
     while not all_keys:
         [text.draw() for text in pause_text]
@@ -151,7 +152,7 @@ def pause(current_i, total_imgs, win, img_pos, expt_clock, flip_text=True):
 def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(500, 1000, 2000),
         fix_deg_size=.25, screen_size_deg=60, eyetracker=None, edf_path=None, save_frames=None,
         binocular_offset=[0, 0], take_break=True, keys_pressed=[], timings=[], start_from_stim=0,
-        flip_text=True, **monitor_kwargs):
+        flip_text=True, text_height=50, **monitor_kwargs):
     """run one run of the experiment
 
     stimuli_path specifies the path of the unshuffled experiment
@@ -272,8 +273,8 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
         # it in order to add that to the expt_clock...
         expt_clock.reset(-float(timings[-1][-1]))
     wait_text = [visual.TextStim(w, ("Press space to start\nq or esc will quit\nspace to pause"),
-                                 pos=p, flipHoriz=flip_text) for w, p in zip(win, img_pos)]
-    query_text = [visual.TextStim(w, "Same as 1 or 2?", pos=p, flipHoriz=flip_text)
+                                 pos=p, flipHoriz=flip_text, height=text_height) for w, p in zip(win, img_pos)]
+    query_text = [visual.TextStim(w, "Same as 1 or 2?", pos=p, flipHoriz=flip_text, height=text_height)
                   for w, p in zip(win, img_pos)]
     [text.draw() for text in wait_text]
     [w.flip() for w in win]
@@ -352,7 +353,8 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
         if check_for_keys(all_keys, ['space']) or (take_break and i+1 == break_time):
             timings.append(('pause', 'start', expt_clock.getTime()))
             if take_break and i == break_time:
-                break_text = [visual.TextStim(w, "Break time!", pos=p, flipHoriz=flip_text)
+                break_text = [visual.TextStim(w, "Break time!", pos=p, flipHoriz=flip_text,
+                                              height=text_height)
                               for w, p in zip(win, img_pos)]
                 [text.draw() for text in break_text]
                 [w.flip() for w in win]
@@ -367,7 +369,7 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
              last_trial=i+start_from_stim, **monitor_kwargs)
         if check_for_keys(all_keys+paused_keys):
             break
-    [visual.TextStim(w, "Run over", pos=p, flipHoriz=flip_text).draw() for w, p in zip(win, img_pos)]
+    [visual.TextStim(w, "Run over", pos=p, flipHoriz=flip_text, height=text_height).draw() for w, p in zip(win, img_pos)]
     [w.flip() for w in win]
     timings.append(("run_end", '', expt_clock.getTime()))
     all_keys = event.getKeys(timeStamped=expt_clock)
@@ -386,7 +388,7 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
 
 def expt(stimuli_path, subj_name, sess_num, im_num, output_dir="data/raw_behavioral", eyetrack=False,
          screen_size_pix=[1920, 1080], screen_size_deg=60, take_break=True, ipd_csv=None,
-         flip_text=True, **kwargs):
+         flip_text=True, text_height=50, **kwargs):
     """run a full experiment
 
     this just sets up the various paths, calls ``run``, and then saves
@@ -452,7 +454,8 @@ def expt(stimuli_path, subj_name, sess_num, im_num, output_dir="data/raw_behavio
                                           start_from_stim=start_from_stim, flip_text=flip_text,
                                           binocular_offset=binocular_offset,
                                           edf_path=edf_path.format(sess=sess_num, im=im_num),
-                                          keys_pressed=keys, timings=timings, **kwargs)
+                                          keys_pressed=keys, timings=timings,
+                                          text_height=text_height, **kwargs)
     save(save_path, stimuli_path, idx_path, keys, timings, expt_params, idx, **kwargs)
     if eyetracker is not None:
         eyetracker.close()
