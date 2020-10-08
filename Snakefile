@@ -586,6 +586,21 @@ def get_constraint(wildcards, cluster):
     else:
         return ''
 
+def get_cpu_num(wildcards):
+    if int(wildcards.gpu) > 0:
+        # then we're using the GPU and so don't really need CPUs
+        return 1
+    else:
+        # these are all based on estimates from rusty (which automatically
+        # gives each job 28 nodes), and checking seff to see CPU usage
+        if wildcards.model_name == 'RGC':
+            if float(wildcards.scaling) > .06:
+                return 21
+            elif float(wildcards.scaling) > .03:
+                return 26
+            else:
+                return 28
+
 rule create_metamers:
     input:
         ref_image = lambda wildcards: utils.get_ref_image_full_path(wildcards.image_name),
@@ -611,6 +626,7 @@ rule create_metamers:
     resources:
         gpu = lambda wildcards: int(wildcards.gpu),
         mem = get_mem_estimate,
+        cpus_per_task = get_cpu_num,
     params:
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
         time = lambda wildcards: {'V1': '12:00:00', 'RGC': '7-00:00:00'}[wildcards.model_name.split('_')[0]],
@@ -698,6 +714,7 @@ rule continue_metamers:
     resources:
         gpu = lambda wildcards: int(wildcards.gpu),
         mem = get_mem_estimate,
+        cpus_per_task = get_cpu_num,
     params:
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
         time = lambda wildcards: {'V1': '12:00:00', 'RGC': '7-00:00:00'}[wildcards.model_name.split('_')[0]],
