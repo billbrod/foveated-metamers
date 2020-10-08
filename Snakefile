@@ -904,14 +904,7 @@ rule generate_experiment_idx:
                 try:
                     # want to pick 2 of the 8 reference images per run
                     np.random.seed(int(wildcards.subject.replace('sub-', '')))
-                    # this subject was run while we were still generating all the
-                    # images, so we split up the reference images differently
-                    if wildcards.subject == 'sub-01':
-                        ref_image_idx = np.concatenate([np.random.permutation(np.arange(4)),
-                                                        np.random.permutation(np.arange(4, 8))])
-                        ref_image_idx = ref_image_idx[2*int(wildcards.im_num):2*(int(wildcards.im_num)+1)]
-                    else:
-                        ref_image_idx = np.random.permutation(np.arange(8))[2*int(wildcards.im_num):2*(int(wildcards.im_num)+1)]
+                    ref_image_idx = np.random.permutation(np.arange(8))[2*int(wildcards.im_num):2*(int(wildcards.im_num)+1)]
                 except ValueError:
                     # then this is the test subject
                     ref_image_idx = [0]
