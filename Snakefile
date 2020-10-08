@@ -593,7 +593,7 @@ def get_cpu_num(wildcards):
     else:
         # these are all based on estimates from rusty (which automatically
         # gives each job 28 nodes), and checking seff to see CPU usage
-        if wildcards.model_name == 'RGC':
+        if wildcards.model_name.startswith('RGC'):
             if float(wildcards.scaling) > .06:
                 cpus = 21
             elif float(wildcards.scaling) > .03:
