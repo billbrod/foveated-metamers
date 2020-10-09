@@ -56,7 +56,13 @@ def summarize_trials(raw_behavioral_path):
     for i, trial_beg in enumerate(timing_data[:, 2].astype(float)):
         button_where = np.abs(trial_beg - button_presses[:, 1].astype(float)).argmin()
         trials.append([i, trial_beg, *button_presses[button_where]])
+    trial_end_timing = np.array([t for t in f['timing_data'][()] if (b'-2' in t[0] and b'off' in t[1])])
     f.close()
+    trials = np.array(trials).astype(float)
+    if (any(trials[:, -1] < trial_end_timing[:, -1].astype(float)) or
+        any(trials[:, -1] > timing_data[:, -1].astype(float))):
+        raise Exception("Timing info messed up! Somehow the button press wasn't between the end of "
+                        "one trial and the beginning of the next!")
     return np.array(trials).astype(float)
 
 
