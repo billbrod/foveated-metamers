@@ -343,7 +343,8 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
             [w.flip() for w in win]
             timings.append(("stimulus_%d-%d" % (i+start_from_stim, j), "off",
                             expt_clock.getTime()))
-            timer.start(off_msec_length[j] / 1000)
+            if j != 2:
+                timer.start(off_msec_length[j] / 1000)
             for im in img:
                 # off msec lengths are always longer than on msec length, so
                 # we preload the next image here
@@ -359,8 +360,18 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
                         im.image = imagetools.array2image(stimuli[i+1][0])
             if save_frames is not None:
                 [w.getMovieFrame() for w in win]
-            timer.complete()
-            all_keys.extend(event.getKeys(timeStamped=expt_clock))
+            if j == 2:
+                response_keys = []
+                while not response_keys:
+                    [q.draw() for q in query_text]
+                    [w.flip() for w in win]
+                    core.wait(.1)
+                    response_keys = event.getKeys(keyList=['space', 'q', 'escape', 'esc', '1', '2'],
+                                                  timeStamped=expt_clock)
+                all_keys.extend(response_keys)
+            else:
+                timer.complete()
+                all_keys.extend(event.getKeys(timeStamped=expt_clock))
             # we need this double break because we have two for loops
             if check_for_keys(all_keys):
                 break
