@@ -386,6 +386,9 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
         save(save_path, stimuli_path, idx_path, keys_pressed, timings, expt_params, idx,
              screen=screen, edf_path=edf_path, screen_size_deg=screen_size_deg,
              last_trial=i+start_from_stim, **monitor_kwargs)
+        [f.draw() for f in fixation]
+        [w.flip() for w in win]
+        core.wait(.5)
         if check_for_keys(all_keys+paused_keys):
             break
     [visual.TextStim(w, "Run over", pos=p, flipHoriz=flip_text, height=text_height).draw() for w, p in zip(win, img_pos)]
