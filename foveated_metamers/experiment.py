@@ -151,12 +151,9 @@ def pause(current_i, total_imgs, win, img_pos, expt_clock, flip_text=True, text_
     pause_text = [visual.TextStim(w, f"{current_i}/{total_imgs}\nspace to resume\nq or esc to quit",
                                   pos=p, flipHoriz=flip_text, height=text_height)
                   for w, p in zip(win, img_pos)]
-    all_keys = []
-    while not all_keys:
-        [text.draw() for text in pause_text]
-        [w.flip() for w in win]
-        core.wait(.1)
-        all_keys = event.getKeys(keyList=['space', 'q', 'escape', 'esc'], timeStamped=expt_clock)
+    [text.draw() for text in pause_text]
+    [w.flip() for w in win]
+    all_keys = event.waitKeys(keyList=['space', 'q', 'escape', 'esc'], timeStamped=expt_clock)
     clear_events(win)
     return [(key[0], key[1]) for key in all_keys]
 
@@ -295,18 +292,7 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
     [text.draw() for text in wait_text]
     [w.flip() for w in win]
 
-    # we should be able to use waitKeys for this, but something weird
-    # has happened, where we don't record those button presses for some
-    # reason, so instead we do this while loop with a win.flip() and
-    # core.wait() (the issue seems to be that we only grab keys
-    # successfully pretty quickly after a win.flip()?)
-    # all_keys = event.waitKeys(keyList=['space', 'q', 'escape', 'esc'], timeStamped=expt_clock)
-    all_keys = []
-    while not all_keys:
-        [text.draw() for text in wait_text]
-        [w.flip() for w in win]
-        core.wait(.1)
-        all_keys = event.getKeys(keyList=['space', 'q', 'escape', 'esc'], timeStamped=expt_clock)
+    all_keys = event.waitKeys(keyList=['space', 'q', 'escape', 'esc'], timeStamped=expt_clock)
     clear_events(win)
     if save_frames is not None:
         [w.getMovieFrame() for w in win]
@@ -361,13 +347,8 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
             if save_frames is not None:
                 [w.getMovieFrame() for w in win]
             if j == 2:
-                response_keys = []
-                while not response_keys:
-                    [q.draw() for q in query_text]
-                    [w.flip() for w in win]
-                    core.wait(.1)
-                    response_keys = event.getKeys(keyList=['space', 'q', 'escape', 'esc', '1', '2'],
-                                                  timeStamped=expt_clock)
+                response_keys = event.waitKeys(keyList=['space', 'q', 'escape', 'esc', '1', '2'],
+                                               timeStamped=expt_clock)
                 all_keys.extend(response_keys)
             else:
                 timer.complete()
