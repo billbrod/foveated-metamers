@@ -152,7 +152,7 @@ def pause(current_i, total_imgs, win, img_pos, expt_clock, flip_text=True, text_
 def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(500, 1000, 2000),
         fix_deg_size=.25, screen_size_deg=60, eyetracker=None, edf_path=None, save_frames=None,
         binocular_offset=[0, 0], take_break=True, keys_pressed=[], timings=[], start_from_stim=0,
-        flip_text=True, text_height=50, **monitor_kwargs):
+        flip_text=True, text_height=50, foveal_mask_deg_size=1, **monitor_kwargs):
     """run one run of the experiment
 
     stimuli_path specifies the path of the unshuffled experiment
@@ -252,8 +252,12 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
         print("%s total trials, will take break after number %s" % (len(stimuli), break_time))
 
     fix_pix_size = fix_deg_size * (monitor_kwargs['size'][0] / screen_size_deg)
+    foveal_mask_pix_size = foveal_mask_deg_size * (monitor_kwargs['size'][0] / screen_size_deg)
     fixation = [visual.GratingStim(w, size=fix_pix_size, pos=p, sf=0, color='red',
                                    mask='circle') for w, p in zip(win, img_pos)]
+    foveal_mask = [visual.GratingStim(w, size=foveal_mask_pix_size, pos=p, sf=0,
+                                      color=monitor_kwargs['color'], maskParams={'fringeWidth': .33},
+                                      mask='raisedCos', colorSpace='rgb255') for w, p in zip(win, img_pos)]
     # first one is special: we preload it, but we still want to include it in the iterator so the
     # numbers all match up (we don't draw or wait during the on part of the first iteration)
     img = [visual.ImageStim(w, image=imagetools.array2image(stimuli[0, 0]), pos=p,
@@ -306,8 +310,9 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
         # and this one is for the three stimuli in each trial
         all_keys = []
         for j in range(len(stim)):
-            for im, f in zip(img, fixation):
+            for im, f, m in zip(img, fixation, foveal_mask):
                 im.draw()
+                m.draw()
                 f.draw()
             for w in win:
                 w.flip()
