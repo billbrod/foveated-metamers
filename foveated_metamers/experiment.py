@@ -266,7 +266,8 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
                                    mask='circle') for w, p in zip(win, img_pos)]
     foveal_mask = [visual.GratingStim(w, size=foveal_mask_pix_size, pos=p, sf=0,
                                       color=monitor_kwargs['color'], maskParams={'fringeWidth': .33},
-                                      mask='raisedCos', colorSpace='rgb255') for w, p in zip(win, img_pos)]
+                                      mask='raisedCos', colorSpace=monitor_kwargs['colorSpace'])
+                   for w, p in zip(win, img_pos)]
     # first one is special: we preload it, but we still want to include it in the iterator so the
     # numbers all match up (we don't draw or wait during the on part of the first iteration)
     img = [visual.ImageStim(w, image=imagetools.array2image(stimuli[0, 0]), pos=p,
