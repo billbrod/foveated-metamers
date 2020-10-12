@@ -926,6 +926,66 @@ rule gen_all_idx:
          for n in config['PSYCHOPHYSICS']['SESSIONS'] for m in MODELS],
 
 
+rule create_experiment_df:
+    input:
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'task-{task}', 'task-{task}_stimuli_description.csv'),
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'task-{task}', '{subject}',
+                       '{subject}_task-{task}_idx_sess-{sess_num}_im-{im_num}.npy'),
+        op.join(config["DATA_DIR"], 'raw_behavioral', '{model_name}', 'task-{task}', '{subject}',
+                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}.hdf5'),
+    output:
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-{task}', '{subject}',
+                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}_expt.csv'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-{task}', '{subject}',
+                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}_trials.png'),
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-{task}', '{subject}',
+                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}_expt.log'),
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-{task}', '{subject}',
+                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}_expt_benchmark.txt'),
+    run:
+        import foveated_metamers as met
+        import numpy as np
+        import pandas as pd
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                stim_df = pd.read_csv(input[0])
+                idx = np.load(input[1])
+                trials = met.analysis.summarize_trials(input[2])
+                fig = met.analysis.plot_timing_info(trials)
+                fig.savefig(output[1], bbox_inches='tight')
+                df = met.analysis.create_experiment_df(stim_df, idx)
+                df = met.analysis.add_response_info(df, trials, wildcards.subject, wildcards.task,
+                                                    wildcards.sess_num, wildcards.im_num)
+                df.to_csv(output[0], index=False)
+
+
+rule summarize_experiment:
+    input:
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-{task}', '{subject}',
+                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}_expt.csv'),
+    output:
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-{task}', '{subject}',
+                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}_summary.csv'),
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-{task}', '{subject}',
+                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}_summary.log'),
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-{task}', '{subject}',
+                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}_summary_benchmark.txt'),
+    run:
+        import foveated_metamers as met
+        import pandas as pd
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                expt_df = pd.read_csv(input[0])
+                summary_df = met.analysis.summarize_expt(expt_df)
+                summary_df.to_csv(output[0], index=False)
+
+
 rule scaling_comparison_figure:
     input:
         lambda wildcards: [m.replace('metamer.png', 'metamer_gamma-corrected.png') for m in

@@ -3,23 +3,30 @@
 import h5py
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 
 def summarize_trials(raw_behavioral_path):
-    r"""Summarize trials in order to determine whether subject was correct or not
+    r"""Summarize trials in order to determine whether subject was correct or not.
 
     With this, we create a n_trials by 4 array with the following
     structure: [trial number, time of trial end, button pressed, time
-    button press was recorded].
+    button press was recorded, time when image flashed off].
 
-    Because of how psychopy records the button presses, the button a subject
-    presses during the response period will be time-stamped to line up with the
-    beginning of the *next* event; this is what we assume here. Therefore, if
-    everything is working correctly, the 2nd and 4th columns of this array
-    should be basically identical, only differing by msecs.
+    If you're using pyglet, as assumed here, PsychoPy should accurately record
+    the timing of button presses, and the button press should therefore lie
+    between the time of trial end and time when image flashed off (which we
+    check in this function), and should lie closer to the time of trial end, on
+    the order of 1e-4 secs. Timing data is returned so you can check this.
+
+    If you're using glfw, the button a subject presses during the response
+    period will be time-stamped to line up with the beginning of the *next*
+    event. Therefore, if everything is working correctly, the 2nd and 4th
+    columns of this array should be basically identical, only differing by
+    msecs.
 
     This array is used by the get_responses function to grab the data
-    necessary for making the psychophysical curve
+    necessary for making the psychophysical curve.
 
     NOTE: I think whether this works depends on the PsychoPy mode (e.g.,
     pyglet, glfw) you use, so if you change that double-check this
@@ -45,25 +52,64 @@ def summarize_trials(raw_behavioral_path):
     button_mask = [b[0] not in [b'5', b'q', b'esc', b'escape', b'space'] for b in button_presses]
     button_presses = button_presses[button_mask]
     # grab the timing events corresponding to the events immediately after the
-    # button press at the end of each trial: beginning of every event (except
-    # the first and those after each pause, deleted on the next line), any
-    # pauses, and the end of the run.
-    timing_data = np.array([t for t in f['timing_data'][()] if (b'-0' in t[0] and b'on' in t[1])
-                            or (b'pause' in t[0] and b'start' in t[1]) or (b'run_end' in t[0])])[1:]
+    # button press at the end of each trial: the post-stimulus pause or the
+    # beginning of any pause
+    timing_data = np.array([t for t in f['timing_data'][()] if (b'post-' in t[0] and b'on' in t[1])
+                            or (b'pause' in t[0] and b'start' in t[1])])
     # remove events corresponding to the beginning of the trial after each
-    # pause.
+    # pause (because the pause event takes its place).
     timing_data = np.delete(timing_data, np.where([b'pause' in t[0] for t in timing_data])[0]+1, 0)
+    trial_end_timing = np.array([t for t in f['timing_data'][()] if (b'-2' in t[0] and b'off' in t[1])])
     for i, trial_beg in enumerate(timing_data[:, 2].astype(float)):
         button_where = np.abs(trial_beg - button_presses[:, 1].astype(float)).argmin()
-        trials.append([i, trial_beg, *button_presses[button_where]])
-    trial_end_timing = np.array([t for t in f['timing_data'][()] if (b'-2' in t[0] and b'off' in t[1])])
+        trials.append([i, trial_beg, *button_presses[button_where], trial_end_timing[i, 2]])
     f.close()
     trials = np.array(trials).astype(float)
     if (any(trials[:, -1] < trial_end_timing[:, -1].astype(float)) or
         any(trials[:, -1] > timing_data[:, -1].astype(float))):
         raise Exception("Timing info messed up! Somehow the button press wasn't between the end of "
                         "one trial and the beginning of the next!")
-    return np.array(trials).astype(float)
+    if not all([i==1 or i==2 for i in trials[:, 2]]):
+        raise Exception("One of the button presses was something other than 1 or 2!")
+    return trials
+
+
+def plot_timing_info(trials, figsize=(5, 5)):
+    """Create scatter plot of timing info.
+
+    This takes the trials array created to summarize subject responses and
+    plots the response time vs the time before trial end, with color determined
+    by which button was pressed. This is mainly done to make sure everything's
+    working as expected: time before trial end should be pretty constant, on
+    the order of 1e-4 secs, with no dependence on response time, which will
+    vary much more, and no dependence on button press.
+
+    Parameters
+    ----------
+    trials : np.array
+        The n_trials by 5 array created by analysis.summarize_trials
+    figsize : tuple, optional
+        size of the figure
+
+    Returns
+    -------
+    fig : matplotlib.figure.Figure
+        figure containing this plot
+
+    """
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
+    for i in [1, 2]:
+        tmp = trials[trials[:, 2] == i]
+        response_time = tmp[:, 3] - tmp[:, 4]
+        time_before_end = tmp[:, 1] - tmp[:, 3]
+        ax.scatter(response_time, time_before_end, c=f'C{i-1}', label=i)
+    ax.legend()
+    lim = np.abs(trials[:, 1] - trials[:, 3]).max()
+    # y-values will all be strictly positive, because of the check we do in
+    # summarize_trials()
+    ax.set(ylabel='Time between button press and trial end', xlabel='Response time',
+           ylim=(0, lim + .1*lim))
+    return fig
 
 
 def create_experiment_df(df, presentation_idx, dep_variables=['scaling']):
@@ -155,17 +201,20 @@ def create_experiment_df(df, presentation_idx, dep_variables=['scaling']):
     return expt_df
 
 
-def add_response_info(expt_df, trials, subject_name, session_number, image_set_number):
+def add_response_info(expt_df, trials, subject_name, task, session_number, image_set_number):
     r"""Add information about subject's response and correctness to expt_df
 
     This function takes the expt_df, which summarizes the trials of the
-    experiment, and adds three additional columns: 'subject_response', which
-    gives the number (1 or 2) the subject pressed on this trial, 'hit_or_miss',
-    which contains either 'hit' or 'miss', describing whether the subject was
-    correct or not, 'subject_name', which contains the name of the subject
-    corresponding to the trials array, 'session_number', which gives the number
-    of this experimental session, and 'image_set_number', which gives the
-    number of this image set (determines which image_name values were used).
+    experiment, and adds several additional columns: 'subject_response', which
+    gives the number (1 or 2) the subject pressed on this trial,
+    'response_time', which contains the time (in seconds) between when the
+    stimulus turned off and when the subject pressed the response button,
+    'hit_or_miss', which contains either 'hit' or 'miss', describing whether
+    the subject was correct or not, 'subject_name', which contains the name of
+    the subject corresponding to the trials array, 'task', the name of this
+    task, 'session_number', which gives the number of this experimental
+    session, and 'image_set_number', which gives the number of this image set
+    (determines which image_name values were used).
 
     Parameters
     ----------
@@ -173,9 +222,11 @@ def add_response_info(expt_df, trials, subject_name, session_number, image_set_n
         The experiment information dataframe, as created by
         analysis.create_experiment_df
     trials : np.array
-        The n_trials by 4 array created by analysis.summarize_trials
+        The n_trials by 5 array created by analysis.summarize_trials
     subject_name : str
         The name of this subject
+    task : str
+        The name of this task
     session_number : int
         Session number
     image_set_number : int
@@ -191,10 +242,13 @@ def add_response_info(expt_df, trials, subject_name, session_number, image_set_n
     # just in case it was an incomplete session
     expt_df = expt_df.iloc[:len(trials)]
     subj_answers = trials[:, 2].astype(int)
+    response_time = trials[:, 3] - trials[:, 4]
     expt_df['subject_response'] = subj_answers
+    expt_df['response_time'] = response_time
     expt_df['hit_or_miss'] = np.where(expt_df.correct_response == expt_df.subject_response, 'hit',
                                       'miss')
     expt_df['subject_name'] = subject_name
+    expt_df['task'] = task
     expt_df['session_number'] = session_number
     expt_df['image_set_number'] = image_set_number
     return expt_df
