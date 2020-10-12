@@ -29,6 +29,7 @@ wildcard_constraints:
     gpu="0|1",
     sess_num="|".join([f'{i:02d}' for i in range(3)]),
     im_num="|".join([f'{i:02d}' for i in range(4)]),
+    task='abx|split',
 ruleorder:
     collect_metamers_example > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image
 
@@ -848,16 +849,16 @@ rule collect_metamers_example:
 
 rule collect_metamers:
     input:
-        lambda wildcards: [m.replace('metamer.png', 'metamer-16.png') for m in
+        lambda wildcards: [m.replace('metamer.png', 'metamer.npy') for m in
                            utils.generate_metamer_paths(**wildcards)],
         lambda wildcards: [utils.get_ref_image_full_path(i) for i in IMAGES]
     output:
-        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli.npy'),
-        report(op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description.csv')),
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'task-{task}', 'task-{task}_stimuli.npy'),
+        report(op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'task-{task}', 'task-{task}_stimuli_description.csv')),
     log:
-        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'stimuli.log'),
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'task-{task}', 'task-{task}_stimuli.log'),
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'stimuli_benchmark.txt'),
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'task-{task}', 'task-{task}_stimuli_benchmark.txt'),
     run:
         import foveated_metamers as met
         import contextlib
@@ -883,15 +884,16 @@ def get_experiment_seed(wildcards):
 
 rule generate_experiment_idx:
     input:
-        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description.csv'),
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'task-{task}', 'task-{task}_stimuli_description.csv'),
     output:
-        report(op.join(config["DATA_DIR"], 'stimuli', '{model_name}', '{subject}_idx_sess-{sess_num}_im-{im_num}.npy')),
+        report(op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'task-{task}', '{subject}',
+                       '{subject}_task-{task}_idx_sess-{sess_num}_im-{im_num}.npy')),
     log:
-        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', '{subject}_idx_sess-{sess_num}_im-{im_num}'
-                '.log'),
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'task-{task}', '{subject}',
+                '{subject}_task-{task}_idx_sess-{sess_num}_im-{im_num}.log'),
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', '{subject}_idx_sess-{sess_num}_im-{im_num}'
-                '_benchmark.txt'),
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'task-{task}', '{subject}',
+                '{subject}_task-{task}_idx_sess-{sess_num}_im-{im_num}_benchmark.txt'),
     params:
         seed = get_experiment_seed,
     run:

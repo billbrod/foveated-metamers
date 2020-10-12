@@ -5,6 +5,7 @@
 import argparse
 import h5py
 import os
+import re
 import os.path as op
 import datetime
 import warnings
@@ -403,7 +404,8 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
     return keys_pressed, timings, expt_params, idx
 
 
-def expt(stimuli_path, subj_name, sess_num, im_num, output_dir="data/raw_behavioral", eyetrack=False,
+def expt(stimuli_path, subj_name, sess_num, im_num, task,
+         output_dir="data/raw_behavioral", eyetrack=False,
          screen_size_pix=[1920, 1080], screen_size_deg=60, take_break=True, ipd_csv=None,
          flip_text=True, text_height=50, **kwargs):
     """run a full experiment
@@ -416,14 +418,19 @@ def expt(stimuli_path, subj_name, sess_num, im_num, output_dir="data/raw_behavio
         binocular_offset = csv_to_binocular_offset(ipd_csv, subj_name)
     else:
         binocular_offset = [0, 0]
-    model_name = op.split(op.dirname(stimuli_path))[-1]
-    if not op.exists(op.join(output_dir, model_name)):
-        os.makedirs(op.join(output_dir, model_name))
-    save_path = op.join(output_dir, model_name, "%s_%s_sess-{sess:02d}_im-{im:02d}.hdf5" %
-                        (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name))
-    edf_path = op.join(output_dir, model_name, "%s_%s_sess-{sess:02d}_im-{im:02d}.EDF" %
-                       (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name))
-    idx_path = stimuli_path.replace('stimuli.npy', '%s_idx_sess-%02d_im-%02d.npy' % (subj_name, sess_num, im_num))
+    model_name = re.findall("/((?:RGC|V1).*?)/", stimuli_path)[0]
+    if not (model_name.startswith('RGC') or model_name.startswith('V1')):
+        raise Exception(f"Can't find model_name from stimuli_path {stimuli_path}! "
+                        f"Found {model_name} when trying to do so")
+    output_dir = op.join(output_dir, model_name, f'task-{task}', subj_name)
+    if not op.exists(op.join(output_dir)):
+        os.makedirs(op.join(output_dir))
+    save_path = op.join(output_dir, "%s_%s_task-%s_sess-{sess:02d}_im-{im:02d}.hdf5" %
+                        (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name, task))
+    edf_path = op.join(output_dir, "%s_%s_task-%s_sess-{sess:02d}_im-{im:02d}.EDF" %
+                       (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name, task))
+    idx_path = op.join(op.dirname(stimuli_path), subj_name,
+                       f'{subj_name}_task-{task}_idx_sess-{sess_num:02d}_im-{im_num:02d}.npy')
     save_path = save_path.format(sess=sess_num, im=im_num)
     if os.path.isfile(save_path):
         print("Existing save data %s found! Will load in and append results" % save_path)
@@ -513,6 +520,8 @@ if __name__ == '__main__':
                         help=("This script is meant to be run on the haploscope. Therefore, we "
                               "left-right flip all text by default. Use this option to disable"
                               " that"))
+    parser.add_argument("--task", '-t', default='abx',
+                        help="{abx, split}. The task to run.")
     args = vars(parser.parse_args())
     take_break = not args.pop('no_break')
     flip = not args.pop('no_flip')
