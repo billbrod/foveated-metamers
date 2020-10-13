@@ -430,7 +430,7 @@ def expt(stimuli_path, subj_name, sess_num, im_num, task,
                         (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name, task))
     edf_path = op.join(output_dir, "%s_%s_task-%s_sess-{sess:02d}_im-{im:02d}.EDF" %
                        (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name, task))
-    idx_path = op.join(op.dirname(stimuli_path), subj_name,
+    idx_path = op.join(op.dirname(stimuli_path), f'task-{task}', subj_name,
                        f'{subj_name}_task-{task}_idx_sess-{sess_num:02d}_im-{im_num:02d}.npy')
     save_path = save_path.format(sess=sess_num, im=im_num)
     if os.path.isfile(save_path):
