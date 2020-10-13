@@ -159,21 +159,24 @@ def pause(current_i, total_imgs, win, img_pos, expt_clock, flip_text=True, text_
     return [(key[0], key[1]) for key in all_keys]
 
 
-def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(500, 1000, 2000),
-        fix_deg_size=.25, screen_size_deg=60, eyetracker=None, edf_path=None, save_frames=None,
-        binocular_offset=[0, 0], take_break=True, keys_pressed=[], timings=[], start_from_stim=0,
-        flip_text=True, text_height=50, foveal_mask_deg_size=1, **monitor_kwargs):
+def run(stimuli_path, idx_path, save_path, on_msec_length=200,
+        off_msec_length=(500, 1000, 500), fix_deg_size=.25,
+        screen_size_deg=60, eyetracker=None, edf_path=None, save_frames=None,
+        binocular_offset=[0, 0], take_break=True, keys_pressed=[], timings=[],
+        start_from_stim=0, flip_text=True, text_height=50,
+        foveal_mask_deg_size=1, **monitor_kwargs):
     """run one run of the experiment
 
-    stimuli_path specifies the path of the unshuffled experiment
-    stimuli, while idx_path specifies the path of the shuffled indices
-    to use for this run. This function will load in the stimuli at
-    stimuli_path and rearrange them using the indices found at idx_path,
-    then simply go through those stimuli in order, showing each stimuli
-    for ``on_msec_length`` msecs and then a blank screen for
-    ``off_msec_length[i]`` msecs (or as close as possible, given the
-    monitor's refresh rate; ``i`` depends on which of the stimulus just
-    shown was A, B, or X in our ABX design).
+    stimuli_path specifies the path of the unshuffled experiment stimuli, while
+    idx_path specifies the path of the shuffled indices to use for this run.
+    This function will load in the stimuli at stimuli_path and rearrange them
+    using the indices found at idx_path, then simply go through those stimuli
+    in order, showing each stimuli for ``on_msec_length`` msecs and then a
+    blank screen for ``off_msec_length[i]`` msecs (or as close as possible,
+    given the monitor's refresh rate; ``i`` depends on which of the stimulus
+    just shown was A, B, or X in our ABX design; the last value has a slightly
+    different meaning: it's the length of the pause between trials; we also
+    wait for the user to respond.).
 
     For fixation, we show a simple red dot whose size (in degrees) is
     specified by ``fix_deg_size``
@@ -197,10 +200,12 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
         length of the ON blocks in milliseconds; that is, the length of
         time to display each stimulus
     off_msec_length : tuple
-        3-tuple of ints specifying the length of the length of the OFF
-        blocks in milliseconds. This is an ABX experiment, so the 3 ints
-        correspond to the number of milliseconds between A and B, B and
-        X, and X and the A of the next trial
+        3-tuple of ints specifying the length of the length of the OFF blocks
+        in milliseconds. This is an ABX experiment, so the 3 ints correspond to
+        the number of milliseconds between A and B, B and X, and X and the A of
+        the next trial. The last one is actually the length of the pause
+        between trials, so the time between X and A of the next trial is the
+        subject's response time plus that.
     fix_deg_size : int
         the size of the fixation digits, in degrees.
     eyetracker : EyeLink object or None
@@ -382,7 +387,7 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200, off_msec_length=(
             timings.append(('post-stimulus_%d' % (i+start_from_stim), 'on', expt_clock.getTime()))
             [f.draw() for f in fixation]
             [w.flip() for w in win]
-            core.wait(.5)
+            core.wait(off_msec_length[2] / 1000)
         save(save_path, stimuli_path, idx_path, keys_pressed, timings, expt_params, idx,
              screen=screen, edf_path=edf_path, screen_size_deg=screen_size_deg,
              last_trial=i+start_from_stim, **monitor_kwargs)
