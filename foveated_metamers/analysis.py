@@ -74,7 +74,8 @@ def summarize_trials(raw_behavioral_path):
     return trials
 
 
-def plot_timing_info(trials, figsize=(5, 5)):
+def plot_timing_info(trials, subject_name, task, session_number, image_set_number,
+                     figsize=(5,5)):
     """Create scatter plot of timing info.
 
     This takes the trials array created to summarize subject responses and
@@ -84,10 +85,20 @@ def plot_timing_info(trials, figsize=(5, 5)):
     the order of 1e-4 secs, with no dependence on response time, which will
     vary much more, and no dependence on button press.
 
+    We add a title to identify the subject, task, session and image set.
+
     Parameters
     ----------
     trials : np.array
         The n_trials by 5 array created by analysis.summarize_trials
+    subject_name : str
+        The name of this subject
+    task : str
+        The name of this task
+    session_number : int
+        Session number
+    image_set_number : int
+        Image set number
     figsize : tuple, optional
         size of the figure
 
@@ -108,7 +119,9 @@ def plot_timing_info(trials, figsize=(5, 5)):
     # y-values will all be strictly positive, because of the check we do in
     # summarize_trials()
     ax.set(ylabel='Time between button press and trial end', xlabel='Response time',
-           ylim=(0, lim + .1*lim))
+           ylim=(0, lim + .1*lim),
+           title=(f"{subject_name}, task {task}, session {session_number}, "
+                  f"image set {image_set_number}"))
     return fig
 
 
