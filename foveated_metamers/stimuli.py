@@ -187,31 +187,29 @@ def create_metamer_df(image_paths, save_path=None):
     return df
 
 
-def generate_indices(df, seed, save_path=None):
-    r"""Generate the randomized presentation indices
+def _gen_trial_types(df):
+    """Generate the trial types array
 
-    We take in the dataframe describing the metamer images combined into
-    our stimuli array and correctly structure the presentation indices
-    (as used in our experiment.py file), randomize them using the given
-    seed, and optionally save them.
+    This array contains the indices of images that should be compared against
+    each other: all metamers synthesized from the same reference image, for the
+    same model with the same scaling value, and the reference image they're
+    based on.
+
+    It then gets used by other functions to convert that into the format needed
+    for experiments
 
     Parameters
     ----------
     df : pd.DataFrame
         The dataframe containing the metamer information, as created by
         ``create_metamer_df``
-    seed : int
-        The seed passed to ``np.random.seed``.
-    save_path : str or None, optional
-        If a str, the path to save the indices array at (should end in
-        .npy). If None, we don't save the array.
 
     Returns
     -------
-    trials : np.array
-        The n x 3 of presentation indices.
+    trial_types : np.ndarray
+        2d array, `n_comparisons` by `n_images`.
+
     """
-    np.random.seed(seed)
     # The reference images will have a bunch of NaNs in the
     # metamer-relevant fields. In order to be able to select them, we
     # replace these with "None"
@@ -231,6 +229,35 @@ def generate_indices(df, seed, save_path=None):
         t = t.append(df.query('scaling=="None" & image_name==@i & model=="None"').index)
         trial_types.append(t)
     trial_types = np.array(trial_types)
+    return trial_types
+
+
+def generate_indices_abx(df, seed):
+    r"""Generate the randomized presentation indices for ABX task.
+
+    We take in the dataframe describing the metamer images combined into our
+    stimuli array and correctly structure the presentation indices for the ABX
+    task (as used in our experiment.py file), randomize them using the given
+    seed, and return them.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The dataframe containing the metamer information, as created by
+        ``create_metamer_df``
+    seed : int
+        The seed passed to ``np.random.seed``.
+
+    Returns
+    -------
+    trials : np.array
+        The n x 3 of presentation indices.
+
+    """
+    np.random.seed(seed)
+    # get the trial types array, which gives the indices for images to compare
+    # against each other.
+    trial_types = _gen_trial_types(df)
     # Now generate the indices for the trial. At the end of this, trials
     # is a 2d array, n by 3, where each row corresponds to a single ABX
     # trial: two images from the same row of trial_types and then a
@@ -239,9 +266,65 @@ def generate_indices(df, seed, save_path=None):
     trials = trials.reshape(-1, trials.shape[-1])
     trials = np.array([[[i, j, i], [i, j, j]] for i, j in trials])
     trials = trials.reshape(-1, trials.shape[-1])
-    # Now permute and save. we set the random seed at the top of this
-    # function for reproducibility
+    # Now permute. we set the random seed at the top of this function for
+    # reproducibility
     trials = np.random.permutation(trials)
-    if save_path is not None:
-        np.save(save_path, trials)
+    return trials
+
+
+def generate_indices_split(df, seed, mode='same'):
+    """Generate randomized presentation indices for split-screen task.
+
+    We take in the dataframe describing the metamer images combined into our
+    stimuli array and correctly structure the presentation indices for the
+    split-screen task (as used in our experiment.py file), randomize them using
+    the given seed, and return them.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The dataframe containing the metamer information, as created by
+        ``create_metamer_df``
+    seed : int
+        The seed passed to ``np.random.seed``.
+    mode : {'same', 'always_different'}
+        This task has two modes:
+        - 'same': initial stimulus is a single image, split in half, and then
+          one half changes to a second image.
+        - 'always_different': initial stimulus has one image on the left half,
+          one on the right, and then one half will change to a third image.
+
+    Returns
+    -------
+    trials : np.array
+        The n x 2 x 2 of presentation indices.
+
+    """
+    np.random.seed(seed)
+    # get the trial types array, which gives the indices for images to compare
+    # against each other.
+    trial_types = _gen_trial_types(df)
+    # after this, each row of trials contains three indices, first two are the
+    # left and right, respectively, of initial stimulus, and the final is the
+    # image to change to.
+    if mode == 'same':
+        trials = np.array([list(itertools.permutations(t, 2)) for t in trial_types])
+        # this makes this version shaped like the always_different one
+        # described above
+        trials = np.dstack([trials[:, :, 0], trials])
+    elif mode == 'always_different':
+        trials = np.array([list(itertools.permutations(t, 3)) for t in trial_types])
+    trials = trials.reshape(-1, trials.shape[-1])
+    # now we add a None to represent the side that we don't change. this will
+    # thus double the number of rows, as each row gets None on the left and on
+    # the right
+    trials = np.array([[[i, j, k, None], [i, j, None, k]]
+                       for i, j, k in trials])
+    # this reshapes it so trials are indexed along the first dimension, and
+    # then each trial is 2x2, representing the left and right sides for the
+    # first and second stimulus.
+    trials = trials.reshape(-1, 2, 2)
+    # Now permute. we set the random seed at the top of this function for
+    # reproducibility
+    trials = np.random.permutation(trials)
     return trials

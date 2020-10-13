@@ -29,7 +29,7 @@ wildcard_constraints:
     gpu="0|1",
     sess_num="|".join([f'{i:02d}' for i in range(3)]),
     im_num="|".join([f'{i:02d}' for i in range(4)]),
-    task='abx|split',
+    task='abx|split-same|split-diff',
 ruleorder:
     collect_metamers_example > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image
 
@@ -914,7 +914,13 @@ rule generate_experiment_idx:
                     stim_df = stim_df.fillna('None').query("scaling in [@scaling_val, 'None']")
                 ref_image_to_include = stim_df.image_name.unique()[ref_image_idx]
                 stim_df = stim_df.query("image_name in @ref_image_to_include")
-                met.stimuli.generate_indices(stim_df, params.seed, output[0])
+                if wildcards.task == 'abx':
+                    idx = met.stimuli.generate_indices_abx(stim_df, params.seed)
+                elif wildcards.task == 'split-same':
+                    idx = met.stimuli.generate_indices_split(stim_df, params.seed, 'same')
+                elif wildcards.task == 'split-diff':
+                    idx = met.stimuli.generate_indices_split(stim_df, params.seed, 'always_different')
+                np.save(output[0], idx)
 
 
 rule gen_all_idx:
