@@ -159,13 +159,99 @@ def pause(current_i, total_imgs, win, img_pos, expt_clock, flip_text=True, text_
     return [(key[0], key[1]) for key in all_keys]
 
 
-def run(stimuli_path, idx_path, save_path, on_msec_length=200,
-        off_msec_length=(500, 1000, 500), fix_deg_size=.25,
-        screen_size_deg=60, eyetracker=None, edf_path=None, save_frames=None,
-        binocular_offset=[0, 0], take_break=True, keys_pressed=[], timings=[],
-        start_from_stim=0, flip_text=True, text_height=50,
-        foveal_mask_deg_size=1, **monitor_kwargs):
-    """run one run of the experiment
+def _setup_run(stimuli_path, idx_path, fix_deg_size=.25, screen_size_deg=60,
+               eyetracker=None, edf_path=None, binocular_offset=[0, 0],
+               take_break=True, timings=[], start_from_stim=0,
+               **monitor_kwargs):
+    """Setup the run.
+
+    Does the thigns that are constant across different tasks.
+
+    """
+    stimuli, idx, expt_params, monitor_kwargs = _set_params(stimuli_path, idx_path,
+                                                            **monitor_kwargs)
+    stimuli = stimuli[start_from_stim:]
+    print("Starting from stimulus %s" % start_from_stim)
+
+    if len(monitor_kwargs['screen']) == 1:
+        screen = monitor_kwargs.pop('screen')[0]
+        print('Doing single-monitor mode on screen %s' % screen)
+        win = [visual.Window(winType='pyglet', screen=screen, **monitor_kwargs)]
+        img_pos = [(0, 0)]
+    elif len(monitor_kwargs['screen']) == 2:
+        screen = monitor_kwargs.pop('screen')
+        # want these to be in increasing order
+        screen.sort()
+        print("Doing binocular mode on screens %s" % screen)
+        img_pos = [[int(-o // 2) for o in binocular_offset],
+                   [int(o // 2) for o in binocular_offset]]
+        print("Using binocular offsets: %s" % img_pos)
+        win = [visual.Window(winType='pyglet', screen=screen[0], swapInterval=1, **monitor_kwargs)]
+        # see here for the explanation of swapInterval and share args
+        # (basically, in order to make PsychoPy correctly update the two
+        # monitors together):
+        # https://discourse.psychopy.org/t/strange-behavior-with-retina-displays-external-monitors-in-1-90-2-py2/5485/5
+        # I know this works for glfw, need to double-check it works for pyglet
+        win.append(visual.Window(winType='pyglet', screen=screen[1], swapInterval=0, share=win[0],
+                                 **monitor_kwargs))
+    else:
+        raise Exception("Can't handle %s screens!" % len(monitor_kwargs['screen']))
+
+    break_time = len(stimuli) // 2
+    if take_break:
+        print("%s total trials, will take break after number %s" % (len(stimuli), break_time))
+
+    fix_pix_size = fix_deg_size * (monitor_kwargs['size'][0] / screen_size_deg)
+    fixation = [visual.GratingStim(w, size=fix_pix_size, pos=p, sf=0, color='red',
+                                   mask='circle') for w, p in zip(win, img_pos)]
+
+    if eyetracker is not None:
+        assert edf_path is not None, "edf_path must be set so we can save the eyetracker output!"
+        eyetracker.openDataFile('temp.EDF')
+        pylink.flushGetkeyQueue()
+        eyetracker.startRecording(1, 1, 1, 1)
+
+    timer = clock.StaticPeriod(screenHz=60)
+    expt_clock = clock.Clock()
+    if timings:
+        # if we've been passed something, make sure everything happens
+        # after it. for some reason, need to use the negative value of
+        # it in order to add that to the expt_clock...
+        expt_clock.reset(-float(timings[-1][-1]))
+    return (stimuli, idx, expt_params, monitor_kwargs, win, img_pos, break_time,
+            fixation, timer, expt_clock, screen)
+
+
+def _end_run(win, img_pos, timings, eyetracker, edf_path, save_frames,
+             flip_text, text_height, expt_clock):
+    """End the run.
+
+    Do the things that are shared across task types.
+
+    """
+    [visual.TextStim(w, "Run over", pos=p, flipHoriz=flip_text,
+                     height=text_height).draw() for w, p in zip(win, img_pos)]
+    [w.flip() for w in win]
+    timings.append(("run_end", '', expt_clock.getTime()))
+    all_keys = event.getKeys(timeStamped=expt_clock)
+    core.wait(4)
+    if eyetracker is not None:
+        eyetracker.stopRecording()
+        eyetracker.closeDataFile()
+        eyetracker.receiveDataFile('temp.EDF', edf_path)
+    if save_frames is not None:
+        [w.saveMovieFrames(save_frames) for w in win]
+    [w.close() for w in win]
+    return all_keys
+
+
+def run_abx(stimuli_path, idx_path, save_path, on_msec_length=200,
+            off_msec_length=(500, 1000, 500), fix_deg_size=.25,
+            screen_size_deg=60, eyetracker=None, edf_path=None,
+            save_frames=None, binocular_offset=[0, 0], take_break=True,
+            keys_pressed=[], timings=[], start_from_stim=0, flip_text=True,
+            text_height=50, foveal_mask_deg_size=1, **monitor_kwargs):
+    """run one run of the ABX task
 
     stimuli_path specifies the path of the unshuffled experiment stimuli, while
     idx_path specifies the path of the shuffled indices to use for this run.
@@ -233,43 +319,15 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200,
         Whether to flip the text horizontally or not
 
     """
-    stimuli, idx, expt_params, monitor_kwargs = _set_params(stimuli_path, idx_path,
-                                                            **monitor_kwargs)
-    stimuli = stimuli[start_from_stim:]
-    print("Starting from stimulus %s" % start_from_stim)
-
-    if len(monitor_kwargs['screen']) == 1:
-        screen = monitor_kwargs.pop('screen')[0]
-        print('Doing single-monitor mode on screen %s' % screen)
-        win = [visual.Window(winType='pyglet', screen=screen, **monitor_kwargs)]
-        img_pos = [(0, 0)]
-    elif len(monitor_kwargs['screen']) == 2:
-        screen = monitor_kwargs.pop('screen')
-        # want these to be in increasing order
-        screen.sort()
-        print("Doing binocular mode on screens %s" % screen)
-        img_pos = [[int(-o // 2) for o in binocular_offset],
-                   [int(o // 2) for o in binocular_offset]]
-        print("Using binocular offsets: %s" % img_pos)
-        win = [visual.Window(winType='pyglet', screen=screen[0], swapInterval=1, **monitor_kwargs)]
-        # see here for the explanation of swapInterval and share args
-        # (basically, in order to make PsychoPy correctly update the two
-        # monitors together):
-        # https://discourse.psychopy.org/t/strange-behavior-with-retina-displays-external-monitors-in-1-90-2-py2/5485/5
-        # I know this works for glfw, need to double-check it works for pyglet
-        win.append(visual.Window(winType='pyglet', screen=screen[1], swapInterval=0, share=win[0],
-                                 **monitor_kwargs))
-    else:
-        raise Exception("Can't handle %s screens!" % len(monitor_kwargs['screen']))
-
-    break_time = len(stimuli) // 2
-    if take_break:
-        print("%s total trials, will take break after number %s" % (len(stimuli), break_time))
-
-    fix_pix_size = fix_deg_size * (monitor_kwargs['size'][0] / screen_size_deg)
+    setup_args = _setup_run(stimuli_path, idx_path, fix_deg_size,
+                            screen_size_deg, eyetracker, edf_path,
+                            binocular_offset, take_break, timings,
+                            start_from_stim, **monitor_kwargs)
+    
+    (stimuli, idx, expt_params, monitor_kwargs, win, img_pos, break_time,
+     fixation, timer, expt_clock, screen) = setup_args
+    
     foveal_mask_pix_size = foveal_mask_deg_size * (monitor_kwargs['size'][0] / screen_size_deg)
-    fixation = [visual.GratingStim(w, size=fix_pix_size, pos=p, sf=0, color='red',
-                                   mask='circle') for w, p in zip(win, img_pos)]
     foveal_mask = [visual.GratingStim(w, size=foveal_mask_pix_size, pos=p, sf=0,
                                       color=monitor_kwargs['color'], maskParams={'fringeWidth': .33},
                                       mask='raisedCos', colorSpace=monitor_kwargs['colorSpace'])
@@ -278,22 +336,10 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200,
     # numbers all match up (we don't draw or wait during the on part of the first iteration)
     img = [visual.ImageStim(w, image=imagetools.array2image(stimuli[0, 0]), pos=p,
                             size=expt_params['stimuli_size']) for w, p in zip(win, img_pos)]
-
-    if eyetracker is not None:
-        assert edf_path is not None, "edf_path must be set so we can save the eyetracker output!"
-        eyetracker.openDataFile('temp.EDF')
-        pylink.flushGetkeyQueue()
-        eyetracker.startRecording(1, 1, 1, 1)
-
-    timer = clock.StaticPeriod(screenHz=60)
-    expt_clock = clock.Clock()
-    if timings:
-        # if we've been passed something, make sure everything happens
-        # after it. for some reason, need to use the negative value of
-        # it in order to add that to the expt_clock...
-        expt_clock.reset(-float(timings[-1][-1]))
+    
     wait_text = [visual.TextStim(w, ("Press space to start\nq or esc will quit\nspace to pause"),
-                                 pos=p, flipHoriz=flip_text, height=text_height) for w, p in zip(win, img_pos)]
+                                 pos=p, flipHoriz=flip_text, height=text_height)
+                 for w, p in zip(win, img_pos)]
     query_text = [visual.TextStim(w, "Same as 1 or 2?", pos=p, flipHoriz=flip_text, height=text_height)
                   for w, p in zip(win, img_pos)]
     [text.draw() for text in wait_text]
@@ -393,20 +439,10 @@ def run(stimuli_path, idx_path, save_path, on_msec_length=200,
              last_trial=i+start_from_stim, **monitor_kwargs)
         if check_for_keys(all_keys+paused_keys):
             break
-    [visual.TextStim(w, "Run over", pos=p, flipHoriz=flip_text, height=text_height).draw() for w, p in zip(win, img_pos)]
-    [w.flip() for w in win]
-    timings.append(("run_end", '', expt_clock.getTime()))
-    all_keys = event.getKeys(timeStamped=expt_clock)
+    all_keys = _end_run(win, img_pos, timings, eyetracker, edf_path,
+                        save_frames, flip_text, text_height, expt_clock)
     if all_keys:
         keys_pressed.extend([(key[0], key[1]) for key in all_keys])
-    core.wait(4)
-    if eyetracker is not None:
-        eyetracker.stopRecording()
-        eyetracker.closeDataFile()
-        eyetracker.receiveDataFile('temp.EDF', edf_path)
-    if save_frames is not None:
-        [w.saveMovieFrames(save_frames) for w in win]
-    [w.close() for w in win]
     return keys_pressed, timings, expt_params, idx
 
 
@@ -466,26 +502,35 @@ def expt(stimuli_path, subj_name, sess_num, im_num, task,
     if subj_name not in idx_path:
         raise Exception("subj_name %s should be in idx_path %s, are you sure they correspond?" %
                         (subj_name, idx_path))
-    if eyetrack:
-        eyetracker = _setup_eyelink(screen_size_pix)
-    else:
-        eyetracker = None
-        # we pass through the same edf_path even if we're not using the eyetracker because it
-        # doesn't get used (and if set this to None or something, then the edf_path.format call
-        # several lines down will fail)
     print("Running 1 run, with the following stimulus:")
     print("\t%s" % stimuli_path)
     print("Will use the following index:")
     print("\t%s" % idx_path)
     print("Will save at the following location:\n\t%s" % save_path)
-    keys, timings, expt_params, idx = run(stimuli_path, idx_path, save_path, size=screen_size_pix,
-                                          eyetracker=eyetracker, take_break=take_break,
-                                          screen_size_deg=screen_size_deg,
-                                          start_from_stim=start_from_stim, flip_text=flip_text,
-                                          binocular_offset=binocular_offset,
-                                          edf_path=edf_path.format(sess=sess_num, im=im_num),
-                                          keys_pressed=keys, timings=timings,
-                                          text_height=text_height, **kwargs)
+    # we pass through the same edf_path even if we're not using the eyetracker
+    # because it doesn't get used (and if set this to None or something, then
+    # this edf_path.format call will fail)
+    edf_path = edf_path.format(sess=sess_num, im=im_num)
+    if eyetrack:
+        eyetracker = _setup_eyelink(screen_size_pix)
+        print("Using eyetracker, saving output at:\n\t%s" % edf_path)
+    else:
+        eyetracker = None
+    if task == 'abx':
+        keys, timings, expt_params, idx = run_abx(stimuli_path, idx_path,
+                                                  save_path,
+                                                  size=screen_size_pix,
+                                                  eyetracker=eyetracker,
+                                                  take_break=take_break,
+                                                  screen_size_deg=screen_size_deg,
+                                                  start_from_stim=start_from_stim,
+                                                  flip_text=flip_text,
+                                                  binocular_offset=binocular_offset,
+                                                  edf_path=edf_path,
+                                                  keys_pressed=keys,
+                                                  timings=timings,
+                                                  text_height=text_height,
+                                                  **kwargs)
     save(save_path, stimuli_path, idx_path, keys, timings, expt_params, idx, **kwargs)
     if eyetracker is not None:
         eyetracker.close()
