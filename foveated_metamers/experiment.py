@@ -108,18 +108,29 @@ def _set_params(stimuli_path, idx_path, size=[1920, 1080], monitor='CBI-prisma-p
     """
     stimuli = np.load(stimuli_path)
     idx = np.load(idx_path)
-    # we do some nifty indexing here. idx will be a 2d array, i x 3
-    # (where i is the number of trials we want), so when we do the
-    # following, we go from n x *img_size array (where n is the max
-    # number of images) to i x 3 x *img_size array
-    stimuli = stimuli[idx, :, :]
     expt_params = {}
-    # the first dimension of stimuli (retrieved by len) is how many
-    # trials we have. the next one shows the number of stimuli per
-    # trial (3), and the final two are the size of the stimuli
-    expt_params['trial_num'] = stimuli.shape[0]
-    expt_params['stimuli_per_trial'] = stimuli.shape[1]
-    expt_params['stimuli_size'] = stimuli.shape[2::]
+    # final two dimensions are always the size of the stimuli
+    expt_params['stimuli_size'] = stimuli.shape[-2:]
+    if idx.ndim == 2:
+        # we do some nifty indexing here. idx will be a 2d array, i x 3
+        # (where i is the number of trials we want), so when we do the
+        # following, we go from n x *img_size array (where n is the max
+        # number of images) to i x 3 x *img_size array
+        stimuli = stimuli[idx, :, :]
+        # the first dimension of stimuli (retrieved by len) is how many
+        # trials we have. the next one shows the number of stimuli per
+        # trial (3).
+        expt_params['trial_num'] = stimuli.shape[0]
+        expt_params['stimuli_per_trial'] = stimuli.shape[1]
+    elif idx.ndim == 3:
+        left_stimuli = stimuli[idx[0], ..., :1300]
+        right_stimuli = stimuli[idx[1], ..., 1300:]
+        stimuli = np.array([left_stimuli, right_stimuli])
+        # the first dimension of stimuli is left/right the second is how many
+        # trials we have, and the next one shows the number of stimuli per
+        # trial (2)
+        expt_params['trial_num'] = stimuli.shape[1]
+        expt_params['stimuli_per_trial'] = stimuli.shape[2]
     # array size and stimulus size are backwards of each other, so
     # need to reverse this
     expt_params['stimuli_size'] = expt_params['stimuli_size'][::-1]
@@ -154,9 +165,27 @@ def pause(current_i, total_imgs, win, img_pos, expt_clock, flip_text=True, text_
                   for w, p in zip(win, img_pos)]
     [text.draw() for text in pause_text]
     [w.flip() for w in win]
-    all_keys = event.waitKeys(keyList=['space', 'q', 'escape', 'esc'], timeStamped=expt_clock)
+    all_keys = event.waitKeys(keyList=['enter', 'space', 'q', 'escape', 'esc'], timeStamped=expt_clock)
     clear_events(win)
     return [(key[0], key[1]) for key in all_keys]
+
+
+def _create_bar_mask(bar_height, bar_width=200, fringe_proportion=.5):
+    """Create central bar with raised-cosine edges.
+
+    """
+    x = np.linspace(-bar_width//2, bar_width//2, bar_width)
+    fringe_width = fringe_proportion * x.max()
+    def raised_cos(x, start_x, end_x):
+        x = (x-start_x) / (end_x - start_x)
+        return .5*(1+np.cos(np.pi*x))
+    mask = np.piecewise(x, [x < -fringe_width, (x > -fringe_width) & (x < fringe_width), fringe_width < x],
+                       [lambda x: raised_cos(x, -fringe_width, x.min()), 1,
+                        lambda x: raised_cos(x, fringe_width, x.max())])
+    # for psychopy, 1 mean fully opaque and -1 means fully transparent
+    mask = mask * 2 - 1
+    mask = np.repeat(np.expand_dims(mask, 0), bar_height, 0)
+    return mask
 
 
 def _setup_run(stimuli_path, idx_path, fix_deg_size=.25, screen_size_deg=60,
@@ -170,7 +199,12 @@ def _setup_run(stimuli_path, idx_path, fix_deg_size=.25, screen_size_deg=60,
     """
     stimuli, idx, expt_params, monitor_kwargs = _set_params(stimuli_path, idx_path,
                                                             **monitor_kwargs)
-    stimuli = stimuli[start_from_stim:]
+    if idx.ndim == 2:
+        stimuli = stimuli[start_from_stim:]
+        total_trials = stimuli.shape[0]
+    elif idx.ndim == 3:
+        stimuli = stimuli[:, start_from_stim:]
+        total_trials = stimuli.shape[1]
     print("Starting from stimulus %s" % start_from_stim)
 
     if len(monitor_kwargs['screen']) == 1:
@@ -197,9 +231,10 @@ def _setup_run(stimuli_path, idx_path, fix_deg_size=.25, screen_size_deg=60,
     else:
         raise Exception("Can't handle %s screens!" % len(monitor_kwargs['screen']))
 
-    break_time = len(stimuli) // 2
+    break_time = total_trials // 2
     if take_break:
-        print("%s total trials, will take break after number %s" % (len(stimuli), break_time))
+        print("%s total trials, will take break after number %s" %
+              (total_trials, break_time))
 
     fix_pix_size = fix_deg_size * (monitor_kwargs['size'][0] / screen_size_deg)
     fixation = [visual.GratingStim(w, size=fix_pix_size, pos=p, sf=0, color='red',
@@ -243,6 +278,236 @@ def _end_run(win, img_pos, timings, eyetracker, edf_path, save_frames,
         [w.saveMovieFrames(save_frames) for w in win]
     [w.close() for w in win]
     return all_keys
+
+
+def run_split(stimuli_path, idx_path, save_path, on_msec_length=200,
+              off_msec_length=(500, 500), fix_deg_size=.25, screen_size_deg=60,
+              eyetracker=None, edf_path=None, save_frames=None,
+              binocular_offset=[0, 0], take_break=True, keys_pressed=[],
+              timings=[], start_from_stim=0, flip_text=True, text_height=50,
+              bar_deg_size=2, **monitor_kwargs):
+    r"""Run one run of the split task.
+
+    stimuli_path specifies the path of the unshuffled experiment stimuli, while
+    idx_path specifies the path of the shuffled indices to use for this run.
+    This function will load in the stimuli at stimuli_path and rearrange them
+    using the indices found at idx_path, then simply go through those stimuli
+    in order, showing each stimuli for ``on_msec_length`` msecs and then a
+    blank screen for ``off_msec_length[i]`` msecs (or as close as possible,
+    given the monitor's refresh rate; ``i`` depends on whether this was between
+    the two stimuli or between trials, though the actual time between trials
+    will be the sum of this number, the length of the pause, and the subject's
+    response time).
+
+    For fixation, we show a simple red dot whose size (in degrees) is
+    specified by ``fix_deg_size``
+
+    We load the arrays saved at stimuli_path and idx_path, and show the stimuli
+    whose indices are found in the index array. So if `idx=np.array([0, 4,
+    2])`, we would only show the 1st, 3rd, and 5th elements. This can be used
+    to show a subset of all stimuli
+
+    Arguments
+    ============
+    stimuli_path : string
+        path to .npy file where stimuli are stored (as 3d array)
+    idx_path : string
+        path to .npy file where shuffled indices are stored (as 2d
+        array)
+    save_path : string
+        path to .hdf5 file where we'll store the outputs of this
+        experiment (we save every trial)
+    on_msec_length : int
+        length of the ON blocks in milliseconds; that is, the length of
+        time to display each stimulus
+    off_msec_length : tuple
+        2-tuple of ints specifying the length of the length of the OFF blocks
+        in milliseconds. The first number gives the length of time between
+        stimuli, while the second gives the length of the pause between trials
+        (so the actual time between one trial's second stimulus going off and
+        the next trial's first one going on is the sum of this and the subjet's
+        response time).
+    fix_deg_size : int
+        the size of the fixation digits, in degrees.
+    screen_size_deg : int or float.
+        the max visual angle (in degrees) of the full screen.
+    eyetracker : EyeLink object or None
+        if None, will not collect eyetracking data. if not None, will
+        gather it. the EyeLink object must already be initialized (by
+        calling the _setup_eyelink function, as is done in the expt
+        function). if this is set, must also specify edf_path
+    edf_path : str or None
+        if eyetracker is not None, this must be a string, which is where
+        we will save the output of the eyetracker
+    save_frames : None or str
+        if not None, this should be the filename you wish to save frames
+        at (one image will be made for each frame). WARNING: typically a
+        large number of files will be saved (depends on the length of
+        your session), which means this may make the end of the run
+        (with the screen completely blank) take a while
+    binocular_offset : list
+        list of 2 ints, specifying the horizontal, vertical offset
+        between the stimuli (in pixels) presented on the two monitors in
+        order to allow the user to successfully fuse the image. This
+        should come from the calibration, run before this experiment.
+    take_break : bool
+        Whether to take a break half-way through the experiment or not.
+    keys_pressed : list
+        keys pressed. should be empty list unless resuming a run.
+    timings : list
+        timing of events. should be empty list unless resuming a run.
+    start_from_stim : int
+        the first stimulus to show. should be 0 unless resuming a run.
+    flip_text : bool
+        Whether to flip the text horizontally or not
+    text_height : int
+        The text height in pixels.
+    bar_deg_size : float
+        The width of the central bar dividing left and right half of stimulus,
+        in degrees
+    monitor_kwargs :
+        passed to visual.Window
+
+    """
+    setup_args = _setup_run(stimuli_path, idx_path, fix_deg_size,
+                            screen_size_deg, eyetracker, edf_path,
+                            binocular_offset, take_break, timings,
+                            start_from_stim, **monitor_kwargs)
+
+    (stimuli, idx, expt_params, monitor_kwargs, win, img_pos, break_time,
+     fixation, timer, expt_clock, screen) = setup_args
+
+    bar_pix_size = int(bar_deg_size * (monitor_kwargs['size'][0] / screen_size_deg))
+    bar_size = [bar_pix_size, expt_params['stimuli_size'][1]]
+    center_mask = [visual.GratingStim(w, size=bar_size, pos=p, sf=0,
+                                      color=monitor_kwargs['color'],
+                                      mask=_create_bar_mask(*bar_size[::-1]),
+                                      colorSpace=monitor_kwargs['colorSpace'])
+                   for w, p in zip(win, img_pos)]
+
+    stim_size = [expt_params['stimuli_size'][0]/2, expt_params['stimuli_size'][1]]
+    left_pos = [[p[0] - stim_size[0]/2, p[1]] for p in img_pos]
+    left_stimuli = stimuli[0]
+    left_img = [visual.ImageStim(w, image=imagetools.array2image(left_stimuli[0, 0]), pos=p,
+                                 size=stim_size) for w, p in zip(win, left_pos)]
+
+    right_stimuli = stimuli[1]
+    right_pos = [[p[0] + stim_size[0]/2, p[1]] for p in img_pos]
+    right_img = [visual.ImageStim(w, image=imagetools.array2image(right_stimuli[0, 0]), pos=p,
+                                 size=stim_size) for w, p in zip(win, right_pos)]
+    del stimuli
+
+    wait_text = [visual.TextStim(w, ("Press space to start\nq or esc will quit\nspace to pause"),
+                                 pos=p, flipHoriz=flip_text, height=text_height)
+                 for w, p in zip(win, img_pos)]
+    query_text = [visual.TextStim(w, "Did image change on left or right?", pos=p,
+                                  flipHoriz=flip_text, height=text_height)
+                  for w, p in zip(win, img_pos)]
+    [text.draw() for text in wait_text]
+    [w.flip() for w in win]
+
+    all_keys = event.waitKeys(keyList=['enter', 'space', 'q', 'escape', 'esc'], timeStamped=expt_clock)
+    clear_events(win)
+    if save_frames is not None:
+        [w.getMovieFrame() for w in win]
+
+    if check_for_keys(all_keys):
+        [w.close() for w in win]
+        return all_keys, [], expt_params, idx
+    countdown(win, img_pos, flip_text, text_height)
+
+    timings.append(("start", "off", expt_clock.getTime()))
+
+    # this outer for loop is per trial
+    for i, (l_stim, r_stim) in enumerate(zip(left_stimuli, right_stimuli)):
+        # and this one is for the two stimuli in each trial
+        all_keys = []
+        for j in range(len(l_stim)):
+            for l_im, r_im, f, m in zip(left_img, right_img, fixation, center_mask):
+                l_im.draw()
+                r_im.draw()
+                m.draw()
+                f.draw()
+            for w in win:
+                w.flip()
+            timings.append(("stimulus_%d-%d" % (i+start_from_stim, j), "on", expt_clock.getTime()))
+            # convert to sec
+            core.wait(on_msec_length / 1000)
+            if eyetracker is not None:
+                eyetracker.sendMessage("TRIALID %02d" % i)
+            if save_frames is not None:
+                [w.getMovieFrame() for w in win]
+            if j == 1:
+                [q.draw() for q in query_text]
+            else:
+                [f.draw() for f in fixation]
+            [w.flip() for w in win]
+            timings.append(("stimulus_%d-%d" % (i+start_from_stim, j), "off",
+                            expt_clock.getTime()))
+            if j != 1:
+                timer.start(off_msec_length[j] / 1000)
+            for l_im, r_im in zip(left_img, right_img):
+                # off msec lengths are always longer than on msec length, so
+                # we preload the next image here
+                try:
+                    # we either load the next one in the set of three for
+                    # this trial...
+                    l_im.image = imagetools.array2image(l_stim[j+1])
+                    r_im.image = imagetools.array2image(r_stim[j+1])
+                except IndexError:
+                    # or, if we've gone through all those, we load the first
+                    # image for the next trial. if i+1==len(stimuli), then we've
+                    # gone through all images and will quit out
+                    if i+1 < len(left_stimuli):
+                        l_im.image = imagetools.array2image(left_stimuli[i+1][0])
+                        r_im.image = imagetools.array2image(right_stimuli[i+1][0])
+            if save_frames is not None:
+                [w.getMovieFrame() for w in win]
+            if j == 1:
+                response_keys = event.waitKeys(keyList=['q', 'escape', 'esc', '1', '2'],
+                                               timeStamped=expt_clock)
+                all_keys.extend(response_keys)
+            else:
+                timer.complete()
+                all_keys.extend(event.getKeys(timeStamped=expt_clock))
+            # we need this double break because we have two for loops
+            if check_for_keys(all_keys):
+                break
+        if all_keys:
+            keys_pressed.extend([(key[0], key[1]) for key in all_keys])
+        # python is 0-indexed, so add 1 to i in order to determine which trial
+        # we're on
+        if check_for_keys(all_keys, ['enter', 'space']) or (take_break and i+1 == break_time):
+            timings.append(('pause', 'start', expt_clock.getTime()))
+            if take_break and i == break_time:
+                break_text = [visual.TextStim(w, "Break time!", pos=p, flipHoriz=flip_text,
+                                              height=text_height)
+                              for w, p in zip(win, img_pos)]
+                [text.draw() for text in break_text]
+                [w.flip() for w in win]
+                core.wait(2)
+            paused_keys = pause(i+1, len(left_stimuli), win, img_pos, expt_clock, flip_text)
+            timings.append(('pause', 'stop', expt_clock.getTime()))
+            keys_pressed.extend(paused_keys)
+            if not check_for_keys(paused_keys):
+                countdown(win, img_pos, flip_text, text_height)
+        else:
+            paused_keys = []
+        if not check_for_keys(all_keys+paused_keys):
+            timings.append(('post-stimulus_%d' % (i+start_from_stim), 'on', expt_clock.getTime()))
+            [f.draw() for f in fixation]
+            [w.flip() for w in win]
+            core.wait(off_msec_length[1] / 1000)
+        save(save_path, stimuli_path, idx_path, keys_pressed, timings, expt_params, idx,
+             screen=screen, edf_path=edf_path, screen_size_deg=screen_size_deg,
+             last_trial=i+start_from_stim, **monitor_kwargs)
+        if check_for_keys(all_keys+paused_keys):
+            break
+    all_keys = _end_run(win, img_pos, timings, eyetracker, edf_path,
+                        save_frames, flip_text, text_height, expt_clock)
+    if all_keys:
+        keys_pressed.extend([(key[0], key[1]) for key in all_keys])
+    return keys_pressed, timings, expt_params, idx
 
 
 def run_abx(stimuli_path, idx_path, save_path, on_msec_length=200,
@@ -294,6 +559,8 @@ def run_abx(stimuli_path, idx_path, save_path, on_msec_length=200,
         subject's response time plus that.
     fix_deg_size : int
         the size of the fixation digits, in degrees.
+    screen_size_deg : int or float.
+        the max visual angle (in degrees) of the full screen.
     eyetracker : EyeLink object or None
         if None, will not collect eyetracking data. if not None, will
         gather it. the EyeLink object must already be initialized (by
@@ -302,8 +569,6 @@ def run_abx(stimuli_path, idx_path, save_path, on_msec_length=200,
     edf_path : str or None
         if eyetracker is not None, this must be a string, which is where
         we will save the output of the eyetracker
-    screen_size_deg : int or float.
-        the max visual angle (in degrees) of the full screen.
     save_frames : None or str
         if not None, this should be the filename you wish to save frames
         at (one image will be made for each frame). WARNING: typically a
@@ -315,8 +580,22 @@ def run_abx(stimuli_path, idx_path, save_path, on_msec_length=200,
         between the stimuli (in pixels) presented on the two monitors in
         order to allow the user to successfully fuse the image. This
         should come from the calibration, run before this experiment.
+    take_break : bool
+        Whether to take a break half-way through the experiment or not.
+    keys_pressed : list
+        keys pressed. should be empty list unless resuming a run.
+    timings : list
+        timing of events. should be empty list unless resuming a run.
+    start_from_stim : int
+        the first stimulus to show. should be 0 unless resuming a run.
     flip_text : bool
         Whether to flip the text horizontally or not
+    text_height : int
+        The text height in pixels.
+    foveal_mask_deg_size : float
+        The width of the mask at the fovea, in degrees
+    monitor_kwargs :
+        passed to visual.Window
 
     """
     setup_args = _setup_run(stimuli_path, idx_path, fix_deg_size,
@@ -345,7 +624,7 @@ def run_abx(stimuli_path, idx_path, save_path, on_msec_length=200,
     [text.draw() for text in wait_text]
     [w.flip() for w in win]
 
-    all_keys = event.waitKeys(keyList=['space', 'q', 'escape', 'esc'], timeStamped=expt_clock)
+    all_keys = event.waitKeys(keyList=['enter', 'space', 'q', 'escape', 'esc'], timeStamped=expt_clock)
     clear_events(win)
     if save_frames is not None:
         [w.getMovieFrame() for w in win]
@@ -400,7 +679,7 @@ def run_abx(stimuli_path, idx_path, save_path, on_msec_length=200,
             if save_frames is not None:
                 [w.getMovieFrame() for w in win]
             if j == 2:
-                response_keys = event.waitKeys(keyList=['space', 'q', 'escape', 'esc', '1', '2'],
+                response_keys = event.waitKeys(keyList=['q', 'escape', 'esc', '1', '2'],
                                                timeStamped=expt_clock)
                 all_keys.extend(response_keys)
             else:
@@ -413,7 +692,7 @@ def run_abx(stimuli_path, idx_path, save_path, on_msec_length=200,
             keys_pressed.extend([(key[0], key[1]) for key in all_keys])
         # python is 0-indexed, so add 1 to i in order to determine which trial
         # we're on
-        if check_for_keys(all_keys, ['space']) or (take_break and i+1 == break_time):
+        if check_for_keys(all_keys, ['space', 'enter']) or (take_break and i+1 == break_time):
             timings.append(('pause', 'start', expt_clock.getTime()))
             if take_break and i == break_time:
                 break_text = [visual.TextStim(w, "Break time!", pos=p, flipHoriz=flip_text,
@@ -518,6 +797,21 @@ def expt(stimuli_path, subj_name, sess_num, im_num, task,
         eyetracker = None
     if task == 'abx':
         keys, timings, expt_params, idx = run_abx(stimuli_path, idx_path,
+                                                  save_path,
+                                                  size=screen_size_pix,
+                                                  eyetracker=eyetracker,
+                                                  take_break=take_break,
+                                                  screen_size_deg=screen_size_deg,
+                                                  start_from_stim=start_from_stim,
+                                                  flip_text=flip_text,
+                                                  binocular_offset=binocular_offset,
+                                                  edf_path=edf_path,
+                                                  keys_pressed=keys,
+                                                  timings=timings,
+                                                  text_height=text_height,
+                                                  **kwargs)
+    elif task.startswith('split'):
+        keys, timings, expt_params, idx = run_split(stimuli_path, idx_path,
                                                   save_path,
                                                   size=screen_size_pix,
                                                   eyetracker=eyetracker,
