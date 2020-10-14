@@ -165,7 +165,7 @@ def pause(current_i, total_imgs, win, img_pos, expt_clock, flip_text=True, text_
                   for w, p in zip(win, img_pos)]
     [text.draw() for text in pause_text]
     [w.flip() for w in win]
-    all_keys = event.waitKeys(keyList=['enter', 'space', 'q', 'escape', 'esc'], timeStamped=expt_clock)
+    all_keys = event.waitKeys(keyList=['return', 'space', 'q', 'escape', 'esc'], timeStamped=expt_clock)
     clear_events(win)
     return [(key[0], key[1]) for key in all_keys]
 
@@ -406,7 +406,7 @@ def run_split(stimuli_path, idx_path, save_path, on_msec_length=200,
     [text.draw() for text in wait_text]
     [w.flip() for w in win]
 
-    all_keys = event.waitKeys(keyList=['enter', 'space', 'q', 'escape', 'esc'], timeStamped=expt_clock)
+    all_keys = event.waitKeys(keyList=['return', 'space', 'q', 'escape', 'esc'], timeStamped=expt_clock)
     clear_events(win)
     if save_frames is not None:
         [w.getMovieFrame() for w in win]
@@ -477,7 +477,7 @@ def run_split(stimuli_path, idx_path, save_path, on_msec_length=200,
             keys_pressed.extend([(key[0], key[1]) for key in all_keys])
         # python is 0-indexed, so add 1 to i in order to determine which trial
         # we're on
-        if check_for_keys(all_keys, ['enter', 'space']) or (take_break and i+1 == break_time):
+        if check_for_keys(all_keys, ['return', 'space']) or (take_break and i+1 == break_time):
             timings.append(('pause', 'start', expt_clock.getTime()))
             if take_break and i == break_time:
                 break_text = [visual.TextStim(w, "Break time!", pos=p, flipHoriz=flip_text,
@@ -624,7 +624,7 @@ def run_abx(stimuli_path, idx_path, save_path, on_msec_length=200,
     [text.draw() for text in wait_text]
     [w.flip() for w in win]
 
-    all_keys = event.waitKeys(keyList=['enter', 'space', 'q', 'escape', 'esc'], timeStamped=expt_clock)
+    all_keys = event.waitKeys(keyList=['return', 'space', 'q', 'escape', 'esc'], timeStamped=expt_clock)
     clear_events(win)
     if save_frames is not None:
         [w.getMovieFrame() for w in win]
@@ -692,7 +692,7 @@ def run_abx(stimuli_path, idx_path, save_path, on_msec_length=200,
             keys_pressed.extend([(key[0], key[1]) for key in all_keys])
         # python is 0-indexed, so add 1 to i in order to determine which trial
         # we're on
-        if check_for_keys(all_keys, ['space', 'enter']) or (take_break and i+1 == break_time):
+        if check_for_keys(all_keys, ['space', 'return']) or (take_break and i+1 == break_time):
             timings.append(('pause', 'start', expt_clock.getTime()))
             if take_break and i == break_time:
                 break_text = [visual.TextStim(w, "Break time!", pos=p, flipHoriz=flip_text,
