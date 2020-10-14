@@ -297,7 +297,7 @@ def generate_indices_split(df, seed, mode='same'):
     Returns
     -------
     trials : np.array
-        The n x 2 x 2 of presentation indices.
+        The 2 x n x 2 of presentation indices.
 
     """
     np.random.seed(seed)
@@ -315,10 +315,9 @@ def generate_indices_split(df, seed, mode='same'):
     elif mode == 'always_different':
         trials = np.array([list(itertools.permutations(t, 3)) for t in trial_types])
     trials = trials.reshape(-1, trials.shape[-1])
-    # now we add a None to represent the side that we don't change. this will
-    # thus double the number of rows, as each row gets None on the left and on
-    # the right
-    trials = np.array([[[i, j, k, None], [i, j, None, k]]
+    # now we duplicate the side that we don't change. this will thus double the
+    # number of rows, as each row gets None on the left and on the right
+    trials = np.array([[[i, j, k, j], [i, j, i, k]]
                        for i, j, k in trials])
     # this reshapes it so trials are indexed along the first dimension, and
     # then each trial is 2x2, representing the left and right sides for the
@@ -327,4 +326,9 @@ def generate_indices_split(df, seed, mode='same'):
     # Now permute. we set the random seed at the top of this function for
     # reproducibility
     trials = np.random.permutation(trials)
+    # and this rearranges it so left and right are along the first dimension,
+    # then trials, then first and second stimulus. This needs to happen after
+    # the permutation, because np.random.permutation only permutes along the
+    # first axis
+    trials = np.moveaxis(trials, 2, 0)
     return trials
