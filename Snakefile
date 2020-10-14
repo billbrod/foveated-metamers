@@ -959,11 +959,14 @@ rule create_experiment_df:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 stim_df = pd.read_csv(input[0])
                 idx = np.load(input[1])
-                trials = met.analysis.summarize_trials(input[2])
+                trials = met.analysis.summarize_trials(input[2], wildcards.task.split('-')[0])
                 fig = met.analysis.plot_timing_info(trials, wildcards.subject, wildcards.task,
                                                     wildcards.sess_num, wildcards.im_num)
                 fig.savefig(output[1], bbox_inches='tight')
-                df = met.analysis.create_experiment_df(stim_df, idx)
+                if wildcards.task == 'abx':
+                    df = met.analysis.create_experiment_df_abx(stim_df, idx)
+                elif wildcards.task.startswith('split'):
+                    df = met.analysis.create_experiment_df_split(stim_df, idx)
                 df = met.analysis.add_response_info(df, trials, wildcards.subject, wildcards.task,
                                                     wildcards.sess_num, wildcards.im_num)
                 df.to_csv(output[0], index=False)
