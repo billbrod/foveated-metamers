@@ -728,7 +728,7 @@ def run_abx(stimuli_path, idx_path, save_path, on_msec_length=200,
 def expt(stimuli_path, subj_name, sess_num, im_num, task,
          output_dir="data/raw_behavioral", eyetrack=False,
          screen_size_pix=[1920, 1080], screen_size_deg=60, take_break=True, ipd_csv=None,
-         flip_text=True, text_height=50, **kwargs):
+         flip_text=True, text_height=50, screen=[1, 2], **kwargs):
     """run a full experiment
 
     this just sets up the various paths, calls ``run``, and then saves
@@ -746,10 +746,13 @@ def expt(stimuli_path, subj_name, sess_num, im_num, task,
     output_dir = op.join(output_dir, model_name, f'task-{task}', subj_name)
     if not op.exists(op.join(output_dir)):
         os.makedirs(op.join(output_dir))
-    save_path = op.join(output_dir, "%s_%s_task-%s_sess-{sess:02d}_im-{im:02d}.hdf5" %
-                        (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name, task))
-    edf_path = op.join(output_dir, "%s_%s_task-%s_sess-{sess:02d}_im-{im:02d}.EDF" %
-                       (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name, task))
+    kwargs_str = ""
+    for k, v in kwargs.items():
+        kwargs_str += "_{}-{}".format(k, v)
+    save_path = op.join(output_dir, "%s_%s_task-%s_sess-{sess:02d}_im-{im:02d}%s.hdf5" %
+                        (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name, task, kwargs_str))
+    edf_path = op.join(output_dir, "%s_%s_task-%s_sess-{sess:02d}_im-{im:02d}%s.EDF" %
+                       (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name, task, kwargs_str))
     idx_path = op.join(op.dirname(stimuli_path), f'task-{task}', subj_name,
                        f'{subj_name}_task-{task}_idx_sess-{sess_num:02d}_im-{im_num:02d}.npy')
     save_path = save_path.format(sess=sess_num, im=im_num)
@@ -809,22 +812,24 @@ def expt(stimuli_path, subj_name, sess_num, im_num, task,
                                                   keys_pressed=keys,
                                                   timings=timings,
                                                   text_height=text_height,
+                                                  screen=screen,
                                                   **kwargs)
     elif task.startswith('split'):
         keys, timings, expt_params, idx = run_split(stimuli_path, idx_path,
-                                                  save_path,
-                                                  size=screen_size_pix,
-                                                  eyetracker=eyetracker,
-                                                  take_break=take_break,
-                                                  screen_size_deg=screen_size_deg,
-                                                  start_from_stim=start_from_stim,
-                                                  flip_text=flip_text,
-                                                  binocular_offset=binocular_offset,
-                                                  edf_path=edf_path,
-                                                  keys_pressed=keys,
-                                                  timings=timings,
-                                                  text_height=text_height,
-                                                  **kwargs)
+                                                    save_path,
+                                                    size=screen_size_pix,
+                                                    eyetracker=eyetracker,
+                                                    take_break=take_break,
+                                                    screen_size_deg=screen_size_deg,
+                                                    start_from_stim=start_from_stim,
+                                                    flip_text=flip_text,
+                                                    binocular_offset=binocular_offset,
+                                                    edf_path=edf_path,
+                                                    keys_pressed=keys,
+                                                    timings=timings,
+                                                    text_height=text_height,
+                                                    screen=screen,
+                                                    **kwargs)
     save(save_path, stimuli_path, idx_path, keys, timings, expt_params, idx, **kwargs)
     if eyetracker is not None:
         eyetracker.close()
@@ -867,6 +872,8 @@ if __name__ == '__main__':
                               " that"))
     parser.add_argument("--task", '-t', default='abx',
                         help="{abx, split-same, split-diff}. The task to run.")
+    parser.add_argument("--on_msec_length", '-l', default=200, type=int,
+                        help="Length of stimulus duration (in msec)")
     args = vars(parser.parse_args())
     take_break = not args.pop('no_break')
     flip = not args.pop('no_flip')

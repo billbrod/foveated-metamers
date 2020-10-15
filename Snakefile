@@ -878,7 +878,7 @@ def get_experiment_seed(wildcards):
         seed = 10*int(wildcards.subject.replace('sub-', '')) + int(wildcards.sess_num)
     except ValueError:
         # then this is the training subject and seed doesn't really matter
-        seed = 0
+        seed = int(wildcards.sess_num)
     return seed
 
 
@@ -938,22 +938,23 @@ rule create_experiment_df:
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'task-{task}', '{subject}',
                        '{subject}_task-{task}_idx_sess-{sess_num}_im-{im_num}.npy'),
         op.join(config["DATA_DIR"], 'raw_behavioral', '{model_name}', 'task-{task}', '{subject}',
-                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}.hdf5'),
+                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}{kwargs}.hdf5'),
     output:
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-{task}', '{subject}',
-                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}_expt.csv'),
+                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}{kwargs}_expt.csv'),
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-{task}', '{subject}',
-                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}_trials.png'),
+                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}{kwargs}_trials.png'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-{task}', '{subject}',
-                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}_expt.log'),
+                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}_expt{kwargs}.log'),
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-{task}', '{subject}',
-                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}_expt_benchmark.txt'),
+                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}_expt{kwargs}_benchmark.txt'),
     run:
         import foveated_metamers as met
         import numpy as np
         import pandas as pd
+        import re
         import contextlib
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
@@ -969,22 +970,29 @@ rule create_experiment_df:
                     df = met.analysis.create_experiment_df_split(stim_df, idx)
                 df = met.analysis.add_response_info(df, trials, wildcards.subject, wildcards.task,
                                                     wildcards.sess_num, wildcards.im_num)
+                # this will always start with a _. we want to get rid of that
+                # and add one at the end, given our regex
+                kwargs = wildcards.kwargs + '_'
+                if kwargs[0] == '_':
+                    kwargs = kwargs[1:]
+                kwargs = dict(re.findall('(.*?)-(.*?)_', kwargs))
+                df = df.assign(**kwargs)
                 df.to_csv(output[0], index=False)
 
 
 rule summarize_experiment:
     input:
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-{task}', '{subject}',
-                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}_expt.csv'),
+                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}{kwargs}_expt.csv'),
     output:
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-{task}', '{subject}',
-                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}_summary.csv'),
+                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}{kwargs}_summary.csv'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-{task}', '{subject}',
-                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}_summary.log'),
+                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}{kwargs}_summary.log'),
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-{task}', '{subject}',
-                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}_summary_benchmark.txt'),
+                       '{date}_{subject}_task-{task}_sess-{sess_num}_im-{im_num}{kwargs}_summary_benchmark.txt'),
     run:
         import foveated_metamers as met
         import pandas as pd
@@ -992,7 +1000,15 @@ rule summarize_experiment:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 expt_df = pd.read_csv(input[0])
-                summary_df = met.analysis.summarize_expt(expt_df)
+                dep_variables = ['scaling', 'trial_type']
+                # this will always start with a _. we want to get rid of that
+                # and add one at the end, given our regex
+                kwargs = wildcards.kwargs + '_'
+                if kwargs[0] == '_':
+                    kwargs = kwargs[1:]
+                kwargs = dict(re.findall('(.*?)-(.*?)_', kwargs))
+                dep_variables += list(kwargs.keys())
+                summary_df = met.analysis.summarize_expt(expt_df, dep_variables)
                 summary_df.to_csv(output[0], index=False)
 
 
