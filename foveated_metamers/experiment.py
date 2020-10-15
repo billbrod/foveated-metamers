@@ -866,7 +866,7 @@ if __name__ == '__main__':
                               "left-right flip all text by default. Use this option to disable"
                               " that"))
     parser.add_argument("--task", '-t', default='abx',
-                        help="{abx, split}. The task to run.")
+                        help="{abx, split-same, split-diff}. The task to run.")
     args = vars(parser.parse_args())
     take_break = not args.pop('no_break')
     flip = not args.pop('no_flip')
