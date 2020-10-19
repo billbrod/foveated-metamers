@@ -129,8 +129,6 @@ def collect_images(image_paths, save_path=None):
         # then it's a float32 array, with range [0, 1]
         elif i.endswith('.npy'):
             im = np.load(i)
-            if im.min() < 0 or im.max() > 1:
-                raise Exception(f"image should have range [0, 1], but has range {im.min(), im.max()}!")
         else:
             raise Exception(f"Don't know how to handle file extension {i.split('.')[-1]}!")
         # then properly convert everything to uint8

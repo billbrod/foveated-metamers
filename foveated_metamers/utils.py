@@ -73,6 +73,13 @@ def convert_im_to_int(im, dtype=np.uint8):
             im = np.clip(im, 0, 1)
         else:
             raise Exception("all values of im must lie between 0 and 1, but max is %s" % im.max())
+    if im.min() < 0:
+        if abs(im.min()) < 1e-4:
+            warnings.warn("There was a precision/rounding error somewhere and im.min is "
+                          f"{im.min()}. Setting that to 0 and converting anyway")
+            im = np.clip(im, 0, 1)
+        else:
+            raise Exception("all values of im must lie between 0 and 1, but min is %s" % im.min())
     return (im * np.iinfo(dtype).max).astype(dtype)
 
 
