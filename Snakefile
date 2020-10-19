@@ -602,11 +602,18 @@ def get_cpu_num(wildcards):
             cpus = 28
     return cpus
 
+def get_init_image(wildcards):
+    if wildcards.init_type in ['white', 'gray', 'pink', 'blue']:
+        return []
+    else:
+        return utils.get_ref_image_full_path(wildcards.init_type)
+
 rule create_metamers:
     input:
         ref_image = lambda wildcards: utils.get_ref_image_full_path(wildcards.image_name),
         windows = get_windows,
         norm_dict = get_norm_dict,
+        init_image = get_init_image,
     output:
         METAMER_TEMPLATE_PATH.replace('_metamer.png', '.pt'),
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'summary.csv'),
@@ -650,7 +657,7 @@ rule create_metamers:
                 else:
                     coarse_to_fine = wildcards.coarse_to_fine
                 if wildcards.init_type not in ['white', 'blue', 'pink', 'gray']:
-                    init_type = REF_IMAGE_TEMPLATE_PATH.format(image_name=wildcards.init_type)
+                    init_type = met.utils.get_ref_image_full_path(wildcards.init_type)
                 else:
                     init_type = wildcards.init_type
                 if resources.gpu == 1:
@@ -695,6 +702,7 @@ rule continue_metamers:
         ref_image = lambda wildcards: utils.get_ref_image_full_path(wildcards.image_name),
         norm_dict = get_norm_dict,
         continue_path = lambda wildcards: find_attempts(wildcards).replace('_metamer.png', '.pt'),
+        init_image = get_init_image,
     output:
         CONTINUE_TEMPLATE_PATH.replace('_metamer.png', '.pt'),
         CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'summary.csv'),
@@ -738,7 +746,7 @@ rule continue_metamers:
                 else:
                     coarse_to_fine = wildcards.coarse_to_fine
                 if wildcards.init_type not in ['white', 'blue', 'pink', 'gray']:
-                    init_type = REF_IMAGE_TEMPLATE_PATH.format(image_name=wildcards.init_type)
+                    init_type = met.utils.get_ref_image_full_path(wildcards.init_type)
                 else:
                     init_type = wildcards.init_type
                 if resources.gpu == 1:
