@@ -31,7 +31,7 @@ wildcard_constraints:
     im_num="|".join([f'{i:02d}' for i in range(4)]),
     task='abx|split-same|split-diff',
 ruleorder:
-    collect_metamers_example > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image
+    collect_metamers_training > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image
 
 
 LINEAR_IMAGES = config['IMAGE_NAME']['ref_image']
@@ -822,21 +822,21 @@ rule postproc_metamers:
                         shutil.copy(input[i], f)
 
 
-rule collect_metamers_example:
+rule collect_metamers_training:
     # this is for a shorter version of the experiment, the goal is to
     # create a test version for teaching someone how to run the
     # experiment or for demos
     input:
-        utils.generate_metamer_paths('RGC', seed=2,
-                                     image_name=config['DEFAULT_METAMERS']['image_name'][0]),
-        utils.get_ref_image_full_path(IMAGES[2]),
+        lambda wildcards: utils.generate_metamer_paths(wildcards.model_name,
+                                                       scaling=config[wildcards.model_name.split('_')[0]]['training_scaling']),
+        [utils.get_ref_image_full_path(i) for i in IMAGES],
     output:
-        op.join(config["DATA_DIR"], 'stimuli', 'RGC_norm_gaussian_demo', 'stimuli.npy'),
-        report(op.join(config["DATA_DIR"], 'stimuli', 'RGC_norm_gaussian_demo', 'stimuli_description.csv')),
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}_training', 'stimuli.npy'),
+        report(op.join(config["DATA_DIR"], 'stimuli', '{model_name}_training', 'stimuli_description.csv')),
     log:
-        op.join(config["DATA_DIR"], 'logs', 'stimuli', 'RGC_demo', 'stimuli.log'),
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}_training', 'stimuli.log'),
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'stimuli', 'RGC_demo', 'stimuli_benchmark.txt'),
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}_training', 'stimuli_benchmark.txt'),
     run:
         import foveated_metamers as met
         import contextlib
@@ -909,7 +909,10 @@ rule generate_experiment_idx:
                 except ValueError:
                     # then this is the test subject
                     ref_image_idx = [0]
-                    scaling_val = config[wildcards.model_name.split('_')[0]]['scaling'][-1]
+                    if 'training' not in wildcards.model_name:
+                        scaling_val = config[wildcards.model_name.split('_')[0]]['scaling'][-1]
+                    else:
+                        scaling_val = config[wildcards.model_name.split('_')[0]]['training_scaling']
                     stim_df = stim_df.fillna('None').query("scaling in [@scaling_val, 'None']")
                 ref_image_to_include = stim_df.image_name.unique()[ref_image_idx]
                 stim_df = stim_df.query("image_name in @ref_image_to_include")

@@ -65,6 +65,7 @@ RGC:
     - .058
     - .075
   max_iter: 5000
+  training_scaling: 0.5
 
 V1:
   model_name: 'V1_norm_s6_gaussian'
@@ -83,6 +84,7 @@ V1:
   coarse_to_fine: 'together'
   clamp_each_iter: False
   gpu: 1
+  training_scaling: 1.0
 
 PSYCHOPHYSICS:
   SESSIONS:
