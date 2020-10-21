@@ -835,8 +835,9 @@ rule collect_metamers_training:
     # create a test version for teaching someone how to run the
     # experiment or for demos
     input:
-        lambda wildcards: utils.generate_metamer_paths(wildcards.model_name,
-                                                       scaling=config[wildcards.model_name.split('_')[0]]['training_scaling']),
+        lambda wildcards: [m.replace('metamer.png', 'metamer.npy') for m in
+                           utils.generate_metamer_paths(wildcards.model_name, gpu=1,
+                                                       scaling=config[wildcards.model_name.split('_')[0]]['training_scaling'])],
         [utils.get_ref_image_full_path(i) for i in IMAGES],
     output:
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}_training', 'stimuli.npy'),
