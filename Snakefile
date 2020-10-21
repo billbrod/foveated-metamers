@@ -1052,3 +1052,37 @@ rule scaling_comparison_figure:
                     fig = met.figures.scaling_comparison_figure(wildcards.model_name,
                         wildcards.image_name, scaling, wildcards.seed, max_ecc=max_ecc)
                     fig.savefig(output[0], bbox_inches='tight')
+
+
+rule window_size_figure:
+    input:
+        image = lambda wildcards: [m.replace('metamer.png', 'metamer_gamma-corrected.png') for m in
+                                   utils.generate_metamer_paths(**wildcards)],
+    output:
+        report(op.join(config['DATA_DIR'], 'figures', '{context}', '{model_name}',
+                       '{image_name}_scaling-{scaling}_seed-{seed}_window.svg'))
+    log:
+        report(op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
+                       '{image_name}_scaling-{scaling}_seed-{seed}_window.log'))
+    benchmark:
+        report(op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
+                       '{image_name}_scaling-{scaling}_seed-{seed}_window_benchmark.txt'))
+    params:
+        cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
+    run:
+        import foveated_metamers as met
+        import seaborn as sns
+        import contextlib
+        import imageio
+        import plenoptic as po
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                font_scale = {'poster': 1.7}.get(wildcards.context, 1)
+                min_ecc = config['DEFAULT_METAMERS']['min_ecc']
+                max_ecc = config['DEFAULT_METAMERS']['max_ecc']
+                with sns.plotting_context(wildcards.context, font_scale=font_scale):
+                    image = met.utils.convert_im_to_float(imageio.imread(input.image[0]))
+                    model, _, _, _ = met.create_metamers.setup_model(wildcards.model_name, float(wildcards.scaling),
+                                                                     image, min_ecc, max_ecc)
+                    fig = met.figures.pooling_window_size(model.PoolingWindows, image)
+                    fig.savefig(output[0], bbox_inches='tight')

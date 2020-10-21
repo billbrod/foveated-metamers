@@ -1,8 +1,11 @@
 """code to generate figures for the project
 """
 import imageio
+import torch
 import numpy as np
 import pyrtools as pt
+import plenoptic as po
+from skimage import measure
 import os.path as op
 from . import utils
 
@@ -254,4 +257,54 @@ def scaling_comparison_figure(model_name, image_name, scaling_vals, seed, window
     fig.axes[0].set(title='Reference')
     for i, sc in zip(range(1, len(images)), scaling_vals):
         fig.axes[i].set(title='scaling=%.03f' % sc)
+    return fig
+
+
+def pooling_window_size(windows, image, target_eccentricity=24,
+                        windows_scale=0, **kwargs):
+    """Plot example window on image.
+
+    This plots a single window, as close to the target_eccentricity as
+    possible, at half-max amplitude, to visualize the size of the pooling
+    windows
+
+    Parameters
+    ----------
+    windows : po.simul.PoolingWindows
+        The PoolingWindows object to plot.
+    image : np.ndarray or str
+        The image to plot the window on. If a np.ndarray, then this should
+        already lie between 0 and 1. If a str, must be the path to the image
+        file,and we'll load it in.
+    target_eccentricity : float, optional
+        The approximate central eccentricity of the window to plot
+    windows_scale : int, optional
+        The scale of the windows to plot. If greater than 0, we down-sampled
+        image by a factor of 2 that many times so they plot correctly.
+    kwargs :
+        Passed to pyrtools.imshow.
+
+    Returns
+    -------
+    fig : plt.Figure
+        The figure containing the plot.
+
+    """
+    if isinstance(image, str):
+        image = utils.convert_im_to_float(imageio.imread(image))
+    target_ecc_idx = abs(windows.central_eccentricity_degrees -
+                         target_eccentricity).argmin()
+    ecc_windows = (windows.ecc_windows[windows_scale] /
+                   windows.norm_factor[windows_scale])
+    target_amp = windows.window_max_amplitude / 2
+    window = torch.einsum('hw,hw->hw',
+                          windows.angle_windows[windows_scale][0],
+                          ecc_windows[target_ecc_idx])
+
+    # need to down-sample image for these scales
+    for i in range(windows_scale):
+        image = measure.block_reduce(image, (2, 2))
+    fig = pt.imshow(image, title=None, **kwargs)
+    fig.axes[0].contour(po.to_numpy(window).squeeze(), [target_amp],
+                        colors='r')
     return fig
