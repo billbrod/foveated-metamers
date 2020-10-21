@@ -199,7 +199,7 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
                                    center_surround_ratio=center_surround_ratio,
                                    transition_x=transition_x,
                                    normalize_dict=normalize_dict)
-        animate_figsize = (22, 5)
+        animate_figsize = ((image.shape[-1] / image.shape[-2]) * 5 + 2, 5)
         if model.window_type == 'dog':
             # then our rep_image will include 3 plots, instead of 1, so
             # we want it to be wider
@@ -211,7 +211,7 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
         # figsize and image shape are backwards of each other:
         # image.shape's last two indices are (height, width), while
         # figsize is (width, height)
-        default_imgsize = 256
+        default_imgsize = (256, (image.shape[-1] / image.shape[-2]) * 256)
     elif model_name.startswith('V1'):
         if 'norm' not in model_name:
             if normalize_dict:
