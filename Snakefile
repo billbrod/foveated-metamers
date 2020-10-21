@@ -1060,7 +1060,7 @@ rule window_size_figure:
                                    utils.generate_metamer_paths(**wildcards)],
     output:
         report(op.join(config['DATA_DIR'], 'figures', '{context}', '{model_name}',
-                       '{image_name}_scaling-{scaling}_seed-{seed}_window.svg'))
+                       '{image_name}_scaling-{scaling}_seed-{seed}_window.png'))
     log:
         report(op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
                        '{image_name}_scaling-{scaling}_seed-{seed}_window.log'))
@@ -1082,7 +1082,9 @@ rule window_size_figure:
                 max_ecc = config['DEFAULT_METAMERS']['max_ecc']
                 with sns.plotting_context(wildcards.context, font_scale=font_scale):
                     image = met.utils.convert_im_to_float(imageio.imread(input.image[0]))
-                    model, _, _, _ = met.create_metamers.setup_model(wildcards.model_name, float(wildcards.scaling),
-                                                                     image, min_ecc, max_ecc)
+                    # remove the normalizing aspect, since we don't need it here
+                    model, _, _, _ = met.create_metamers.setup_model(wildcards.model_name.replace('_norm', ''),
+                                                                     float(wildcards.scaling),
+                                                                     image, min_ecc, max_ecc, params.cache_dir)
                     fig = met.figures.pooling_window_size(model.PoolingWindows, image)
-                    fig.savefig(output[0], bbox_inches='tight')
+                    fig.savefig(output[0])
