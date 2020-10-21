@@ -1060,13 +1060,13 @@ rule window_size_figure:
                                    utils.generate_metamer_paths(**wildcards)],
     output:
         report(op.join(config['DATA_DIR'], 'figures', '{context}', '{model_name}',
-                       '{image_name}_scaling-{scaling}_seed-{seed}_window.png'))
+                       '{image_name}_scaling-{scaling}_seed-{seed}_gpu-{gpu}_window.png'))
     log:
         report(op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
-                       '{image_name}_scaling-{scaling}_seed-{seed}_window.log'))
+                       '{image_name}_scaling-{scaling}_seed-{seed}_gpu-{gpu}_window.log'))
     benchmark:
         report(op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
-                       '{image_name}_scaling-{scaling}_seed-{seed}_window_benchmark.txt'))
+                       '{image_name}_scaling-{scaling}_seed-{seed}_gpu-{gpu}_window_benchmark.txt'))
     params:
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
     run:
