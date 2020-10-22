@@ -2,12 +2,14 @@
 """
 import imageio
 import torch
+import re
 import numpy as np
 import pyrtools as pt
 import plenoptic as po
 from skimage import measure
+import matplotlib.pyplot as plt
 import os.path as op
-from . import utils
+from . import utils, create_metamers
 
 V1_TEMPLATE_PATH = op.join('/home/billbrod/Desktop/metamers', 'metamers_display', 'V1_norm_s6_'
                            'gaussian', '{image_name}', 'scaling-{scaling}', 'opt-Adam',
@@ -308,3 +310,57 @@ def pooling_window_size(windows, image, target_eccentricity=24,
     fig.axes[0].contour(po.to_numpy(window).squeeze(), [target_amp],
                         colors='r')
     return fig
+
+
+def synthesis_video(metamer_save_path, model_name=None):
+    """Create video showing synthesis progress, for presentations.
+
+    Creates videos showing the metamer, representation, and pixels over time.
+    Works best if synthesis was run with store_progress=1, or some other low
+    value. Will create three videos, so can be used for a build. Will be saved
+    in the same directory as metamer_save_path, replacing the extension with
+    _synthesis-0.mp4, _synthesis-1.mp4, and synthesis-2.mp4
+
+    WARNING: This will be very memory-intensive and may take a long time to
+    run, depending on how many iterations synthesis ran for.
+
+    Parameters
+    ----------
+    metamer_save_path : str
+        Path to the .pt file containing the complete saved metamer
+    model_name : str or None, optional
+        str giving the model name. If None, we try and infer it from
+        metamer_save_path
+
+    """
+    if model_name is None:
+        # try to infer from path
+        model_name = re.findall('/((?:RGC|V1)_.*?)/', path)[0]
+    if model_name.startswith('RGC'):
+        model_constructor = po.simul.PooledRGC.from_state_dict_reduced
+    elif model_name.startswith('V1'):
+        model_constructor = po.simul.PooledV1.from_state_dict_reduced
+    metamer = po.synth.Metamer.load(metamer_save_path, model_constructor=model_constructor)
+    animate_figsize, _, img_zoom = create_metamers.find_figsizes(model_name,
+                                                                 metamer.model,
+                                                                 metamer.base_signal.shape)
+    width_ratios = [metamer.synthesized_signal.shape[-1] / metamer.synthesized_signal.shape[-2],
+                    1, 1]
+    vid_kwargs = {}
+    for i in range(3):
+        video_path = op.splitext(metamer_save_path)[0] + f"_synthesis-{i}.mp4"
+        print(f"Saving synthesis-{i} video at {video_path}")
+        figsize_2 = ((animate_figsize[0]-2) * .75 + 2, animate_figsize[1])
+        fig, axes = plt.subplots(1, 3, figsize=figsize_2,
+                                 subplot_kw={'aspect': 1},
+                                 gridspec_kw={'width_ratios': width_ratios,
+                                              'left': .05, 'right': .95})
+        for j in range(i+1, 3):
+            fig.axes[j].set_visible(False)
+        if i == 1:
+            vid_kwargs['plot_rep_comparison'] = True
+        elif i == 2:
+            vid_kwargs['plot_signal_comparison'] = True
+        anim = metamer.animate(fig=fig, imshow_zoom=img_zoom, plot_loss=False,
+                               plot_representation_error=False, **vid_kwargs)
+        anim.save(video_path)

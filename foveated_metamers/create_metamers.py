@@ -83,6 +83,102 @@ def setup_image(image):
     return image
 
 
+def find_figsizes(model_name, model, image_shape):
+    """Find figure sizes for various outputs, based on model.
+
+    This gives a best guess, can definitely still be improved.
+
+    Parameters
+    ----------
+    model_name : str
+        str defining the model. Must begin with either RGC or V1.
+    image_shape : array_like
+        array_like giving the shape of the image. Height and width must be on
+        the last two dimensions.
+
+    Returns
+    -------
+    animate_figsize : tuple
+        The figsize tuple to use with ``metamer.animate`` or
+        ``metamer.plot_metamer_status`` functions
+    rep_image_figsize : tuple
+        The figsize tuple to pass to ``summary_plots`` to for the
+        'rep_image' plot
+    img_zoom : int or float
+        Either an int or an inverse power of 2, how much to zoom the
+        images by in the plots we'll create
+
+    """
+    if model_name.startswith('RGC'):
+        animate_figsize = ((3+(image_shape[-1] / image_shape[-2])) * 5 + 2, 5.5)
+        # these values were selected at 72 dpi, so will need to be adjusted if
+        # ours is different
+        animate_figsize = [s*72/mpl.rcParams['figure.dpi'] for s in animate_figsize]
+        if 'dog' in model_name:
+            # then our rep_image will include 3 plots, instead of 1, so
+            # we want it to be wider
+            rep_image_figsize = (13, 13)
+        else:
+            rep_image_figsize = [4, 13]
+        # default figsize arguments work for an image that is 256x256,
+        # may need to expand. we go backwards through figsize because
+        # figsize and image shape are backwards of each other:
+        # image_shape's last two indices are (height, width), while
+        # figsize is (width, height)
+        default_imgsize = np.array((256, (image_shape[-1] / image_shape[-2]) * 256))
+    elif model_name.startswith('V1'):
+        try:
+            num_scales = int(re.findall('_s([0-9]+)_', model_name)[0])
+        except (IndexError, ValueError):
+            num_scales = 4
+        animate_figsize = (40, 11)
+        # we need about 11 per plot (and we have one of those per scale,
+        # plus one for the mean luminance)
+        rep_image_figsize = [11 * (num_scales+1), 30]
+        # default figsize arguments work for an image that is 512x512,
+        # may need to expand. we go backwards through figsize because
+        # figsize and image shape are backwards of each other:
+        # image.shape's last two indices are (height, width), while
+        # figsize is (width, height)
+        default_imgsize = np.array((512, 512))
+    # We want to figure out two things: 1. how much larger we need to
+    # make the different figures so we can fit everything on them and
+    # 2. if we need to shrink the images in order to fit
+    # everything. here we determine how much bigger the image is than
+    # the one we used to get the figsizes above
+    zoom_factor = np.array([max(1, image_shape[::-1][i]/default_imgsize[i]) for i in range(2)])
+    img_zoom = 1
+    # if it's more than twice as big, then that's too much to blow
+    # everything up, so we figure out how much to shrink the image by to
+    # fit on a figure twice as big as above
+    if (zoom_factor > 2).any():
+        zoom_factor = np.array([min(i, 2) for i in zoom_factor])
+        while ((np.array(image_shape[::-1][:2]) * img_zoom) > (default_imgsize*zoom_factor)).any():
+            img_zoom /= 2
+        zoom_factor = np.array([max(1, img_zoom*image_shape[::-1][i]/default_imgsize[i]) for i in range(2)])
+    # img_zoom applies to the first image and then will increase by a factor of
+    # 2 for all successive scales
+    plot_shapes = np.array([img_zoom * 2**k * np.array(v.shape[-2:]) for k, v in
+                            model.PoolingWindows.angle_windows.items()])
+    if (plot_shapes.astype(int) != plot_shapes).any():
+        raise Exception("At least one of the model scales will have a fractional image size. "
+                        "Make your image size closer to a power of 2. Debug info: "
+                        f"img_zoom: {img_zoom}, plot_shapes: {plot_shapes}")
+    # and then update the figsizes appropriately
+    animate_figsize = tuple([s*zoom_factor[i] for i, s in enumerate(animate_figsize)])
+    rep_image_figsize = tuple([s*zoom_factor[i] for i, s in enumerate(rep_image_figsize)])
+    rescale_factor = np.mean(zoom_factor)
+    # 10 and 12 are the default font sizes for labels and titles,
+    # respectively, and we want to scale them in order to keep them
+    # readable. this should be global to matplotlib and so propagate
+    # through
+    mpl.rc('axes', labelsize=rescale_factor*10, titlesize=rescale_factor*12)
+    mpl.rc('xtick', labelsize=rescale_factor*10)
+    mpl.rc('ytick', labelsize=rescale_factor*10)
+    mpl.rc('lines', linewidth=rescale_factor*1.5, markersize=rescale_factor*6)
+    return animate_figsize, rep_image_figsize, img_zoom
+
+
 def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normalize_dict=None):
     r"""setup the model
 
@@ -199,22 +295,6 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
                                    center_surround_ratio=center_surround_ratio,
                                    transition_x=transition_x,
                                    normalize_dict=normalize_dict)
-        animate_figsize = ((3+(image.shape[-1] / image.shape[-2])) * 5 + 2, 5)
-        # these values were selected at 72 dpi, so will need to be adjusted if
-        # ours is different
-        animate_figsize = [s*72/mpl.rcParams['figure.dpi'] for s in animate_figsize]
-        if model.window_type == 'dog':
-            # then our rep_image will include 3 plots, instead of 1, so
-            # we want it to be wider
-            rep_image_figsize = (13, 13)
-        else:
-            rep_image_figsize = [4, 13]
-        # default figsize arguments work for an image that is 256x256,
-        # may need to expand. we go backwards through figsize because
-        # figsize and image shape are backwards of each other:
-        # image.shape's last two indices are (height, width), while
-        # figsize is (width, height)
-        default_imgsize = np.array((256, (image.shape[-1] / image.shape[-2]) * 256))
     elif model_name.startswith('V1'):
         if 'norm' not in model_name:
             if normalize_dict:
@@ -235,53 +315,10 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
                                   normalize_dict=normalize_dict,
                                   num_scales=num_scales,
                                   window_type=window_type)
-        animate_figsize = (40, 11)
-        # we need about 11 per plot (and we have one of those per scale,
-        # plus one for the mean luminance)
-        rep_image_figsize = [11 * (num_scales+1), 30]
-        # default figsize arguments work for an image that is 512x512,
-        # may need to expand. we go backwards through figsize because
-        # figsize and image shape are backwards of each other:
-        # image.shape's last two indices are (height, width), while
-        # figsize is (width, height)
-        default_imgsize = np.array((512, 512))
     else:
         raise Exception("Don't know how to handle model_name %s" % model_name)
-    # We want to figure out two things: 1. how much larger we need to
-    # make the different figures so we can fit everything on them and
-    # 2. if we need to shrink the images in order to fit
-    # everything. here we determine how much bigger the image is than
-    # the one we used to get the figsizes above
-    zoom_factor = np.array([max(1, image.shape[::-1][i]/default_imgsize[i]) for i in range(2)])
-    img_zoom = 1
-    # if it's more than twice as big, then that's too much to blow
-    # everything up, so we figure out how much to shrink the image by to
-    # fit on a figure twice as big as above
-    if (zoom_factor > 2).any():
-        zoom_factor = np.array([min(i, 2) for i in zoom_factor])
-        while ((np.array(image.shape[::-1][:2]) * img_zoom) > (default_imgsize*zoom_factor)).any():
-            img_zoom /= 2
-        zoom_factor = np.array([max(1, img_zoom*image.shape[::-1][i]/default_imgsize[i]) for i in range(2)])
-    # img_zoom applies to the first image and then will increase by a factor of
-    # 2 for all successive scales
-    plot_shapes = np.array([img_zoom * 2**k * np.array(v.shape[-2:]) for k, v in
-                            model.PoolingWindows.angle_windows.items()])
-    if (plot_shapes.astype(int) != plot_shapes).any():
-        raise Exception("At least one of the model scales will have a fractional image size. "
-                        "Make your image size closer to a power of 2. Debug info: "
-                        f"img_zoom: {img_zoom}, plot_shapes: {plot_shapes}")
-    # and then update the figsizes appropriately
-    animate_figsize = tuple([s*zoom_factor[i] for i, s in enumerate(animate_figsize)])
-    rep_image_figsize = tuple([s*zoom_factor[i] for i, s in enumerate(rep_image_figsize)])
-    rescale_factor = np.mean(zoom_factor)
-    # 10 and 12 are the default font sizes for labels and titles,
-    # respectively, and we want to scale them in order to keep them
-    # readable. this should be global to matplotlib and so propagate
-    # through
-    mpl.rc('axes', labelsize=rescale_factor*10, titlesize=rescale_factor*12)
-    mpl.rc('xtick', labelsize=rescale_factor*10)
-    mpl.rc('ytick', labelsize=rescale_factor*10)
-    mpl.rc('lines', linewidth=rescale_factor*1.5, markersize=rescale_factor*6)
+    animate_figsize, rep_image_figsize, img_zoom = find_figsizes(model_name, model,
+                                                                 image.shape)
     return model, animate_figsize, rep_image_figsize, img_zoom
 
 
@@ -656,24 +693,6 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
                              subplot_kw={'aspect': 1})
     anim = metamer.animate(fig=fig, imshow_zoom=img_zoom, plot_image_hist=True)
     anim.save(video_path)
-    vid_kwargs = {}
-    for i in range(3):
-        video_path = op.splitext(save_path)[0] + f"_synthesis-{i}.mp4"
-        print(f"Saving synthesis-{i} video at {video_path}")
-        figsize_2 = ((animate_figsize[0]-2) * .75 + 2, animate_figsize[1])
-        fig, axes = plt.subplots(1, 3, figsize=figsize_2,
-                                 subplot_kw={'aspect': 1},
-                                 gridspec_kw={'width_ratios': width_ratios[:3],
-                                              'left': .05, 'right': .95})
-        for j in range(i+1, 3):
-            fig.axes[j].set_visible(False)
-        if i == 1:
-            vid_kwargs['plot_rep_comparison'] = True
-        elif i == 2:
-            vid_kwargs['plot_signal_comparison'] = True
-        anim = metamer.animate(fig=fig, imshow_zoom=img_zoom, plot_loss=False,
-                               plot_representation_error=False, **vid_kwargs)
-        anim.save(video_path)
     synthesis_path = op.splitext(save_path)[0] + "_synthesis.png"
     print(f"Saving synthesis image at {synthesis_path}")
     fig = metamer.plot_synthesis_status(figsize=animate_figsize, imshow_zoom=img_zoom,
@@ -799,7 +818,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
          loss_thresh=1e-4, loss_change_iter=50, save_path=None, initial_image_type='white',
          gpu_id=None, cache_dir=None, normalize_dict=None, optimizer='SGD', fraction_removed=0,
          loss_change_fraction=1, loss_change_thresh=.1, coarse_to_fine=False, clamper_name='clamp',
-         clamp_each_iter=True, loss_func='l2', continue_path=None):
+         clamp_each_iter=True, loss_func='l2', continue_path=None, save_all=True):
     r"""create metamers!
 
     Given a model_name, model parameters, a target image, and some
@@ -965,6 +984,12 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         where we left off) and set max_iter to a different value (the
         number of extra iterations to run) otherwise the rest of the
         arguments should be the same as the first run.
+    save_all : bool, optional
+        If True, store_progress=1 and we cache the synthesized image and its
+        representation each iteration. If False, we do it 100 times over the
+        course of the synthesis. WARNING: This will massively increase the
+        amount of RAM used (not on the GPU though), the footprint on disk, and
+        the amount of time it takes to run.
 
     """
     print("Using seed %s" % seed)
@@ -1046,11 +1071,12 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
             save_progress = max(200, max_iter//10)
     else:
         save_progress = False
-    # don't want to store too often, otherwise we slow down and use too
-    # much memory. this way we store at most 100 time points
-    store_progress = max(10, max_iter//100)
-    # TEMPORARY
-    store_progress = 1
+    if save_all:
+        store_progress = 1
+    else:
+        # don't want to store too often, otherwise we slow down and use too
+        # much memory. this way we store at most 100 time points
+        store_progress = max(10, max_iter//100)
     start_time = time.time()
     matched_im, matched_rep = metamer.synthesize(clamper=clamper,
                                                  store_progress=store_progress,

@@ -30,6 +30,7 @@ wildcard_constraints:
     sess_num="|".join([f'{i:02d}' for i in range(3)]),
     im_num="|".join([f'{i:02d}' for i in range(4)]),
     task='abx|split-same|split-diff',
+    save_all='|_saveall',
 ruleorder:
     collect_metamers_training > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image
 
@@ -69,7 +70,8 @@ rule test_setup:
                                      learning_rate=1, min_ecc=.5, max_ecc=15,
                                      max_iter=100, loss_thresh=1e-8, gpu=0,
                                      clamp='clamp', clamp_each_iter=True, loss='l2',
-                                     loss_change_thresh=.1, loss_change_iter=50),
+                                     loss_change_thresh=.1, loss_change_iter=50,
+                                     save_all=''),
         METAMER_TEMPLATE_PATH.format(model_name=MODELS[1],
                                      image_name='einstein_degamma_size-256,256',
                                      scaling=.5, optimizer='Adam', fract_removed=0, loss_fract=1,
@@ -77,7 +79,7 @@ rule test_setup:
                                      learning_rate=.1, min_ecc=.5, max_ecc=15, max_iter=100,
                                      loss_thresh=1e-8, gpu=0, coarse_to_fine='together',
                                      clamp='clamp', clamp_each_iter=True, loss='l2',
-                                     loss_change_iter=50),
+                                     loss_change_iter=50, save_all=''),
         METAMER_TEMPLATE_PATH.format(model_name=MODELS[0],
                                      image_name='einstein_degamma_size-256,256',
                                      scaling=.1, optimizer='Adam', fract_removed=0, loss_fract=1,
@@ -85,7 +87,7 @@ rule test_setup:
                                      learning_rate=1, min_ecc=.5, max_ecc=15,
                                      max_iter=100, loss_thresh=1e-8, gpu=1,
                                      clamp='clamp', clamp_each_iter=True, loss='l2',
-                                     loss_change_thresh=.1, loss_change_iter=50),
+                                     loss_change_thresh=.1, loss_change_iter=50, save_all=''),
         METAMER_TEMPLATE_PATH.format(model_name=MODELS[1],
                                      image_name='einstein_degamma_size-256,256',
                                      scaling=.5, optimizer='Adam', fract_removed=0, loss_fract=1,
@@ -93,7 +95,7 @@ rule test_setup:
                                      learning_rate=.1, min_ecc=.5, max_ecc=15,
                                      max_iter=100, loss_thresh=1e-8, gpu=1, clamp='clamp',
                                      clamp_each_iter=True, loss='l2', coarse_to_fine='together',
-                                     loss_change_iter=50),
+                                     loss_change_iter=50, save_all=''),
     output:
         directory(op.join(config['DATA_DIR'], 'test_setup', MODELS[0], 'einstein')),
         directory(op.join(config['DATA_DIR'], 'test_setup', MODELS[1], 'einstein'))
@@ -400,9 +402,9 @@ def get_mem_estimate(wildcards):
             if 'gaussian' in wildcards.model_name:
                 if 'V1' in wildcards.model_name:
                     if float(wildcards.scaling) < .01:
-                        return 128
+                        mem = 128
                     else:
-                        return 64
+                        mem = 64
                 if 'RGC' in wildcards.model_name:
                     # this is an approximation of the size of their windows,
                     # and if you have at least 3 times this memory, you're
@@ -410,20 +412,20 @@ def get_mem_estimate(wildcards):
                     # converting form 2048,3528 (which the numbers came
                     # from) to 2048,2600 (which has 1.36x fewer pixels)
                     window_size = 1.17430726 / (1.36*float(wildcards.scaling))
-                    return int(4 * window_size)
+                    mem = int(4 * window_size)
             if 'cosine' in wildcards.model_name:
                 if 'V1' in wildcards.model_name:
                     # most it will need is 32 GB
-                    return 32
+                    mem = 32
                 if 'RGC' in wildcards.model_name:
                     # this is an approximation of the size of their windows,
                     # and if you have at least 3 times this memory, you're
                     # good
                     window_size = 0.49238059 / float(wildcards.scaling)
-                    return int(4 * window_size)
+                    mem = int(4 * window_size)
         else:
             # don't have a good estimate for these
-            return 16
+            mem = 16
     except AttributeError:
         # then we don't have a image_name wildcard (and thus this is
         # being called by cache_windows)
@@ -435,16 +437,29 @@ def get_mem_estimate(wildcards):
                 # converting form 2048,3528 (which the numbers came
                 # from) to 2048,2600 (which has 1.36x fewer pixels)
                 window_size = 1.17430726 / (1.36*float(wildcards.scaling))
-                return int(3 * window_size)
+                mem = int(3 * window_size)
             elif wildcards.window_type == 'cosine':
                 # this is an approximation of the size of their windows,
                 # and if you have at least 3 times this memory, you're
                 # good
                 window_size = 0.49238059 / float(wildcards.scaling)
-                return int(3 * window_size)
+                mem = int(3 * window_size)
         else:
             # don't have a good estimate here
-            return 16
+            mem = 16
+    try:
+        if wildcards.save_all:
+            # for this estimate, RGC with scaling .095 went from 36GB requested
+            # to about 54GB used when stored iterations went from 100 to 1000.
+            # that's 1.5x higher, and we add a bit of a buffer. also, don't
+            # want to reduce memory estimate
+            mem_factor = max((int(wildcards.max_iter) / 100) * (1.7/10), 1)
+            mem *= mem_factor
+    except AttributeError:
+        # then we're missing either the save_all or max_iter wildcard, in which
+        # case this is probably cache_windows and the above doesn't matter
+        pass
+    return int(np.ceil(mem))
 
 
 rule cache_windows:
@@ -620,7 +635,6 @@ rule create_metamers:
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'history.csv'),
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'history.png'),
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'synthesis.mp4'),
-        [METAMER_TEMPLATE_PATH.replace('metamer.png', f'synthesis-{i}.mp4') for i in range(3)],
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'synthesis.png'),
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'window_check.svg'),
         METAMER_TEMPLATE_PATH.replace('metamer.png', 'rep.png'),
@@ -710,7 +724,6 @@ rule continue_metamers:
         CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'history.csv'),
         CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'history.png'),
         CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'synthesis.mp4'),
-        [CONTINUE_TEMPLATE_PATH.replace('metamer.png', f'synthesis-{i}.mp4') for i in range(3)],
         CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'synthesis.png'),
         CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'window_check.svg'),
         CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'rep.png'),
@@ -781,7 +794,6 @@ rule postproc_metamers:
         lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'history.csv'),
         lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'history.png'),
         lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'synthesis.mp4'),
-        [lambda wildcards: find_attempts(wildcards).replace('metamer.png', f'synthesis-{i}.mp4') for i in range(3)],
         lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'synthesis.png'),
         lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'window_check.svg'),
         lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'rep.png'),
@@ -794,7 +806,6 @@ rule postproc_metamers:
         OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'history.csv'),
         OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'history.png'),
         OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'synthesis.mp4'),
-        [OUTPUT_TEMPLATE_PATH.replace('metamer.png', f'synthesis-{i}.mp4') for i in range(3)],
         OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'synthesis.png'),
         OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'window_check.svg'),
         OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'rep.png'),
@@ -1066,11 +1077,11 @@ rule window_size_figure:
         report(op.join(config['DATA_DIR'], 'figures', '{context}', '{model_name}',
                        '{image_name}_scaling-{scaling}_seed-{seed}_gpu-{gpu}_window.png'))
     log:
-        report(op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
-                       '{image_name}_scaling-{scaling}_seed-{seed}_gpu-{gpu}_window.log'))
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
+                '{image_name}_scaling-{scaling}_seed-{seed}_gpu-{gpu}_window.log')
     benchmark:
-        report(op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
-                       '{image_name}_scaling-{scaling}_seed-{seed}_gpu-{gpu}_window_benchmark.txt'))
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
+                '{image_name}_scaling-{scaling}_seed-{seed}_gpu-{gpu}_window_benchmark.txt')
     params:
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
     resources:
@@ -1094,3 +1105,22 @@ rule window_size_figure:
                                                                      image, min_ecc, max_ecc, params.cache_dir)
                     fig = met.figures.pooling_window_size(model.PoolingWindows, image)
                     fig.savefig(output[0])
+
+
+rule synthesis_video:
+    input:
+        METAMER_TEMPLATE_PATH.replace('_metamer.png', '.pt'),
+    output:
+        [METAMER_TEMPLATE_PATH.replace('metamer.png', f'synthesis-{i}.mp4') for i in range(3)],
+    log:
+        METAMER_LOG_PATH.replace('.log', '_synthesis_video.log')
+    benchmark:
+        METAMER_LOG_PATH.replace('.log', '_synthesis_video_benchmark.txt')
+    resources:
+        mem = get_mem_estimate,
+    run:
+        import foveated_metamers as met
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                met.figures.synthesis_video(input[0], wildcards.model_name)

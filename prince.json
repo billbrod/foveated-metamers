@@ -33,5 +33,9 @@
     "window_size_figure":
     {
         "mem": "{resources.mem}GB"
+    },
+    "synthesis_video":
+    {
+        "mem": "{resources.mem}GB"
     }
 }
