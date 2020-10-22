@@ -656,6 +656,24 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
                              subplot_kw={'aspect': 1})
     anim = metamer.animate(fig=fig, imshow_zoom=img_zoom, plot_image_hist=True)
     anim.save(video_path)
+    vid_kwargs = {}
+    for i in range(3):
+        video_path = op.splitext(save_path)[0] + f"_synthesis-{i}.mp4"
+        print(f"Saving synthesis-{i} video at {video_path}")
+        figsize_2 = ((animate_figsize[0]-2) * .75 + 2, animate_figsize[1])
+        fig, axes = plt.subplots(1, 3, figsize=figsize_2,
+                                 subplot_kw={'aspect': 1},
+                                 gridspec_kw={'width_ratios': width_ratios[:3],
+                                              'left': .05, 'right': .95})
+        for j in range(i+1, 3):
+            fig.axes[j].set_visible(False)
+        if i == 1:
+            vid_kwargs['plot_rep_comparison'] = True
+        elif i == 2:
+            vid_kwargs['plot_signal_comparison'] = True
+        anim = metamer.animate(fig=fig, imshow_zoom=img_zoom, plot_loss=False,
+                               plot_representation_error=False, **vid_kwargs)
+        anim.save(video_path)
     synthesis_path = op.splitext(save_path)[0] + "_synthesis.png"
     print(f"Saving synthesis image at {synthesis_path}")
     fig = metamer.plot_synthesis_status(figsize=animate_figsize, imshow_zoom=img_zoom,
@@ -1031,6 +1049,8 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     # don't want to store too often, otherwise we slow down and use too
     # much memory. this way we store at most 100 time points
     store_progress = max(10, max_iter//100)
+    # TEMPORARY
+    store_progress = 1
     start_time = time.time()
     matched_im, matched_rep = metamer.synthesize(clamper=clamper,
                                                  store_progress=store_progress,
