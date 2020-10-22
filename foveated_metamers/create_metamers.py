@@ -147,7 +147,12 @@ def find_figsizes(model_name, model, image_shape):
     # everything. here we determine how much bigger the image is than
     # the one we used to get the figsizes above
     zoom_factor = np.array([max(1, image_shape[::-1][i]/default_imgsize[i]) for i in range(2)])
-    img_zoom = 1
+    if all(zoom_factor == 1):
+        img_zoom = [int(np.round(default_imgsize[i] / image_shape[::-1][i]))
+                    for i in range(2)]
+        img_zoom = max(img_zoom)
+    else:
+        img_zoom = 1
     # if it's more than twice as big, then that's too much to blow
     # everything up, so we figure out how much to shrink the image by to
     # fit on a figure twice as big as above
