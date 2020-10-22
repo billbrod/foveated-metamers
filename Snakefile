@@ -1073,6 +1073,8 @@ rule window_size_figure:
                        '{image_name}_scaling-{scaling}_seed-{seed}_gpu-{gpu}_window_benchmark.txt'))
     params:
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
+    resources:
+        mem = get_mem_estimate,
     run:
         import foveated_metamers as met
         import seaborn as sns

@@ -29,5 +29,9 @@
     "cache_windows":
     {
         "mem": "{resources.mem}GB"
+    },
+    "window_size_figure":
+    {
+        "mem": "{resources.mem}GB"
     }
 }
