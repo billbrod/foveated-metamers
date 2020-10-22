@@ -199,7 +199,10 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
                                    center_surround_ratio=center_surround_ratio,
                                    transition_x=transition_x,
                                    normalize_dict=normalize_dict)
-        animate_figsize = ((image.shape[-1] / image.shape[-2]) * 5 + 2, 5)
+        animate_figsize = ((3+(image.shape[-1] / image.shape[-2])) * 5 + 2, 5)
+        # these values were selected at 72 dpi, so will need to be adjusted if
+        # ours is different
+        animate_figsize = [s*72/mpl.rcParams['figure.dpi'] for s in animate_figsize]
         if model.window_type == 'dog':
             # then our rep_image will include 3 plots, instead of 1, so
             # we want it to be wider
@@ -211,7 +214,7 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
         # figsize and image shape are backwards of each other:
         # image.shape's last two indices are (height, width), while
         # figsize is (width, height)
-        default_imgsize = (256, (image.shape[-1] / image.shape[-2]) * 256)
+        default_imgsize = np.array((256, (image.shape[-1] / image.shape[-2]) * 256))
     elif model_name.startswith('V1'):
         if 'norm' not in model_name:
             if normalize_dict:
@@ -241,7 +244,7 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
         # figsize and image shape are backwards of each other:
         # image.shape's last two indices are (height, width), while
         # figsize is (width, height)
-        default_imgsize = 512
+        default_imgsize = np.array((512, 512))
     else:
         raise Exception("Don't know how to handle model_name %s" % model_name)
     # We want to figure out two things: 1. how much larger we need to
@@ -249,7 +252,7 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
     # 2. if we need to shrink the images in order to fit
     # everything. here we determine how much bigger the image is than
     # the one we used to get the figsizes above
-    zoom_factor = np.array([max(1, image.shape[::-1][i]/default_imgsize) for i in range(2)])
+    zoom_factor = np.array([max(1, image.shape[::-1][i]/default_imgsize[i]) for i in range(2)])
     img_zoom = 1
     # if it's more than twice as big, then that's too much to blow
     # everything up, so we figure out how much to shrink the image by to
@@ -258,7 +261,7 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
         zoom_factor = np.array([min(i, 2) for i in zoom_factor])
         while ((np.array(image.shape[::-1][:2]) * img_zoom) > (default_imgsize*zoom_factor)).any():
             img_zoom /= 2
-        zoom_factor = np.array([max(1, img_zoom*image.shape[::-1][i]/default_imgsize) for i in range(2)])
+        zoom_factor = np.array([max(1, img_zoom*image.shape[::-1][i]/default_imgsize[i]) for i in range(2)])
     # img_zoom applies to the first image and then will increase by a factor of
     # 2 for all successive scales
     plot_shapes = np.array([img_zoom * 2**k * np.array(v.shape[-2:]) for k, v in
@@ -646,13 +649,18 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom):
     windowed_fig.savefig(windowed_path)
     video_path = op.splitext(save_path)[0] + "_synthesis.mp4"
     print("Saving synthesis video at %s" % video_path)
-    anim = metamer.animate(figsize=animate_figsize, imshow_zoom=img_zoom, plot_image_hist=True)
+    width_ratios = [metamer_image.shape[-1] / metamer_image.shape[-2], 1, 1, 1]
+    fig, axes = plt.subplots(1, 4, figsize=animate_figsize,
+                             gridspec_kw={'width_ratios': width_ratios,
+                                          'left': .05, 'right': .95},
+                             subplot_kw={'aspect': 1})
+    anim = metamer.animate(fig=fig, imshow_zoom=img_zoom, plot_image_hist=True)
     anim.save(video_path)
     synthesis_path = op.splitext(save_path)[0] + "_synthesis.png"
     print(f"Saving synthesis image at {synthesis_path}")
     fig = metamer.plot_synthesis_status(figsize=animate_figsize, imshow_zoom=img_zoom,
                                         plot_image_hist=True)
-    fig.savefig(synthesis_path)
+    fig.savefig(synthesis_path, bbox_inches='tight')
     angle_n = np.linspace(0, metamer.model.n_polar_windows, 8, dtype=int, endpoint=False)
     fig = metamer.model.PoolingWindows.plot_window_checks(angle_n)
     window_check_path = op.splitext(save_path)[0] + "_window_check.svg"
