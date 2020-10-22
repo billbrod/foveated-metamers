@@ -1121,6 +1121,8 @@ rule synthesis_video:
     run:
         import foveated_metamers as met
         import contextlib
+        import seaborn as sns
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                met.figures.synthesis_video(input[0], wildcards.model_name)
+                with sns.axes_style('white', {'axes.spines.right': False, 'axes.spines.top': False}):
+                    met.figures.synthesis_video(input[0], wildcards.model_name)
