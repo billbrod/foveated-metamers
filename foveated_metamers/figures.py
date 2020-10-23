@@ -357,6 +357,8 @@ def synthesis_video(metamer_save_path, model_name=None):
                                               'left': .05, 'right': .95})
         for j in range(i+1, 3):
             fig.axes[j].set_visible(False)
+        for j in range(0, i+1):
+            axes[j].locator_params(nbins=3)
         if i == 1:
             vid_kwargs['plot_rep_comparison'] = True
         elif i == 2:
