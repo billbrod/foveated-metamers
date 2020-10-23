@@ -1111,7 +1111,8 @@ rule synthesis_video:
     input:
         METAMER_TEMPLATE_PATH.replace('_metamer.png', '.pt'),
     output:
-        [METAMER_TEMPLATE_PATH.replace('metamer.png', f'synthesis-{i}.mp4') for i in range(3)],
+        [METAMER_TEMPLATE_PATH.replace('metamer.png', f'synthesis-{i}.{f}') for
+         i, f in enumerate(['png', 'png', 'png', 'mp4', 'png', 'mp4'])]
     log:
         METAMER_LOG_PATH.replace('.log', '_synthesis_video.log')
     benchmark:

@@ -349,8 +349,9 @@ def synthesis_schematic(metamer, iteration=0, plot_synthesized_image=True,
 
     Notes
     -----
-    To successfully animate, call with same flags, pass fig and axes_idx, and
-    set init_figure to False.
+    To successfully animate, call with same values for the args that start with
+    `plot_`, pass fig and axes_idx, and set init_figure, plot_loss,
+    plot_representation_error to False.
 
     """
     image_shape = metamer.base_signal.shape
@@ -464,28 +465,27 @@ def synthesis_video(metamer_save_path, model_name=None):
     elif model_name.startswith('V1'):
         model_constructor = po.simul.PooledV1.from_state_dict_reduced
     metamer = po.synth.Metamer.load(metamer_save_path, model_constructor=model_constructor)
-    animate_figsize, _, img_zoom = create_metamers.find_figsizes(model_name,
-                                                                 metamer.model,
-                                                                 metamer.base_signal.shape)
-    width_ratios = [metamer.synthesized_signal.shape[-1] / metamer.synthesized_signal.shape[-2],
-                    1, 1]
-    vid_kwargs = {}
-    for i in range(3):
-        video_path = op.splitext(metamer_save_path)[0] + f"_synthesis-{i}.mp4"
-        print(f"Saving synthesis-{i} video at {video_path}")
-        figsize_2 = ((animate_figsize[0]-2) * .75 + 2, animate_figsize[1])
-        fig, axes = plt.subplots(1, 3, figsize=figsize_2,
-                                 subplot_kw={'aspect': 1},
-                                 gridspec_kw={'width_ratios': width_ratios,
-                                              'left': .05, 'right': .95})
-        for j in range(i+1, 3):
-            fig.axes[j].set_visible(False)
-        for j in range(0, i+1):
-            axes[j].locator_params(nbins=3)
+    kwargs = {'plot_synthesized_image': False, 'plot_rep_comparison': False,
+              'plot_signal_comparison': False}
+    formats = ['png', 'png', 'png', 'mp4', 'png', 'mp4']
+    for i, f in enumerate(formats):
+        path = op.splitext(metamer_save_path)[0] + f"_synthesis-{i}.{f}"
+        print(f"Saving synthesis-{i} {f} at {path}")
         if i == 1:
-            vid_kwargs['plot_rep_comparison'] = True
+            kwargs['plot_synthesized_image'] = True
         elif i == 2:
-            vid_kwargs['plot_signal_comparison'] = True
-        anim = metamer.animate(fig=fig, imshow_zoom=img_zoom, plot_loss=False,
-                               plot_representation_error=False, **vid_kwargs)
-        anim.save(video_path)
+            kwargs['plot_rep_comparison'] = True
+        elif i == 4:
+            kwargs['plot_signal_comparison'] = True
+        fig, axes_idx = synthesis_schematic(metamer, **kwargs)
+        if i >= 2:
+            fig.axes[axes_idx['rep_comp']].locator_params(nbins=3)
+        if i >= 4:
+            fig.axes[axes_idx['signal_comp']].locator_params(nbins=3)
+        if f == 'mp4':
+            anim = metamer.animate(fig=fig, axes_idx=axes_idx,
+                                   plot_loss=False, init_figure=False,
+                                   plot_representation_error=False, **kwargs)
+            anim.save(path)
+        else:
+            fig.savefig(path)
