@@ -8,6 +8,7 @@ import pyrtools as pt
 import plenoptic as po
 from skimage import measure
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import os.path as op
 from . import utils, create_metamers
 
@@ -310,6 +311,128 @@ def pooling_window_size(windows, image, target_eccentricity=24,
     fig.axes[0].contour(po.to_numpy(window).squeeze(), [target_amp],
                         colors='r')
     return fig
+
+
+def synthesis_schematic(metamer, iteration=0, plot_synthesized_image=True,
+                        plot_rep_comparison=True, plot_signal_comparison=True,
+                        **kwargs):
+    """Create schematic of synthesis, for animating.
+
+    WARNING: Currently, only works with images of size (256, 256), will need a
+    small amount of tweaking to work with differently sized images. (And may
+    never look quite as good with them)
+
+    Parameters
+    ----------
+    metamer : po.synth.Metamer
+        The Metamer object to grab data from
+    iteration : int or None, optional
+        Which iteration to display. If None, we show the most recent one.
+        Negative values are also allowed.
+    plot_synthesized_image : bool, optional
+        Whether to plot the synthesized image or not.
+    plot_rep_comparison : bool, optional
+        Whether to plot a scatter plot comparing the synthesized and base
+        representation.
+    plot_signal_comparison : bool, optional
+        Whether to plot the comparison of the synthesized and base
+        images.
+    kwargs :
+        passed to metamer.plot_synthesis_status
+
+    Returns
+    -------
+    fig : plt.Figure
+        Figure containing the plot
+    axes_idx : dict
+        dictionary specifying which plot is where, for use with animate()
+
+    Notes
+    -----
+    To successfully animate, call with same flags, pass fig and axes_idx, and
+    set init_figure to False.
+
+    """
+    image_shape = metamer.base_signal.shape
+    figsize = ((1.5+(image_shape[-1] / image_shape[-2])) * 4.5 + 2.5, 3*4.5+1)
+    fig = plt.figure(figsize=figsize)
+    gs = mpl.gridspec.GridSpec(3, 10, figure=fig, hspace=.25, bottom=.05,
+                               top=.95, left=.05, right=.95)
+    fig.add_subplot(gs[0, 0:3], aspect=1)
+    fig.add_subplot(gs[0, 4:7], aspect=1)
+    fig.add_subplot(gs[1, 1:4], aspect=1)
+    fig.add_subplot(gs[1, 6:9], aspect=1)
+    fig.add_subplot(gs[2, 0:3], aspect=1)
+    fig.add_subplot(gs[2, 4:7], aspect=1)
+    axes_idx = {'image': 0, 'signal_comp': 2, 'rep_comp': 3,
+                'misc': [1] + list(range(4, len(fig.axes)))}
+    po.imshow(metamer.base_signal, ax=fig.axes[4], title=None)
+    if not plot_rep_comparison:
+        axes_idx['misc'].append(axes_idx.pop('rep_comp'))
+    if not plot_signal_comparison:
+        axes_idx['misc'].append(axes_idx.pop('signal_comp'))
+    for i in [0] + axes_idx['misc']:
+        fig.axes[i].xaxis.set_visible(False)
+        fig.axes[i].yaxis.set_visible(False)
+        fig.axes[i].set_frame_on(False)
+    model_axes = [5]
+    if plot_synthesized_image:
+        model_axes += [1]
+    arrowkwargs = {'xycoords': 'axes fraction', 'textcoords': 'axes fraction',
+                   'ha': 'center', 'va': 'center'}
+    arrowprops = {'color': '0', 'connectionstyle': 'arc3', 'arrowstyle': '->',
+                  'lw': 3}
+    for i in model_axes:
+        p = mpl.patches.Rectangle((0, .25), .5, .5, fill=False)
+        p.set_transform(fig.axes[i].transAxes)
+        fig.axes[i].add_patch(p)
+        fig.axes[i].text(.25, .5, 'M', {'size': 50}, ha='center', va='center',
+                         transform=fig.axes[i].transAxes)
+        fig.axes[i].annotate('', (0, .5), (-.4, .5), arrowprops=arrowprops,
+                             **arrowkwargs)
+    if plot_rep_comparison:
+        arrowprops['connectionstyle'] += ',rad=.3'
+        fig.axes[5].annotate('', (1.2, 1.25), (.53, .5), arrowprops=arrowprops,
+                             **arrowkwargs)
+        if plot_synthesized_image:
+            arrowprops['connectionstyle'] = 'arc3,rad=.2'
+            fig.axes[1].annotate('', (.6, -.8), (.25, .22), arrowprops=arrowprops,
+                                 **arrowkwargs)
+    else:
+        fig.axes[5].annotate('', (1.2, .5), (.53, .5), arrowprops=arrowprops,
+                             **arrowkwargs)
+        vector = "[{:.3f}, {:.3f}, {:.3f}, ..., {:.3f}]".format(*np.random.rand(4))
+        fig.axes[5].text(1.2, .5, vector, {'size': '25'}, transform=fig.axes[5].transAxes,
+                         va='center', ha='left')
+        if plot_synthesized_image:
+            fig.axes[1].annotate('', (1.2, .5), (.53, .5), arrowprops=arrowprops,
+                                 **arrowkwargs)
+            vector = "[{:.3f}, {:.3f}, {:.3f}, ..., {:.3f}]".format(*np.random.rand(4))
+            fig.axes[1].text(1.2, .5, vector, {'size': '25'}, transform=fig.axes[1].transAxes,
+                             va='center', ha='left')
+    if plot_signal_comparison:
+        arrowprops['connectionstyle'] = 'arc3'
+        fig.axes[4].annotate('', (.8, 1.25), (.8, 1.03), arrowprops=arrowprops,
+                             **arrowkwargs)
+        if plot_synthesized_image:
+            arrowprops['connectionstyle'] += ',rad=.1'
+            fig.axes[0].annotate('', (.25, -.8), (.15, -.03), arrowprops=arrowprops,
+                                 **arrowkwargs)
+    fig = metamer.plot_synthesis_status(axes_idx=axes_idx, iteration=iteration,
+                                        plot_rep_comparison=plot_rep_comparison,
+                                        plot_synthesized_image=plot_synthesized_image,
+                                        plot_loss=False,
+                                        plot_signal_comparison=plot_signal_comparison,
+                                        plot_representation_error=False, fig=fig,
+                                        **kwargs)
+    # plot_synthesis_status can update axes_idx
+    axes_idx = metamer._axes_idx
+    fig.axes[0].set_title('')
+    if plot_signal_comparison:
+        fig.axes[2].set(xlabel='', ylabel='')
+    if plot_rep_comparison:
+        fig.axes[3].set(xlabel='', ylabel='')
+    return fig, axes_idx
 
 
 def synthesis_video(metamer_save_path, model_name=None):
