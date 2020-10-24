@@ -668,7 +668,8 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom,
         course of the synthesis. WARNING: This will massively increase the
         amount of RAM used (not on the GPU though), the footprint on disk, and
         the amount of time it takes to run. Because of this, we don't save the
-        synthesis.mp4 movie, because it takes too long.
+        synthesis.mp4 movie, because it takes too long; however, snakemake
+        expects a file, so we create a simple text file at that location
 
     """
     print("Saving at %s" % save_path)
@@ -697,8 +698,8 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom,
     windowed_path = op.splitext(save_path)[0] + "_windowed.png"
     print("Saving windowed image at %s" % windowed_path)
     windowed_fig.savefig(windowed_path)
+    video_path = op.splitext(save_path)[0] + "_synthesis.mp4"
     if not save_all:
-        video_path = op.splitext(save_path)[0] + "_synthesis.mp4"
         print("Saving synthesis video at %s" % video_path)
         width_ratios = [metamer_image.shape[-1] / metamer_image.shape[-2], 1, 1, 1]
         fig, axes = plt.subplots(1, 4, figsize=animate_figsize,
@@ -707,6 +708,13 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom,
                                  subplot_kw={'aspect': 1})
         anim = metamer.animate(fig=fig, imshow_zoom=img_zoom, plot_image_hist=True)
         anim.save(video_path)
+    else:
+
+        text = ("Because save_all was True, we're not outputting the synthesis video, "
+                f"just saving small text file at {video_path}")
+        print(text)
+        with open(video_path, 'w') as f:
+            f.writelines(text)
     synthesis_path = op.splitext(save_path)[0] + "_synthesis.png"
     print(f"Saving synthesis image at {synthesis_path}")
     fig = metamer.plot_synthesis_status(figsize=animate_figsize, imshow_zoom=img_zoom,
