@@ -623,6 +623,20 @@ def get_init_image(wildcards):
     else:
         return utils.get_ref_image_full_path(wildcards.init_type)
 
+
+def get_metamer_outputs(wildcards, template):
+    paths = []
+    for f in ['summary.csv', 'history.csv', 'history.png', 'synthesis.png',
+              'window_check.svg', 'rep.png', 'windowed.png', 'metamer-16.png']:
+        paths.append(template.replace('metamer.png', f).format(**wildcards))
+    paths.append(template.replace('_metamer.png', '.pt').format(**wildcards))
+    paths.append(template.replace('.png', '.npy').format(**wildcards))
+    paths.append(report(template.format(**wildcards)))
+    if not wildcards.save_all:
+        paths.append(template.replace('metamer.png', 'synthesis.mp4').format(**wildcards))
+    return paths
+
+
 rule create_metamers:
     input:
         ref_image = lambda wildcards: utils.get_ref_image_full_path(wildcards.image_name),
@@ -630,18 +644,7 @@ rule create_metamers:
         norm_dict = get_norm_dict,
         init_image = get_init_image,
     output:
-        METAMER_TEMPLATE_PATH.replace('_metamer.png', '.pt'),
-        METAMER_TEMPLATE_PATH.replace('metamer.png', 'summary.csv'),
-        METAMER_TEMPLATE_PATH.replace('metamer.png', 'history.csv'),
-        METAMER_TEMPLATE_PATH.replace('metamer.png', 'history.png'),
-        METAMER_TEMPLATE_PATH.replace('metamer.png', 'synthesis.mp4'),
-        METAMER_TEMPLATE_PATH.replace('metamer.png', 'synthesis.png'),
-        METAMER_TEMPLATE_PATH.replace('metamer.png', 'window_check.svg'),
-        METAMER_TEMPLATE_PATH.replace('metamer.png', 'rep.png'),
-        METAMER_TEMPLATE_PATH.replace('metamer.png', 'windowed.png'),
-        METAMER_TEMPLATE_PATH.replace('metamer.png', 'metamer-16.png'),
-        METAMER_TEMPLATE_PATH.replace('.png', '.npy'),
-        report(METAMER_TEMPLATE_PATH),
+        lambda wildcards: get_metamer_outputs(wildcards, METAMER_TEMPLATE_PATH)
     log:
         METAMER_LOG_PATH,
     benchmark:
@@ -719,18 +722,7 @@ rule continue_metamers:
         continue_path = lambda wildcards: find_attempts(wildcards).replace('_metamer.png', '.pt'),
         init_image = get_init_image,
     output:
-        CONTINUE_TEMPLATE_PATH.replace('_metamer.png', '.pt'),
-        CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'summary.csv'),
-        CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'history.csv'),
-        CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'history.png'),
-        CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'synthesis.mp4'),
-        CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'synthesis.png'),
-        CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'window_check.svg'),
-        CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'rep.png'),
-        CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'windowed.png'),
-        CONTINUE_TEMPLATE_PATH.replace('metamer.png', 'metamer-16.png'),
-        CONTINUE_TEMPLATE_PATH.replace('.png', '.npy'),
-        report(CONTINUE_TEMPLATE_PATH),
+        lambda wildcards: get_metamer_outputs(wildcards, CONTINUE_TEMPLATE_PATH)
     log:
         CONTINUE_LOG_PATH,
     benchmark:
@@ -802,18 +794,8 @@ rule postproc_metamers:
         lambda wildcards: find_attempts(wildcards),
         float32_array = lambda wildcards: find_attempts(wildcards).replace('.png', '.npy'),
     output:
-        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'summary.csv'),
-        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'history.csv'),
-        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'history.png'),
-        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'synthesis.mp4'),
-        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'synthesis.png'),
-        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'window_check.svg'),
-        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'rep.png'),
-        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'windowed.png'),
-        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'metamer-16.png'),
-        OUTPUT_TEMPLATE_PATH,
-        OUTPUT_TEMPLATE_PATH.replace('.png', '.npy'),
-        report(OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'metamer_gamma-corrected.png')),
+        lambda wildcards: get_metamer_outputs(wildcards, OUTPUT_TEMPLATE_PATH)
+        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'metamer_gamma-corrected.png'),
     log:
         OUTPUT_LOG_PATH,
     benchmark:
