@@ -309,7 +309,7 @@ def pooling_window_size(windows, image, target_eccentricity=24,
         image = measure.block_reduce(image, (2, 2))
     fig = pt.imshow(image, title=None, **kwargs)
     fig.axes[0].contour(po.to_numpy(window).squeeze(), [target_amp],
-                        colors='r')
+                        colors='r', linewidths=5)
     return fig
 
 
