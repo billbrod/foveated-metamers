@@ -4,6 +4,7 @@ import os
 import re
 import copy
 import os.path as op
+from glob import glob
 import yaml
 import argparse
 import warnings
@@ -156,6 +157,76 @@ def _find_img_size(image_name):
     return np.array(image_size.split(',')).astype(int)
 
 
+def find_attempts(wildcards, increment=False, extra_iter=None):
+    """Find most recently-generated metamer with specified wilcards.
+
+    We allow for the possibility of continuing metamer synthesis, and so need a
+    way to find the last synthesis attempt. This uses the wildcards dictionary
+    (which specifies the desired metamer) and searches for the existing metamer
+    with the highest attempt. Then, if `increment is False`, we return the path
+    to that metamer (returning the original metamer path, as specified by
+    METAMER_TEMPLATE_PATH if none can be found) or, if `increment is True`, we
+    increment the attempt number by one (in this case, `extra_iter` must be an
+    int, so we know how many extra iterations to add; if the original metamer
+    path is not found, we'll return that).
+
+    Parameters
+    ----------
+    wildcards : dict
+        wildcards dictionary (as created by Snake make) whose keys are the
+        format keys from the METAMER_TEMPLATE_PATH found in config.yml plus,
+        potentially, `num` and `extra_iter`, which specify which continue
+        attempt this is and how many iterations to add, respectively.
+    increment : bool, optional
+        Whether to return the most recently found metamer or increment attempt
+        by one.
+    extra_iter : int or None, optional
+        If increment is True, this must be an int specifying how many extra
+        iterations to add. If increment is False, this is ignored.
+
+    Returns
+    -------
+    path : str
+        path to the metamer.png file. see above for description.
+
+    """
+    with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
+        defaults = yaml.safe_load(f)
+    METAMER_TEMPLATE_PATH = defaults['METAMER_TEMPLATE_PATH']
+    CONTINUE_TEMPLATE_PATH = (METAMER_TEMPLATE_PATH.replace('metamers/{model_name}', 'metamers_continue/{model_name}')
+                              .replace("{clamp_each_iter}/", "{clamp_each_iter}/attempt-{num}_iter-{extra_iter}/"))
+    num = wildcards.pop('num', None)
+    wildcards.pop('extra_iter', None)
+    wildcards['max_ecc'] = float(wildcards['max_ecc'])
+    wildcards['min_ecc'] = float(wildcards['min_ecc'])
+    i = 0
+    while len(glob(CONTINUE_TEMPLATE_PATH.format(num=i, extra_iter='*', **wildcards))) > 0:
+        i += 1
+    # I would like to ensure that num is i, but to make the DAG we have
+    # to go backwards and check each attempt, so this function does not
+    # only get called for the rule the user calls
+    if num is not None and int(num) > i:
+        raise Exception("attempts at continuing metamers need to use strictly increasing num")
+    if increment:
+        if extra_iter is None:
+            raise Exception("If increment is True, extra_iter must be an int, not None!")
+        if i > 0:
+            p = CONTINUE_TEMPLATE_PATH.format(num=i, extra_iter=extra_iter, **wildcards)
+        else:
+            if op.exists(METAMER_TEMPLATE_PATH.format(**wildcards)):
+                p = CONTINUE_TEMPLATE_PATH.format(num=0, extra_iter=extra_iter, **wildcards)
+            else:
+                p = METAMER_TEMPLATE_PATH.format(**wildcards)
+    else:
+        if i > 0:
+            p = glob(CONTINUE_TEMPLATE_PATH.format(num=i-1, extra_iter='*', **wildcards))[0]
+        else:
+            p = METAMER_TEMPLATE_PATH.format(**wildcards)
+    # this makes sure we're using the right os.sep and also removes any double
+    # slashes we might have accidentally introduced
+    return os.sep + op.join(*p.split('/'))
+
+
 def get_ref_image_full_path(image_name,
                             preproc_methods=['full', 'gamma-corrected',
                                              'range', 'degamma']):
@@ -248,7 +319,8 @@ def generate_image_names(ref_image=None, preproc=None, size=None):
     return image_names
 
 
-def generate_metamer_paths(model_name, **kwargs):
+def generate_metamer_paths(model_name, increment=False, extra_iter=None,
+                           gamma_corrected=False, **kwargs):
     """Generate metamer paths in a programmatic way
 
     This generates paths to the metamer.png files found in the
@@ -264,12 +336,25 @@ def generate_metamer_paths(model_name, **kwargs):
     any `key` not passed, we'll use the model-specific defaults from
     config.yml
 
+    We will return the most recent attempt found `increment is False` and we
+    will increment the attempt if it's True (in this case, `extra_iter` must be
+    an int so we know what to put there).
+
     Parameters
     ----------
     model_name : str
         Name(s) of the model(s) to run. Must begin with either V1 or
         RGC. If model name is just 'RGC' or just 'V1', we will use the
         default model name for that brain area from config.yml
+    increment : bool, optional
+        Whether to return the most recently found metamer or increment attempt
+        by one.
+    extra_iter : int or None, optional
+        If increment is True, this must be an int specifying how many extra
+        iterations to add. If increment is False, this is ignored.
+    gamma_corrected : bool, optional
+        If True, return the path to the gamma-corrected version. If False, the
+        non-gamma-corrected
     kwargs :
         keys must be configurable options for METAMER_TEMPLATE_PATH, as
         found in config.yml. If an option is *not* set, we'll use the
@@ -294,8 +379,6 @@ def generate_metamer_paths(model_name, **kwargs):
         images = [images]
     args = {}
     paths = []
-    template_path = defaults['METAMER_TEMPLATE_PATH'].replace('metamers/{model_name}',
-                                                              'metamers_display/{model_name}')
     for im in images:
         for model in model_name:
             args.update(copy.deepcopy(defaults['DEFAULT_METAMERS']))
@@ -322,8 +405,10 @@ def generate_metamer_paths(model_name, **kwargs):
                 args.pop(k)
             for vals in product(*list_args.values()):
                 tmp = dict(zip(list_args.keys(), vals))
-                p = template_path.format(**tmp, **args)
-                p = os.sep + op.join(*p.split('/'))
+                tmp.update(args)
+                p = find_attempts(tmp, increment=increment, extra_iter=extra_iter)
+                if gamma_corrected:
+                    p = p.replace('metamer.png', 'metamer_gamma-corrected.png')
                 paths.append(p)
     return paths
 
@@ -331,11 +416,13 @@ def generate_metamer_paths(model_name, **kwargs):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description=("Generate metamer paths in a programmatic way, for passing to snakemake. "
-                     "With the exception of model_name, --print, and --save_path, all other "
-                     "arguments are the various configurable options from the metamer template "
-                     "path, which control synthesis behavior. All arguments can take multiple "
-                     "values, in which case we'll generate all possible combinations. If a value "
-                     "is unset, we'll use the model-specific defaults from config.yml."))
+                     "With the exception of model_name, --print, --save_path, --increment and "
+                     "--extra_iter all other arguments are the various configurable options from the "
+                     "metamer template path, which control synthesis behavior. All arguments "
+                     "can take multiple values, in which case we'll generate all possible "
+                     "combinations. If a value is unset, we'll use the model-specific "
+                     "defaults from config.yml."))
+
     with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
         defaults = yaml.safe_load(f)
     template_path = defaults['METAMER_TEMPLATE_PATH']
@@ -345,6 +432,14 @@ if __name__ == '__main__':
     parser.add_argument('--save_path', '-s', default='',
                         help=("Path to a .txt file to save the paths at. If not set, will not "
                               "save. Note either this or --print must be set"))
+    parser.add_argument('--increment', '-i', action='store_true',
+                        help=("Whether we should return the last found attempt or increment it "
+                              "by one. If passed, --extra_iter must also be set"))
+    parser.add_argument('--gamma_corrected', '-g', action='store_true',
+                        help=("Whether we should return the gamma-corrected path or not."))
+    parser.add_argument('--extra_iter', type=int,
+                        help=("If --increment is passed, this specifies how many extra "
+                              "iterations to run synthesis for"))
     for k in possible_args:
         nargs = {'DATA_DIR': 1}.get(k, '+')
         if k == 'model_name':
@@ -367,6 +462,9 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
     print_output = args.pop('print')
     save_path = args.pop('save_path')
+    increment = args.pop('increment')
+    extra_iter = args.pop('extra_iter')
+    gamma_corrected = args.pop('gamma_corrected')
     image_kwargs = {k: args.pop(k) for k in ['ref_image', 'size', 'preproc']}
     images = generate_image_names(**image_kwargs)
     new_args = {}
@@ -394,7 +492,9 @@ if __name__ == '__main__':
         raise Exception("Either --save or --print must be true!")
     if save_path and not save_path.endswith('.txt'):
         raise Exception("--save must point towards a .txt file")
-    paths = generate_metamer_paths(**new_args)
+    paths = generate_metamer_paths(increment=increment, extra_iter=extra_iter,
+                                   gamma_corrected=gamma_corrected,
+                                   **new_args)
     # need to do a bit of string manipulation to get this in the right
     # format
     paths = ' '.join(paths)

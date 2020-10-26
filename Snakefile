@@ -4,7 +4,6 @@ import imageio
 import time
 import os.path as op
 import numpy as np
-from glob import glob
 from plenoptic.simulate import pooling
 from foveated_metamers import utils
 
@@ -48,9 +47,6 @@ REF_IMAGE_TEMPLATE_PATH = config['REF_IMAGE_TEMPLATE_PATH'].replace("{DATA_DIR}/
 # since Snakemake doesn't like them
 METAMER_TEMPLATE_PATH = re.sub(":.*?}", "}", config['METAMER_TEMPLATE_PATH'].replace("{DATA_DIR}/", DATA_DIR))
 METAMER_LOG_PATH = METAMER_TEMPLATE_PATH.replace('metamers/{model_name}', 'logs/metamers/{model_name}').replace('_metamer.png', '.log')
-OUTPUT_TEMPLATE_PATH = METAMER_TEMPLATE_PATH.replace('metamers/{model_name}',
-                                                     'metamers_display/{model_name}')
-OUTPUT_LOG_PATH = METAMER_LOG_PATH.replace('logs/metamers', 'logs/postproc_metamers')
 CONTINUE_TEMPLATE_PATH = (METAMER_TEMPLATE_PATH.replace('metamers/{model_name}', 'metamers_continue/{model_name}')
                           .replace("{clamp_each_iter}/", "{clamp_each_iter}/attempt-{num}_iter-{extra_iter}"))
 CONTINUE_LOG_PATH = CONTINUE_TEMPLATE_PATH.replace('metamers_continue/{model_name}', 'logs/metamers_continue/{model_name}').replace('_metamer.png', '.log')
@@ -694,29 +690,11 @@ rule create_metamers:
                                              wildcards.clamp, clamp_each_iter, wildcards.loss)
 
 
-def find_attempts(wildcards):
-    wildcards = dict(wildcards)
-    num = wildcards.pop('num', None)
-    wildcards.pop('extra_iter', None)
-    i = 0
-    while len(glob(CONTINUE_TEMPLATE_PATH.format(num=i, extra_iter='*', **wildcards))) > 0:
-        i += 1
-    # I would like to ensure that num is i, but to make the DAG we have
-    # to go backwards and check each attempt, so this function does not
-    # only get called for the rule the user calls
-    if num is not None and int(num) > i:
-        raise Exception("attempts at continuing metamers need to use strictly increasing num")
-    if i > 0:
-        return glob(CONTINUE_TEMPLATE_PATH.format(num=i-1, extra_iter='*', **wildcards))[0]
-    else:
-        return METAMER_TEMPLATE_PATH.format(**wildcards)
-
-
 rule continue_metamers:
     input:
         ref_image = lambda wildcards: utils.get_ref_image_full_path(wildcards.image_name),
         norm_dict = get_norm_dict,
-        continue_path = lambda wildcards: find_attempts(wildcards).replace('_metamer.png', '.pt'),
+        continue_path = lambda wildcards: utils.find_attempts(dict(wildcards)).replace('_metamer.png', '.pt'),
         init_image = get_init_image,
     output:
         CONTINUE_TEMPLATE_PATH.replace('_metamer.png', '.pt'),
@@ -788,36 +766,16 @@ rule continue_metamers:
                                              input.continue_path)
 
 
-rule postproc_metamers:
+rule gamma_correct_metamer:
     input:
-        lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'summary.csv'),
-        lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'history.csv'),
-        lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'history.png'),
-        lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'synthesis.mp4'),
-        lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'synthesis.png'),
-        lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'window_check.svg'),
-        lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'rep.png'),
-        lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'windowed.png'),
-        lambda wildcards: find_attempts(wildcards).replace('metamer.png', 'metamer-16.png'),
-        lambda wildcards: find_attempts(wildcards),
-        float32_array = lambda wildcards: find_attempts(wildcards).replace('.png', '.npy'),
+        lambda wildcards: [m.replace('metamer.png', 'metamer.npy') for m in
+                           utils.generate_metamer_paths(**wildcards)]
     output:
-        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'summary.csv'),
-        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'history.csv'),
-        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'history.png'),
-        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'synthesis.mp4'),
-        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'synthesis.png'),
-        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'window_check.svg'),
-        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'rep.png'),
-        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'windowed.png'),
-        OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'metamer-16.png'),
-        OUTPUT_TEMPLATE_PATH,
-        OUTPUT_TEMPLATE_PATH.replace('.png', '.npy'),
-        report(OUTPUT_TEMPLATE_PATH.replace('metamer.png', 'metamer_gamma-corrected.png')),
+        report(METAMER_TEMPLATE_PATH.replace('metamer.png', 'metamer_gamma-corrected.png'))
     log:
-        OUTPUT_LOG_PATH,
+        METAMER_LOG_PATH.replace('.log', '_gamma-corrected.log')
     benchmark:
-        OUTPUT_LOG_PATH.replace('.log', '_benchmark.txt'),
+        METAMER_LOG_PATH.replace('.log', '_gamma-corrected_benchmark.txt')
     run:
         import foveated_metamers as met
         import contextlib
@@ -826,23 +784,17 @@ rule postproc_metamers:
         import foveated_metamers as met
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                for i, f in enumerate(output):
-                    if f.endswith('metamer_gamma-corrected.png'):
-                        if ('degamma' in wildcards.image_name or
-                            any([i in wildcards.image_name for i in LINEAR_IMAGES])):
-                            print("Saving gamma-corrected image %s" % f)
-                            im = np.load(input.float32_array)
-                            dtype = np.uint8
-                            print("Retaining image dtype %s" % dtype)
-                            im = im ** (1/2.2)
-                            im = met.utils.convert_im_to_int(im, dtype)
-                            imageio.imwrite(f, im)
-                        else:
-                            print("Image already gamma-corrected, copying to %s" % f)
-                            shutil.copy(f.replace('_gamma-corrected', ''), f)
+                if output[0].endswith('metamer_gamma-corrected.png'):
+                    if ('degamma' in wildcards.image_name or
+                        any([i in wildcards.image_name for i in LINEAR_IMAGES])):
+                        print(f"Saving gamma-corrected image {output[0]} as np.uint8")
+                        im = np.load(input[0])
+                        im = im ** (1/2.2)
+                        im = met.utils.convert_im_to_int(im, np.uint8)
+                        imageio.imwrite(output[0], im)
                     else:
-                        print("Copy file %s to %s" % (input[i], f))
-                        shutil.copy(input[i], f)
+                        print("Image already gamma-corrected, copying to {output[0]}")
+                        shutil.copy(output[0].replace('_gamma-corrected', ''), output[0])
 
 
 rule collect_metamers_training:
