@@ -36,6 +36,7 @@
     },
     "synthesis_video":
     {
-        "mem": "{resources.mem}GB"
+        "mem": "{resources.mem}GB",
+        "time": "4:00:00"
     }
 }
