@@ -356,6 +356,7 @@ def synthesis_schematic(metamer, iteration=0, plot_synthesized_image=True,
     """
     # arrangement was all made with 72 dpi
     mpl.rc('figure', dpi=72)
+    mpl.rc('axes', titlesize=25)
     image_shape = metamer.base_signal.shape
     figsize = ((1.5+(image_shape[-1] / image_shape[-2])) * 4.5 + 2.5, 3*4.5+1)
     fig = plt.figure(figsize=figsize)
@@ -402,16 +403,16 @@ def synthesis_schematic(metamer, iteration=0, plot_synthesized_image=True,
             fig.axes[1].annotate('', (.6, -.8), (.25, .22), arrowprops=arrowprops,
                                  **arrowkwargs)
     else:
-        fig.axes[5].annotate('', (1.2, .5), (.53, .5), arrowprops=arrowprops,
+        fig.axes[5].annotate('', (1.05, .5), (.53, .5), arrowprops=arrowprops,
                              **arrowkwargs)
-        vector = "[{:.3f}, {:.3f}, {:.3f},\n  ..., {:.3f}]".format(*np.random.rand(4))
-        fig.axes[5].text(1.2, .5, vector, {'size': '25'}, transform=fig.axes[5].transAxes,
+        vector = "[{:.3f}, {:.3f}, ..., {:.3f}]".format(*np.random.rand(3))
+        fig.axes[5].text(1.05, .5, vector, {'size': '25'}, transform=fig.axes[5].transAxes,
                          va='center', ha='left')
         if plot_synthesized_image:
-            fig.axes[1].annotate('', (1.2, .5), (.53, .5), arrowprops=arrowprops,
+            fig.axes[1].annotate('', (1.05, .5), (.53, .5), arrowprops=arrowprops,
                                  **arrowkwargs)
-            vector = "[{:.3f}, {:.3f}, {:.3f},\n  ..., {:.3f}]".format(*np.random.rand(4))
-            fig.axes[1].text(1.2, .5, vector, {'size': '25'}, transform=fig.axes[1].transAxes,
+            vector = "[{:.3f}, {:.3f}, ..., {:.3f}]".format(*np.random.rand(3))
+            fig.axes[1].text(1.05, .5, vector, {'size': '25'}, transform=fig.axes[1].transAxes,
                              va='center', ha='left')
     if plot_signal_comparison:
         arrowprops['connectionstyle'] = 'arc3'
@@ -432,7 +433,7 @@ def synthesis_schematic(metamer, iteration=0, plot_synthesized_image=True,
     axes_idx = metamer._axes_idx
     fig.axes[0].set_title('')
     if plot_signal_comparison:
-        fig.axes[2].set(xlabel='', ylabel='')
+        fig.axes[2].set(xlabel='', ylabel='', title='Pixel values')
     if plot_rep_comparison:
         fig.axes[3].set(xlabel='', ylabel='')
     return fig, axes_idx
@@ -480,6 +481,9 @@ def synthesis_video(metamer_save_path, model_name=None):
             kwargs['plot_rep_comparison'] = True
         elif i == 4:
             kwargs['plot_signal_comparison'] = True
+            kwargs['iteration'] = None
+        else:
+            kwargs['iteration'] = 0
         np.random.seed(0)
         fig, axes_idx = synthesis_schematic(metamer, **kwargs)
         # remove ticks because they don't matter here
