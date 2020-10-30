@@ -186,12 +186,13 @@ def create_metamer_df(image_paths, save_path=None):
 
 
 def _gen_trial_types(df):
-    """Generate the trial types array
+    """Generate the trial types arrays
 
-    This array contains the indices of images that should be compared against
-    each other: all metamers synthesized from the same reference image, for the
-    same model with the same scaling value, and the reference image they're
-    based on.
+    These arrays contains the indices of images that should be compared against
+    each other: the first contains all metamers synthesized from the same
+    reference image, for the same model with the same scaling value, and the
+    second contains reference image they're based on. To combine them into one
+    array: `np.concatenate((metamers, ref_images), 1)`
 
     It then gets used by other functions to convert that into the format needed
     for experiments
@@ -204,8 +205,10 @@ def _gen_trial_types(df):
 
     Returns
     -------
-    trial_types : np.ndarray
-        2d array, `n_comparisons` by `n_images`.
+    metamers : np.ndarray
+        2d array, `n_comparisons` by `n_initializations`.
+    ref_images : np.ndarray
+        2d array, `n_comparisons` by 1.
 
     """
     # The reference images will have a bunch of NaNs in the
@@ -221,16 +224,15 @@ def _gen_trial_types(df):
     # Now go through and find the indices for each unique combination of
     # these three (there should be multiple for each of these because of
     # the different seeds used) and then add the reference image
-    trial_types = []
+    metamers = []
+    reference_images = []
     for s, i, m in itertools.product(*trials_dict.values()):
-        t = df.query('scaling==@s & image_name==@i & model==@m').index
-        t = t.append(df.query('scaling=="None" & image_name==@i & model=="None"').index)
-        trial_types.append(t)
-    trial_types = np.array(trial_types)
-    return trial_types
+        metamers.append(df.query('scaling==@s & image_name==@i & model==@m').index)
+        reference_images.append(df.query('scaling=="None" & image_name==@i & model=="None"').index)
+    return np.array(metamers), np.array(reference_images)
 
 
-def generate_indices_abx(df, seed):
+def generate_indices_abx(df, seed, comparison='met_v_ref'):
     r"""Generate the randomized presentation indices for ABX task.
 
     We take in the dataframe describing the metamer images combined into our
@@ -245,6 +247,9 @@ def generate_indices_abx(df, seed):
         ``create_metamer_df``
     seed : int
         The seed passed to ``np.random.seed``.
+    comparison : {'met_v_met', 'met_v_ref'}, optional
+        Whether to create the indices for comparing metamers against each other
+        or against the reference image
 
     Returns
     -------
@@ -255,13 +260,21 @@ def generate_indices_abx(df, seed):
     np.random.seed(seed)
     # get the trial types array, which gives the indices for images to compare
     # against each other.
-    trial_types = _gen_trial_types(df)
+    mets, refs = _gen_trial_types(df)
     # Now generate the indices for the trial. At the end of this, trials
     # is a 2d array, n by 3, where each row corresponds to a single ABX
     # trial: two images from the same row of trial_types and then a
     # repeat of one of them
-    trials = np.array([list(itertools.permutations(t, 2)) for t in trial_types])
-    trials = trials.reshape(-1, trials.shape[-1])
+    if comparison == 'met_v_met':
+        trials = np.array([list(itertools.permutations(t, 2)) for t in mets])
+        trials = trials.reshape(-1, trials.shape[-1])
+    elif comparison == 'met_v_ref':
+        # grab each metamer and reference image
+        trials = np.array([[c, refs[i, 0]] for i, comp in enumerate(mets) for c
+                           in comp])
+        # the above has reference image second, so this adds on all those same
+        # rows, but with the reference image first
+        trials = np.concatenate([trials, trials[:, [1, 0]]])
     trials = np.array([[[i, j, i], [i, j, j]] for i, j in trials])
     trials = trials.reshape(-1, trials.shape[-1])
     # Now permute. we set the random seed at the top of this function for
@@ -270,7 +283,7 @@ def generate_indices_abx(df, seed):
     return trials
 
 
-def generate_indices_split(df, seed, mode='same'):
+def generate_indices_split(df, seed, comparison='met_v_ref'):
     """Generate randomized presentation indices for split-screen task.
 
     We take in the dataframe describing the metamer images combined into our
@@ -285,12 +298,9 @@ def generate_indices_split(df, seed, mode='same'):
         ``create_metamer_df``
     seed : int
         The seed passed to ``np.random.seed``.
-    mode : {'same', 'always_different'}
-        This task has two modes:
-        - 'same': initial stimulus is a single image, split in half, and then
-          one half changes to a second image.
-        - 'always_different': initial stimulus has one image on the left half,
-          one on the right, and then one half will change to a third image.
+    comparison : {'met_v_met', 'met_v_ref'}, optional
+        Whether to create the indices for comparing metamers against each other
+        or against the reference image
 
     Returns
     -------
@@ -301,20 +311,32 @@ def generate_indices_split(df, seed, mode='same'):
     np.random.seed(seed)
     # get the trial types array, which gives the indices for images to compare
     # against each other.
-    trial_types = _gen_trial_types(df)
+    mets, refs = _gen_trial_types(df)
     # after this, each row of trials contains three indices, first two are the
     # left and right, respectively, of initial stimulus, and the final is the
     # image to change to.
-    if mode == 'same':
-        trials = np.array([list(itertools.permutations(t, 2)) for t in trial_types])
-        # this makes this version shaped like the always_different one
-        # described above
+    if comparison == 'met_v_met':
+        # from each set of comparisons, grab all possible permutations of list
+        # 2. that is, for each set of metamers with same scaling and reference
+        # image, get every possible combination of two, and both orderings
+        trials = np.array([list(itertools.permutations(t, 2)) for t in mets])
+        # then duplicate the first image (so it shows up on both left and
+        # right)
         trials = np.dstack([trials[:, :, 0], trials])
-    elif mode == 'always_different':
-        trials = np.array([list(itertools.permutations(t, 3)) for t in trial_types])
-    trials = trials.reshape(-1, trials.shape[-1])
+        # and make this 2d
+        trials = trials.reshape(-1, trials.shape[-1])
+    elif comparison == 'met_v_ref':
+        # grab each metamer and reference image
+        trials = np.array([[c, refs[i, 0]] for i, comp in enumerate(mets) for c
+                           in comp])
+        # the above has reference image second, so this adds on all those same
+        # rows, but with the reference image first
+        trials = np.concatenate([trials, trials[:, [1, 0]]])
+        # and now duplicate the first image (so it shows up on both left and
+        # right)
+        trials = trials[:, [0, 0, 1]]
     # now we duplicate the side that we don't change. this will thus double the
-    # number of rows, as each row gets None on the left and on the right
+    # number of rows, as each row gets a no-change on the left and on the right
     trials = np.array([[[i, j, k, j], [i, j, i, k]]
                        for i, j, k in trials])
     # this reshapes it so trials are indexed along the first dimension, and

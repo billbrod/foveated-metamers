@@ -95,8 +95,6 @@ PSYCHOPHYSICS:
   IMAGE_SET_NUMBERS:
     - 0
     - 1
-    - 2
-    - 3
   SUBJECTS:
     - 'sub-01'
     - 'sub-02'
