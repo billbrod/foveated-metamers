@@ -840,7 +840,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
          loss_thresh=1e-4, loss_change_iter=50, save_path=None, initial_image_type='white',
          gpu_id=None, cache_dir=None, normalize_dict=None, optimizer='SGD', fraction_removed=0,
          loss_change_fraction=1, loss_change_thresh=.1, coarse_to_fine=False, clamper_name='clamp',
-         clamp_each_iter=True, loss_func='l2', continue_path=None, save_all=True):
+         clamp_each_iter=True, loss_func='l2', continue_path=None, save_all=False):
     r"""create metamers!
 
     Given a model_name, model parameters, a target image, and some

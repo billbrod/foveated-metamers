@@ -678,6 +678,10 @@ rule create_metamers:
                     get_gid = False
                 else:
                     raise Exception("Multiple gpus are not supported!")
+                if wildcards.save_all:
+                    save_all = True
+                else:
+                    save_all = False
                 with met.utils.get_gpu_id(get_gid, on_cluster=ON_CLUSTER) as gpu_id:
                     met.create_metamers.main(wildcards.model_name, float(wildcards.scaling),
                                              input.ref_image, int(wildcards.seed), float(wildcards.min_ecc),
@@ -688,7 +692,8 @@ rule create_metamers:
                                              wildcards.optimizer, float(wildcards.fract_removed),
                                              float(wildcards.loss_fract),
                                              float(wildcards.loss_change_thresh), coarse_to_fine,
-                                             wildcards.clamp, clamp_each_iter, wildcards.loss)
+                                             wildcards.clamp, clamp_each_iter, wildcards.loss,
+                                             save_all=save_all)
 
 
 rule continue_metamers:
