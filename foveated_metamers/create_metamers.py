@@ -140,13 +140,14 @@ def find_figsizes(model_name, model, image_shape):
         # figsize and image shape are backwards of each other:
         # image.shape's last two indices are (height, width), while
         # figsize is (width, height)
-        default_imgsize = np.array((512, 512))
+        default_imgsize = np.array((256*3, 256*3))
     # We want to figure out two things: 1. how much larger we need to
     # make the different figures so we can fit everything on them and
     # 2. if we need to shrink the images in order to fit
     # everything. here we determine how much bigger the image is than
     # the one we used to get the figsizes above
-    zoom_factor = np.array([max(1, image_shape[::-1][i]/default_imgsize[i]) for i in range(2)])
+    zoom_factor = np.array([max(1, image_shape[::-1][i]/default_imgsize[i]) for
+                            i in range(2)])
     if all(zoom_factor == 1):
         img_zoom = [int(np.round(default_imgsize[i] / image_shape[::-1][i]))
                     for i in range(2)]
@@ -699,13 +700,12 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom,
     print("Saving windowed image at %s" % windowed_path)
     windowed_fig.savefig(windowed_path)
     video_path = op.splitext(save_path)[0] + "_synthesis.mp4"
+    width_ratios = [metamer_image.shape[-1] / metamer_image.shape[-2], 1, 1, 1]
     if not save_all:
         print("Saving synthesis video at %s" % video_path)
-        width_ratios = [metamer_image.shape[-1] / metamer_image.shape[-2], 1, 1, 1]
         fig, axes = plt.subplots(1, 4, figsize=animate_figsize,
                                  gridspec_kw={'width_ratios': width_ratios,
-                                              'left': .05, 'right': .95},
-                                 subplot_kw={'aspect': 1})
+                                              'left': .05, 'right': .95})
         anim = metamer.animate(fig=fig, imshow_zoom=img_zoom, plot_image_hist=True)
         anim.save(video_path)
     else:
@@ -717,8 +717,11 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom,
             f.writelines(text)
     synthesis_path = op.splitext(save_path)[0] + "_synthesis.png"
     print(f"Saving synthesis image at {synthesis_path}")
-    fig = metamer.plot_synthesis_status(figsize=animate_figsize, imshow_zoom=img_zoom,
-                                        plot_image_hist=True)
+    fig, axes = plt.subplots(1, 4, figsize=animate_figsize,
+                             gridspec_kw={'width_ratios': width_ratios,
+                                          'left': .05, 'right': .95})
+    fig = metamer.plot_synthesis_status(imshow_zoom=img_zoom,
+                                        plot_image_hist=True, fig=fig)
     fig.savefig(synthesis_path, bbox_inches='tight')
     angle_n = np.linspace(0, metamer.model.n_polar_windows, 8, dtype=int, endpoint=False)
     fig = metamer.model.PoolingWindows.plot_window_checks(angle_n)
