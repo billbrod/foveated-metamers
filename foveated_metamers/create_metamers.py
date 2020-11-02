@@ -540,11 +540,13 @@ def summarize_history(metamer, save_path, **kwargs):
                           "add that ourselves! Removing...")
             kwargs.pop(k)
     for i in range(1, num_saves):
-        it = (i-1) * metamer.store_progress
         rep_error = metamer.representation_error(i)
         image_mse = torch.pow(metamer.base_signal - metamer.saved_signal[i], 2).mean().item()
         summarized_rep = metamer.model.summarize_representation(rep_error)
         summarized_rep = _transform_summarized_rep(summarized_rep)
+        it = (i-1) * metamer.store_progress
+        if it >= len(metamer.loss):
+            it = -1
         data = {'loss': metamer.loss[it], 'image_mse': image_mse, 'iteration': it,
                 'learning_rate': metamer.learning_rate[it], 'gradient_norm': metamer.gradient[it],
                 'num_statistics': metamer.base_representation.numel(),
@@ -1078,14 +1080,27 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         swa_kwargs = {}
         swa_str = ""
     print(f"Using optimizer {optimizer}{swa_str}")
-    if continue_path is None:
-        metamer = po.synth.Metamer(image, model, loss_function=loss,
-                                   loss_function_kwargs=loss_kwargs)
+    if save_path is not None:
+        inprogress_path = save_path.replace('.pt', '_inprogress.pt')
     else:
+        inprogress_path = None
+    if continue_path is not None or op.exists(inprogress_path):
+        if op.exists(inprogress_path):
+            continue_path = inprogress_path
         print("Resuming synthesis saved at %s" % continue_path)
         metamer = po.synth.Metamer.load(continue_path, model.from_state_dict_reduced)
+        if op.exists(inprogress_path):
+            # run the number of extra iterations we need, not more. if it was
+            # complete, then this can be 0 and we do no iterations, but will
+            # still save everything else out (useful if synthesis finished
+            # without a problem but hit an out of memory or time error while
+            # saving outputs)
+            max_iter = max(max_iter - len(metamer.loss), 0)
         initial_image = None
         learning_rate = None
+    else:
+        metamer = po.synth.Metamer(image, model, loss_function=loss,
+                                   loss_function_kwargs=loss_kwargs)
     print(f"Using learning rate {learning_rate}, loss_thresh {loss_thresh} (loss_change_iter "
           f"{loss_change_iter}), and max_iter {max_iter}")
     if save_path is not None:
@@ -1119,8 +1134,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                                                  loss_change_fraction=loss_change_fraction,
                                                  loss_change_thresh=loss_change_thresh,
                                                  coarse_to_fine=coarse_to_fine,
-                                                 save_path=save_path.replace('.pt',
-                                                                             '_inprogress.pt'))
+                                                 save_path=inprogress_path)
     duration = time.time() - start_time
     # make sure everything's on the cpu for saving
     metamer = metamer.to('cpu')
@@ -1148,4 +1162,4 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                           image_name=op.basename(image_name).replace('.pgm', '').replace('.png', ''))
         save(save_path, metamer, animate_figsize, rep_figsize, img_zoom, save_all)
     if save_progress:
-        os.remove(save_path.replace('.pt', '_inprogress.pt'))
+        os.remove(inprogress_path)
