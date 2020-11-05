@@ -1080,6 +1080,15 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         swa_kwargs = {}
         swa_str = ""
     print(f"Using optimizer {optimizer}{swa_str}")
+    # want to set store_progress before we potentially change max_iter below,
+    # because if we're resuming synthesis, want to have the same store_progress
+    # arg
+    if save_all:
+        store_progress = 1
+    else:
+        # don't want to store too often, otherwise we slow down and use too
+        # much memory. this way we store at most 100 time points
+        store_progress = max(10, max_iter//100)
     if save_path is not None:
         inprogress_path = save_path.replace('.pt', '_inprogress.pt')
     else:
@@ -1111,12 +1120,6 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
             save_progress = max(200, max_iter//10)
     else:
         save_progress = False
-    if save_all:
-        store_progress = 1
-    else:
-        # don't want to store too often, otherwise we slow down and use too
-        # much memory. this way we store at most 100 time points
-        store_progress = max(10, max_iter//100)
     start_time = time.time()
     matched_im, matched_rep = metamer.synthesize(clamper=clamper,
                                                  store_progress=store_progress,
