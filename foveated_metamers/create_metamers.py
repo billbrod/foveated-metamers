@@ -1121,6 +1121,10 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     else:
         save_progress = False
     start_time = time.time()
+    # note that there's a possibility that max_iter=0 (in particular, if we're
+    # loading in an inprogress.pt file that finished synthesis but had trouble
+    # when saving outputs). we still want to call synthesize, because there's a
+    # small amount of wrapping up that needs to happen
     matched_im, matched_rep = metamer.synthesize(clamper=clamper,
                                                  store_progress=store_progress,
                                                  learning_rate=learning_rate,
