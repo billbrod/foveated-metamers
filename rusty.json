@@ -42,6 +42,7 @@
     },
     "compute_distances":
     {
-        "mem": "{resources.mem}GB"
+        "mem": "{resources.mem}GB",
+        "partition": "ccn"
     }
 }
