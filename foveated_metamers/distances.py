@@ -3,6 +3,7 @@
 """
 
 import pandas as pd
+import numpy as np
 import plenoptic as po
 from . import utils
 import os.path as op
@@ -19,7 +20,7 @@ def _find_seed(x):
     try:
         return re.findall('seed-(\d)_', x)[0]
     except IndexError:
-        return 'ref'
+        return 'reference'
 
 
 def model_distance(model, synth_model_name, ref_image_name, scaling):
@@ -83,4 +84,8 @@ def model_distance(model, synth_model_name, ref_image_name, scaling):
     df['ref_image'] = ref_image_name.split('_')[0]
     df['image_1_seed'] = df.image_1.apply(_find_seed)
     df['image_2_seed'] = df.image_2.apply(_find_seed)
+    metamer_vs_reference = np.logical_or((df.image_1_seed == 'reference').values,
+                                         (df.image_2_seed == 'reference').values)
+    df['trial_type'] = np.where(metamer_vs_reference, 'metamer_vs_reference',
+                                'metamer_vs_metamer')
     return df
