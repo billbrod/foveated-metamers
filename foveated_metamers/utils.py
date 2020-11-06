@@ -484,10 +484,10 @@ if __name__ == '__main__':
             except ValueError:
                 # then it's a list of strings, and we keep it as is
                 new_args[k] = v
-    if 'image_name' in new_args.keys():
-        new_args['image_name'].extend(images)
-    else:
+    if 'image_name' not in new_args.keys():
         new_args['image_name'] = images
+    elif 'image_name' in new_args.keys() and images and not all([v is None for v in image_kwargs.values()]):
+        raise Exception("Must set either image_name or its components (ref_image, size, preproc)!")
     if not save_path and not print_output:
         raise Exception("Either --save or --print must be true!")
     if save_path and not save_path.endswith('.txt'):
