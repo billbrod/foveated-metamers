@@ -1073,3 +1073,49 @@ rule synthesis_video:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 met.figures.synthesis_video(input[0], wildcards.model_name)
+
+
+rule compute_distances:
+    input:
+        ref_image = lambda wildcards: utils.get_ref_image_full_path(wildcards.image_name),
+        windows = get_windows,
+        norm_dict = get_norm_dict,
+        synth_images = lambda wildcards: [m.replace('.png', '-16.png') for m in
+                                          utils.generate_metamer_paths(wildcards.synth_model_name,
+                                                                       image_name=wildcards.image_name)],
+    output:
+        op.join(config["DATA_DIR"], 'distances', '{model_name}', 'scaling-{scaling}',
+                'synth-{synth_model_name}', '{image_name}_e0-{min_ecc}_em-{max_ecc}_distances.csv'),
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'distances', '{model_name}', 'scaling-{scaling}',
+                'synth-{synth_model_name}', '{image_name}_e0-{min_ecc}_em-{max_ecc}_distances.log')
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'distances', '{model_name}', 'scaling-{scaling}',
+                'synth-{synth_model_name}', '{image_name}_e0-{min_ecc}_em-{max_ecc}_distances_benchmark.txt')
+    params:
+        cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
+    resources:
+        mem = get_mem_estimate,
+    run:
+        import foveated_metamers as met
+        import plenoptic as po
+        import torch
+        import pandas as pd
+        ref_image = po.load_images(input.ref_image)
+        if input.norm_dict:
+            norm_dict = torch.load(input.norm_dict)
+        else:
+            norm_dict = None
+        model = met.create_metamers.setup_model(wildcards.model_name, float(wildcards.scaling),
+                                                ref_image, float(wildcards.min_ecc),
+                                                float(wildcards.max_ecc), params.cache_dir,
+                                                input.norm_dict)[0]
+        synth_scaling = config[wildcards.synth_model_name.split('_')[0]]['scaling']
+        df = []
+        for sc in synth_scaling:
+            df.append(met.distances.model_distance(model, wildcards.synth_model_name,
+                                                   wildcards.image_name, sc))
+        df = pd.concat(df).reset_index(drop=True)
+        df['distance_model'] = wildcards.model_name
+        df['distance_scaling'] = float(wildcards.scaling)
+        df.to_csv(output[0], index=False)

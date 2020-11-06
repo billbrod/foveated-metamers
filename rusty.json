@@ -39,5 +39,9 @@
     {
         "mem": "{resources.mem}GB",
         "time": "04:00:00"
+    },
+    "compute_distances":
+    {
+        "mem": "{resources.mem}GB"
     }
 }
