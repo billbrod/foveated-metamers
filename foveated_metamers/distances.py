@@ -26,8 +26,8 @@ def _find_seed(x):
 def model_distance(model, synth_model_name, ref_image_name, scaling):
     """Calculate distances between images for a model.
 
-    We want to reason about the model distance of our best model (the l2-norm
-    in model space, same as used during synthesis except without the range
+    We want to reason about the model distance of our best model (the MSE in
+    model space, same as used during synthesis except without the range
     penalty) between images synthesized by other models / scaling values. This
     is a step on the way towards getting a human perceptual metric, and should
     show us that the metamer-metamer distance, even for high scaling values, is
@@ -70,11 +70,11 @@ def model_distance(model, synth_model_name, ref_image_name, scaling):
     for i, (im, p) in enumerate(zip(synth_images, paths)):
         image_name = op.splitext(op.basename(p))[0]
         reps[image_name] = model(im)
-        dist = po.optim.l2_norm(reps[image_name], ref_image_rep).item()
+        dist = po.optim.mse(reps[image_name], ref_image_rep).item()
         df.append(pd.DataFrame({'distance': dist, 'image_1': image_name,
                                 'image_2': ref_image_name}, index=[0]))
     for im_1, im_2 in itertools.combinations(reps, 2):
-        dist = po.optim.l2_norm(reps[im_1], reps[im_2]).item()
+        dist = po.optim.mse(reps[im_1], reps[im_2]).item()
         df.append(pd.DataFrame({'distance': dist, 'image_1': im_1,
                                 'image_2': im_2}, index=[0]))
     df = pd.concat(df).reset_index(drop=True)
