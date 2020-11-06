@@ -1109,7 +1109,7 @@ rule compute_distances:
         model = met.create_metamers.setup_model(wildcards.model_name, float(wildcards.scaling),
                                                 ref_image, float(wildcards.min_ecc),
                                                 float(wildcards.max_ecc), params.cache_dir,
-                                                input.norm_dict)[0]
+                                                norm_dict)[0]
         synth_scaling = config[wildcards.synth_model_name.split('_')[0]]['scaling']
         df = []
         for sc in synth_scaling:
