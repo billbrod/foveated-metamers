@@ -25,7 +25,37 @@ def _find_seed(x):
 def model_distance(model, synth_model_name, ref_image_name, scaling):
     """Calculate distances between images for a model.
 
-    We want to reason about the distance
+    We want to reason about the model distance of our best model (the l2-norm
+    in model space, same as used during synthesis except without the range
+    penalty) between images synthesized by other models / scaling values. This
+    is a step on the way towards getting a human perceptual metric, and should
+    show us that the metamer-metamer distance, even for high scaling values, is
+    still pretty small, while the metamer-reference distance is fairly large.
+
+    This loads in the specified reference image and all metamers with the given
+    scaling value (we use `utils.generate_metamer_paths` to find them), then
+    computes the distance between the reference image and each metamer, as well
+    as between pairs of metamers.
+
+    Parameters
+    ----------
+    model : po.synth model
+        Instantiated model, which takes image tensor as input and returns some
+        output.
+    synth_model_name : str
+        str defining the name of the model used to synthesize the images we're
+        checking (e.g., "V1_norm_s6_gaussian").
+    ref_image_name : str
+        str giving the name of the reference image (like those in
+        config.yml:DEFAULT_METAMERS:image_name) for the metamers to compare.
+    scaling : float
+        Scaling value for the synthesized images.
+
+    Returns
+    -------
+    df : pd.DataFrame
+        DataFrame containing the distances. Contains column identifying the
+        synthesis model and scaling, but not the distance model and scaling
 
     """
     paths = utils.generate_metamer_paths(synth_model_name,
