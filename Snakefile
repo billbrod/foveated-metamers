@@ -885,7 +885,7 @@ rule generate_experiment_idx:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 stim_df = pd.read_csv(input[0])
                 try:
-                    # want to pick 2 of the 8 reference images per run
+                    # want to pick 4 of the 8 reference images per run
                     np.random.seed(int(wildcards.subject.replace('sub-', '')))
                     ref_image_idx = np.random.permutation(np.arange(8))[4*int(wildcards.im_num):4*(int(wildcards.im_num)+1)]
                 except ValueError:
