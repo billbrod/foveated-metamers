@@ -114,12 +114,7 @@ def find_figsizes(model_name, model, image_shape):
         # these values were selected at 72 dpi, so will need to be adjusted if
         # ours is different
         animate_figsize = [s*72/mpl.rcParams['figure.dpi'] for s in animate_figsize]
-        if 'dog' in model_name:
-            # then our rep_image will include 3 plots, instead of 1, so
-            # we want it to be wider
-            rep_image_figsize = (13, 13)
-        else:
-            rep_image_figsize = [4, 13]
+        rep_image_figsize = [4, 13]
         # default figsize arguments work for an image that is 256x256,
         # may need to expand. we go backwards through figsize because
         # figsize and image shape are backwards of each other:
@@ -273,16 +268,6 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
         window_type = 'cosine'
         t_width = 1
         std_dev = None
-    elif 'dog' in model_name:
-        # then model_name will also include the center_surround_ratio
-        # and surround_std_dev
-        window_type = 'dog'
-        surround_std_dev = float([n for n in model_name.split('_') if n.startswith('s-')][0].split('-')[-1])
-        center_surround_ratio = float([n for n in model_name.split('_') if n.startswith('r-')][0].split('-')[-1])
-        t_width = None
-        std_dev = 1
-        transition_x = min_ecc
-        min_ecc = None
     if model_name.startswith('RGC'):
         if 'norm' not in model_name:
             if normalize_dict:
@@ -354,19 +339,10 @@ def add_center_to_image(model, image, reference_image):
     """
     model(image)
     rep = model.representation['mean_luminance']
-    try:
-        dummy_ones = torch.ones_like(rep)
-        windows = model.PoolingWindows.project(dummy_ones).squeeze().to(image.device)
-        # these aren't exactly zero, so we can't convert it to boolean
-        anti_windows = 1 - windows
-    except NotImplementedError:
-        # then this model has DoG windows. the portion that the DoG
-        # windows don't cover is the same as the portion the center
-        # windows don't cover (if we do this boolean conversion)
-        dummy_ones = torch.ones_like(model.PoolingWindows.forward(image, windows_key='center'))
-        windows = model.PoolingWindows.project(dummy_ones, windows_key='center').squeeze()
-        windows = windows.to(bool).to(image.device)
-        anti_windows = ~windows
+    dummy_ones = torch.ones_like(rep)
+    windows = model.PoolingWindows.project(dummy_ones).squeeze().to(image.device)
+    # these aren't exactly zero, so we can't convert it to boolean
+    anti_windows = 1 - windows
     return ((windows * image) + (anti_windows * reference_image))
 
 
@@ -411,25 +387,15 @@ def summary_plots(metamer, rep_image_figsize, img_zoom):
         vranges = ['indep0', 'indep0', 'indep0']
     else:
         vranges = ['indep1', 'indep1', 'indep0']
-    if metamer.model.window_type == 'dog':
-        # For DoG windows, need to pass not the model called on the image,
-        # but the image itself. for representation error, difference of the
-        # target and matched image will do
-        images = [metamer.base_signal, metamer.synthesized_signal,
-                  metamer.base_signal - metamer.synthesized_signal]
-    else:
-        images = [metamer.model(metamer.base_signal), metamer.model(metamer.synthesized_signal),
-                  metamer.representation_error()]
+    images = [metamer.model(metamer.base_signal), metamer.model(metamer.synthesized_signal),
+              metamer.representation_error()]
     for i, (im, t, vr) in enumerate(zip(images, titles, vranges)):
         metamer.model.plot_representation_image(ax=axes[i], data=im, title=t, vrange=vr,
                                                 zoom=img_zoom)
     images = [metamer.saved_signal[0], metamer.synthesized_signal, metamer.base_signal]
     images = 2*[po.to_numpy(i.to(torch.float32)).squeeze() for i in images]
     titles = ['Initial image', 'Metamer', 'Reference image']
-    if metamer.model.window_type == 'dog':
-        titles += ['Windowed (center) '+t for t in titles]
-    else:
-        titles += ['Windowed '+t for t in titles]
+    titles += ['Windowed '+t for t in titles]
     windowed_fig = pt.imshow(images, col_wrap=3, title=titles, vrange=(0, 1), zoom=img_zoom)
     for ax in windowed_fig.axes[3:]:
         metamer.model.plot_windows(ax)

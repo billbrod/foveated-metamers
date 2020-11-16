@@ -486,20 +486,6 @@ rule cache_windows:
                     std_dev = float(wildcards.t_width)
                     t_width = None
                     min_ecc = float(wildcards.min_ecc)
-                elif wildcards.window_type == 'dog':
-                    # in this case, the t_width wildcard will be a bit
-                    # more complicated, and we need to parse it more
-                    t_width = wildcards.t_width.split('_')
-                    std_dev = float(t_width[0])
-                    if not t_width[1].startswith('s-'):
-                        raise Exception("DoG windows require surround_std_dev!")
-                    kwargs['surround_std_dev'] = float(t_width[1].split('-')[-1])
-                    if not t_width[2].startswith('r-'):
-                        raise Exception("DoG windows require center_surround_ratio!")
-                    kwargs['center_surround_ratio'] = float(t_width[2].split('-')[-1])
-                    t_width = None
-                    min_ecc = None
-                    kwargs['transition_x'] = float(wildcards.min_ecc)
                 po.simul.PoolingWindows(float(wildcards.scaling), img_size, min_ecc,
                                         float(wildcards.max_ecc), cache_dir=op.dirname(output[0]),
                                         transition_region_width=t_width, std_dev=std_dev,
@@ -541,13 +527,6 @@ def get_windows(wildcards):
     elif 'gaussian' in wildcards.model_name:
         window_type = 'gaussian'
         t_width = 1.0
-    elif 'dog' in wildcards.model_name:
-        # then model_name will also include the center_surround_ratio
-        # and surround_std_dev
-        window_type = 'dog'
-        surround_std_dev = [n for n in wildcards.model_name.split('_') if n.startswith('s-')][0]
-        center_surround_ratio = [n for n in wildcards.model_name.split('_') if n.startswith('r-')][0]
-        t_width = f'1.0_{surround_std_dev}_{center_surround_ratio}'
     if wildcards.model_name.startswith("RGC"):
         size = ','.join([str(i) for i in im_shape])
         return window_template.format(scaling=wildcards.scaling, size=size,
