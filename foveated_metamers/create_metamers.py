@@ -257,9 +257,6 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
         images by in the plots we'll create
 
     """
-    surround_std_dev = None
-    center_surround_ratio = None
-    transition_x = None
     if 'gaussian' in model_name:
         window_type = 'gaussian'
         t_width = None
@@ -282,9 +279,6 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
                                    transition_region_width=t_width,
                                    cache_dir=cache_dir,
                                    std_dev=std_dev,
-                                   surround_std_dev=surround_std_dev,
-                                   center_surround_ratio=center_surround_ratio,
-                                   transition_x=transition_x,
                                    normalize_dict=normalize_dict)
     elif model_name.startswith('V1'):
         if 'norm' not in model_name:
