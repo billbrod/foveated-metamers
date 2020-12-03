@@ -80,6 +80,10 @@ V1:
     - .33
     - .4
     - .5
+    - .66
+    - .87
+    - 1.14
+    - 1.5
   loss: 'mse_range-0,1_lmbda-0.01'
   optimizer: 'Adam-SWA_s-50_f-5'
   coarse_to_fine: 'together'
