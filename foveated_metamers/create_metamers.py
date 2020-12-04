@@ -130,12 +130,11 @@ def find_figsizes(model_name, model, image_shape):
         # we need about 11 per plot (and we have one of those per scale,
         # plus one for the mean luminance)
         rep_image_figsize = [11 * (num_scales+1), 30]
-        # default figsize arguments work for an image that is 512x512,
-        # may need to expand. we go backwards through figsize because
-        # figsize and image shape are backwards of each other:
-        # image.shape's last two indices are (height, width), while
-        # figsize is (width, height)
-        default_imgsize = np.array((256*3, 256*3))
+        # default figsize arguments work for an image that is 512x512 may need
+        # to expand. we go backwards through figsize because figsize and image
+        # shape are backwards of each other: image.shape's last two indices are
+        # (height, width), while figsize is (width, height)
+        default_imgsize = np.array((512, (image_shape[-1] / image_shape[-2]) * 512))
     # We want to figure out two things: 1. how much larger we need to
     # make the different figures so we can fit everything on them and
     # 2. if we need to shrink the images in order to fit
