@@ -391,7 +391,7 @@ rule combine_norm_stats:
                 torch.save(combined_stats, output[0])
 
 
-def get_mem_estimate(wildcards):
+def get_mem_estimate(wildcards, partition=None):
     r"""estimate the amount of memory that this will need, in GB
     """
     try:
@@ -456,7 +456,18 @@ def get_mem_estimate(wildcards):
         # then we're missing either the save_all or max_iter wildcard, in which
         # case this is probably cache_windows and the above doesn't matter
         pass
-    return int(np.ceil(mem))
+    mem = int(np.ceil(mem))
+    if partition == 'rusty':
+        if int(wildcards.gpu) == 0:
+            # in this case, we *do not* want to specify memory (we'll get the
+            # whole node allocated but slurm could still kill the job if we go
+            # over requested memory)
+            mem = ''
+        else:
+            # we'll be plugging this right into the mem request to slurm, so it
+            # needs to be exactly correct
+            mem = f"{mem}GB"
+    return mem
 
 
 rule cache_windows:
@@ -624,9 +635,10 @@ rule create_metamers:
         METAMER_LOG_PATH.replace('.log', '_benchmark.txt'),
     resources:
         gpu = lambda wildcards: int(wildcards.gpu),
-        mem = get_mem_estimate,
         cpus_per_task = get_cpu_num,
+        mem = get_mem_estimate,
     params:
+        rusty_mem = lambda wildcards: get_mem_estimate(wildcards, 'rusty')
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
         time = lambda wildcards: {'V1': '12:00:00', 'RGC': '7-00:00:00'}[wildcards.model_name.split('_')[0]],
         rusty_partition = lambda wildcards: get_partition(wildcards, 'rusty'),
