@@ -638,7 +638,7 @@ rule create_metamers:
         cpus_per_task = get_cpu_num,
         mem = get_mem_estimate,
     params:
-        rusty_mem = lambda wildcards: get_mem_estimate(wildcards, 'rusty')
+        rusty_mem = lambda wildcards: get_mem_estimate(wildcards, 'rusty'),
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
         time = lambda wildcards: {'V1': '12:00:00', 'RGC': '7-00:00:00'}[wildcards.model_name.split('_')[0]],
         rusty_partition = lambda wildcards: get_partition(wildcards, 'rusty'),
