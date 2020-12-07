@@ -795,28 +795,48 @@ rule gamma_correct_metamer:
 
 
 rule collect_metamers_training:
-    # this is for a shorter version of the experiment, the goal is to
-    # create a test version for teaching someone how to run the
-    # experiment or for demos
+    # this is for a simple version of the experiment, the goal is to create a
+    # test version for teaching someone how to run the experiment or to
+    # demonstrate to subjects
     input:
-        lambda wildcards: [m.replace('metamer.png', 'metamer.npy') for m in
-                           utils.generate_metamer_paths(wildcards.model_name, gpu=1,
-                                                       scaling=config[wildcards.model_name.split('_')[0]]['training_scaling'])],
-        [utils.get_ref_image_full_path(i) for i in IMAGES],
+        # this duplication is *on purpose*. it's the easiest way of making sure
+        # each of them show up twice in our stimuli array and description
+        # dataframe
+        op.join(config['DATA_DIR'], 'ref_images', 'uniform-noise_size-2048,2600.png'),
+        op.join(config['DATA_DIR'], 'ref_images', 'pink-noise_size-2048,2600.png'),
+        op.join(config['DATA_DIR'], 'ref_images', 'uniform-noise_size-2048,2600.png'),
+        op.join(config['DATA_DIR'], 'ref_images', 'pink-noise_size-2048,2600.png'),
+        [utils.get_ref_image_full_path(i) for i in IMAGES[:2]],
     output:
-        op.join(config["DATA_DIR"], 'stimuli', '{model_name}_training', 'stimuli.npy'),
-        report(op.join(config["DATA_DIR"], 'stimuli', '{model_name}_training', 'stimuli_description.csv')),
+        op.join(config["DATA_DIR"], 'stimuli', 'training', 'stimuli.npy'),
+        report(op.join(config["DATA_DIR"], 'stimuli', 'training', 'stimuli_description.csv')),
     log:
-        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}_training', 'stimuli.log'),
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', 'training', 'stimuli.log'),
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}_training', 'stimuli_benchmark.txt'),
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', 'training', 'stimuli_benchmark.txt'),
     run:
         import foveated_metamers as met
         import contextlib
+        import pandas as pd
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 met.stimuli.collect_images(input, output[0])
-                met.stimuli.create_metamer_df(input, output[1])
+                df = []
+                for i, p in enumerate(input):
+                    if i < 4:
+                        image_name = op.basename(input[-2:][i//2]).replace('.pgm', '').replace('.png', '')
+                        # dummy scaling value
+                        scaling = 1
+                        model = 'training'
+                        seed = i % 2
+                    else:
+                        image_name = op.basename(p).replace('.pgm', '').replace('.png', '')
+                        scaling = None
+                        model = None
+                        seed = None
+                    df.append(pd.DataFrame({'base_signal': p, 'image_name': image_name, 'model': model,
+                                            'scaling': scaling, 'seed': seed}, index=[0]))
+                pd.concat(df).to_csv(output[1], index=False)
 
 
 rule collect_metamers:
@@ -881,12 +901,14 @@ rule generate_experiment_idx:
                     ref_image_idx = np.random.permutation(np.arange(8))[4*int(wildcards.im_num):4*(int(wildcards.im_num)+1)]
                 except ValueError:
                     # then this is the test subject
-                    ref_image_idx = [0]
                     if 'training' not in wildcards.model_name:
+                        ref_image_idx = [0]
                         scaling_val = config[wildcards.model_name.split('_')[0]]['scaling'][-1]
+                        stim_df = stim_df.fillna('None').query("scaling in [@scaling_val, 'None']")
                     else:
-                        scaling_val = config[wildcards.model_name.split('_')[0]]['training_scaling']
-                    stim_df = stim_df.fillna('None').query("scaling in [@scaling_val, 'None']")
+                        # if it is the traning model, then the stimuli description
+                        # has already been restricted to only the values we want
+                        ref_image_idx = [0, 1]
                 ref_image_to_include = stim_df.image_name.unique()[ref_image_idx]
                 stim_df = stim_df.query("image_name in @ref_image_to_include")
                 comp = 'met_v_' + wildcards.comp
