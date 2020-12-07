@@ -725,7 +725,7 @@ def run_abx(stimuli_path, idx_path, save_path, on_msec_length=200,
     return keys_pressed, timings, expt_params, idx
 
 
-def expt(stimuli_path, subj_name, sess_num, im_num, task,
+def expt(stimuli_path, subj_name, sess_num, im_num, task, comparison,
          output_dir="data/raw_behavioral", eyetrack=False,
          screen_size_pix=[1920, 1080], screen_size_deg=60, take_break=True, ipd_csv=None,
          flip_text=True, text_height=50, screen=[1, 2], **kwargs):
@@ -739,22 +739,22 @@ def expt(stimuli_path, subj_name, sess_num, im_num, task,
         binocular_offset = csv_to_binocular_offset(ipd_csv, subj_name)
     else:
         binocular_offset = [0, 0]
-    model_name = re.findall("/((?:RGC|V1).*?)/", stimuli_path)[0]
-    if not (model_name.startswith('RGC') or model_name.startswith('V1')):
+    model_name = re.findall("/((?:RGC|V1|training).*?)/", stimuli_path)[0]
+    if not (model_name.startswith('RGC') or model_name.startswith('V1') or model_name.startswith('training')):
         raise Exception(f"Can't find model_name from stimuli_path {stimuli_path}! "
                         f"Found {model_name} when trying to do so")
-    output_dir = op.join(output_dir, model_name, f'task-{task}', subj_name)
+    output_dir = op.join(output_dir, model_name, f'task-{task}_comp-{comparison}', subj_name)
     if not op.exists(op.join(output_dir)):
         os.makedirs(op.join(output_dir))
     kwargs_str = ""
     for k, v in kwargs.items():
         kwargs_str += "_{}-{}".format(k, v)
-    save_path = op.join(output_dir, "%s_%s_task-%s_sess-{sess:02d}_im-{im:02d}%s.hdf5" %
-                        (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name, task, kwargs_str))
-    edf_path = op.join(output_dir, "%s_%s_task-%s_sess-{sess:02d}_im-{im:02d}%s.EDF" %
-                       (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name, task, kwargs_str))
-    idx_path = op.join(op.dirname(stimuli_path), f'task-{task}', subj_name,
-                       f'{subj_name}_task-{task}_idx_sess-{sess_num:02d}_im-{im_num:02d}.npy')
+    save_path = op.join(output_dir, "%s_%s_task-%s_comp-%s_sess-{sess:02d}_im-{im:02d}%s.hdf5" %
+                        (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name, task, comparison, kwargs_str))
+    edf_path = op.join(output_dir, "%s_%s_task-%s_comp-%s_sess-{sess:02d}_im-{im:02d}%s.EDF" %
+                       (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name, task, comparison, kwargs_str))
+    idx_path = op.join(op.dirname(stimuli_path), f'task-{task}_comp-{comparison}', subj_name,
+                       f'{subj_name}_task-{task}_comp-{comparison}_idx_sess-{sess_num:02d}_im-{im_num:02d}.npy')
     save_path = save_path.format(sess=sess_num, im=im_num)
     if os.path.isfile(save_path):
         print("Existing save data %s found! Will load in and append results" % save_path)
@@ -814,7 +814,7 @@ def expt(stimuli_path, subj_name, sess_num, im_num, task,
                                                   text_height=text_height,
                                                   screen=screen,
                                                   **kwargs)
-    elif task.startswith('split'):
+    elif task == 'split':
         keys, timings, expt_params, idx = run_split(stimuli_path, idx_path,
                                                     save_path,
                                                     size=screen_size_pix,
@@ -870,8 +870,11 @@ if __name__ == '__main__':
                         help=("This script is meant to be run on the haploscope. Therefore, we "
                               "left-right flip all text by default. Use this option to disable"
                               " that"))
-    parser.add_argument("--task", '-t', default='abx',
-                        help="{abx, split-same, split-diff}. The task to run.")
+    parser.add_argument("--task", '-t', default='split',
+                        help="{abx, split, split}. The task to run.")
+    parser.add_argument("--comparison", '-c', default='ref',
+                        help=("{ref, met}. Whether this run is comparing metamers against "
+                              "reference images or other metamers."))
     parser.add_argument("--on_msec_length", '-l', default=200, type=int,
                         help="Length of stimulus duration (in msec)")
     args = vars(parser.parse_args())
