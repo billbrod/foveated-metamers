@@ -299,7 +299,7 @@ If you wanted to generate all of your metamers at once, this is very
 easy: simply running
 
 ```
-snakemake -j n --resources gpu=n mem=m -prk --restart-times 3 --ri ~/Desktop/metamers_display/dummy_RGC_gaussian_0_-1.txt ~/Desktop/metamers_display/dummy_V1_norm_s6_gaussian_0_-1.txt
+python foveated_metamers/utils.py RGC V1 -g --print | xargs snakemake -j n --resources gpu=n mem=m -prk --restart-times 3 --ri 
 ```
 
 will do this (where you should replace both `n` with the number of
@@ -312,21 +312,22 @@ directed acyclic graph (DAG) of jobs necessary to create those two txt
 files, which are just placeholders that require all the metamers as
 their input.
 
-However, you probably can't create all metamers at once on one
-machine, because that would take too much time. You probably want to
-split things up. If you've got a cluster system, you can configure
-`snakemake` to work with it in a [straightforward
+However, you probably can't create all metamers at once on one machine, because
+that would take too much time. You probably want to split things up. If you've
+got a cluster system, you can configure `snakemake` to work with it in a
+[straightforward
 manner](https://snakemake.readthedocs.io/en/stable/executable.html#cluster-execution)
-(snakemake also works with cloud services like AWS, kubernetes, but I
-have no experience with that; you should google around to find info
-for your specific job scheduler, see the small repo [I put
-together](https://github.com/billbrod/snakemake-slurm) for using NYU's
-SLURM system). In that case, you'll need to put together a
-`cluster.json` file within this directory to tell snakemake how to
-request GPUs, etc. Something like this should work for a SLURM system
-(the different `key: value` pairs would probably need to be changed on
-different systems, depending on how you request resources; the one
-that's probably the most variable is the final line, gpus):
+(snakemake also works with cloud services like AWS, kubernetes, but I have no
+experience with that; you should google around to find info for your specific
+job scheduler, see the small repo [I put
+together](https://github.com/billbrod/snakemake-slurm) for using NYU's or the
+Flatiron Institute's SLURM system). In that case, you'll need to put together a
+`cluster.json` file within this directory to tell snakemake how to request GPUs,
+etc (see `prince.json` and `rusty.json` for the config files I use on NYU's and
+Flatiron's, respectively). Something like this should work for a SLURM system
+(the different `key: value` pairs would probably need to be changed on different
+systems, depending on how you request resources; the one that's probably the
+most variable is the final line, gpus):
 
 ```
 {
@@ -356,27 +357,23 @@ similarly when requesting resources above. This is just an estimate
 and, if you find yourself running out of RAM, you may need to increase
 it in the `get_mem_estimate` function in `Snakefile.`
 
-If you don't have a cluster available and instead have several
-machines with GPUs so you can split up the jobs, that `dummy.txt` file
-will help there as well: the structure of the file is
-`dummy_{model_name}_{min_idx}_{max_idx}.txt`, where `{model_name}`
-should be one of the two mentioned above, and `{min_idx}` and
-`{max_idx}` are two integers from 0 to 108 inclusive (`max_idx` can
-also be -1, which is equivalent to 108), where these index the list of
-all 108 metamers generated for each model, returned in order of
-increasing scaling value. Therefore, for each model, the lower
-integers correspond to metamers that will take longer to generate, and
-the higher ones correspond to metamers that will take less time (and
-resources). You can use this to break up the generation of the
-metamers in whatever way makes sense to you and your resources (note
-because of how python indexing works, the different sets should have
-overlapping `max_idx/min_idx` values; we go from
-`metamers[min_idx:max_idx]`, so if you want to break this into e.g.,
-two groups, you should create `dummy_{model_name}_0_64.txt` and
-`dummy_{model_name}_64_108`). While messing with this, pay attention
-to the `-j n` and `--resources gpu=n` flags, which tell snakemake how
-many jobs to run at once and how many GPUs you have available,
-respectively.
+If you don't have a cluster available and instead have several machines with
+GPUs so you can split up the jobs, making use of the
+`foveated_metamers/utils.py` script. See it's help string for details, but
+calling it from the command line with different arguments will generate the
+paths for the corresponding metamers. For example, to generate all RGC metamers
+with a given scaling value, you would run 
+
+```
+python foveated_metamers/utils.py RGC -g --print --scaling 0.01
+```
+
+The `-g` argument tells the script to include the gamma-correction step (for
+viewing on non-linear displays), `--print` tells it to print out the desired
+output (instead of saving it to file), and `RGC` and `--scaling 0.01` tell it to
+use that model and scaling value, respectively. While messing with this, pay
+attention to the `-j n` and `--resources gpu=n` flags, which tell snakemake how
+many jobs to run at once and how many GPUs you have available, respectively.
 
 Note that I'm using dotlockfile to handle scheduling jobs across
 different GPUs. I think this will work, but I recommend adding the
@@ -392,48 +389,52 @@ Once the metamers have all been generated, they'll need to be combined
 into a numpy array for the displaying during the experiment, and the
 presentation indices will need to generated for each subject.
 
-For the experiment we performed, we had 30 subjects, with 3 sessions
-per model. In order to re-generate the indices we used, you can simply
-run `snakemake -prk gen_all_idx`. This will generate the indices for
-each subject, each session, each model, as well as the stimuli array
-(we actually use the same index for each model for a given subject and
-session number; they're generated using the same seed).
+For the experiment we performed, we had XX subjects, with 6 sessions per model
+(2 image blocks, with 4 reference images each, by 3 presentation orders). In
+order to re-generate the indices we used, you can simply run `snakemake -prk
+gen_all_idx`. This will generate the indices for each subject, each session,
+each model, as well as the stimuli array (we actually use the same index for
+each model for a given subject and session number; they're generated using the
+same seed).
 
 This can be run on your local machine, as it won't take too much time
 or memory.
 
 The stimuli arrays will be located at:
-`~/Desktop/metamers/stimuli/{model_name}/stimuli.npy` and the
-presentation indices will be at
-`~/Desktop/metamers/stimuli/{model_name}/{subject}_idx_sess-{num}.npy`. There
-will also be a pandas DataFrame, saved as a csv, at
-`~/Desktop/metamers/stimuli/{model_name}/stimuli_description.csv`,
-which contains information about the metamers and their
-optimization. It's used to generate the presentation indices as well
-as to analyze the data.
+`~/Desktop/metamers/stimuli/{model_name}/stimuli.npy` and the presentation
+indices will be at
+`~/Desktop/metamers/stimuli/{model_name}/task-{task}_comp-{comp}/{subject}/{subject}_task-{task}_comp-{comp}_idx_sess-{sess_num}_im-{im_num}.npy`,
+where `{task}` is either `split` or `abx`, depending on whether you're using the
+split-screen or ABX task, and `{comp}` is `met` and `ref`, for the metamer vs
+metamer and metamer vs reference image comparisons, respectively. There will
+also be a pandas DataFrame, saved as a csv, at
+`~/Desktop/metamers/stimuli/{model_name}/stimuli_description.csv`, which
+contains information about the metamers and their optimization. It's used to
+generate the presentation indices as well as to analyze the data.
 
 You can generate your own, novel presentation indices by running `snakemake -prk
-~/Desktop/metamers/stimuli/{model_name}/{subject}_idx_sess-{num}.npy`, replacing
-`{model_name}` with one of `'RGC_gaussian', 'V1_norm_s6_gaussian'`, `{subject}`
-must be of the format `sub-##`, where `##` is some integer (ideally zero-padded,
-but this isn't required), and `{num}` must also be an integer (this is because
-we use the number in the subject name and session number to determine the seed
-for randomizing the presentation order; if you'd like to change this, see the
-snakemake rule `generate_experiment_idx`, and how the parameter `seed` is
-determined; as long as you modify this so that each subject/session combination
-gets a unique seed, everything should be fine).
+~/Desktop/metamers/stimuli/{model_name}/task-{task}_comp-{comp}/{subject}/{subject}_task-{task}_comp-{comp}_idx_sess-{sess_num}_im-{im_num}.npy`,
+replacing `{model_name}` with one of `'RGC_norm_gaussian',
+'V1_norm_s6_gaussian'`, `{subject}` must be of the format `sub-##`, where `##`
+is some integer (ideally zero-padded, but this isn't required), `{sess_num}`
+must also be an integer (this is because we use the number in the subject name
+and session number to determine the seed for randomizing the presentation order;
+if you'd like to change this, see the snakemake rule `generate_experiment_idx`,
+and how the parameter `seed` is determined; as long as you modify this so that
+each subject/session combination gets a unique seed, everything should be fine),
+`{im_num}` is `00` or `01` (determines which set of 4 reference images are
+shown), and `task` and `comp` take one of the values explained above.
 
 ### Demo / test experiment
 
-If you want to put together a quick demo, either to show someone what
-the experiment looks like or to teach someone how to run the
-experiment, a rule is provided for this. If you run `snakemake -prk
-~/Desktop/metamers/stimuli/RGC_demo/sub-00_idx_sess-00.npy`, we'll
-create a small stimulus array (it contains one image per scaling value
-of the `azulejos` reference image, all with random seed 0) and the
-indices necessary to present them. You can then follow the
-instructions in the following section to run the experiment, using
-`model_name=RGC_demo`, `subject=sub-00`, and `num=0`.
+If you want to put together a quick demo, either to show someone what the
+experiment looks like or to teach someone how to run the experiment, a rule is
+provided for this. If you run `snakemake -prk
+~/Desktop/metamers/stimuli/training/task-split_comp-met/sub-training/sub-training_task-split_comp-met_idx_sess-00_im-00.npy`,
+we'll create a small stimulus array (it the azulejos and tiles reference images,
+as well as white and pink noise) and the indices necessary to present them. You
+can then follow the instructions in the following section to run the experiment,
+using `model_name=training`, `subject=sub-training`, `sess_num=0`, and `im_num=0`
 
 ## Run experiment
 
@@ -447,10 +448,104 @@ other way to guarantee that your subject remains fixated on the center
 of the image; the results of the experiment rely very heavily on the
 subject's and model's foveations being identical.
 
-We want 3 sessions per subject per model. Each session will contain
-all trials in the experiment, the only thing that differs is the
-presentation order. Each trial lasts 4.1 seconds and is structured
+We want 6 sessions per subject per model. Each session will contain all trials
+in the experiment for 4 of the 8 reference images, the only thing that differs
+is the presentation order (each subject gets presented a different split of 4
+reference images). 
+
+## Training
+
+To teach the subject about the experiment, we want to introduce them to the
+structure of the task and the images used.
+
+1. First, run a simple training run (as described
+   [above](#demo--test-experiment)):
+    - `conda activate psypy` 
+    - `python foveated_metamers.py
+      ~/Desktop/metamers/stimuli/training/stimuli.npy sub-training 0 0 -c
+      {comp}`, where `{comp}` is `met` or `ref` depending on which version
+      you're running.
+    - Explanatory text will appear on screen, answer any questions.
+    - This should explain the basic structure of the experiment, and be easy.
+2. Run `python example_images.py {model}` where `{model}` is `V1` or `RGC`
+   depending on which model you're running.
+    - This will open up two image viewers, each with a separate reference image,
+      a metamer with the lowest scaling value, and one with the highest scaling
+      value (all linear).
+    - Allow the participant to flip between these images at their leisure, so
+      they understand what the images will look like.
+
+### Split-screen Task
+
+Now, using a split-screen task. Each trial lasts 1.4 seconds and is structured
 like so:
+
+```
+|Image 1 | Blank  |Image 2 |Response|  Blank |
+|--------|--------|--------|--------|--------|
+|200 msec|500 msec|200 msec|        |500 msec|
+```
+
+Image 1 will consist of a single image divided vertically at the center by a
+gray bar. One half of image 2 will be the same as image 1, and the other half
+will have changed. The two images involved are either two metamers with the same
+scaling value (if `comp=met`) or a metamer and the reference image it is based
+on (if `comp=ref`). The subject's task is to say whether the left or the right
+half changed. They have as long as they need to respond and receive no feedback.
+
+To run the experiment:
+
+- Activate the `psypy` environment: `conda activate psypy`
+- Start the experiment script from the command line: `python
+   foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/{model
+   name}/stimuli.npy {subject} {sess_num} {im_num} -t split -c {comp}`, where
+   `{model_name}, {subject}, {im_num}, {sess_num}, {comp}` are as above
+   - There are several other arguments the experiment script can take,
+     run `python foveated_metamers/experiment.py -h` to see them, and
+     see the [other arguments](#other-arguments) section for more
+     information.
+- Explain the task to the subject, as seen in the "say this to subject for
+  experiment" section (this text will also appear on screen before each run for
+  the participant to read)
+- When the subject is ready, press the space bar to begin the task.
+- You can press the space bar at any point to pause it, but the pause
+  won't happen until the end of the current trial, so don't press it a
+  bunch of times because it doesn't seem to be working. However, try
+  not to pause the experiment at all.
+- You can press q/esc to quit, but don't do this unless truly
+  necessary.
+- There will be a break half-way through the block. The subject can
+  get up, walk, and stretch during this period, but remind them to
+  take no more than 5 minutes. When they're ready to begin again,
+  press the space bar to resume.
+- The data will be saved on every trial, so if you do need to quit
+  out, all is not lost. You can run the same command as above, and the
+  experiment will pick up where you stopped.
+
+Recommended explanation to subjects:
+
+> In this experiment, you'll be asked to complete what we call an "2-Alternative
+> Forced Choice task": you'll view an image, split in half, and then, after a
+> brief delay, a second image, also split in half. One half of the second image
+> will be the same as the first, but the other half will have changed. Your task
+> is to press the left or right button to say which half you think changed. All
+> the images will be presented for a very brief period of time, so pay
+> attention. Sometimes, the two images will be very similar; sometimes, they'll
+> be very different. For the very similar images, we expect the task to be hard.
+> Just do your best!
+
+> For this experiment, fixate on the center of the image the whole time and try
+> not to move your eyes.
+
+> The run will last for about twenty minutes, but there will be a break halfway
+> through. During the break, you can move away from the device, walk around, and
+> stretch, but please don't take more than 5 minutes. Tell me when you're ready
+> to begin again.
+
+### ABX Task
+
+Originally, was going to use the ABX task, as described in Freeman and
+Simoncelli, 2011. Each trial lasts 4.1 seconds and is structured like so:
 
 ```
 |Image 1 | Blank  |Image 2 |  Blank  |Image X |  Blank  |
@@ -458,27 +553,27 @@ like so:
 |200 msec|500 msec|200 msec|1000 msec|200 msec|2000 msec|
 ```
 
-Image 1 and image 2 will always be two different images. They will
-either be two metamers generated from the same reference image with
-the same scaling value (and model), but different seeds, or one of
-those images and the reference image it was generated from. Image X
-will always be a repeat of either image 1 or 2, and the subject's job
-is to press either 1 or 2 on the keyboard, in order to indicate which
-image they think was repeated.
+Image 1 and image 2 will always be two different images. They will either be two
+metamers generated from the same reference image with the same scaling value
+(and model, if `comp=met`), but different seeds, or one of those images and the
+reference image it was generated from (if `comp=ref`). Image X will always be a
+repeat of either image 1 or 2, and the subject's job is to press either 1 or 2
+on the keyboard, in order to indicate which image they think was repeated.
 
 To run the experiment:
 
 - Activate the `psypy` environment: `conda activate psypy`
 - Start the experiment script from the command line: `python
    foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/{model
-   name}/stimuli.npy {subject} {num}`, where `{model_name}, {subject},
-   and {num}` are as above
+   name}/stimuli.npy {subject} {sess_num} {im_num} -t abx -c {comp}`, where
+   `{model_name}, {subject}, {im_num}, {sess_num}, {comp}` are as above
    - There are several other arguments the experiment script can take,
      run `python foveated_metamers/experiment.py -h` to see them, and
      see the [other arguments](#other-arguments) section for more
      information.
-- Explain the task to the subject, as seen in the "say this to subject
-  for experiment" section
+- Explain the task to the subject, as seen in the "say this to subject for
+  experiment" section (this text will also appear on screen before each run for
+  the participant to read)
 - When the subject is ready, press the space bar to begin the task.
 - You can press the space bar at any point to pause it, but the pause
   won't happen until the end of the current trial, so don't press it a

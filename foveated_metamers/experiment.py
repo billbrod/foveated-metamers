@@ -257,6 +257,36 @@ def _setup_run(stimuli_path, idx_path, fix_deg_size=.25, screen_size_deg=60,
             fixation, timer, expt_clock, screen)
 
 
+def _explain_task(win, img_pos, expt_clock, flip_text=True, text_height=50, task='split'):
+    """Draw some text explaining the task
+    """
+    if task == 'split':
+        text = ("In this experiment, you'll be performing a Two-Alternative Forced Choice task: "
+                "you'll view an image, split in half, and then, after a brief delay, a second "
+                "image, also split in half. One half of the second image will be the same as the "
+                "first, but the other half will have changed. Your task is to press the left or "
+                "right button to say which half you think changed. You have as much time as you "
+                "need, but respond as quickly as you can. All the images will be presented for a "
+                "very brief period of time, so pay attention. Sometimes the two images will be "
+                "very similar; sometimes they'll be very different. For the similar images, we "
+                "expect the task to be hard. Just do your best!\n\n"
+                "Fixate your eyes on the center of the image and try not to move them.\n\n"
+                "The run will last for about twenty minutes and there will be a break halfway "
+                "through. When you've finished the run, go get the experimenter.\n\n"
+                "Press space to continue")
+    else:
+        raise Exception("Haven't implemented this yet!")
+    explain_text = [visual.TextStim(w, text, pos=p, flipHoriz=flip_text,
+                                    height=text_height, wrapWidth=2000)
+                    for w, p in zip(win, img_pos)]
+    [text.draw() for text in explain_text]
+    [w.flip() for w in win]
+    all_keys = event.waitKeys(keyList=['return', 'space', ], timeStamped=expt_clock)
+    clear_events(win)
+    return [(key[0], key[1]) for key in all_keys]
+
+
+
 def _end_run(win, img_pos, timings, eyetracker, edf_path, save_frames,
              flip_text, text_height, expt_clock):
     """End the run.
@@ -396,6 +426,8 @@ def run_split(stimuli_path, idx_path, save_path, on_msec_length=200,
     right_img = [visual.ImageStim(w, image=imagetools.array2image(right_stimuli[0, 0]), pos=p,
                                  size=stim_size) for w, p in zip(win, right_pos)]
     del stimuli
+
+    _explain_task(win, img_pos, expt_clock, flip_text, text_height, task='split')
 
     wait_text = [visual.TextStim(w, ("Press space to start\nq or esc will quit\nspace to pause"),
                                  pos=p, flipHoriz=flip_text, height=text_height)
