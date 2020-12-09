@@ -257,9 +257,14 @@ def _setup_run(stimuli_path, idx_path, fix_deg_size=.25, screen_size_deg=60,
             fixation, timer, expt_clock, screen)
 
 
-def _explain_task(win, img_pos, expt_clock, flip_text=True, text_height=50, task='split'):
+def _explain_task(win, img_pos, expt_clock, comparison, flip_text=True,
+                  text_height=50, task='split'):
     """Draw some text explaining the task
     """
+    if comparison == 'met':
+        comp_text = "On this run, you'll be comparing two synthesized images."
+    elif comparison == 'ref':
+        comp_text = "On this run, you'll be comparing natural and synthesized images."
     if task == 'split':
         text = ("In this experiment, you'll be performing a Two-Alternative Forced Choice task: "
                 "you'll view an image, split in half, and then, after a brief delay, a second "
@@ -269,9 +274,9 @@ def _explain_task(win, img_pos, expt_clock, flip_text=True, text_height=50, task
                 "need, but respond as quickly as you can. All the images will be presented for a "
                 "very brief period of time, so pay attention. Sometimes the two images will be "
                 "very similar; sometimes they'll be very different. For the similar images, we "
-                "expect the task to be hard. Just do your best!\n\n"
+                f"expect the task to be hard. Just do your best!\n\n{comp_text}\n\n"
                 "Fixate your eyes on the center of the image and try not to move them.\n\n"
-                "The run will last for about twenty minutes and there will be a break halfway "
+                "The run will last for about fifteen minutes and there will be a break halfway "
                 "through. When you've finished the run, go get the experimenter.\n\n"
                 "Press space to continue")
     else:
@@ -294,7 +299,7 @@ def _end_run(win, img_pos, timings, eyetracker, edf_path, save_frames,
     Do the things that are shared across task types.
 
     """
-    [visual.TextStim(w, "Run over", pos=p, flipHoriz=flip_text,
+    [visual.TextStim(w, "Run over\nGo notify experimenter", pos=p, flipHoriz=flip_text,
                      height=text_height).draw() for w, p in zip(win, img_pos)]
     [w.flip() for w in win]
     timings.append(("run_end", '', expt_clock.getTime()))
@@ -310,7 +315,7 @@ def _end_run(win, img_pos, timings, eyetracker, edf_path, save_frames,
     return all_keys
 
 
-def run_split(stimuli_path, idx_path, save_path, on_msec_length=200,
+def run_split(stimuli_path, idx_path, save_path, comparison, on_msec_length=200,
               off_msec_length=(500, 500), fix_deg_size=.25, screen_size_deg=60,
               eyetracker=None, edf_path=None, save_frames=None,
               binocular_offset=[0, 0], take_break=True, keys_pressed=[],
@@ -347,6 +352,8 @@ def run_split(stimuli_path, idx_path, save_path, on_msec_length=200,
     save_path : string
         path to .hdf5 file where we'll store the outputs of this
         experiment (we save every trial)
+    comparison : {'ref', 'met'}
+        whether we're comparing two metamers or a metamer and a reference image
     on_msec_length : int
         length of the ON blocks in milliseconds; that is, the length of
         time to display each stimulus
@@ -427,7 +434,8 @@ def run_split(stimuli_path, idx_path, save_path, on_msec_length=200,
                                  size=stim_size) for w, p in zip(win, right_pos)]
     del stimuli
 
-    _explain_task(win, img_pos, expt_clock, flip_text, text_height, task='split')
+    _explain_task(win, img_pos, expt_clock, comparison, flip_text, text_height,
+                  task='split')
 
     wait_text = [visual.TextStim(w, ("Press space to start\nq or esc will quit\nspace to pause"),
                                  pos=p, flipHoriz=flip_text, height=text_height)
@@ -849,6 +857,7 @@ def expt(stimuli_path, subj_name, sess_num, im_num, task, comparison,
     elif task == 'split':
         keys, timings, expt_params, idx = run_split(stimuli_path, idx_path,
                                                     save_path,
+                                                    comparison,
                                                     size=screen_size_pix,
                                                     eyetracker=eyetracker,
                                                     take_break=take_break,
