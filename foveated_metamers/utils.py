@@ -320,7 +320,7 @@ def generate_image_names(ref_image=None, preproc=None, size=None):
 
 
 def generate_metamer_paths(model_name, increment=False, extra_iter=None,
-                           gamma_corrected=False, **kwargs):
+                           gamma_corrected=False, comp='ref', **kwargs):
     """Generate metamer paths in a programmatic way
 
     This generates paths to the metamer.png files found in the
@@ -355,6 +355,13 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
     gamma_corrected : bool, optional
         If True, return the path to the gamma-corrected version. If False, the
         non-gamma-corrected
+    comp : {'ref', 'met'}, optional
+        If 'scaling' is not included in kwargs, this determines which range of
+        default scaling values we use. If 'ref' (the defualt), we use those
+        under the model:scaling key in the config file. If 'met', we look for
+        model:met_v_met_scaling key; we use these plus the highest ones from
+        model:scaling so that we end up with 9 total values. If there is no
+        model:met_v_met_scaling key, we return the same values as before.
     kwargs :
         keys must be configurable options for METAMER_TEMPLATE_PATH, as
         found in config.yml. If an option is *not* set, we'll use the
@@ -370,6 +377,8 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
     """
     if not isinstance(model_name, list):
         model_name = [model_name]
+    if comp not in ['ref', 'met']:
+        raise Exception("comp must be one of {'ref', 'met'}!")
     with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
         defaults = yaml.safe_load(f)
     default_img_size = _find_img_size(defaults['DEFAULT_METAMERS']['image_name'][0])
@@ -394,9 +403,23 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
                 if model == 'V1':
                     model = defaults['V1']['model_name']
             args['DATA_DIR'] = defaults['DATA_DIR']
+            if 'scaling' not in kwargs.keys():
+                scaling = defaults[model.split('_')[0]]['scaling']
+                if comp == 'met':
+                    try:
+                        more_scaling = defaults[model.split('_')[0]]['met_v_met_scaling']
+                        scaling = scaling[-(9-len(more_scaling)):] + more_scaling
+                    except KeyError:
+                        pass
+            else:
+                scaling = kwargs['scaling']
             # by putting this last, we'll over-write the defaults
             args.update(kwargs)
-            args.update({'model_name': model, 'image_name': im})
+            args.update({'model_name': model, 'image_name': im,
+                         'scaling': scaling})
+            # remove this key if it's here. if it were included, it would
+            # create duplicates of the paths
+            args.pop('met_v_met_scaling', None)
             # we want to handle lists differently, iterating through them. we
             # use an ordered dict because we want the keys and values to have
             # the same ordering when we iterate through them separately
@@ -437,6 +460,9 @@ if __name__ == '__main__':
                               "by one. If passed, --extra_iter must also be set"))
     parser.add_argument('--gamma_corrected', '-g', action='store_true',
                         help=("Whether we should return the gamma-corrected path or not."))
+    parser.add_argument('--comp', '-c',
+                        help=("{ref, met}, Whether to generate the scaling values for comparing "
+                              "metamers to reference images or to other metamers"))
     parser.add_argument('--extra_iter', type=int,
                         help=("If --increment is passed, this specifies how many extra "
                               "iterations to run synthesis for"))

@@ -401,7 +401,7 @@ This can be run on your local machine, as it won't take too much time
 or memory.
 
 The stimuli arrays will be located at:
-`~/Desktop/metamers/stimuli/{model_name}/stimuli.npy` and the presentation
+`~/Desktop/metamers/stimuli/{model_name}/stimuli_comp-{comp}.npy` and the presentation
 indices will be at
 `~/Desktop/metamers/stimuli/{model_name}/task-{task}_comp-{comp}/{subject}/{subject}_task-{task}_comp-{comp}_idx_sess-{sess_num}_im-{im_num}.npy`,
 where `{task}` is either `split` or `abx`, depending on whether you're using the
@@ -462,7 +462,7 @@ structure of the task and the images used.
    [above](#demo--test-experiment)):
     - `conda activate psypy` 
     - `python foveated_metamers.py
-      ~/Desktop/metamers/stimuli/training/stimuli.npy sub-training 0 0 -c
+      ~/Desktop/metamers/stimuli/training/stimuli_comp-{comp}.npy sub-training 0 0 -c
       {comp}`, where `{comp}` is `met` or `ref` depending on which version
       you're running.
     - Explanatory text will appear on screen, answer any questions.
@@ -498,7 +498,7 @@ To run the experiment:
 - Activate the `psypy` environment: `conda activate psypy`
 - Start the experiment script from the command line: `python
    foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/{model
-   name}/stimuli.npy {subject} {sess_num} {im_num} -t split -c {comp}`, where
+   name}/stimuli_comp-{comp}.npy {subject} {sess_num} {im_num} -t split -c {comp}`, where
    `{model_name}, {subject}, {im_num}, {sess_num}, {comp}` are as above
    - There are several other arguments the experiment script can take,
      run `python foveated_metamers/experiment.py -h` to see them, and
@@ -565,7 +565,7 @@ To run the experiment:
 - Activate the `psypy` environment: `conda activate psypy`
 - Start the experiment script from the command line: `python
    foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/{model
-   name}/stimuli.npy {subject} {sess_num} {im_num} -t abx -c {comp}`, where
+   name}/stimuli_comp-{comp}.npy {subject} {sess_num} {im_num} -t abx -c {comp}`, where
    `{model_name}, {subject}, {im_num}, {sess_num}, {comp}` are as above
    - There are several other arguments the experiment script can take,
      run `python foveated_metamers/experiment.py -h` to see them, and
