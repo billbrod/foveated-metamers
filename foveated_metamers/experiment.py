@@ -299,8 +299,8 @@ def _end_run(win, img_pos, timings, eyetracker, edf_path, save_frames,
     Do the things that are shared across task types.
 
     """
-    [visual.TextStim(w, "Run over\nGo notify experimenter", pos=p, flipHoriz=flip_text,
-                     height=text_height).draw() for w, p in zip(win, img_pos)]
+    [visual.TextStim(w, "Run over\n\nGo notify experimenter", pos=p, flipHoriz=flip_text,
+                     height=text_height, wrapWidth=2000).draw() for w, p in zip(win, img_pos)]
     [w.flip() for w in win]
     timings.append(("run_end", '', expt_clock.getTime()))
     all_keys = event.getKeys(timeStamped=expt_clock)
