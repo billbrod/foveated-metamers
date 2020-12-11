@@ -460,7 +460,7 @@ if __name__ == '__main__':
                               "by one. If passed, --extra_iter must also be set"))
     parser.add_argument('--gamma_corrected', '-g', action='store_true',
                         help=("Whether we should return the gamma-corrected path or not."))
-    parser.add_argument('--comp', '-c',
+    parser.add_argument('--comp', '-c', default='ref',
                         help=("{ref, met}, Whether to generate the scaling values for comparing "
                               "metamers to reference images or to other metamers"))
     parser.add_argument('--extra_iter', type=int,
