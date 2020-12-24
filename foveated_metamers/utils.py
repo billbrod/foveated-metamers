@@ -273,8 +273,21 @@ def get_gamma_corrected_ref_image(image_name):
 
     """
     image_name = image_name.split('_')
-    image_name = '_'.join([image_name[0]] + ['gamma-corrected'] + image_name[1:])
-    return image_name
+    target_i = 0
+    # these two are special: if either are present, we want gamma-corrected to
+    # be inserted right before it
+    if any(['range' in i for i in image_name]):
+        target_i = image_name.index(np.array(image_name)[['range' in i for i in image_name]])
+        target_i -= 1
+    elif any(['full' in i for i in image_name]):
+        target_i = image_name.index(np.array(image_name)[['full' in i for i in image_name]])
+        target_i -= 1
+    image_name_target = []
+    for part in [image_name[:(target_i+1)], ['gamma-corrected'], image_name[(target_i+1):]]:
+        if not isinstance(part, list):
+            part = [part]
+        image_name_target += part
+    return '_'.join(image_name_target)
 
 
 def generate_image_names(ref_image=None, preproc=None, size=None):

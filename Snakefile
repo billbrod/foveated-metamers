@@ -23,7 +23,7 @@ wildcard_constraints:
     size="[0-9,]+",
     bits="[0-9]+",
     img_preproc="full|degamma|gamma-corrected|gamma-corrected_full|range-[,.0-9]+|gamma-corrected_range-[,.0-9]+",
-    preproc_image_name="azulejos|tiles|market|flower|einstein|bike|dubrovnik|goats|graffiti|house|llama|rooves|santorini|split|store|terraces|yarn",
+    preproc_image_name="|".join([im+'_?[a-z]*' for im in config['IMAGE_NAME']['ref_image']]),
     preproc="|_degamma|degamma",
     gpu="0|1",
     sess_num="|".join([f'{i:02d}' for i in range(3)]),
@@ -33,7 +33,6 @@ wildcard_constraints:
     save_all='|_saveall',
 ruleorder:
     collect_metamers_training > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image
-
 
 LINEAR_IMAGES = config['IMAGE_NAME']['ref_image']
 MODELS = [config[i]['model_name'] for i in ['RGC', 'V1']]
@@ -189,6 +188,7 @@ rule crop_image:
                 im = imageio.imread(input[0])
                 curr_shape = np.array(im.shape)[:2]
                 target_shape = [int(i) for i in wildcards.size.split(',')]
+                print(curr_shape, target_shape)
                 if len(target_shape) == 1:
                     target_shape = 2* target_shape
                 target_shape = np.array(target_shape)

@@ -114,14 +114,27 @@ for anything outside the experiment itself.
 
 ## Source images
 
-We use images from the authors' personal collection as the targets for
-our metamer generation. This is because we need images that are large,
-linear (i.e., their pixel intensities are proportional to photon
-count, as you get from an image that has not been processed in any
-way), and openly-licensed. See the [Setup](#setup) section for details
-on how to obtain the images from the Open Science Foundation website
-for this project, along with the statistics used to normalize the V1
-model and a small image of Albert Einstein for testing the setup.
+We use images from the authors' personal collection and the [UPenn Natural Image
+Database](http://tofu.psych.upenn.edu/~upennidb/) as the targets for our metamer
+generation. This is because we need images that are large, linear (i.e., their
+pixel intensities are proportional to photon count, as you get from an image
+that has not been processed in any way), and openly-licensed. See the
+[Setup](#setup) section for details on how to obtain the images from the Open
+Science Foundation website for this project, along with the statistics used to
+normalize the V1 model and a small image of Albert Einstein for testing the
+setup.
+
+Authors' personal collection: azulejos, tiles, bike, graffiti, llama,
+rooves, store, terraces.
+
+UPenn Natural Image Database: baboons (cd01A/DSC_0003), puffballs
+(cd01A/DSC_0010), trunk (cd01A/DSC_0015), canopy (cd01A/DSC_0021), treetop
+(cd01A/DSC_0033), fern (cd01A/DSC_0041), base (cd01A/DSC_0064), grooming
+(cd02A/DSC_0011), eating (cd02A/DSC_0035), palm (cd02A/DSC_0043), lake
+(cd02A/DSC_0062), treetop2 (cd03A/DSC_0014), deadtrees (cd03A/DSC_0034), trees
+(cd03A/DSC_0042), ground (cd03A/DSC_0049), leaves (cd12A/DSC_0030), portrait
+(cd58A/DSC_0001), troop (cd58A/DSC_0008), termite (cd58A/DSC_0015), digging
+(cd58A/DSC_0063).
 
 ## Minimal experiment install
 

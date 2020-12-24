@@ -52,8 +52,6 @@ def pad_image(image, pad_mode, save_path=None, constant_values=.5, **pad_kwargs)
 
     Currently, we only support grayscale images
 
-    All additional kwargs are passed directly to ``skimage.util.pad``
-
     Parameters
     ----------
     image : str or np.array
@@ -72,6 +70,8 @@ def pad_image(image, pad_mode, save_path=None, constant_values=.5, **pad_kwargs)
         The values to set the the padded values to for each axis. See
         ``skimage.util.pad`` for more details. If ``pad_mode`` is not
         ``'constant'``, we ignore this.
+    pad_kwargs :
+        Passed to ``skimage.util.pad``
 
     Returns
     -------
