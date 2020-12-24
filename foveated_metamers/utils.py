@@ -319,8 +319,60 @@ def generate_image_names(ref_image=None, preproc=None, size=None):
     return image_names
 
 
+def generate_metamer_seeds_dict(model_name):
+    """Generate dictionary giving mapping to random seed.
+
+    For each (model_name, image, scaling), we want unique seeds. This generates a
+    dictionary that does that in a reasonable manner: the model must be
+    specified, and it has (image, scaling) as keys (based on the config.yml
+    file), with lists of n_seeds possible seeds as values.
+
+    This should work well with additional models, images, scaling values, or
+    seeds (as long as the ordering isn't changed) up to 100 of each.
+
+    Parameters
+    ----------
+    model_name : {'RGC', 'V1'}
+        Name(s) of the model to run.
+
+    Returns
+    -------
+    seeds : dict
+        Dict of seeds, see above for structure.
+
+    """
+    # separate each model_name by 1 million, image_name by 10k, each scaling value
+    # by 100, which allows us to have up to 100 images, 100 scaling vaules, 100
+    # seeds.
+    model_name_sep = 1000000
+    image_name_sep = 10000
+    scaling_sep = 100
+    n_seeds = 100
+    with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
+        defaults = yaml.safe_load(f)
+    image_names = defaults['DEFAULT_METAMERS']['image_name']
+    met_v_met = defaults[model_name].get('met_v_met_scaling', [])
+    scaling = defaults[model_name]['scaling'] + met_v_met
+    seeds = {}
+    model_name_base = {'RGC': 0, 'V1': 1}[model_name] * model_name_sep
+    for i, im in enumerate(image_names):
+        image_base = i * image_name_sep
+        for j, sc in enumerate(scaling):
+            scaling_base = j * scaling_sep
+            if im in defaults['OLD_SEEDS']['image_names']:
+                seed = [k for k in defaults['OLD_SEEDS']['seeds']]
+                seed += [model_name_base + image_base + scaling_base + k for k
+                         in range(len(seed), n_seeds)]
+            else:
+                seed = [model_name_base + image_base + scaling_base + k for k
+                        in range(n_seeds)]
+            seeds[(im, sc)] = seed
+    return seeds
+
+
 def generate_metamer_paths(model_name, increment=False, extra_iter=None,
-                           gamma_corrected=False, comp='ref', **kwargs):
+                           gamma_corrected=False, comp='ref',
+                           seed_n=[0, 1, 2], **kwargs):
     """Generate metamer paths in a programmatic way
 
     This generates paths to the metamer.png files found in the
@@ -362,6 +414,9 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
         model:met_v_met_scaling key; we use these plus the highest ones from
         model:scaling so that we end up with 9 total values. If there is no
         model:met_v_met_scaling key, we return the same values as before.
+    seed_n : list, optional
+        List specifying which seeds to grab for each (model, image, scaling).
+        If seed is in kwargs, this is ignored.
     kwargs :
         keys must be configurable options for METAMER_TEMPLATE_PATH, as
         found in config.yml. If an option is *not* set, we'll use the
@@ -398,10 +453,12 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
                 args.update(defaults['RGC'])
                 if model == 'RGC':
                     model = defaults['RGC']['model_name']
+                seeds_dict = generate_metamer_seeds_dict('RGC')
             elif model.startswith('V1'):
                 args.update(defaults['V1'])
                 if model == 'V1':
                     model = defaults['V1']['model_name']
+                seeds_dict = generate_metamer_seeds_dict('V1')
             args['DATA_DIR'] = defaults['DATA_DIR']
             if 'scaling' not in kwargs.keys():
                 scaling = defaults[model.split('_')[0]]['scaling']
@@ -417,6 +474,8 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
             args.update(kwargs)
             args.update({'model_name': model, 'image_name': im,
                          'scaling': scaling})
+            if 'seed' not in args.keys():
+                args['seed_n'] = seed_n
             # remove this key if it's here. if it were included, it would
             # create duplicates of the paths
             args.pop('met_v_met_scaling', None)
@@ -429,6 +488,13 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
             for vals in product(*list_args.values()):
                 tmp = dict(zip(list_args.keys(), vals))
                 tmp.update(args)
+                if 'seed_n' in tmp.keys():
+                    try:
+                        tmp['seed'] = seeds_dict[(tmp['image_name'], tmp['scaling'])][tmp.pop('seed_n')]
+                    except KeyError:
+                        raise Exception(f"{tmp['image_name']} and {tmp['scaling']} (for model {model}) "
+                                        "not found in the default set of metamers with pre-generated seeds"
+                                        " -- please specify the seed argument")
                 p = find_attempts(tmp, increment=increment, extra_iter=extra_iter)
                 if gamma_corrected:
                     p = p.replace('metamer.png', 'metamer_gamma-corrected.png')
@@ -463,6 +529,9 @@ if __name__ == '__main__':
     parser.add_argument('--comp', '-c', default='ref',
                         help=("{ref, met}, Whether to generate the scaling values for comparing "
                               "metamers to reference images or to other metamers"))
+    parser.add_argument('--seed_n', '-n', nargs='+', type=int, default=[0, 1, 2],
+                        help=(" List specifying which seeds to grab for each (model, image, "
+                              "scaling). If seed is also passed, this is ignored."))
     parser.add_argument('--extra_iter', type=int,
                         help=("If --increment is passed, this specifies how many extra "
                               "iterations to run synthesis for"))
@@ -499,7 +568,7 @@ if __name__ == '__main__':
             continue
         if k == 'DATA_DIR':
             new_args[k] = v
-        elif k in ['seed', 'max_iter', 'gpu', 'loss_change_iter']:
+        elif k in ['seed', 'max_iter', 'gpu', 'loss_change_iter', 'seed_n']:
             # then it's an int
             new_args[k] = [int(vi) for vi in v]
         else:

@@ -18,6 +18,21 @@ IMAGE_NAME:
   preproc: 'range-.05,.95'
   size: '2048,2600'
 
+OLD_SEEDS:
+  seeds:
+    - 0
+    - 1
+    - 2
+  image_names:
+    - 'azulejos_range-.05,.95_size-2048,2600'
+    - 'tiles_range-.05,.95_size-2048,2600'
+    - 'bike_range-.05,.95_size-2048,2600'
+    - 'graffiti_range-.05,.95_size-2048,2600'
+    - 'llama_range-.05,.95_size-2048,2600'
+    - 'rooves_range-.05,.95_size-2048,2600'
+    - 'store_range-.05,.95_size-2048,2600'
+    - 'terraces_range-.05,.95_size-2048,2600'
+
 DEFAULT_METAMERS:
   image_name:
     - 'azulejos_range-.05,.95_size-2048,2600'
@@ -28,10 +43,6 @@ DEFAULT_METAMERS:
     - 'rooves_range-.05,.95_size-2048,2600'
     - 'store_range-.05,.95_size-2048,2600'
     - 'terraces_range-.05,.95_size-2048,2600'
-  seed:
-    - 0
-    - 1
-    - 2
   optimizer: 'Adam'
   loss: 'mse'
   fract_removed: 0
