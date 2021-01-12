@@ -804,7 +804,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
          loss_thresh=1e-4, loss_change_iter=50, save_path=None, initial_image_type='white',
          gpu_id=None, cache_dir=None, normalize_dict=None, optimizer='SGD', fraction_removed=0,
          loss_change_fraction=1, loss_change_thresh=.1, coarse_to_fine=False, clamper_name='clamp',
-         clamp_each_iter=True, loss_func='l2', continue_path=None, save_all=False):
+         clamp_each_iter=True, loss_func='l2', continue_path=None, save_all=False, num_threads=None):
     r"""create metamers!
 
     Given a model_name, model parameters, a target image, and some
@@ -976,9 +976,21 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         course of the synthesis. WARNING: This will massively increase the
         amount of RAM used (not on the GPU though), the footprint on disk, and
         the amount of time it takes to run.
+    num_threads : int or None, optional
+        If int, the number of CPU threads to use. If None, we don't restrict it
+        and so we'll use all available resources. If using the GPU, this won't
+        matter (all costly computations are done on the GPU). If one the CPU,
+        we seem to only improve performance up to ~12 threads (at least with
+        RGC model), and actively start to harm performance as we get above 40.
 
     """
     print("Using seed %s" % seed)
+    if num_threads is not None:
+        print(f"Using {num_threads} threads")
+        torch.set_num_threads(num_threads)
+    else:
+        print("Not restricting number of threads, will probably use max "
+              f"available ({torch.get_num_threads()})")
     torch.manual_seed(seed)
     np.random.seed(seed)
     image_name = image

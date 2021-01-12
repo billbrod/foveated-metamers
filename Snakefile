@@ -604,6 +604,7 @@ def get_cpu_num(wildcards):
             cpus = 28
     return cpus
 
+
 def get_init_image(wildcards):
     if wildcards.init_type in ['white', 'gray', 'pink', 'blue']:
         return []
@@ -637,6 +638,8 @@ rule create_metamers:
         gpu = lambda wildcards: int(wildcards.gpu),
         cpus_per_task = get_cpu_num,
         mem = get_mem_estimate,
+        # this seems to be the best, anymore doesn't help and will eventually hurt
+        num_threads = 12,
     params:
         rusty_mem = lambda wildcards: get_mem_estimate(wildcards, 'rusty'),
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
@@ -684,7 +687,7 @@ rule create_metamers:
                                              float(wildcards.loss_fract),
                                              float(wildcards.loss_change_thresh), coarse_to_fine,
                                              wildcards.clamp, clamp_each_iter, wildcards.loss,
-                                             save_all=save_all)
+                                             save_all=save_all, num_threads=resources.num_threads)
 
 
 rule continue_metamers:
@@ -714,6 +717,8 @@ rule continue_metamers:
         gpu = lambda wildcards: int(wildcards.gpu),
         mem = get_mem_estimate,
         cpus_per_task = get_cpu_num,
+        # this seems to be the best, anymore doesn't help and will eventually hurt
+        num_threads = 12,
     params:
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
         time = lambda wildcards: {'V1': '12:00:00', 'RGC': '7-00:00:00'}[wildcards.model_name.split('_')[0]],
@@ -760,7 +765,7 @@ rule continue_metamers:
                                              float(wildcards.loss_fract),
                                              float(wildcards.loss_change_thresh), coarse_to_fine,
                                              wildcards.clamp, clamp_each_iter, wildcards.loss,
-                                             input.continue_path)
+                                             input.continue_path, num_threads=resources.num_threads)
 
 
 rule gamma_correct_metamer:
