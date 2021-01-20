@@ -113,7 +113,9 @@ rule test_setup:
 
 rule all_refs:
     input:
-        [op.join(config['DATA_DIR'], 'ref_images_preproc', i + '.png') for i in IMAGES],
+        [utils.get_ref_image_full_path(utils.get_gamma_corrected_ref_image(i))
+         for i in IMAGES],
+        [utils.get_ref_image_full_path(i) for i in IMAGES],
 
 
 # for this project, our input images are linear images, but if you want
@@ -193,7 +195,19 @@ rule crop_image:
                     target_shape = 2* target_shape
                 target_shape = np.array(target_shape)
                 crop_amt = curr_shape - target_shape
-                cropped_im = im[crop_amt[0]//2:-crop_amt[0]//2, crop_amt[1]//2:-crop_amt[1]//2]
+                # this is ugly, but I can't come up with an easier way to make
+                # sure that we skip a dimension if crop_amt is 0 for it
+                cropped_im = im
+                for i, c in enumerate(crop_amt):
+                    if c == 0:
+                        continue
+                    else:
+                        if i == 0:
+                            cropped_im = cropped_im[c//2:-c//2]
+                        elif i == 1:
+                            cropped_im = cropped_im[:, c//2:-c//2]
+                        else:
+                            raise Exception("Can only crop up to two dimensions!")
                 cropped_im = color.rgb2gray(cropped_im)
                 imageio.imwrite(output[0], met.utils.convert_im_to_int(cropped_im, np.uint16))
                 # tiffs can't be read in using the as_gray arg, so we
