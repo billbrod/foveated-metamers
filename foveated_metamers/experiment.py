@@ -147,7 +147,7 @@ def check_for_keys(all_keys, keys_to_check=['q', 'esc', 'escape']):
     return any([k in all_keys for k in keys_to_check])
 
 
-def countdown(win, img_pos, flip_text=True, text_height=50):
+def countdown(win, img_pos, flip_text=False, text_height=50):
     countdown_text = [visual.TextStim(w, '3',
                                       pos=p, flipHoriz=flip_text, height=text_height)
                       for w, p in zip(win, img_pos)]
@@ -159,7 +159,7 @@ def countdown(win, img_pos, flip_text=True, text_height=50):
         core.wait(1)
 
 
-def pause(current_i, total_imgs, win, img_pos, expt_clock, flip_text=True, text_height=50):
+def pause(current_i, total_imgs, win, img_pos, expt_clock, flip_text=False, text_height=50):
     pause_text = [visual.TextStim(w, f"{current_i}/{total_imgs}\nspace to resume\nq or esc to quit",
                                   pos=p, flipHoriz=flip_text, height=text_height)
                   for w, p in zip(win, img_pos)]
@@ -188,7 +188,7 @@ def _create_bar_mask(bar_height, bar_width=200, fringe_proportion=.5):
     return mask
 
 
-def _setup_run(stimuli_path, idx_path, fix_deg_size=.25, screen_size_deg=60,
+def _setup_run(stimuli_path, idx_path, fix_deg_size=.25, screen_size_deg=73.45,
                eyetracker=None, edf_path=None, binocular_offset=[0, 0],
                take_break=True, timings=[], start_from_stim=0,
                **monitor_kwargs):
@@ -257,7 +257,7 @@ def _setup_run(stimuli_path, idx_path, fix_deg_size=.25, screen_size_deg=60,
             fixation, timer, expt_clock, screen)
 
 
-def _explain_task(win, img_pos, expt_clock, comparison, flip_text=True,
+def _explain_task(win, img_pos, expt_clock, comparison, flip_text=False,
                   text_height=50, task='split'):
     """Draw some text explaining the task
     """
@@ -316,10 +316,10 @@ def _end_run(win, img_pos, timings, eyetracker, edf_path, save_frames,
 
 
 def run_split(stimuli_path, idx_path, save_path, comparison, on_msec_length=200,
-              off_msec_length=(500, 500), fix_deg_size=.25, screen_size_deg=60,
+              off_msec_length=(500, 500), fix_deg_size=.25, screen_size_deg=73.45,
               eyetracker=None, edf_path=None, save_frames=None,
               binocular_offset=[0, 0], take_break=True, keys_pressed=[],
-              timings=[], start_from_stim=0, flip_text=True, text_height=50,
+              timings=[], start_from_stim=0, flip_text=False, text_height=50,
               bar_deg_size=2, **monitor_kwargs):
     r"""Run one run of the split task.
 
@@ -552,9 +552,9 @@ def run_split(stimuli_path, idx_path, save_path, comparison, on_msec_length=200,
 
 def run_abx(stimuli_path, idx_path, save_path, on_msec_length=200,
             off_msec_length=(500, 1000, 500), fix_deg_size=.25,
-            screen_size_deg=60, eyetracker=None, edf_path=None,
+            screen_size_deg=73.45, eyetracker=None, edf_path=None,
             save_frames=None, binocular_offset=[0, 0], take_break=True,
-            keys_pressed=[], timings=[], start_from_stim=0, flip_text=True,
+            keys_pressed=[], timings=[], start_from_stim=0, flip_text=False,
             text_height=50, foveal_mask_deg_size=1, **monitor_kwargs):
     """run one run of the ABX task
 
@@ -767,8 +767,8 @@ def run_abx(stimuli_path, idx_path, save_path, on_msec_length=200,
 
 def expt(stimuli_path, subj_name, sess_num, im_num, task, comparison,
          output_dir="data/raw_behavioral", eyetrack=False,
-         screen_size_pix=[1920, 1080], screen_size_deg=60, take_break=True, ipd_csv=None,
-         flip_text=True, text_height=50, screen=[1, 2], **kwargs):
+         screen_size_pix=[3840, 2160], screen_size_deg=73.45, take_break=True, ipd_csv=None,
+         flip_text=False, text_height=50, screen=[0], **kwargs):
     """run a full experiment
 
     this just sets up the various paths, calls ``run``, and then saves
@@ -899,20 +899,20 @@ if __name__ == '__main__':
                         help=("Pass this flag to tell the script to gather eye-tracking data. If"
                               " pylink is not installed, this is impossible and will throw an "
                               "exception"))
-    parser.add_argument("--screen", '-s', default=[1, 2], type=int, nargs='+',
-                        help=("Screen number to display experiment on"))
+    parser.add_argument("--screen", '-s', default=[0], type=int, nargs='+',
+                        help=("Screen number(s) to display experiment on."))
     parser.add_argument("--screen_size_pix", '-p', nargs=2, help="Size of the screen (in pixels)",
-                        default=[4096, 2160], type=float)
-    parser.add_argument("--screen_size_deg", '-d', default=95, type=float,
+                        default=[3840, 2160], type=float)
+    parser.add_argument("--screen_size_deg", '-d', default=73.45, type=float,
                         help="Size of longest screen side (in degrees)")
     parser.add_argument('--no_break', '-n', action='store_true',
                         help=("If passed, we do not take a break at the half-way point"))
-    parser.add_argument("--no_flip", '-f', action='store_true',
-                        help=("This script is meant to be run on the haploscope. Therefore, we "
-                              "left-right flip all text by default. Use this option to disable"
-                              " that"))
+    parser.add_argument("--flip", '-f', action='store_true',
+                        help=("This script can be run on a haploscope or regular monitors. "
+                              "If on a haploscope (and thus screen is viewed through a mirror), "
+                              "the text must be flipped left-right. Use this to enable that flip."))
     parser.add_argument("--task", '-t', default='split',
-                        help="{abx, split, split}. The task to run.")
+                        help="{abx, split}. The task to run.")
     parser.add_argument("--comparison", '-c', default='ref',
                         help=("{ref, met}. Whether this run is comparing metamers against "
                               "reference images or other metamers."))
@@ -920,7 +920,7 @@ if __name__ == '__main__':
                         help="Length of stimulus duration (in msec)")
     args = vars(parser.parse_args())
     take_break = not args.pop('no_break')
-    flip = not args.pop('no_flip')
+    flip = args.pop('flip')
     ipd_csv = args.pop('ipd_csv')
     if op.exists(ipd_csv):
         ipd_csv = pd.read_csv(ipd_csv)
