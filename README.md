@@ -67,7 +67,7 @@ experimental environment, either follow [the minimal
 install](#minimal-experiment-install) or do the following:
 
 ```
-conda install -f environment-psychopy.yml
+conda env create -f environment-psychopy.yml
 ```
 
 Then, to activate, run `conda activate psypy`.
@@ -88,7 +88,7 @@ you should carefully check that.
 To setup the environment for everything else:
 
 ```
-conda install -f environment.yml
+conda env create -f environment.yml
 ```
 
 Then, to activate, run `conda activate metamers`.
