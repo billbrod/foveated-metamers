@@ -827,12 +827,12 @@ rule collect_metamers_training:
         op.join(config['DATA_DIR'], 'ref_images', 'pink-noise_size-2048,2600.png'),
         [utils.get_ref_image_full_path(i) for i in IMAGES[:2]],
     output:
-        op.join(config["DATA_DIR"], 'stimuli', 'training', 'stimuli.npy'),
-        report(op.join(config["DATA_DIR"], 'stimuli', 'training', 'stimuli_description.csv')),
+        op.join(config["DATA_DIR"], 'stimuli', 'training', 'stimuli_comp-{comp}.npy'),
+        report(op.join(config["DATA_DIR"], 'stimuli', 'training', 'stimuli_description_comp-{comp}.csv')),
     log:
-        op.join(config["DATA_DIR"], 'logs', 'stimuli', 'training', 'stimuli.log'),
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', 'training', 'stimuli_comp-{comp}.log'),
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'stimuli', 'training', 'stimuli_benchmark.txt'),
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', 'training', 'stimuli_comp-{comp}_benchmark.txt'),
     run:
         import foveated_metamers as met
         import contextlib
