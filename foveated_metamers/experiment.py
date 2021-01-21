@@ -265,6 +265,8 @@ def _explain_task(win, img_pos, expt_clock, comparison, flip_text=False,
         comp_text = "On this run, you'll be comparing two synthesized images."
     elif comparison == 'ref':
         comp_text = "On this run, you'll be comparing natural and synthesized images."
+        if task == 'split':
+            comp_text += " The initial image will always be a natural image."
     if task == 'split':
         text = ("In this experiment, you'll be performing a Two-Alternative Forced Choice task: "
                 "you'll view an image, split in half, and then, after a brief delay, a second "

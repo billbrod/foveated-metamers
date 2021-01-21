@@ -240,6 +240,9 @@ def generate_indices_abx(df, seed, comparison='met_v_ref'):
     task (as used in our experiment.py file), randomize them using the given
     seed, and return them.
 
+    For both met_v_ref and met_v_met comparisons, this randomizes which is
+    presented first.
+
     Parameters
     ----------
     df : pd.DataFrame
@@ -291,6 +294,11 @@ def generate_indices_split(df, seed, comparison='met_v_ref'):
     split-screen task (as used in our experiment.py file), randomize them using
     the given seed, and return them.
 
+    Unlike ABX experiment (which always randomizes which is presented first),
+    this task always presents the reference image first for met_v_ref
+    comparison (for met_v_met, presentation order is randomized; thus there
+    will be more trials).
+
     Parameters
     ----------
     df : pd.DataFrame
@@ -326,12 +334,10 @@ def generate_indices_split(df, seed, comparison='met_v_ref'):
         # and make this 2d
         trials = trials.reshape(-1, trials.shape[-1])
     elif comparison == 'met_v_ref':
-        # grab each metamer and reference image
-        trials = np.array([[c, refs[i, 0]] for i, comp in enumerate(mets) for c
+        # grab each reference image and metamer (in that order). We're showing
+        # the reference image first on each trial.
+        trials = np.array([[refs[i, 0], c] for i, comp in enumerate(mets) for c
                            in comp])
-        # the above has reference image second, so this adds on all those same
-        # rows, but with the reference image first
-        trials = np.concatenate([trials, trials[:, [1, 0]]])
         # and now duplicate the first image (so it shows up on both left and
         # right)
         trials = trials[:, [0, 0, 1]]
