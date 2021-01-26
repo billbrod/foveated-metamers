@@ -381,16 +381,18 @@ def add_response_info(expt_df, trials, subject_name, task, session_number, image
     return expt_df
 
 
-def summarize_expt(expt_df, dep_variables=['scaling', 'trial_type']):
+def summarize_expt(expt_df, dep_variables=['scaling', 'trial_type'], bootstrap_num=0):
     r"""Summarize expt_df to get proportion correct
 
     Here, we take the ``expt_df`` summarizing the experiment's trials and the
     subject's responses, and we compute the proportion correct on each trial
     type. We end up with a DataFrame that has the columns ``['subject_name',
-    'session_number', 'image_name', 'model', 'trial_type'] + dep_variables``
-    from ``expt_df``, as well as two new columns: ``'n_trials'`` (which gives
-    the number of trials in that condition) and ``'proportion_correct'`` (which
-    gives the proportion of time the subject was correct in that condition).
+    'model', 'trial_type'] + dep_variables`` from ``expt_df``, as well as two
+    or three new columns: ``'n_trials'`` (which gives the number of trials in
+    that condition), ``'proportion_correct'`` (which gives the proportion of
+    time the subject was correct in that condition), and (if
+    ``bootstrap_num>0``) ``'bootstrap_num'`` (which runs from 0 to
+    ``bootstrap_num`` and gives the bootstrap index).
 
     Parameters
     ----------
@@ -401,6 +403,12 @@ def summarize_expt(expt_df, dep_variables=['scaling', 'trial_type']):
         A list of strs, containing one or more of the columns of
         ``expt_df``, which tells us which additional variable(s) we want
         to include in our dataframe.
+    bootstrap_num : int, optional
+        How many times to bootstrap when computing the proportion_correct. If
+        0, we don't bootstrap (just take the mean across all observations).
+        Else, we sample (with replacement) along the same categories as we
+        summarized along (i.e., subject, image name, model, and
+        ``dep_variables``).
 
     Returns
     -------
@@ -409,10 +417,19 @@ def summarize_expt(expt_df, dep_variables=['scaling', 'trial_type']):
     """
     expt_df = expt_df.copy()
 
-    gb = expt_df.groupby(['subject_name', 'session_number', 'image_set_number',
-                          'image_name', 'model'] + dep_variables)
+    gb_cols = (['subject_name', 'image_name', 'model'] + dep_variables)
+
+    gb = expt_df.groupby(gb_cols)
     summary_df = gb.count()['trial_number'].reset_index()
-    summary_df = summary_df.merge(gb.hit_or_miss_numeric.mean().reset_index())
+    if not bootstrap_num:
+        summary_df = summary_df.merge(gb.hit_or_miss_numeric.mean().reset_index())
+    else:
+        bootstrapped = []
+        for i in range(bootstrap_num):
+            tmp = gb.sample(frac=1, replace=True).groupby(gb_cols)
+            bootstrapped.append(summary_df.merge(tmp.hit_or_miss_numeric.mean().reset_index()))
+            bootstrapped[-1]['bootstrap_num'] = i
+        summary_df = pd.concat(bootstrapped).reset_index(drop=False)
     summary_df = summary_df.rename(columns={'trial_number': 'n_trials',
                                             'hit_or_miss_numeric': 'proportion_correct'})
     return summary_df
