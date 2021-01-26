@@ -18,6 +18,43 @@ try:
     import pylink
 except ImportError:
     warnings.warn("Unable to find pylink, will not be able to collect eye-tracking data")
+import analysis
+
+
+def calc_pct_correct(raw_behavioral_path, idx, stim_df, task):
+    """Calculate percent correct, grouped by scaling.
+
+    This is only intended for use during the training sessions, to give
+    participant a sense of how well they did.
+
+    Parameters
+    ----------
+    raw_behavioral_path : str
+        The str to the hdf5 file that contains the behavioral results,
+        as saved by the experiment.py script
+    idx : np.array
+        The n_trials by 3 array containing the stimuli presentation
+        indices for the run being analyzed.
+    stim_df : pd.DataFrame
+        The metamer information dataframe, as created by
+        stimuli.create_metamer_df
+    task : {'abx', 'split'}
+        whether this was the ABX or split-screen task
+
+    Returns
+    -------
+    df : pd.DataFrame
+        Dataframe with the columns 'scaling' and 'pct_correct'
+
+    """
+    trials = analysis.summarize_trials(raw_behavioral_path, task)
+    if task == 'abx':
+        df = analysis.create_experiment_df_abx(stim_df, idx)
+    elif task == 'split':
+        df = analysis.create_experiment_df_split(stim_df, idx)
+    df = analysis.add_response_info(df, trials, 'training', task, 'training', 'training')
+    df = df.groupby('scaling').hit_or_miss_numeric.mean()
+    return df.reset_index().rename(columns={'hit_or_miss_numeric': 'pct_correct'})
 
 
 def _convert_str(list_of_strs):
@@ -258,7 +295,7 @@ def _setup_run(stimuli_path, idx_path, fix_deg_size=.25, screen_size_deg=73.45,
 
 
 def _explain_task(win, img_pos, expt_clock, comparison, flip_text=False,
-                  text_height=50, task='split'):
+                  text_height=50, task='split', train_flag=False):
     """Draw some text explaining the task
     """
     if comparison == 'met':
@@ -267,6 +304,22 @@ def _explain_task(win, img_pos, expt_clock, comparison, flip_text=False,
         comp_text = "On this run, you'll be comparing natural and synthesized images."
         if task == 'split':
             comp_text += " The initial image will always be a natural image."
+    if train_flag:
+        train_text = "For this training run, there will only be two natural images and "
+        feedback_text = ("Because this is training run, we will show you your performance "
+                         "at the end of the run. You should get 100% on ")
+        if train_flag == 'noise':
+            train_text += 'two noise patches.\n\n'
+            comp_text = comp_text.replace('synthesized images', 'noise patches')
+            feedback_text += 'this run.'
+        elif train_flag == 'model':
+            train_text += "two possible synthesized image for each: one easy and one hard.\n\n"
+            feedback_text += 'the easy trials, but will do worse on the hard ones.'
+        duration_text = 'one minute'
+    else:
+        train_text = ""
+        duration_text = "fifteen minutes"
+        feedback_text = "You will receive no feedback, either during or after the run."
     if task == 'split':
         text = ("In this experiment, you'll be performing a Two-Alternative Forced Choice task: "
                 "you'll view an image, split in half, and then, after a brief delay, a second "
@@ -276,11 +329,13 @@ def _explain_task(win, img_pos, expt_clock, comparison, flip_text=False,
                 "need, but respond as quickly as you can. All the images will be presented for a "
                 "very brief period of time, so pay attention. Sometimes the two images will be "
                 "very similar; sometimes they'll be very different. For the similar images, we "
-                f"expect the task to be hard. Just do your best!\n\n{comp_text}\n\n"
-                "Fixate your eyes on the center of the image and try not to move them.\n\n"
-                "The run will last for about fifteen minutes and there will be a break halfway "
-                "through. When you've finished the run, go get the experimenter.\n\n"
-                "Press space to continue")
+                f"expect the task to be hard. Just do your best!\n\n{comp_text}\n\n{train_text}"
+                "Fixate your eyes on the center of the image (there will be a fixation dot)"
+                " and try not to move them.\n\n"
+                f'{feedback_text}\n\n'
+                f"The run will last for about {duration_text} and there will be a break halfway "
+                "through. When you've finished the run, take a brief break before beginning the"
+                " next one.\n\nPress space to continue")
     else:
         raise Exception("Haven't implemented this yet!")
     explain_text = [visual.TextStim(w, text, pos=p, flipHoriz=flip_text,
@@ -295,14 +350,18 @@ def _explain_task(win, img_pos, expt_clock, comparison, flip_text=False,
 
 
 def _end_run(win, img_pos, timings, eyetracker, edf_path, save_frames,
-             flip_text, text_height, expt_clock):
+             flip_text, text_height, expt_clock, train_flag=False):
     """End the run.
 
     Do the things that are shared across task types.
 
     """
-    [visual.TextStim(w, "Run over\n\nGo notify experimenter", pos=p, flipHoriz=flip_text,
-                     height=text_height, wrapWidth=2000).draw() for w, p in zip(win, img_pos)]
+    if not train_flag:
+        [visual.TextStim(w, "Run over\n\nGo notify experimenter", pos=p, flipHoriz=flip_text,
+                         height=text_height, wrapWidth=2000).draw() for w, p in zip(win, img_pos)]
+    else:
+        [visual.TextStim(w, "Run over\n\nWait a sec while we compute your performance...", pos=p, flipHoriz=flip_text,
+                         height=text_height, wrapWidth=2000).draw() for w, p in zip(win, img_pos)]
     [w.flip() for w in win]
     timings.append(("run_end", '', expt_clock.getTime()))
     all_keys = event.getKeys(timeStamped=expt_clock)
@@ -313,7 +372,8 @@ def _end_run(win, img_pos, timings, eyetracker, edf_path, save_frames,
         eyetracker.receiveDataFile('temp.EDF', edf_path)
     if save_frames is not None:
         [w.saveMovieFrames(save_frames) for w in win]
-    [w.close() for w in win]
+    if not train_flag:
+        [w.close() for w in win]
     return all_keys
 
 
@@ -322,7 +382,7 @@ def run_split(stimuli_path, idx_path, save_path, comparison, on_msec_length=200,
               eyetracker=None, edf_path=None, save_frames=None,
               binocular_offset=[0, 0], take_break=True, keys_pressed=[],
               timings=[], start_from_stim=0, flip_text=False, text_height=50,
-              bar_deg_size=2, **monitor_kwargs):
+              bar_deg_size=2, train_flag=False, **monitor_kwargs):
     r"""Run one run of the split task.
 
     stimuli_path specifies the path of the unshuffled experiment stimuli, while
@@ -404,6 +464,9 @@ def run_split(stimuli_path, idx_path, save_path, comparison, on_msec_length=200,
     bar_deg_size : float
         The width of the central bar dividing left and right half of stimulus,
         in degrees
+    train_flag : bool
+        Whether this is a training run or not. If so, the instruction text has
+        some extra words and we show the percent correct at the end.
     monitor_kwargs :
         passed to visual.Window
 
@@ -437,7 +500,7 @@ def run_split(stimuli_path, idx_path, save_path, comparison, on_msec_length=200,
     del stimuli
 
     _explain_task(win, img_pos, expt_clock, comparison, flip_text, text_height,
-                  task='split')
+                  task='split', train_flag=train_flag)
 
     wait_text = [visual.TextStim(w, ("Press space to start\nq or esc will quit\nspace to pause"),
                                  pos=p, flipHoriz=flip_text, height=text_height)
@@ -546,10 +609,11 @@ def run_split(stimuli_path, idx_path, save_path, comparison, on_msec_length=200,
         if check_for_keys(all_keys+paused_keys):
             break
     all_keys = _end_run(win, img_pos, timings, eyetracker, edf_path,
-                        save_frames, flip_text, text_height, expt_clock)
+                        save_frames, flip_text, text_height, expt_clock,
+                        train_flag)
     if all_keys:
         keys_pressed.extend([(key[0], key[1]) for key in all_keys])
-    return keys_pressed, timings, expt_params, idx
+    return keys_pressed, timings, expt_params, idx, win, img_pos
 
 
 def run_abx(stimuli_path, idx_path, save_path, on_msec_length=200,
@@ -557,7 +621,8 @@ def run_abx(stimuli_path, idx_path, save_path, on_msec_length=200,
             screen_size_deg=73.45, eyetracker=None, edf_path=None,
             save_frames=None, binocular_offset=[0, 0], take_break=True,
             keys_pressed=[], timings=[], start_from_stim=0, flip_text=False,
-            text_height=50, foveal_mask_deg_size=1, **monitor_kwargs):
+            text_height=50, foveal_mask_deg_size=1, train_flag=False,
+            **monitor_kwargs):
     """run one run of the ABX task
 
     stimuli_path specifies the path of the unshuffled experiment stimuli, while
@@ -636,6 +701,9 @@ def run_abx(stimuli_path, idx_path, save_path, on_msec_length=200,
         The text height in pixels.
     foveal_mask_deg_size : float
         The width of the mask at the fovea, in degrees
+    train_flag : bool
+        Whether this is a training run or not. If so, the instruction text has
+        some extra words and we show the percent correct at the end.
     monitor_kwargs :
         passed to visual.Window
 
@@ -761,16 +829,17 @@ def run_abx(stimuli_path, idx_path, save_path, on_msec_length=200,
         if check_for_keys(all_keys+paused_keys):
             break
     all_keys = _end_run(win, img_pos, timings, eyetracker, edf_path,
-                        save_frames, flip_text, text_height, expt_clock)
+                        save_frames, flip_text, text_height, expt_clock,
+                        train_flag)
     if all_keys:
         keys_pressed.extend([(key[0], key[1]) for key in all_keys])
-    return keys_pressed, timings, expt_params, idx
+    return keys_pressed, timings, expt_params, idx, win, img_pos
 
 
 def expt(stimuli_path, subj_name, sess_num, im_num, task, comparison,
          output_dir="data/raw_behavioral", eyetrack=False,
          screen_size_pix=[3840, 2160], screen_size_deg=73.45, take_break=True, ipd_csv=None,
-         flip_text=False, text_height=50, screen=[0], **kwargs):
+         flip_text=False, text_height=50, screen=[0], train_flag=False, **kwargs):
     """run a full experiment
 
     this just sets up the various paths, calls ``run``, and then saves
@@ -841,53 +910,51 @@ def expt(stimuli_path, subj_name, sess_num, im_num, task, comparison,
     else:
         eyetracker = None
     if task == 'abx':
-        keys, timings, expt_params, idx = run_abx(stimuli_path, idx_path,
-                                                  save_path,
-                                                  size=screen_size_pix,
-                                                  eyetracker=eyetracker,
-                                                  take_break=take_break,
-                                                  screen_size_deg=screen_size_deg,
-                                                  start_from_stim=start_from_stim,
-                                                  flip_text=flip_text,
-                                                  binocular_offset=binocular_offset,
-                                                  edf_path=edf_path,
-                                                  keys_pressed=keys,
-                                                  timings=timings,
-                                                  text_height=text_height,
-                                                  screen=screen,
-                                                  **kwargs)
+        keys, timings, expt_params, idx, win, img_pos = run_abx(
+            stimuli_path, idx_path, save_path, size=screen_size_pix,
+            eyetracker=eyetracker, take_break=take_break,
+            screen_size_deg=screen_size_deg,
+            start_from_stim=start_from_stim, flip_text=flip_text,
+            binocular_offset=binocular_offset, edf_path=edf_path,
+            keys_pressed=keys, timings=timings, text_height=text_height,
+            screen=screen, train_flag=train_flag, **kwargs)
     elif task == 'split':
-        keys, timings, expt_params, idx = run_split(stimuli_path, idx_path,
-                                                    save_path,
-                                                    comparison,
-                                                    size=screen_size_pix,
-                                                    eyetracker=eyetracker,
-                                                    take_break=take_break,
-                                                    screen_size_deg=screen_size_deg,
-                                                    start_from_stim=start_from_stim,
-                                                    flip_text=flip_text,
-                                                    binocular_offset=binocular_offset,
-                                                    edf_path=edf_path,
-                                                    keys_pressed=keys,
-                                                    timings=timings,
-                                                    text_height=text_height,
-                                                    screen=screen,
-                                                    **kwargs)
+        keys, timings, expt_params, idx, win, img_pos = run_split(
+            stimuli_path, idx_path, save_path, comparison,
+            size=screen_size_pix, eyetracker=eyetracker, take_break=take_break,
+            screen_size_deg=screen_size_deg, start_from_stim=start_from_stim,
+            flip_text=flip_text, binocular_offset=binocular_offset,
+            edf_path=edf_path, keys_pressed=keys, timings=timings,
+            text_height=text_height, screen=screen, train_flag=train_flag,
+            **kwargs)
     save(save_path, stimuli_path, idx_path, keys, timings, expt_params, idx, **kwargs)
+    if train_flag:
+        stim_df = pd.read_csv(stimuli_path.replace('stimuli_', 'stimuli_description_').replace('.npy', '.csv'))
+        pct_correct = calc_pct_correct(save_path, idx, stim_df, task)
+        if len(pct_correct) == 1:
+            pct_correct = f'{int(pct_correct.iloc[0].pct_correct * 100)}%'
+        else:
+            # once we've sorted by scaling, the first and last entries will be
+            # the lowest scaling / hardest and highest scaling / easiest,
+            # respectively
+            pct_correct = pct_correct.sort_values('scaling')
+            pct_correct = (f'\nEasy trials: {int(pct_correct.iloc[-1].pct_correct*100)}%'
+                           f'\nHard trials: {int(pct_correct.iloc[0].pct_correct*100)}%')
+        [visual.TextStim(w, f"Percent correct: {pct_correct}\n\nPress space to finish.", pos=p, flipHoriz=flip_text,
+                         height=text_height, wrapWidth=2000).draw() for w, p in zip(win, img_pos)]
+        [w.flip() for w in win]
+        all_keys = event.waitKeys(keyList=['return', 'space', 'q', 'escape', 'esc'])
+        clear_events(win)
+        [w.close() for w in win]
     if eyetracker is not None:
         eyetracker.close()
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description=("Run an ABX experiment to investigate metamers! Specify the location of the "
-                     "stimuli, the location of the (already-computed and randomized) indices, and"
-                     " the subject name, and we'll handle the rest. Each trial will consist of "
-                     "three stimuli, shown briefly, with blank screens in between, with a pause at"
-                     " the end of the trial, at which point they must specify whether the third "
-                     "stimulus was identical to the first or the second. This continues until we'"
-                     "ve gone through all the trials in the index array, at which point we save "
-                     "responses, stimulus timing, and exit out."),
+        description=("Run a psychophysical experiment to investigate metamers! Specify the location of the "
+                     "stimuli, the session number, image set, and the subject name, and we'll handle the "
+                     "rest. Structure of experiment depends on task and comparison options."),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("stimuli_path", help="Path to your unshuffled stimuli.")
     parser.add_argument("subj_name", help="Name of the subject")
@@ -918,15 +985,20 @@ if __name__ == '__main__':
     parser.add_argument("--comparison", '-c', default='ref',
                         help=("{ref, met}. Whether this run is comparing metamers against "
                               "reference images or other metamers."))
-    parser.add_argument("--on_msec_length", '-l', default=200, type=int,
-                        help="Length of stimulus duration (in msec)")
     args = vars(parser.parse_args())
     take_break = not args.pop('no_break')
     flip = args.pop('flip')
     ipd_csv = args.pop('ipd_csv')
+    if 'training_noise' in args['stimuli_path']:
+        train_flag = 'noise'
+    elif 'training' in args['stimuli_path']:
+        train_flag = 'model'
+    else:
+        train_flag = False
     if op.exists(ipd_csv):
         ipd_csv = pd.read_csv(ipd_csv)
     else:
         warnings.warn("Can't find ipd_csv, using zero binocular offset!")
         ipd_csv = None
-    expt(ipd_csv=ipd_csv, take_break=take_break, flip_text=flip, **args)
+    expt(ipd_csv=ipd_csv, take_break=take_break, flip_text=flip,
+         train_flag=train_flag, **args)

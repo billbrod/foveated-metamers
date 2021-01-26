@@ -32,7 +32,7 @@ wildcard_constraints:
     comp='met|ref',
     save_all='|_saveall',
 ruleorder:
-    collect_metamers_training > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image
+    collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image
 
 LINEAR_IMAGES = config['IMAGE_NAME']['ref_image']
 MODELS = [config[i]['model_name'] for i in ['RGC', 'V1']]
@@ -813,10 +813,8 @@ rule gamma_correct_metamer:
                         shutil.copy(output[0].replace('_gamma-corrected', ''), output[0])
 
 
-rule collect_metamers_training:
-    # this is for a simple version of the experiment, the goal is to create a
-    # test version for teaching someone how to run the experiment or to
-    # demonstrate to subjects
+# for subject to learn task structure: comparing noise and reference images
+rule collect_training_noise:
     input:
         # this duplication is *on purpose*. it's the easiest way of making sure
         # each of them show up twice in our stimuli array and description
@@ -827,19 +825,19 @@ rule collect_metamers_training:
         op.join(config['DATA_DIR'], 'ref_images', 'pink-noise_size-2048,2600.png'),
         [utils.get_ref_image_full_path(i) for i in IMAGES[:2]],
     output:
-        op.join(config["DATA_DIR"], 'stimuli', 'training', 'stimuli_comp-{comp}.npy'),
-        report(op.join(config["DATA_DIR"], 'stimuli', 'training', 'stimuli_description_comp-{comp}.csv')),
+        op.join(config["DATA_DIR"], 'stimuli', 'training_noise', 'stimuli_comp-{comp}.npy'),
+        report(op.join(config["DATA_DIR"], 'stimuli', 'training_noise', 'stimuli_description_comp-{comp}.csv')),
     log:
-        op.join(config["DATA_DIR"], 'logs', 'stimuli', 'training', 'stimuli_comp-{comp}.log'),
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', 'training_noise', 'stimuli_comp-{comp}.log'),
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'stimuli', 'training', 'stimuli_comp-{comp}_benchmark.txt'),
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', 'training_noise', 'stimuli_comp-{comp}_benchmark.txt'),
     run:
         import foveated_metamers as met
         import contextlib
         import pandas as pd
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                met.stimuli.collect_images(input, output[0])
+                met.stimuli.collect_images(input[:6], output[0])
                 df = []
                 for i, p in enumerate(input):
                     if i < 4:
@@ -856,6 +854,35 @@ rule collect_metamers_training:
                     df.append(pd.DataFrame({'base_signal': p, 'image_name': image_name, 'model': model,
                                             'scaling': scaling, 'seed': seed}, index=[0]))
                 pd.concat(df).to_csv(output[1], index=False)
+
+
+def get_training_metamers(wildcards):
+    scaling = [config[wildcards.model_name.split('_')[0]]['scaling'][0],
+               config[wildcards.model_name.split('_')[0]]['scaling'][-1]]
+    mets = utils.generate_metamer_paths(scaling=scaling, image_name=IMAGES[:2],
+                                        seed_n=[0], **wildcards)
+    return [m.replace('metamer.png', 'metamer.npy') for m in mets]
+                    
+
+# for subjects to get a sense for how this is done with metamers
+rule collect_training_metamers:
+    input:
+        get_training_metamers,
+        lambda wildcards: [utils.get_ref_image_full_path(i) for i in IMAGES[:2]]
+    output:
+        op.join(config["DATA_DIR"], 'stimuli', 'training_{model_name}', 'stimuli_comp-{comp}.npy'),
+        report(op.join(config["DATA_DIR"], 'stimuli', 'training_{model_name}', 'stimuli_description_comp-{comp}.csv')),
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', 'training_{model_name}', 'stimuli_comp-{comp}.log'),
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', 'training_{model_name}', 'stimuli_comp-{comp}_benchmark.txt'),
+    run:
+        import foveated_metamers as met
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                met.stimuli.collect_images(input, output[0])
+                met.stimuli.create_metamer_df(input, output[1])
 
 
 rule collect_metamers:
@@ -972,7 +999,7 @@ rule create_experiment_df:
                 fig.savefig(output[1], bbox_inches='tight')
                 if wildcards.task == 'abx':
                     df = met.analysis.create_experiment_df_abx(stim_df, idx)
-                elif wildcards.task.startswith('split'):
+                elif wildcards.task == 'split':
                     df = met.analysis.create_experiment_df_split(stim_df, idx)
                 df = met.analysis.add_response_info(df, trials, wildcards.subject, wildcards.task,
                                                     wildcards.sess_num, wildcards.im_num)
