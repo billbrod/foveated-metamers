@@ -5,3 +5,4 @@ from . import figures
 from . import distances
 from . import create_metamers
 from . import curve_fit
+from . import simulate
