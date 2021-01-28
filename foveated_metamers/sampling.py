@@ -109,9 +109,9 @@ def check_sampling(val_sampling=.5, pix_sampling=None, func=gaussian, x=torch.li
 
 
 def plot_coeffs(coeffs, ncols=5, ax_size=(5, 5)):
-    r"""plot interpolatoin coefficients
+    r"""plot interpolation coefficients
 
-    Simple functoin to plot a bunch of interpolation coefficients on the
+    Simple function to plot a bunch of interpolation coefficients on the
     same figure as stem plots
 
     Parameters
