@@ -483,7 +483,8 @@ def synthesis_video(metamer_save_path, model_name=None):
             kwargs['plot_signal_comparison'] = True
             kwargs['iteration'] = None
         else:
-            kwargs['iteration'] = 0
+            # otherwise, don't specify iteration
+            kwargs.pop('iteration', None)
         np.random.seed(0)
         fig, axes_idx = synthesis_schematic(metamer, **kwargs)
         # remove ticks because they don't matter here
