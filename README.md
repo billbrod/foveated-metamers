@@ -211,6 +211,29 @@ Google Sheets, a text editor, LibreOffice Calc, or loaded in to pandas
   images, trial types, sessions, or, subjects (the `n_trials` column
   will be useful to correctly weight the average if you want to
   collapse across them).
+  
+# Code structure
+
+ - `Snakefile`: used by snakemake to determine how to create the files for this
+   project. Handles everything except the experiment
+ - `foveated_metamers/`: library of functions used in this project
+    - `create_metamers.py`: creates metamers.
+    - `stimuli.py`: assembles the various metamer images into format required
+      for running the experiment.
+    - `distances.py`: finds distance in model space between images in an
+      efficient way.
+    - `experiment.py`: runs experiment.
+    - `analysis.py`: basic analyses of behavioral data.
+    - `curve_fit.py`: fits psychophysical curves to real or simulated data.
+    - `simulate.py`: simulate behavioral data, for checking `curve_fit.py`
+      performance, as well as how many trials are required.
+    - `figures.py`: creates various figures.
+    - `utils.py`: various utility functions.
+    - `sampling.py`: checks sampling and aliasing issues, not used in main
+      analysis.
+  - `notebooks/`: Jupyter notebooks.
+    - `Sampling_and_aliasing`: example of how to check for sampling / aliasing
+      issues.
 
 # Usage
 
