@@ -283,7 +283,7 @@ def plot_optimization_results(data, result, hue=None, fig=None, plot_data=True,
         Whether to plot the (bootstrapped) mean across hue as well as the
         individual values. If so, we plot the individual values with a reduced
         alpha. This increases the amount of time this takes by a fair amount
-        (due to bootstrapping).
+        (roughly 3x; due to bootstrapping).
     plot_kwargs :
         passed to each plotting funtion.
 
