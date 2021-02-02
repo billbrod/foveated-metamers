@@ -245,6 +245,7 @@ def plot_optimization_results(scaling, proportion_correct,
         Figure containing the plots
 
     """
+    plot_kwargs.setdefault('color', 'C0')
     prop_corr = proportion_correct_curve(scaling, proportionality_factor,
                                          critical_scaling)
     prop_corr_curves = pd.DataFrame({'prop_corr': prop_corr,
@@ -284,7 +285,7 @@ def plot_optimization_results(scaling, proportion_correct,
         axes_idx += 1
     if np.any(proportionality_factor_history) and np.any(critical_scaling_history):
         scatter_kwargs = plot_kwargs.copy()
-        scatter_kwargs.pop('label')
+        scatter_kwargs.pop('label', '')
         axes[axes_idx].plot(critical_scaling_history[[0, -1]],
                             proportionality_factor_history[[0, -1]], '-',
                             **scatter_kwargs)
