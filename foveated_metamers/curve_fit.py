@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
-"""Code to fit the psychophysical curve to data
-"""
+"""Code to fit the psychophysical curve to data."""
 import torch
+# this is a wrapper and drop-in replacement for multiprocessing:
+# https://pytorch.org/docs/stable/multiprocessing.html
+import torch.multiprocessing as mp
+import inspect
+from collections import OrderedDict
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 import seaborn as sns
 import matplotlib.pyplot as plt
-import plenoptic as po
+import matplotlib as mpl
 
 
 def calculate_discriminability(scaling, proportionality_factor, critical_scaling):
@@ -17,7 +21,7 @@ def calculate_discriminability(scaling, proportionality_factor, critical_scaling
 
     Parameters
     ----------
-    scaling : torch.Tensor
+    scaling : torch.Tensor or np.ndarray
         Scaling value(s) to calculate discriminability for.
     proportionality_factor : torch.Tensor or float
         The "gain" of the curve, determines how quickly it rises, parameter
@@ -40,6 +44,7 @@ def calculate_discriminability(scaling, proportionality_factor, critical_scaling
        Neuroscience, 14(9), 1195–1201. http://dx.doi.org/10.1038/nn.2889
 
     """
+    scaling = torch.tensor(scaling)
     discrim = torch.zeros_like(scaling)
     masks = [scaling <= critical_scaling, scaling > critical_scaling]
     vals = [torch.zeros_like(scaling),
@@ -100,9 +105,8 @@ def fit_psychophysical_parameters(scaling, proportion_correct, lr=.001,
 
     Loss is MSE between predicted proportion correct and
     ``proportion_correct``, plus a quadratic penalty on negative values of
-    critical_scaling (``10*(critical_scaling)**2``, in order to make it the
-    magnitude of that loss matter when compared against the proportion correct
-    MSE)
+    critical_scaling (``10*(critical_scaling)**2``, in order to make its
+    magnitude matter when compared against the proportion correct MSE)
 
     Parameters
     ----------
@@ -133,21 +137,11 @@ def fit_psychophysical_parameters(scaling, proportion_correct, lr=.001,
 
     Returns
     -------
-    proportionality_factor : torch.tensor
-        The "gain" of the curve, determines how quickly it rises, parameter
-        $\alpha_0$ in [1]_, equation 17. This will vary more across subjects
-        and isn't as directly relevant for this study.
-    critical_scaling : torch.tensor
-        The "threshold" of the curve, the scaling value at which
-        discriminability falls to 0 and thus performance falls to chance,
-        parameter $s_0$ in [1]_, equation 17. This should be more consistent,
-        and is the focus of this study.
-    losses : np.ndarray of floats
-        Loss on each iteration.
-    proportionality_factor_history : np.ndarray of floats
-        proportionality_factor on each iteration.
-    critical_scaling_history : np.ndarray of floats
-        critical_scaling on each iteration.
+    result : pd.DataFrame
+        DataFrame with 6 columns and ``max_iter`` rows, containing the
+        proportionality_factor, critical_scaling (both constant across
+        iterations), iteration, loss, proportionality_factor_history,
+        critical_scaling_history.
 
     """
     if seed is not None:
@@ -171,7 +165,8 @@ def fit_psychophysical_parameters(scaling, proportion_correct, lr=.001,
         loss = torch.sum((proportion_correct - yhat)**2)
         if s_0 < 0:
             # the sum is really unnecessary (s_0 will only ever be a single
-            # value), but it makes sure that it's a 0d tensor, like loss
+            # value), but it makes sure that it's a 0d tensor, like loss. the
+            # 10* is necessary to make it have enough weight to matter.
             loss += 10*(s_0 ** 2).sum()
         optimizer.zero_grad()
         loss.backward(retain_graph=True)
@@ -183,26 +178,87 @@ def fit_psychophysical_parameters(scaling, proportion_correct, lr=.001,
         losses.append(loss.item())
         a_0s.append(a_0.item())
         s_0s.append(s_0.item())
-    return a_0.detach(), s_0.detach(), np.array(losses), np.array(a_0s), np.array(s_0s)
+    result = pd.DataFrame({'proportionality_factor': a_0.item(),
+                           'critical_scaling': s_0.item(),
+                           'loss': np.array(losses),
+                           'proportionality_factor_history': np.array(a_0s),
+                           'critical_scaling_history': np.array(s_0s),
+                           'iteration': np.arange(max_iter)})
+    return result
 
 
-def plot_optimization_results(scaling, proportion_correct,
-                              proportionality_factor, critical_scaling, loss,
-                              proportionality_factor_history=[],
-                              critical_scaling_history=[], fig=None,
-                              plot_data=True, **plot_kwargs):
+def multi_fit_psychophysical_parameters(kwargs, use_multiproc=True,
+                                        n_processes=None, identifiers=[]):
+    """Run fit_psychophysical_parameters multiple times, optionally using multiproc.
+
+    Simple helper function to fit the psychophysical parameters multiple times,
+    using either multiproc or a simple for loop.
+
+    Parameters
+    ----------
+    kwargs : list
+        List of dictionaries to pass to ``fit_psychophysical_parameters``. We
+        simply iterate through them and unpack on the call.
+    use_multiproc : bool, optional
+        Whether to use multiprocessing to parallelize across cores or not.
+    n_processes : int or None, optional
+        If ``use_multiproc`` is True, how many processes to run in parallel. If
+        None, will be equal to ``os.cpu_count()``. If ``use_multiproc`` is
+        False, this is ignored.
+    identifiers : list, optional
+        If not empty, list of dictionaries with same length as kwargs. Contains
+        key: value pairs to add to the results from each run to identify them
+        (e.g., different seeds, bootstrap numbers).
+
+    Returns
+    -------
+    results : pd.DataFrame
+        DataFrame containing all the results. we add the values from args as
+        additional columns, to differentiate among them.
+
+    """
+    if len(identifiers) > 0 and len(identifiers) != len(kwargs):
+        raise Exception("identifiers must be the same length as kwargs, but "
+                        f'got {len(identifiers)} and {len(kwargs)}!')
+    if use_multiproc:
+        # multiprocessing.pool does not allow for kwargs, so we have to
+        # construct the args tuple. this is difficult because we don't know
+        # whether the kwargs we've been passed has all the args or not. to
+        # solve that, we grab the function signature (in order)...
+        defaults = OrderedDict(inspect.signature(fit_psychophysical_parameters).parameters)
+        # and iterate through the arguments for each dictionary in kwargs. if
+        # that dictionary has the corresponding key, grab it; else, grab the
+        # value from defaults
+        args = [[kwarg.get(k, v.default) for k, v in defaults.items()]
+                for kwarg in kwargs]
+        # see https://github.com/pytorch/pytorch/wiki/Autograd-and-Fork for why
+        # we use spawn
+        ctx = mp.get_context('spawn')
+        with ctx.Pool(n_processes) as pool:
+            results = pool.starmap_async(fit_psychophysical_parameters, args)
+            results = results.get()
+    else:
+        results = []
+        for kwarg in kwargs:
+            results.append(fit_psychophysical_parameters(**kwarg))
+    for (iden, result) in zip(identifiers, results):
+        for (k, v) in iden.items():
+            result[k] = v
+    results = pd.concat(results)
+    return results
+
+
+def plot_optimization_results(data, result, hue=None, fig=None, plot_data=True,
+                              plot_mean=False, **plot_kwargs):
     r"""Plot results of psychophysical curve fitting.
 
-    Creates 2 to 5 plot figure:
+    Creates 5 plot figure:
     1. Data and psychophysical curve
     2. Loss over iterations
-    3. History of proportionality_factor values (if
-       proportionality_factor_history is set)
-    4. History of critical_scaling values (if
-       critical_scaling_history is set)
+    3. History of proportionality_factor values
+    4. History of critical_scaling values
     5. Scatter plot showing initial and final values of the two parameters
-       (critical_scaling on x, proportionality_factor on y; if both histories
-       are set)
+       (critical_scaling on x, proportionality_factor on y)
 
     Intended to be called multiple time with, e.g., multiple bootstraps or
     optimization iterations. In order to do that, call this once with
@@ -211,31 +267,23 @@ def plot_optimization_results(scaling, proportion_correct,
 
     Parameters
     ----------
-    scaling : torch.tensor
-        The scaling values tested.
-    proportion_correct : torch.tensor
-        The proportion correct at each of those scaling values.
-    proportionality_factor : torch.tensor or float
-        The "gain" of the curve, determines how quickly it rises, parameter
-        $\alpha_0$ in [1]_, equation 17. Currently only handle single values
-        for this (i.e., one curve)
-    critical_scaling : torch.tensor or float
-        The "threshold" of the curve, the scaling value at which
-        discriminability falls to 0 and thus performance falls to chance,
-        parameter $s_0$ in [1]_, equation 17. This should be more consistent,
-        and is the focus of this study. Currently only handle single values
-        for this (i.e., one curve)
-    losses : np.ndarray of floats
-        Loss on each iteration.
-    proportionality_factor_history : np.ndarray of floats, optional
-        proportionality_factor on each iteration.
-    critical_scaling_history : np.ndarray of floats, optional
-        critical_scaling on each iteration.
+    data : pd.DataFrame
+        data DataFrame containing columns for scaling and proportion correct.
+    result : pd.DataFrame
+        results DataFrame, as returned by ``fit_psychophysical_parameters``.
+        can be from multiple fits, in which case hue must be set.
+    hue : str or None, optional
+        The variable in result to facet the hue on (we don't facet data)
     fig : plt.Figure or None, optional
         If not None, the figure to plot on. We don't check number of axes or
         add any more, so make sure you've created enough.
     plot_data : bool, optional
         Whether to plot data on the first axes or just the psychophysical curve
+    plot_mean : bool, optional
+        Whether to plot the (bootstrapped) mean across hue as well as the
+        individual values. If so, we plot the individual values with a reduced
+        alpha. This increases the amount of time this takes by a fair amount
+        (due to bootstrapping).
     plot_kwargs :
         passed to each plotting funtion.
 
@@ -245,102 +293,81 @@ def plot_optimization_results(scaling, proportion_correct,
         Figure containing the plots
 
     """
-    plot_kwargs.setdefault('color', 'C0')
-    prop_corr = proportion_correct_curve(scaling, proportionality_factor,
-                                         critical_scaling)
-    prop_corr_curves = pd.DataFrame({'prop_corr': prop_corr,
-                                     'scaling': po.to_numpy(scaling)})
-    n_plots = 2
-    if np.any(proportionality_factor_history):
-        n_plots += 1
-    if np.any(critical_scaling_history):
-        n_plots += 1
-    if np.any(proportionality_factor_history) and np.any(critical_scaling_history):
-        n_plots += 1
+    alpha = 1
+    if plot_mean:
+        alpha = .5
     if fig is None:
-        fig, axes = plt.subplots(1, n_plots, figsize=(5*n_plots, 5))
+        fig, axes = plt.subplots(1, 5, figsize=(25, 5))
     else:
         axes = fig.axes
-    sns.lineplot(x='scaling', y='prop_corr', ax=axes[0], data=prop_corr_curves,
-                 **plot_kwargs)
+    prop_corr_curves = []
+    scaling = data.scaling.unique()
+    if hue is None:
+        gb = [(None, result)]
+    else:
+        gb = result.groupby(hue)
+    for n, g in gb:
+        if g.critical_scaling.nunique() > 1 or g.proportionality_factor.nunique() > 1:
+            raise Exception("For a given hue value, need a single solution!")
+        prop_corr = proportion_correct_curve(scaling,
+                                             g.proportionality_factor.unique()[0],
+                                             g.critical_scaling.unique()[0])
+        prop_corr = pd.DataFrame({'proportion_correct': prop_corr,
+                                  'scaling': scaling, hue: n})
+        prop_corr_curves.append(prop_corr)
+    prop_corr_curves = pd.concat(prop_corr_curves)
+    sns.lineplot(x='scaling', y='proportion_correct', hue=hue, ax=axes[0],
+                 data=prop_corr_curves, alpha=alpha, **plot_kwargs)
+    if plot_mean:
+        sns.lineplot(x='scaling', y='proportion_correct', ax=axes[0],
+                     data=prop_corr_curves, legend=False, color='k',
+                     **plot_kwargs)
     if plot_data:
         data_kwargs = plot_kwargs.copy()
         data_kwargs.update({'color': 'k', 'label': 'data'})
-        axes[0].scatter(scaling, proportion_correct, **data_kwargs)
-    axes[0].set(title='Data and psychophysical curve', xlabel='scaling',
-                ylabel='proportion correct')
-    axes[1].semilogy(loss, **plot_kwargs)
-    axes[1].set(xlabel='iteration', ylabel='loss', title='Loss')
-    axes_idx = 2
-    if np.any(proportionality_factor_history):
-        axes[axes_idx].plot(proportionality_factor_history, **plot_kwargs)
-        axes[axes_idx].set(xlabel='iteration',
-                           ylabel=r'proportionality_factor ($\alpha_0$)',
-                           title='Parameter history')
-        axes_idx += 1
-    if np.any(critical_scaling_history):
-        axes[axes_idx].plot(critical_scaling_history, **plot_kwargs)
-        axes[axes_idx].set(xlabel='iteration', ylabel=r'critical_scaling ($s_0$)',
-                           title='Parameter history')
-        axes_idx += 1
-    if np.any(proportionality_factor_history) and np.any(critical_scaling_history):
-        scatter_kwargs = plot_kwargs.copy()
-        scatter_kwargs.pop('label', '')
-        axes[axes_idx].plot(critical_scaling_history[[0, -1]],
-                            proportionality_factor_history[[0, -1]], '-',
-                            **scatter_kwargs)
-        axes[axes_idx].scatter(critical_scaling_history[0],
-                               proportionality_factor_history[0],
-                               label='initial',
-                               facecolor='none', **scatter_kwargs)
-        axes[axes_idx].scatter(critical_scaling_history[-1],
-                               proportionality_factor_history[-1],
-                               label='final',
-                               **scatter_kwargs)
-        axes[axes_idx].set(xlabel=r'critical_scaling ($s_0$)',
-                           ylabel=r'proportionality_factor ($\alpha_0$)',
-                           title='Initial and final parameter values')
-        # don't make the legend bigger than it needs to be
-        if axes[axes_idx].legend_ is None:
-            axes[axes_idx].legend()
-        axes_idx += 1
+        sns.lineplot(x='scaling', y='proportion_correct', ax=axes[0], data=data,
+                     marker='o', err_style='bars', linestyle='', **data_kwargs)
+    axes[0].set(title='Data and psychophysical curve')
+    sns.lineplot(x='iteration', y='loss', hue=hue, data=result, ax=axes[1],
+                 legend=False, alpha=alpha, **plot_kwargs)
+    if plot_mean:
+        sns.lineplot(x='iteration', y='loss', data=result, ax=axes[1],
+                     legend=False, color='k', **plot_kwargs)
+    axes[1].set(title='Loss')
+    sns.lineplot(x='iteration', y='proportionality_factor_history', hue=hue,
+                 data=result, ax=axes[2], legend=False, alpha=alpha, color='k',
+                 **plot_kwargs)
+    if plot_mean:
+        sns.lineplot(x='iteration', y='proportionality_factor_history',
+                     data=result, ax=axes[2], legend=False, color='k',
+                     **plot_kwargs)
+    axes[2].set(title='Parameter history')
+    sns.lineplot(x='iteration', y='critical_scaling_history', hue=hue, data=result,
+                 ax=axes[3], legend=False, alpha=alpha, **plot_kwargs)
+    if plot_mean:
+        sns.lineplot(x='iteration', y='critical_scaling_history', color='k',
+                     data=result, ax=axes[3], legend=False, **plot_kwargs)
+    axes[3].set(title='Parameter history')
+    reduced = pd.concat([result.groupby(hue).first().reset_index(),
+                         result.groupby(hue).last().reset_index()])
+    sns.lineplot(x='critical_scaling_history', y='proportionality_factor_history',
+                 hue=hue, data=reduced, ax=axes[4], alpha=alpha, legend=False,
+                 **plot_kwargs)
+    sns.scatterplot(x='critical_scaling_history',
+                    y='proportionality_factor_history', hue=hue,
+                    style='iteration', data=reduced, ax=axes[4],
+                    markers=['.', 'o'], alpha=alpha, **plot_kwargs)
+    if plot_mean:
+        # just plot the final one
+        reduced = result.groupby(hue).last().reset_index()
+        s_0 = np.percentile([reduced.critical_scaling.sample(frac=1, replace=True).mean()
+                             for _ in range(1000)], [2.5, 50, 97.5])
+        a_0 = np.percentile([reduced.proportionality_factor.sample(frac=1, replace=True).mean()
+                             for _ in range(1000)], [2.5, 50, 97.5])
+        ellipse = mpl.patches.Ellipse((s_0[1], a_0[1]), s_0[2] - s_0[0],
+                                      a_0[2] - a_0[0], facecolor='k', alpha=.5,
+                                      zorder=10)
+        axes[4].add_patch(ellipse)
+    axes[4].set(title='Initial and final parameter values')
     fig.tight_layout()
-    return fig
-
-
-def multi_plot_optimization_results(scaling, proportion_correct, results,
-                                    **plot_kwargs):
-    """Plot multiple optimization results.
-
-    This calls ``plot_optimization_results`` multiple times and is intended to
-    be used when you've, e.g., optimized multiple time on the same data and
-    want to compare outcomes.
-
-    Parameters
-    ----------
-    scaling : torch.tensor
-        The scaling values tested.
-    proportion_correct : torch.tensor
-        The proportion correct at each of those scaling values.
-    results : list
-        List of results, as returned by ``fit_psychological_parameters``
-    plot_kwargs :
-        passed to each plotting funtion.
-
-    Returns
-    -------
-    fig : plt.Figure
-        Figure containing the plots
-
-
-    """
-    plot_kwargs.update({'color': 'C0', 'label': 0})
-    fig = plot_optimization_results(scaling, proportion_correct,
-                                    *results[0], **plot_kwargs)
-    for i, res in enumerate(results[1:]):
-        plot_kwargs.update({'color': f'C{i+1}', 'label': i+1})
-        plot_optimization_results(scaling, proportion_correct, *res,
-                                  fig=fig, plot_data=False,
-                                  **plot_kwargs)
-    fig.axes[0].legend()
     return fig
