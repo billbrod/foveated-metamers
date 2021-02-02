@@ -216,9 +216,8 @@ def test_num_trials(num_trials, num_bootstraps, proportionality_factor=5,
                                               hue='bootstrap_num',
                                               plot_mean=True)
     _plot_true_params(fig.axes[-1], proportionality_factor, critical_scaling)
-    fig.suptitle(f'{num_trials} trials')
-    fig.subplots_adjust(top=.85)
-    # fig.tight_layout()
+    fig.suptitle(f'{num_trials} trials', size='xx-large')
+    fig.subplots_adjust(top=.88)
     results = results.drop_duplicates('bootstrap_num')[['bootstrap_num', 'critical_scaling',
                                                         'proportionality_factor']]
     return fig, results, data
