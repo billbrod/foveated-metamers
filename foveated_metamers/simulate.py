@@ -116,6 +116,12 @@ def test_optimization(proportionality_factor=5, critical_scaling=.2,
     _plot_true_params(fig.axes[-1], proportionality_factor, critical_scaling)
     results = results.drop_duplicates('seed')[['seed', 'critical_scaling',
                                                'proportionality_factor']]
+    # add true value for parameters -- don't need one for data because it only
+    # contains the true value
+    results = results.append(pd.DataFrame({'seed': 'true_value',
+                                           'critical_scaling': critical_scaling,
+                                           'proportionality_factor': proportionality_factor},
+                                          [0]))
     return fig, results, data
 
 
@@ -214,10 +220,18 @@ def test_num_trials(num_trials, num_bootstraps, proportionality_factor=5,
                                                              for b in range(num_bootstraps)])
     fig = curve_fit.plot_optimization_results(data, results,
                                               hue='bootstrap_num',
-                                              plot_mean=True)
+                                              plot_mean=False)
     _plot_true_params(fig.axes[-1], proportionality_factor, critical_scaling)
     fig.suptitle(f'{num_trials} trials', size='xx-large')
     fig.subplots_adjust(top=.88)
     results = results.drop_duplicates('bootstrap_num')[['bootstrap_num', 'critical_scaling',
                                                         'proportionality_factor']]
+    # add the true values for parameters and data
+    results = results.append(pd.DataFrame({'bootstrap_num': 'true_value',
+                                           'critical_scaling': critical_scaling,
+                                           'proportionality_factor': proportionality_factor},
+                                          [0]))
+    data = data.append(pd.DataFrame({'bootstrap_num': 'true_value',
+                                     'scaling': scaling,
+                                     'proportion_correct': true_prop_corr}))
     return fig, results, data
