@@ -1054,8 +1054,6 @@ rule simulate_optimization:
     benchmark:
         op.join(config['DATA_DIR'], 'logs', 'simulate', 'optimization', 'a0-{a0}_s0-{s0}_seeds-{n_seeds}_iter-{max_iter}_benchmark.txt'),
     run:
-        import os
-        print(os.environ['KMP_INIT_AT_FORK'])
         import foveated_metamers as fov
         import contextlib
         with open(log[0], 'w', buffering=1) as log_file:
@@ -1064,7 +1062,7 @@ rule simulate_optimization:
                                                                   float(wildcards.s0),
                                                                   n_opt=int(wildcards.n_seeds),
                                                                   max_iter=int(wildcards.max_iter))
-                fig.savefig(output[0])
+                fig.savefig(output[0], bbox_inches='tight')
                 param.to_csv(output[1], index=False)
                 data.to_csv(output[2], index=False)
 
@@ -1086,7 +1084,7 @@ rule simulate_num_trials:
                 fig, param, data = fov.simulate.test_num_trials(int(wildcards.n_trials), int(wildcards.n_boots),
                                                                 float(wildcards.a0), float(wildcards.s0),
                                                                 max_iter=int(wildcards.max_iter))
-                fig.savefig(output[0])
+                fig.savefig(output[0], bbox_inches='tight')
                 param.to_csv(output[1], index=False)
                 data.to_csv(output[2], index=False)
 
