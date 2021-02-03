@@ -51,8 +51,8 @@ def test_optimization(proportionality_factor=5, critical_scaling=.2,
     trouble if the critical_scaling is too far outside the examined scaling
     values.
 
-    Creates final plot summarizing results (by calling
-    ``curve_fit.multi_plot_optimization_results``)
+    Creates final plot summarizing results, as well as dataframe summarizing
+    the results.
 
     We set seeds for reproducibility (so multiple calls of this function will
     give the same result; to test more, increase ``n_opt``).
@@ -129,27 +129,20 @@ def test_optimization(proportionality_factor=5, critical_scaling=.2,
 
 def test_num_trials(num_trials, num_bootstraps, proportionality_factor=5,
                     critical_scaling=.2, scaling=torch.logspace(-1, -.3, steps=9),
-                    n_opt=10, use_multiproc=True, n_processes=None,
+                    use_multiproc=True, n_processes=None,
                     lr=.001, scheduler=True, max_iter=10000):
     r"""Test how many trials we need to be confident in our parameter estimates.
 
-    This simulates data with the specified parameters (for the given scaling
-    values) and runs ``curve_fit.fit_psychophysical_parameters`` ``n_opt``
-    times to see how good our optimization procedure is.
+    We generate the true proportion correct at each scaling value for the
+    specified parameters, then simulate ``num_trials`` psychophysical trials at
+    each scaling value by sampling that many times from a Bernoulli
+    distribution with that probability. We then bootstrap the proportion
+    correct ``num_bootstraps`` times, running
+    ``curve_fit.fit_psychophysical_parameters`` on the resulting data each
+    time.
 
-    It looks like, should run optimization multiple times, because sometimes it
-    fails, and for ~5000 iterations per. When it fails, it's obvious
-    (psychophysical curve is way off, loss fairly high, and parameter values
-    haven't really moved much during optimization) and seems to be because the
-    parameters were initialized too far from the actual values. It also has
-    trouble if the critical_scaling is too far outside the examined scaling
-    values.
-
-    Creates final plot summarizing results (by calling
-    ``curve_fit.multi_plot_optimization_results``)
-
-    We set seeds for reproducibility (so multiple calls of this function will
-    give the same result; to test more, increase ``n_opt``).
+    Creates final plot summarizing results, as well as dataframe summarizing
+    the results.
 
     Parameters
     ----------
@@ -171,8 +164,6 @@ def test_num_trials(num_trials, num_bootstraps, proportionality_factor=5,
     scaling : torch.tensor, optional
         The scaling values to test. Default corresponds roughly to V1 tested
         values.
-    n_opt : int, optional
-        Number of times to run optimization.
     use_multiproc : bool, optional
         Whether to use multiprocessing to parallelize across cores or not.
     n_processes : int or None, optional
