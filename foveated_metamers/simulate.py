@@ -100,6 +100,10 @@ def test_optimization(proportionality_factor=5, critical_scaling=.2,
         from the true parameters; this is the data we were trying to fit.
 
     """
+    metadata = {'max_iter': max_iter, 'lr': lr, 'scheduler': scheduler,
+                'n_opt': n_opt,
+                'proportionality_factor_true': proportionality_factor,
+                'critical_scaling_true': critical_scaling}
     simul_prop_corr = curve_fit.proportion_correct_curve(scaling,
                                                          proportionality_factor,
                                                          critical_scaling)
@@ -118,12 +122,9 @@ def test_optimization(proportionality_factor=5, critical_scaling=.2,
     _plot_true_params(fig.axes[-1], proportionality_factor, critical_scaling)
     results = results.drop_duplicates('seed')[['seed', 'critical_scaling',
                                                'proportionality_factor']]
-    # add true value for parameters -- don't need one for data because it only
-    # contains the true value
-    results = results.append(pd.DataFrame({'seed': 'true_value',
-                                           'critical_scaling': critical_scaling,
-                                           'proportionality_factor': proportionality_factor},
-                                          [0]))
+    for k, v in metadata.items():
+        results[k] = v
+        data[k] = v
     return fig, results, data
 
 
@@ -190,6 +191,10 @@ def test_num_trials(num_trials, num_bootstraps, proportionality_factor=5,
         bootstrap, as well as from the true parameters.
 
     """
+    metadata = {'max_iter': max_iter, 'lr': lr, 'scheduler': scheduler,
+                'num_trials': num_trials, 'num_bootstraps': num_bootstraps,
+                'proportionality_factor_true': proportionality_factor,
+                'critical_scaling_true': critical_scaling}
     true_prop_corr = curve_fit.proportion_correct_curve(scaling,
                                                         proportionality_factor,
                                                         critical_scaling)
@@ -221,12 +226,11 @@ def test_num_trials(num_trials, num_bootstraps, proportionality_factor=5,
     fig.subplots_adjust(top=.88)
     results = results.drop_duplicates('bootstrap_num')[['bootstrap_num', 'critical_scaling',
                                                         'proportionality_factor']]
-    # add the true values for parameters and data
-    results = results.append(pd.DataFrame({'bootstrap_num': 'true_value',
-                                           'critical_scaling': critical_scaling,
-                                           'proportionality_factor': proportionality_factor},
-                                          [0]))
+    # add the true values for data
     data = data.append(pd.DataFrame({'bootstrap_num': 'true_value',
                                      'scaling': scaling,
                                      'proportion_correct': true_prop_corr}))
+    for k, v in metadata.items():
+        results[k] = v
+        data[k] = v
     return fig, results, data
