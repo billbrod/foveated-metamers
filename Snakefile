@@ -137,14 +137,14 @@ rule degamma_image:
     run:
         import imageio
         import contextlib
-        import foveated_metamers as met
+        import foveated_metamers as fov
         from skimage import color
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 im = imageio.imread(input[0])
                 # when loaded in, the range of this will be 0 to 255, we
                 # want to convert it to 0 to 1
-                im = met.utils.convert_im_to_float(im)
+                im = fov.utils.convert_im_to_float(im)
                 # convert to grayscale
                 im = color.rgb2gray(im)
                 # 1/2.2 is the standard encoding gamma for jpegs, so we
@@ -152,7 +152,7 @@ rule degamma_image:
                 # it
                 im = im**2.2
                 dtype = eval('np.uint%s' % wildcards.bits)
-                imageio.imwrite(output[0], met.utils.convert_im_to_int(im, dtype))
+                imageio.imwrite(output[0], fov.utils.convert_im_to_int(im, dtype))
 
 
 rule demosaic_image:
@@ -184,7 +184,7 @@ rule crop_image:
         import imageio
         import contextlib
         from skimage import color
-        import foveated_metamers as met
+        import foveated_metamers as fov
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 im = imageio.imread(input[0])
@@ -209,7 +209,7 @@ rule crop_image:
                         else:
                             raise Exception("Can only crop up to two dimensions!")
                 cropped_im = color.rgb2gray(cropped_im)
-                imageio.imwrite(output[0], met.utils.convert_im_to_int(cropped_im, np.uint16))
+                imageio.imwrite(output[0], fov.utils.convert_im_to_int(cropped_im, np.uint16))
                 # tiffs can't be read in using the as_gray arg, so we
                 # save it as a png, and then read it back in as_gray and
                 # save it back out
@@ -232,7 +232,7 @@ rule preproc_image:
         import imageio
         import contextlib
         import numpy as np
-        import foveated_metamers as met
+        import foveated_metamers as fov
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 im = imageio.imread(input[0])
@@ -266,7 +266,7 @@ rule preproc_image:
                     im = im ** (1/2.2)
                 # always save it as 16 bit
                 print("Saving as 16 bit")
-                im = met.utils.convert_im_to_int(im, np.uint16)
+                im = fov.utils.convert_im_to_int(im, np.uint16)
                 imageio.imwrite(output[0], im)
 
 
@@ -280,11 +280,11 @@ rule pad_image:
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'ref_images', '{image_name}_{pad_mode}-{ext}_benchmark.txt')
     run:
-        import foveated_metamers as met
+        import foveated_metamers as fov
         import contextlib
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                met.stimuli.pad_image(input[0], wildcards.pad_mode, output[0])
+                fov.stimuli.pad_image(input[0], wildcards.pad_mode, output[0])
 
 
 rule generate_image:
@@ -297,11 +297,11 @@ rule generate_image:
         op.join(config['DATA_DIR'], 'logs', 'ref_images', '{image_type}_period-{period}_size-'
                 '{size}_benchmark.txt')
     run:
-        import foveated_metamers as met
+        import foveated_metamers as fov
         import contextlib
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                met.stimuli.create_image(wildcards.image_type, int(wildcards.size), output[0],
+                fov.stimuli.create_image(wildcards.image_type, int(wildcards.size), output[0],
                                          int(wildcards.period))
 
 rule preproc_textures:
@@ -320,13 +320,13 @@ rule preproc_textures:
         import os.path as op
         import os
         from skimage import color
-        import foveated_metamers as met
+        import foveated_metamers as fov
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 os.makedirs(output[0])
                 for i in glob(op.join(input[0], '*.jpg')):
                     im = imageio.imread(i)
-                    im = met.utils.convert_im_to_float(im)
+                    im = fov.utils.convert_im_to_float(im)
                     if im.ndim == 3:
                         # then it's a color image, and we need to make it grayscale
                         im = color.rgb2gray(im)
@@ -336,7 +336,7 @@ rule preproc_textures:
                         # it
                         im = im ** 2.2
                     # save as a 16 bit png
-                    im = met.utils.convert_im_to_int(im, np.uint16)
+                    im = fov.utils.convert_im_to_int(im, np.uint16)
                     imageio.imwrite(op.join(output[0], op.split(i)[-1].replace('jpg', 'png')), im)
 
 
@@ -662,7 +662,7 @@ rule create_metamers:
         prince_partition = lambda wildcards: get_partition(wildcards, 'prince'),
         rusty_constraint = lambda wildcards: get_constraint(wildcards, 'rusty'),
     run:
-        import foveated_metamers as met
+        import foveated_metamers as fov
         import contextlib
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
@@ -677,7 +677,7 @@ rule create_metamers:
                 else:
                     coarse_to_fine = wildcards.coarse_to_fine
                 if wildcards.init_type not in ['white', 'blue', 'pink', 'gray']:
-                    init_type = met.utils.get_ref_image_full_path(wildcards.init_type)
+                    init_type = fov.utils.get_ref_image_full_path(wildcards.init_type)
                 else:
                     init_type = wildcards.init_type
                 if resources.gpu == 1:
@@ -690,8 +690,8 @@ rule create_metamers:
                     save_all = True
                 else:
                     save_all = False
-                with met.utils.get_gpu_id(get_gid, on_cluster=ON_CLUSTER) as gpu_id:
-                    met.create_metamers.main(wildcards.model_name, float(wildcards.scaling),
+                with fov.utils.get_gpu_id(get_gid, on_cluster=ON_CLUSTER) as gpu_id:
+                    fov.create_metamers.main(wildcards.model_name, float(wildcards.scaling),
                                              input.ref_image, int(wildcards.seed), float(wildcards.min_ecc),
                                              float(wildcards.max_ecc), float(wildcards.learning_rate),
                                              int(wildcards.max_iter), float(wildcards.loss_thresh),
@@ -740,7 +740,7 @@ rule continue_metamers:
         prince_partition = lambda wildcards: get_partition(wildcards, 'prince'),
         rusty_constraint = lambda wildcards: get_constraint(wildcards, 'rusty'),
     run:
-        import foveated_metamers as met
+        import foveated_metamers as fov
         import contextlib
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
@@ -755,7 +755,7 @@ rule continue_metamers:
                 else:
                     coarse_to_fine = wildcards.coarse_to_fine
                 if wildcards.init_type not in ['white', 'blue', 'pink', 'gray']:
-                    init_type = met.utils.get_ref_image_full_path(wildcards.init_type)
+                    init_type = fov.utils.get_ref_image_full_path(wildcards.init_type)
                 else:
                     init_type = wildcards.init_type
                 if resources.gpu == 1:
@@ -764,12 +764,12 @@ rule continue_metamers:
                     get_gid = False
                 else:
                     raise Exception("Multiple gpus are not supported!")
-                with met.utils.get_gpu_id(get_gid) as gpu_id:
+                with fov.utils.get_gpu_id(get_gid) as gpu_id:
                     # this is the same as the original call in the
                     # create_metamers rule, except we replace max_iter with
                     # extra_iter, set learning_rate to None, and add the
                     # input continue_path at the end
-                    met.create_metamers.main(wildcards.model_name, float(wildcards.scaling),
+                    fov.create_metamers.main(wildcards.model_name, float(wildcards.scaling),
                                              input.ref_image, int(wildcards.seed), float(wildcards.min_ecc),
                                              float(wildcards.max_ecc), None,
                                              int(wildcards.extra_iter), float(wildcards.loss_thresh),
@@ -793,11 +793,10 @@ rule gamma_correct_metamer:
     benchmark:
         METAMER_LOG_PATH.replace('.log', '_gamma-corrected_benchmark.txt')
     run:
-        import foveated_metamers as met
+        import foveated_metamers as fov
         import contextlib
         import numpy as np
         import shutil
-        import foveated_metamers as met
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 if output[0].endswith('metamer_gamma-corrected.png'):
@@ -806,7 +805,7 @@ rule gamma_correct_metamer:
                         print(f"Saving gamma-corrected image {output[0]} as np.uint8")
                         im = np.load(input[0])
                         im = im ** (1/2.2)
-                        im = met.utils.convert_im_to_int(im, np.uint8)
+                        im = fov.utils.convert_im_to_int(im, np.uint8)
                         imageio.imwrite(output[0], im)
                     else:
                         print("Image already gamma-corrected, copying to {output[0]}")
@@ -832,12 +831,12 @@ rule collect_training_noise:
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'stimuli', 'training_noise', 'stimuli_comp-{comp}_benchmark.txt'),
     run:
-        import foveated_metamers as met
+        import foveated_metamers as fov
         import contextlib
         import pandas as pd
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                met.stimuli.collect_images(input[:6], output[0])
+                fov.stimuli.collect_images(input[:6], output[0])
                 df = []
                 for i, p in enumerate(input):
                     if i < 4:
@@ -877,12 +876,12 @@ rule collect_training_metamers:
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'stimuli', 'training_{model_name}', 'stimuli_comp-{comp}_benchmark.txt'),
     run:
-        import foveated_metamers as met
+        import foveated_metamers as fov
         import contextlib
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                met.stimuli.collect_images(input, output[0])
-                met.stimuli.create_metamer_df(input, output[1])
+                fov.stimuli.collect_images(input, output[0])
+                fov.stimuli.create_metamer_df(input, output[1])
 
 
 rule collect_metamers:
@@ -898,12 +897,12 @@ rule collect_metamers:
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'stimuli_comp-{comp}_benchmark.txt'),
     run:
-        import foveated_metamers as met
+        import foveated_metamers as fov
         import contextlib
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                met.stimuli.collect_images(input, output[0])
-                met.stimuli.create_metamer_df(input, output[1])
+                fov.stimuli.collect_images(input, output[0])
+                fov.stimuli.create_metamer_df(input, output[1])
 
 
 def get_experiment_seed(wildcards):
@@ -935,7 +934,7 @@ rule generate_experiment_idx:
     params:
         seed = get_experiment_seed,
     run:
-        import foveated_metamers as met
+        import foveated_metamers as fov
         import pandas as pd
         import contextlib
         with open(log[0], 'w', buffering=1) as log_file:
@@ -959,9 +958,9 @@ rule generate_experiment_idx:
                 stim_df = stim_df.query("image_name in @ref_image_to_include")
                 comp = 'met_v_' + wildcards.comp
                 if wildcards.task == 'abx':
-                    idx = met.stimuli.generate_indices_abx(stim_df, params.seed, comp)
+                    idx = fov.stimuli.generate_indices_abx(stim_df, params.seed, comp)
                 elif wildcards.task == 'split':
-                    idx = met.stimuli.generate_indices_split(stim_df, params.seed, comp)
+                    idx = fov.stimuli.generate_indices_split(stim_df, params.seed, comp)
                 np.save(output[0], idx)
 
 
@@ -984,7 +983,7 @@ rule create_experiment_df:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-{task}_comp-{comp}',
                 '{subject}', '{date}_{subject}_task-{task}_comp-{comp}_sess-{sess_num}_im-{im_num}_expt{kwargs}_benchmark.txt'),
     run:
-        import foveated_metamers as met
+        import foveated_metamers as fov
         import numpy as np
         import pandas as pd
         import re
@@ -993,15 +992,15 @@ rule create_experiment_df:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 stim_df = pd.read_csv(input[0])
                 idx = np.load(input[1])
-                trials = met.analysis.summarize_trials(input[2], wildcards.task)
-                fig = met.analysis.plot_timing_info(trials, wildcards.subject, wildcards.task,
+                trials = fov.analysis.summarize_trials(input[2], wildcards.task)
+                fig = fov.analysis.plot_timing_info(trials, wildcards.subject, wildcards.task,
                                                     wildcards.sess_num, wildcards.im_num)
                 fig.savefig(output[1], bbox_inches='tight')
                 if wildcards.task == 'abx':
-                    df = met.analysis.create_experiment_df_abx(stim_df, idx)
+                    df = fov.analysis.create_experiment_df_abx(stim_df, idx)
                 elif wildcards.task == 'split':
-                    df = met.analysis.create_experiment_df_split(stim_df, idx)
-                df = met.analysis.add_response_info(df, trials, wildcards.subject, wildcards.task,
+                    df = fov.analysis.create_experiment_df_split(stim_df, idx)
+                df = fov.analysis.add_response_info(df, trials, wildcards.subject, wildcards.task,
                                                     wildcards.sess_num, wildcards.im_num)
                 # this will always start with a _. we want to get rid of that
                 # and add one at the end, given our regex
@@ -1027,7 +1026,7 @@ rule summarize_experiment:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-{task}_comp-{comp}', '{subject}',
                        '{date}_{subject}_task-{task}_comp-{comp}_sess-{sess_num}_im-{im_num}{kwargs}_summary_benchmark.txt'),
     run:
-        import foveated_metamers as met
+        import foveated_metamers as fov
         import pandas as pd
         import contextlib
         with open(log[0], 'w', buffering=1) as log_file:
@@ -1041,7 +1040,7 @@ rule summarize_experiment:
                     kwargs = kwargs[1:]
                 kwargs = dict(re.findall('(.*?)-(.*?)_', kwargs))
                 dep_variables += list(kwargs.keys())
-                summary_df = met.analysis.summarize_expt(expt_df, dep_variables)
+                summary_df = fov.analysis.summarize_expt(expt_df, dep_variables)
                 summary_df.to_csv(output[0], index=False)
 
 
@@ -1060,7 +1059,7 @@ rule scaling_comparison_figure:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
                 '{image_name}_seed-{seed}_scaling_benchmark.txt')
     run:
-        import foveated_metamers as met
+        import foveated_metamers as fov
         import seaborn as sns
         import contextlib
         import re
@@ -1071,7 +1070,7 @@ rule scaling_comparison_figure:
                 with sns.plotting_context(wildcards.context, font_scale=font_scale):
                     scaling = {MODELS[0]: config['RGC']['scaling'],
                                MODELS[1]: config['V1']['scaling']}[wildcards.model_name]
-                    fig = met.figures.scaling_comparison_figure(wildcards.model_name,
+                    fig = fov.figures.scaling_comparison_figure(wildcards.model_name,
                         wildcards.image_name, scaling, wildcards.seed, max_ecc=max_ecc)
                     fig.savefig(output[0], bbox_inches='tight')
 
@@ -1094,7 +1093,7 @@ rule window_size_figure:
     resources:
         mem = get_mem_estimate,
     run:
-        import foveated_metamers as met
+        import foveated_metamers as fov
         import seaborn as sns
         import contextlib
         import imageio
@@ -1105,12 +1104,12 @@ rule window_size_figure:
                 min_ecc = config['DEFAULT_METAMERS']['min_ecc']
                 max_ecc = config['DEFAULT_METAMERS']['max_ecc']
                 with sns.plotting_context(wildcards.context, font_scale=font_scale):
-                    image = met.utils.convert_im_to_float(imageio.imread(input.image[0]))
+                    image = fov.utils.convert_im_to_float(imageio.imread(input.image[0]))
                     # remove the normalizing aspect, since we don't need it here
-                    model, _, _, _ = met.create_metamers.setup_model(wildcards.model_name.replace('_norm', ''),
+                    model, _, _, _ = fov.create_metamers.setup_model(wildcards.model_name.replace('_norm', ''),
                                                                      float(wildcards.scaling),
                                                                      image, min_ecc, max_ecc, params.cache_dir)
-                    fig = met.figures.pooling_window_size(model.PoolingWindows, image)
+                    fig = fov.figures.pooling_window_size(model.PoolingWindows, image)
                     fig.savefig(output[0])
 
 
@@ -1127,11 +1126,11 @@ rule synthesis_video:
     resources:
         mem = get_mem_estimate,
     run:
-        import foveated_metamers as met
+        import foveated_metamers as fov
         import contextlib
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                met.figures.synthesis_video(input[0], wildcards.model_name)
+                fov.figures.synthesis_video(input[0], wildcards.model_name)
 
 
 rule compute_distances:
@@ -1156,7 +1155,7 @@ rule compute_distances:
     resources:
         mem = get_mem_estimate,
     run:
-        import foveated_metamers as met
+        import foveated_metamers as fov
         import plenoptic as po
         import torch
         import pandas as pd
@@ -1165,14 +1164,14 @@ rule compute_distances:
             norm_dict = torch.load(input.norm_dict)
         else:
             norm_dict = None
-        model = met.create_metamers.setup_model(wildcards.model_name, float(wildcards.scaling),
+        model = fov.create_metamers.setup_model(wildcards.model_name, float(wildcards.scaling),
                                                 ref_image, float(wildcards.min_ecc),
                                                 float(wildcards.max_ecc), params.cache_dir,
                                                 norm_dict)[0]
         synth_scaling = config[wildcards.synth_model_name.split('_')[0]]['scaling']
         df = []
         for sc in synth_scaling:
-            df.append(met.distances.model_distance(model, wildcards.synth_model_name,
+            df.append(fov.distances.model_distance(model, wildcards.synth_model_name,
                                                    wildcards.image_name, sc))
         df = pd.concat(df).reset_index(drop=True)
         df['distance_model'] = wildcards.model_name
