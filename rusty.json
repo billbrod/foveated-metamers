@@ -44,5 +44,13 @@
     {
         "mem": "{resources.mem}GB",
         "partition": "ccn"
+    },
+    "simulate_optimization":
+    {
+	"partition": "ccn"
+    },
+    "simulate_num_trials":
+    {
+	"partition": "ccn"
     }
 }
