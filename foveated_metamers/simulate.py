@@ -92,10 +92,12 @@ def test_optimization(proportionality_factor=5, critical_scaling=.2,
     -------
     fig : plt.Figure
         Figure containing the plots
-    proportionality_factor : torch.tensor
-        The final proportionality_factor values from each optimization
-    critical_scaling : torch.tensor
-        The final critical_scaling values from each optimization
+    params : pd.DataFrame
+        DataFrame containing the final parameter values from each optimization,
+        as well as the true values.
+    data : pd.DataFrame
+        DataFrame containing the scaling and proportion_correct that results
+        from the true parameters; this is the data we were trying to fit.
 
     """
     simul_prop_corr = curve_fit.proportion_correct_curve(scaling,
@@ -189,10 +191,12 @@ def test_num_trials(num_trials, num_bootstraps, proportionality_factor=5,
     -------
     fig : plt.Figure
         Figure containing the plots
-    proportionality_factor : torch.tensor
-        The final proportionality_factor values from each optimization
-    critical_scaling : torch.tensor
-        The final critical_scaling values from each optimization
+    params : pd.DataFrame
+        DataFrame containing the final parameter values from each optimization,
+        as well as the true values.
+    data : pd.DataFrame
+        DataFrame containing the scaling and proportion_correct from each
+        bootstrap, as well as from the true parameters.
 
     """
     true_prop_corr = curve_fit.proportion_correct_curve(scaling,
