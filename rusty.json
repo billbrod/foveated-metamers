@@ -47,10 +47,12 @@
     },
     "simulate_optimization":
     {
-	"partition": "ccn"
+	"partition": "ccn",
+        "mem" : ""
     },
     "simulate_num_trials":
     {
-	"partition": "ccn"
+	"partition": "ccn",
+        "mem" : ""
     }
 }
