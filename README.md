@@ -822,8 +822,23 @@ in either pixels or degrees, averaged across all runs they've
 done. This is used by the `experiment.py` script to calculate the
 proper offset.
 
+# Known issues
+
+1. When using multiprocessing (as done when fitting the psychophysical curves)
+   from the command-line, I get `OMP: Error #13: Assertion faliure at
+   z_Linux_util.cpp(2361)` on my Ubuntu 18.04 laptop. As reported
+   [here](https://github.com/ContinuumIO/anaconda-issues/issues/11294), this is
+   a known issue, and the solution appears to be to set an environmental
+   variable: running `export KMP_INIT_AT_FORK=FALSE` in the open terminal will
+   fix the problem. Strangely, this doesn't appear to be a problem in a Jupyter
+   notebook, but it does from `IPython` or the `snakemake` calls. I tried to set
+   the environmental variable from within Snakefile, but I can't make that work.
+   Running the calls with `use_multiproc=False` will also work, though it will
+   obviously be much slower.
+
 # References
 
 - Freeman, J., & Simoncelli, E. P. (2011). Metamers of the ventral
   stream. Nature Neuroscience, 14(9),
   1195–1201. http://dx.doi.org/10.1038/nn.2889
+
