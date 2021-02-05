@@ -7,10 +7,11 @@ import numpy as np
 import pyrtools as pt
 import plenoptic as po
 from skimage import measure
+import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import os.path as op
-from . import utils, create_metamers
+from . import utils, plotting
 
 V1_TEMPLATE_PATH = op.join('/home/billbrod/Desktop/metamers', 'metamers_display', 'V1_norm_s6_'
                            'gaussian', '{image_name}', 'scaling-{scaling}', 'opt-Adam',
@@ -499,3 +500,37 @@ def synthesis_video(metamer_save_path, model_name=None):
             anim.save(path)
         else:
             fig.savefig(path)
+
+
+def simulate_num_trials(params, row='critical_scaling_true', col='variable'):
+    """Create figure summarizing num_trials simulations.
+
+    Assumes only one true value of proportionality_factor (will still work if
+    not true, just might not be as good-looking).
+
+    Parameters
+    ----------
+    params : pd.DataFrame
+        DataFrame containing results from several num_trials simulations
+
+    Returns
+    -------
+    g : sns.FacetGrid
+        FacetGrid with the plot.
+
+    """
+    tmp = params.melt(value_vars=['critical_scaling_true', 'proportionality_factor_true'],
+                      value_name='true_value')
+    tmp['variable'] = tmp.variable.apply(lambda x: x.replace('_true', ''), )
+
+    params = params.melt(['bootstrap_num', 'max_iter', 'lr', 'scheduler',
+                          'num_trials', 'num_bootstraps', 'proportionality_factor_true',
+                          'critical_scaling_true'],
+                         value_vars=['critical_scaling', 'proportionality_factor'])
+    params = params.merge(tmp, left_index=True, right_index=True, suffixes=(None, '_y'))
+    params = params.drop('variable_y', 1)
+
+    g = sns.FacetGrid(params, row=row, col=col, aspect=1.5, sharey=False)
+    g.map_dataframe(plotting.scatter_ci_dist, 'num_trials', 'value')
+    g.map(plt.plot, 'num_trials', 'true_value', color='k', linestyle='--')
+    return g

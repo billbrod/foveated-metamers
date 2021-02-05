@@ -1089,6 +1089,30 @@ rule simulate_num_trials:
                 data.to_csv(output[2], index=False)
 
 
+rule simulate_num_trials_figure:
+    input:
+        [op.join(config['DATA_DIR'], 'simulate', 'num_trials', 'trials-{n_trials}_a0-5_s0-{s0}_boots-100_iter-10000_params.csv').format(n_trials=n, s0=s0)
+         for s0 in [.1, .2] for n in [10, 20, 30, 40, 50]]
+    output:
+        report(op.join(config['DATA_DIR'], 'figures', '{context}', 'simulate', 'num_trials.svg'))
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'simulate', 'num_trials.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'simulate', 'num_trials.log')
+    run:
+        import foveated_metamers as fov
+        import seaborn as sns
+        import pandas as pd
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                df = pd.concat([pd.read_csv(f) for f in input])
+                font_scale = {'poster': 1.7}.get(wildcards.context, 1)
+                with sns.plotting_context(wildcards.context, font_scale=font_scale):
+                    g = fov.figures.simulate_num_trials(df)
+                    g.fig.savefig(output[0], bbox_inches='tight')
+
+
 rule scaling_comparison_figure:
     input:
         lambda wildcards: [m.replace('metamer.png', 'metamer_gamma-corrected.png') for m in
