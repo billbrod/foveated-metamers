@@ -31,6 +31,7 @@ wildcard_constraints:
     task='abx|split',
     comp='met|ref',
     save_all='|_saveall',
+    gammacorrected='|_gamma-corrected'
 ruleorder:
     collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image
 
@@ -1042,6 +1043,69 @@ rule summarize_experiment:
                 dep_variables += list(kwargs.keys())
                 summary_df = fov.analysis.summarize_expt(expt_df, dep_variables)
                 summary_df.to_csv(output[0], index=False)
+
+
+rule calculate_heterogeneity:
+    input:
+        [op.join(config["DATA_DIR"], 'ref_images_preproc', '{img}{{gammacorrected}}_range-.05,.95_size-2048,2600.png').format(img=img)
+         for img in ['azulejos', 'tiles', 'bike', 'graffiti', 'llama', 'rooves', 'store', 'terraces', 'trunk_symmetric',
+                     'treetop_symmetric', 'grooming_symmetric', 'palm_symmetric', 'ground_symmetric', 'leaves_symmetric',
+                     'portrait_symmetric', 'troop_symmetric', 'termite_symmetric', 'digging_symmetric', 'plinth_symmetric',
+                     'quad_symmetric', 'plaza_symmetric', 'penn_symmetric', 'dorm_symmetric', 'pillar_symmetric', 'highway_symmetric',
+                     'statue_symmetric', 'graves', 'ivy', 'nyc', 'redrocks', 'redrocks2', 'rocks', 'terracotta', 'valley', 'boats',
+                     'charlesbroadway', 'gnarled', 'house', 'lettuce', 'lodge', 'rowhouses']]
+    output:
+        op.join(config['DATA_DIR'], 'figures', 'image_select', 'heterogeneity', 'heterogeneity{gammacorrected}.csv'),
+        [op.join(config["DATA_DIR"], 'figures', 'image_select', 'heterogeneity', '{img}{{gammacorrected}}_map.png').format(img=img)
+         for img in ['azulejos', 'tiles', 'bike', 'graffiti', 'llama', 'rooves', 'store', 'terraces', 'trunk_symmetric',
+                     'treetop_symmetric', 'grooming_symmetric', 'palm_symmetric', 'ground_symmetric', 'leaves_symmetric',
+                     'portrait_symmetric', 'troop_symmetric', 'termite_symmetric', 'digging_symmetric', 'plinth_symmetric',
+                     'quad_symmetric', 'plaza_symmetric', 'penn_symmetric', 'dorm_symmetric', 'pillar_symmetric', 'highway_symmetric',
+                     'statue_symmetric', 'graves', 'ivy', 'nyc', 'redrocks', 'redrocks2', 'rocks', 'terracotta', 'valley', 'boats',
+                     'charlesbroadway', 'gnarled', 'house', 'lettuce', 'lodge', 'rowhouses']]
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', 'image_select', 'heterogeneity', 'heterogeneity{gammacorrected}.log'),
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', 'image_select', 'heterogeneity', 'heterogeneity{gammacorrected}_benchmark.txt')
+    run:
+        import plenoptic as po
+        import foveated_metamers as fov
+        import contextlib
+        import pyrtools as pt
+        import os.path as op
+        import pandas as pd
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                images = po.to_numpy(po.load_images(input)).squeeze()
+                df = []
+                for n, im, out in zip(input, images, output[1:]):
+                    hg, tmp = fov.statistics.heterogeneity(im, pyramid_height=7)
+                    n = op.split(n)[-1].split('_')
+                    if 'symmetric' in n:
+                        n = '_'.join(n[:2])
+                    else:
+                        n = n[0]
+                    tmp['image'] = n
+                    df.append(tmp)
+                    print(n, out)
+                    # this pads out the arrays so we can plot them all on
+                    # imshow
+                    pads = []
+                    for i, h in enumerate(hg[::-1]):
+                        ideal_shape = 2**i * np.array(hg[-1].shape)
+                        pad = []
+                        for x in ideal_shape - h.shape:
+                            pad.append((np.ceil(x/2).astype(int),
+                                        np.floor(x/2).astype(int)))
+                        pads.append(pad)
+                    # need to reverse the order, since we construct it backwards
+                    pads = pads[::-1]
+                    hg = [np.pad(h, pads[i]) for i, h in enumerate(hg)]
+                    fig = pt.imshow(hg, zoom=.125,
+                                    title=[f'heterogeneity {n}\nscale {i}' for i in range(len(hg))])
+                    fig.savefig(out, bbox_inches='tight')
+                df = pd.concat(df).reset_index(drop=True)
+                df.to_csv(output[0], index=False)
 
 
 rule simulate_optimization:

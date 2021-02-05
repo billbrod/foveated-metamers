@@ -41,14 +41,14 @@ for ii = 1:length(names)
     hold on;
     imagesc(uint8(fov), 'AlphaData', .2);
     title(sprintf('Magno, sc: %.03e, gamma: %.03e', sc, gamma));
-    saveas(fig, sprintf('~/Desktop/metamers/figures/image_select/%s%s_large_fov.png', name, gamma_corrected))
+    saveas(fig, sprintf('~/Desktop/metamers/figures/image_select/lgnstats/%s%s_large_fov.png', name, gamma_corrected))
     CE(ii) = ce;
     SC(ii) = sc;
     Beta(ii) = beta;
     Gamma(ii) = gamma;
 end
 
-matname = sprintf('~/Desktop/metamers/figures/image_select/lgnstats%s_large_fov.mat', gamma_corrected);
+matname = sprintf('~/Desktop/metamers/figures/image_select/lgnstats/lgnstats%s_large_fov.mat', gamma_corrected);
 try
     save(matname, 'CE', 'SC', 'Beta', 'Gamma', 'names')
 catch
