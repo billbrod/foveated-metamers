@@ -368,8 +368,22 @@ def generate_metamer_seeds_dict(model_name):
     scaling = defaults[model_name]['scaling'] + met_v_met
     seeds = {}
     model_name_base = {'RGC': 0, 'V1': 1}[model_name] * model_name_sep
-    for i, im in enumerate(image_names):
-        image_base = i * image_name_sep
+    # the fixed_idx dict gives us a specific image index for a set of images
+    # (whose metamers were already generated using that value, back when I was
+    # looking at a broader set of images).
+    fixed_idx = defaults['FIXED_IMAGE_IDX'].copy()
+    # we now loop through the images we want to show and, if they're not
+    # already in fixed_idx, give them the lowest index that is not already
+    # used.
+    i = 0
+    for im in image_names:
+        if im not in fixed_idx.keys():
+            while i in fixed_idx.values():
+                i += 1
+            fixed_idx[im] = i
+            i += 1
+    for im in image_names:
+        image_base = fixed_idx[im] * image_name_sep
         for j, sc in enumerate(scaling):
             scaling_base = j * scaling_sep
             if im in defaults['OLD_SEEDS']['image_names']:

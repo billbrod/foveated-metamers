@@ -12,59 +12,21 @@ IMAGE_NAME:
     - 'bike'
     - 'graffiti'
     - 'llama'
-    - 'rooves'
-    - 'store'
     - 'terraces'
-    - 'baboons_symmetric'
-    - 'puffballs_symmetric'
-    - 'trunk_symmetric'
-    - 'canopy_symmetric'
     - 'treetop_symmetric'
-    - 'fern_symmetric'
-    - 'base_symmetric'
     - 'grooming_symmetric'
-    - 'eating_symmetric'
     - 'palm_symmetric'
-    - 'lake_symmetric'
-    - 'treetop2_symmetric'
-    - 'deadtrees_symmetric'
-    - 'trees_symmetric'
-    - 'ground_symmetric'
     - 'leaves_symmetric'
     - 'portrait_symmetric'
     - 'troop_symmetric'
-    - 'termite_symmetric'
-    - 'digging_symmetric'
-    - 'plinth_symmetric'
     - 'quad_symmetric'
-    - 'plaza_symmetric'
-    - 'penn_symmetric'
-    - 'dorm_symmetric'
-    - 'pillar_symmetric'
-    - 'train_symmetric'
     - 'highway_symmetric'
-    - 'umbrellas_symmetric'
-    - 'park_symmetric'
-    - 'statue_symmetric'
-    - 'apartments'
-    - 'church'
-    - 'graves'
     - 'ivy'
     - 'nyc'
-    - 'redrocks'
-    - 'redrocks2'
     - 'rocks'
-    - 'terracotta'
-    - 'valley'
     - 'boats'
-    - 'charlesbroadway'
     - 'gnarled'
-    - 'house'
     - 'lettuce'
-    - 'lodge'
-    - 'midtown'
-    - 'rowhouses'
-    - 'subway'
   preproc: 'range-.05,.95'
   size: '2048,2600'
 
@@ -79,9 +41,34 @@ OLD_SEEDS:
     - 'bike_range-.05,.95_size-2048,2600'
     - 'graffiti_range-.05,.95_size-2048,2600'
     - 'llama_range-.05,.95_size-2048,2600'
-    - 'rooves_range-.05,.95_size-2048,2600'
-    - 'store_range-.05,.95_size-2048,2600'
     - 'terraces_range-.05,.95_size-2048,2600'
+
+# this dict gives us a specific image index for a set of images (whose metamers
+# were already generated using that value, back when I was looking at a broader
+# set of images). Any image names that are found in DEFAULT_METAMERS:image_name
+# but not here will get the lowest image index that's not already in this
+# dictionary
+FIXED_IMAGE_IDX:
+  azulejos_range-.05,.95_size-2048,2600: 0
+  tiles_range-.05,.95_size-2048,2600: 1
+  bike_range-.05,.95_size-2048,2600: 2
+  graffiti_range-.05,.95_size-2048,2600: 3
+  llama_range-.05,.95_size-2048,2600: 4
+  terraces_range-.05,.95_size-2048,2600: 7
+  treetop_symmetric_range-.05,.95_size-2048,2600: 12
+  grooming_symmetric_range-.05,.95_size-2048,2600: 15
+  palm_symmetric_range-.05,.95_size-2048,2600: 17
+  leaves_symmetric_range-.05,.95_size-2048,2600: 23
+  portrait_symmetric_range-.05,.95_size-2048,2600: 24
+  troop_symmetric_range-.05,.95_size-2048,2600: 25
+  quad_symmetric_range-.05,.95_size-2048,2600: 29
+  highway_symmetric_range-.05,.95_size-2048,2600: 35
+  ivy_range-.05,.95_size-2048,2600: 42
+  nyc_range-.05,.95_size-2048,2600: 43
+  rocks_range-.05,.95_size-2048,2600: 46
+  boats_range-.05,.95_size-2048,2600: 49
+  gnarled_range-.05,.95_size-2048,2600: 51
+  lettuce_range-.05,.95_size-2048,2600: 53
 
 DEFAULT_METAMERS:
   image_name:
@@ -90,59 +77,21 @@ DEFAULT_METAMERS:
     - 'bike_range-.05,.95_size-2048,2600'
     - 'graffiti_range-.05,.95_size-2048,2600'
     - 'llama_range-.05,.95_size-2048,2600'
-    - 'rooves_range-.05,.95_size-2048,2600'
-    - 'store_range-.05,.95_size-2048,2600'
     - 'terraces_range-.05,.95_size-2048,2600'
-    - 'baboons_symmetric_range-.05,.95_size-2048,2600'
-    - 'puffballs_symmetric_range-.05,.95_size-2048,2600'
-    - 'trunk_symmetric_range-.05,.95_size-2048,2600'
-    - 'canopy_symmetric_range-.05,.95_size-2048,2600'
     - 'treetop_symmetric_range-.05,.95_size-2048,2600'
-    - 'fern_symmetric_range-.05,.95_size-2048,2600'
-    - 'base_symmetric_range-.05,.95_size-2048,2600'
     - 'grooming_symmetric_range-.05,.95_size-2048,2600'
-    - 'eating_symmetric_range-.05,.95_size-2048,2600'
     - 'palm_symmetric_range-.05,.95_size-2048,2600'
-    - 'lake_symmetric_range-.05,.95_size-2048,2600'
-    - 'treetop2_symmetric_range-.05,.95_size-2048,2600'
-    - 'deadtrees_symmetric_range-.05,.95_size-2048,2600'
-    - 'trees_symmetric_range-.05,.95_size-2048,2600'
-    - 'ground_symmetric_range-.05,.95_size-2048,2600'
     - 'leaves_symmetric_range-.05,.95_size-2048,2600'
     - 'portrait_symmetric_range-.05,.95_size-2048,2600'
     - 'troop_symmetric_range-.05,.95_size-2048,2600'
-    - 'termite_symmetric_range-.05,.95_size-2048,2600'
-    - 'digging_symmetric_range-.05,.95_size-2048,2600'
-    - 'plinth_symmetric_range-.05,.95_size-2048,2600'
     - 'quad_symmetric_range-.05,.95_size-2048,2600'
-    - 'plaza_symmetric_range-.05,.95_size-2048,2600'
-    - 'penn_symmetric_range-.05,.95_size-2048,2600'
-    - 'dorm_symmetric_range-.05,.95_size-2048,2600'
-    - 'pillar_symmetric_range-.05,.95_size-2048,2600'
-    - 'train_symmetric_range-.05,.95_size-2048,2600'
     - 'highway_symmetric_range-.05,.95_size-2048,2600'
-    - 'umbrellas_symmetric_range-.05,.95_size-2048,2600'
-    - 'park_symmetric_range-.05,.95_size-2048,2600'
-    - 'statue_symmetric_range-.05,.95_size-2048,2600'
-    - 'apartments_range-.05,.95_size-2048,2600'
-    - 'church_range-.05,.95_size-2048,2600'
-    - 'graves_range-.05,.95_size-2048,2600'
     - 'ivy_range-.05,.95_size-2048,2600'
     - 'nyc_range-.05,.95_size-2048,2600'
-    - 'redrocks_range-.05,.95_size-2048,2600'
-    - 'redrocks2_range-.05,.95_size-2048,2600'
     - 'rocks_range-.05,.95_size-2048,2600'
-    - 'terracotta_range-.05,.95_size-2048,2600'
-    - 'valley_range-.05,.95_size-2048,2600'
     - 'boats_range-.05,.95_size-2048,2600'
-    - 'charlesbroadway_range-.05,.95_size-2048,2600'
     - 'gnarled_range-.05,.95_size-2048,2600'
-    - 'house_range-.05,.95_size-2048,2600'
     - 'lettuce_range-.05,.95_size-2048,2600'
-    - 'lodge_range-.05,.95_size-2048,2600'
-    - 'midtown_range-.05,.95_size-2048,2600'
-    - 'rowhouses_range-.05,.95_size-2048,2600'
-    - 'subway_range-.05,.95_size-2048,2600'
   optimizer: 'Adam'
   loss: 'mse'
   fract_removed: 0
@@ -175,6 +124,7 @@ RGC:
     - .035
     - .045
     - .058
+  met_v_met_scaling:
     - .075
   max_iter: 5000
   training_scaling: 0.5
@@ -190,8 +140,8 @@ V1:
     - .27
     - .33
     - .4
-    - .5
   met_v_met_scaling:
+    - .5
     - .66
     - .87
     - 1.14
