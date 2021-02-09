@@ -1079,7 +1079,8 @@ rule calculate_heterogeneity:
                 images = po.to_numpy(po.load_images(input)).squeeze()
                 df = []
                 for n, im, out in zip(input, images, output[1:]):
-                    hg, tmp = fov.statistics.heterogeneity(im, pyramid_height=7)
+                    # 7th pyramid scale is dominated by the edge of the picture
+                    hg, tmp = fov.statistics.heterogeneity(im, pyramid_height=6)
                     n = op.split(n)[-1].split('_')
                     if 'symmetric' in n:
                         n = '_'.join(n[:2])
