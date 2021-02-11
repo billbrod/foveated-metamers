@@ -607,7 +607,7 @@ def run_split(stimuli_path, idx_path, save_path, comparison, on_msec_length=200,
     return keys_pressed, timings, expt_params, idx, win, img_pos
 
 
-def expt(stimuli_path, subj_name, sess_num, im_num, comparison,
+def expt(stimuli_path, subj_name, sess_num, run_num, comparison,
          output_dir="data/raw_behavioral", eyetrack=False,
          screen_size_pix=[3840, 2160], screen_size_deg=73.45, take_break=True, ipd_csv=None,
          flip_text=False, text_height=50, screen=[0], train_flag=False, **kwargs):
@@ -631,13 +631,13 @@ def expt(stimuli_path, subj_name, sess_num, im_num, comparison,
     kwargs_str = ""
     for k, v in kwargs.items():
         kwargs_str += "_{}-{}".format(k, v)
-    save_path = op.join(output_dir, "%s_%s_task-split_comp-%s_sess-{sess:02d}_im-{im:02d}%s.hdf5" %
+    save_path = op.join(output_dir, "%s_%s_task-split_comp-%s_sess-{sess:02d}_run-{run:02d}%s.hdf5" %
                         (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name, comparison, kwargs_str))
-    edf_path = op.join(output_dir, "%s_%s_task-split_comp-%s_sess-{sess:02d}_im-{im:02d}%s.EDF" %
+    edf_path = op.join(output_dir, "%s_%s_task-split_comp-%s_sess-{sess:02d}_run-{run:02d}%s.EDF" %
                        (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name, comparison, kwargs_str))
     idx_path = op.join(op.dirname(stimuli_path), f'task-split_comp-{comparison}', subj_name,
-                       f'{subj_name}_task-split_comp-{comparison}_idx_sess-{sess_num:02d}_im-{im_num:02d}.npy')
-    save_path = save_path.format(sess=sess_num, im=im_num)
+                       f'{subj_name}_task-split_comp-{comparison}_idx_sess-{sess_num:02d}_run-{run_num:02d}.npy')
+    save_path = save_path.format(sess=sess_num, run=run_num)
     if os.path.isfile(save_path):
         print("Existing save data %s found! Will load in and append results" % save_path)
         f = h5py.File(save_path)
@@ -674,7 +674,7 @@ def expt(stimuli_path, subj_name, sess_num, im_num, comparison,
     # we pass through the same edf_path even if we're not using the eyetracker
     # because it doesn't get used (and if set this to None or something, then
     # this edf_path.format call will fail)
-    edf_path = edf_path.format(sess=sess_num, im=im_num)
+    edf_path = edf_path.format(sess=sess_num, run=run_num)
     if eyetrack:
         eyetracker = _setup_eyelink(screen_size_pix)
         print("Using eyetracker, saving output at:\n\t%s" % edf_path)
@@ -720,7 +720,7 @@ if __name__ == '__main__':
     parser.add_argument("stimuli_path", help="Path to your unshuffled stimuli.")
     parser.add_argument("subj_name", help="Name of the subject")
     parser.add_argument("sess_num", help=("Session number"), type=int)
-    parser.add_argument("im_num", help=("Image set number"), type=int)
+    parser.add_argument("run_num", help=("Run number"), type=int)
     parser.add_argument("--ipd_csv", '-i', help="Path to the csv containing ipd correction info",
                         default=op.expanduser('~/Desktop/metamers/ipd/ipd_correction.csv'))
     parser.add_argument("--output_dir", '-o', help="directory to place output in",

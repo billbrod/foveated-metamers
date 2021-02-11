@@ -74,7 +74,7 @@ def summarize_trials(raw_behavioral_path):
     return trials
 
 
-def plot_timing_info(trials, subject_name, session_number, image_set_number,
+def plot_timing_info(trials, subject_name, session_number, run_number,
                      figsize=(5,5)):
     """Create scatter plot of timing info.
 
@@ -95,8 +95,8 @@ def plot_timing_info(trials, subject_name, session_number, image_set_number,
         The name of this subject
     session_number : int
         Session number
-    image_set_number : int
-        Image set number
+    run_number : int
+        Run number
     figsize : tuple, optional
         size of the figure
 
@@ -111,7 +111,8 @@ def plot_timing_info(trials, subject_name, session_number, image_set_number,
         tmp = trials[trials[:, 2] == i]
         response_time = tmp[:, 3] - tmp[:, 4]
         time_before_end = tmp[:, 1] - tmp[:, 3]
-        ax.scatter(response_time, time_before_end, c=f'C{i-1}', label=i)
+        ax.scatter(response_time, time_before_end, c=f'C{i-1}',
+                   label=f'button {i}')
     ax.legend()
     lim = np.abs(trials[:, 1] - trials[:, 3]).max()
     # y-values will all be strictly positive, because of the check we do in
@@ -119,7 +120,7 @@ def plot_timing_info(trials, subject_name, session_number, image_set_number,
     ax.set(ylabel='Time between button press and trial end', xlabel='Response time',
            ylim=(0, lim + .1*lim),
            title=(f"{subject_name}, session {session_number}, "
-                  f"image set {image_set_number}"))
+                  f"run {run_number}"))
     return fig
 
 
@@ -244,8 +245,8 @@ def create_experiment_df_split(df, presentation_idx, dep_variables=['scaling']):
     return expt_df
 
 
-def add_response_info(expt_df, trials, subject_name, session_number, image_set_number):
-    r"""Add information about subject's response and correctness to expt_df
+def add_response_info(expt_df, trials, subject_name, session_number, run_number):
+    r"""Add information about subject's response and correctness to expt_df.
 
     This function takes the expt_df, which summarizes the trials of the
     experiment, and adds several additional columns:
@@ -260,10 +261,13 @@ def add_response_info(expt_df, trials, subject_name, session_number, image_set_n
       1, 'miss': 0}
     - 'subject_name', which contains the name of the subject corresponding to
       the trials array
+    - 'extra_image_set': {'A', 'B'}. Based on subject_name (even-numbered
+      subjects get A, odd-numbered get B), this determines the set of extra 5
+      images this subject was shown in addition to the 10 all subjects are
+      shown (across all sessions).
     - 'session_number', which gives the number of this experimental
-      session
-    - 'image_set_number', which gives the number of this image set (determines
-      which image_name values were used).
+      session (determines which image_name values were used).
+    - 'run_number', which gives the number for this run.
 
     Parameters
     ----------
@@ -276,8 +280,8 @@ def add_response_info(expt_df, trials, subject_name, session_number, image_set_n
         The name of this subject
     session_number : int
         Session number
-    image_set_number : int
-        Image set number
+    Run_number : int
+        Run number
 
     Returns
     -------
@@ -296,8 +300,15 @@ def add_response_info(expt_df, trials, subject_name, session_number, image_set_n
                                       'miss')
     expt_df['hit_or_miss_numeric'] = expt_df.hit_or_miss.apply(lambda x: {'hit': 1, 'miss': 0}[x])
     expt_df['subject_name'] = subject_name
+    try:
+        sub_num = int(subject_name.replace('sub-', ''))
+        # we alternate sets A and B
+        expt_df['extra_image_set'] = {0: 'A', 1: 'B'}[sub_num % 2]
+    except ValueError:
+        # then this was sub-training, and so there was no extra image set
+        expt_df['extra_image_set'] = 'training'
     expt_df['session_number'] = session_number
-    expt_df['image_set_number'] = image_set_number
+    expt_df['run_number'] = run_number
     return expt_df
 
 

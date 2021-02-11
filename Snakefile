@@ -26,8 +26,8 @@ wildcard_constraints:
     preproc_image_name="|".join([im+'_?[a-z]*' for im in config['IMAGE_NAME']['ref_image']]),
     preproc="|_degamma|degamma",
     gpu="0|1",
-    sess_num="|".join([f'{i:02d}' for i in range(3)]),
-    im_num="|".join([f'{i:02d}' for i in range(4)]),
+    sess_num="|".join([f'{i:02d}' for i in config['PSYCHOPHYSICS']['SESSIONS']]),
+    run_num="|".join([f'{i:02d}' for i in config['PSYCHOPHYSICS']['RUNS']]),
     comp='met|ref',
     save_all='|_saveall',
     gammacorrected='|_gamma-corrected'
@@ -907,15 +907,15 @@ rule collect_metamers:
 
 def get_experiment_seed(wildcards):
     # the number from subject will be a number from 1 to 30, which we multiply
-    # by 10 in order to get the tens/hundreds place, and the session number
-    # will be between 0 and 2, which we use for the ones place. we use the same
+    # by 10 in order to get the tens/hundreds place, and the run number
+    # will be between 0 and 5, which we use for the ones place. we use the same
     # seed for different model stimuli, since those will be completely
     # different sets of images.
     try:
-        seed = 10*int(wildcards.subject.replace('sub-', '')) + int(wildcards.sess_num)
+        seed = 10*int(wildcards.subject.replace('sub-', '')) + int(wildcards.run_num)
     except ValueError:
         # then this is the training subject and seed doesn't really matter
-        seed = int(wildcards.sess_num)
+        seed = int(wildcards.run_num)
     return seed
 
 
@@ -924,13 +924,13 @@ rule generate_experiment_idx:
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description_comp-{comp}.csv'),
     output:
         report(op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                       '{subject}_task-split_comp-{comp}_idx_sess-{sess_num}_im-{im_num}.npy')),
+                       '{subject}_task-split_comp-{comp}_idx_sess-{sess_num}_run-{run_num}.npy')),
     log:
         op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                '{subject}_task-split_comp-{comp}_idx_sess-{sess_num}_im-{im_num}.log'),
+                '{subject}_task-split_comp-{comp}_idx_sess-{sess_num}_run-{run_num}.log'),
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                '{subject}_task-split_comp-{comp}_idx_sess-{sess_num}_im-{im_num}_benchmark.txt'),
+                '{subject}_task-split_comp-{comp}_idx_sess-{sess_num}_run-{run_num}_benchmark.txt'),
     params:
         seed = get_experiment_seed,
     run:
@@ -941,9 +941,22 @@ rule generate_experiment_idx:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 stim_df = pd.read_csv(input[0])
                 try:
-                    # want to pick 4 of the 8 reference images per run
-                    np.random.seed(int(wildcards.subject.replace('sub-', '')))
-                    ref_image_idx = np.random.permutation(np.arange(8))[4*int(wildcards.im_num):4*(int(wildcards.im_num)+1)]
+                    sub_num = int(wildcards.subject.replace('sub-', ''))
+                    # alternate sets A and B
+                    img_set = {0: 'A', 1: 'B'}[sub_num % 2]
+                    # want to pick 5 of the 15 possible images per session.
+                    all_imgs = (config['PSYCHOPHYSICS']['IMAGE_SETS']['all'] +
+                                config['PSYCHOPHYSICS']['IMAGE_SETS'][img_set])
+                    n_imgs = len(all_imgs)
+                    np.random.seed(sub_num)
+                    ref_image_idx = np.random.permutation(np.arange(n_imgs))
+                    n_sets = len(config['PSYCHOPHYSICS']['SESSIONS'])
+                    n_img_per_set = n_imgs / n_sets
+                    if int(n_img_per_set) != img_per_set:
+                        raise Exception("Number of images must divide evenly into number of sessions!")
+                    ref_image_idx = ref_image_idx[n_img_per_set*int(wildcards.sess_num):
+                                                  n_img_per_set*(int(wildcards.sess_num)+1)]
+                    ref_image_to_include = all_imgs[ref_image_idx]
                 except ValueError:
                     # then this is the test subject
                     if 'training' not in wildcards.model_name:
@@ -954,10 +967,10 @@ rule generate_experiment_idx:
                         # if it is the traning model, then the stimuli description
                         # has already been restricted to only the values we want
                         ref_image_idx = [0, 1]
-                ref_image_to_include = stim_df.image_name.unique()[ref_image_idx]
+                    ref_image_to_include = stim_df.image_name.unique()[ref_image_idx]
                 stim_df = stim_df.query("image_name in @ref_image_to_include")
                 comp = 'met_v_' + wildcards.comp
-                idx = fov.stimuli.generate_indices_split(stim_df, params.seed, comp)
+                idx = fov.stimuli.generate_indices_split(stim_df, params.seed, comp, n_repeats=6)
                 np.save(output[0], idx)
 
 
@@ -965,20 +978,20 @@ rule create_experiment_df:
     input:
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description_comp-{comp}.csv'),
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                '{subject}_task-split_comp-{comp}_idx_sess-{sess_num}_im-{im_num}.npy'),
+                '{subject}_task-split_comp-{comp}_idx_sess-{sess_num}_run-{run_num}.npy'),
         op.join(config["DATA_DIR"], 'raw_behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_im-{im_num}{kwargs}.hdf5'),
+                '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run-{run_num}.hdf5'),
     output:
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_im-{im_num}{kwargs}_expt.csv'),
+                '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run-{run_num}_expt.csv'),
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_im-{im_num}{kwargs}_trials.png'),
+                '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run-{run_num}_trials.png'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                '{subject}', '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_im-{im_num}_expt{kwargs}.log'),
+                '{subject}', '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run-{run_num}_expt.log'),
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                '{subject}', '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_im-{im_num}_expt{kwargs}_benchmark.txt'),
+                '{subject}', '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run-{run_num}_expt_benchmark.txt'),
     run:
         import foveated_metamers as fov
         import numpy as np
@@ -992,34 +1005,27 @@ rule create_experiment_df:
                 trials = fov.analysis.summarize_trials(input[2])
                 fig = fov.analysis.plot_timing_info(trials, wildcards.subject,
                                                     wildcards.sess_num,
-                                                    wildcards.im_num)
+                                                    wildcards.run_num)
                 fig.savefig(output[1], bbox_inches='tight')
                 df = fov.analysis.create_experiment_df_split(stim_df, idx)
                 df = fov.analysis.add_response_info(df, trials, wildcards.subject,
-                                                    wildcards.sess_num, wildcards.im_num)
-                # this will always start with a _. we want to get rid of that
-                # and add one at the end, given our regex
-                kwargs = wildcards.kwargs + '_'
-                if kwargs[0] == '_':
-                    kwargs = kwargs[1:]
-                kwargs = dict(re.findall('(.*?)-(.*?)_', kwargs))
-                df = df.assign(**kwargs)
+                                                    wildcards.sess_num, wildcards.run_num)
                 df.to_csv(output[0], index=False)
 
 
 rule summarize_experiment:
     input:
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_im-{im_num}{kwargs}_expt.csv'),
+                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run-{run_num}_expt.csv'),
     output:
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_im-{im_num}{kwargs}_summary.csv'),
+                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run-{run_num}_summary.csv'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_im-{im_num}{kwargs}_summary.log'),
+                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run-{run_num}_summary.log'),
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_im-{im_num}{kwargs}_summary_benchmark.txt'),
+                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run-{run_num}_summary_benchmark.txt'),
     run:
         import foveated_metamers as fov
         import pandas as pd
@@ -1028,13 +1034,6 @@ rule summarize_experiment:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 expt_df = pd.read_csv(input[0])
                 dep_variables = ['scaling', 'trial_type']
-                # this will always start with a _. we want to get rid of that
-                # and add one at the end, given our regex
-                kwargs = wildcards.kwargs + '_'
-                if kwargs[0] == '_':
-                    kwargs = kwargs[1:]
-                kwargs = dict(re.findall('(.*?)-(.*?)_', kwargs))
-                dep_variables += list(kwargs.keys())
                 summary_df = fov.analysis.summarize_expt(expt_df, dep_variables)
                 summary_df.to_csv(output[0], index=False)
 

@@ -158,9 +158,36 @@ PSYCHOPHYSICS:
     - 0
     - 1
     - 2
-  IMAGE_SET_NUMBERS:
+  RUNS:
     - 0
     - 1
+    - 2
+    - 3
+    - 4
+  IMAGE_SETS:
+    all:
+      - 'tiles_range-.05,.95_size-2048,2600'
+      - 'llama_range-.05,.95_size-2048,2600'
+      - 'treetop_symmetric_range-.05,.95_size-2048,2600'
+      - 'palm_symmetric_range-.05,.95_size-2048,2600'
+      - 'portrait_symmetric_range-.05,.95_size-2048,2600'
+      - 'quad_symmetric_range-.05,.95_size-2048,2600'
+      - 'highway_symmetric_range-.05,.95_size-2048,2600'
+      - 'ivy_range-.05,.95_size-2048,2600'
+      - 'rocks_range-.05,.95_size-2048,2600'
+      - 'gnarled_range-.05,.95_size-2048,2600'
+    A:
+      - 'azulejos_range-.05,.95_size-2048,2600'
+      - 'terraces_range-.05,.95_size-2048,2600'
+      - 'grooming_symmetric_range-.05,.95_size-2048,2600'
+      - 'leaves_symmetric_range-.05,.95_size-2048,2600'
+      - 'boats_range-.05,.95_size-2048,2600'
+    B:
+      - 'bike_range-.05,.95_size-2048,2600'
+      - 'graffiti_range-.05,.95_size-2048,2600'
+      - 'troop_symmetric_range-.05,.95_size-2048,2600'
+      - 'nyc_range-.05,.95_size-2048,2600'
+      - 'lettuce_range-.05,.95_size-2048,2600'
   SUBJECTS:
     - 'sub-01'
     - 'sub-02'

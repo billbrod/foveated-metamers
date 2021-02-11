@@ -232,7 +232,7 @@ def _gen_trial_types(df):
     return np.array(metamers), np.array(reference_images)
 
 
-def generate_indices_split(df, seed, comparison='met_v_ref'):
+def generate_indices_split(df, seed, comparison='met_v_ref', n_repeats=2):
     """Generate randomized presentation indices for split-screen task.
 
     We take in the dataframe describing the metamer images combined into our
@@ -240,8 +240,7 @@ def generate_indices_split(df, seed, comparison='met_v_ref'):
     split-screen task (as used in our experiment.py file), randomize them using
     the given seed, and return them.
 
-    Unlike ABX experiment (which always randomizes which is presented first),
-    this task always presents the reference image first for met_v_ref
+    This task always presents the reference image first for met_v_ref
     comparison (for met_v_met, presentation order is randomized; thus there
     will be more trials).
 
@@ -255,6 +254,11 @@ def generate_indices_split(df, seed, comparison='met_v_ref'):
     comparison : {'met_v_met', 'met_v_ref'}, optional
         Whether to create the indices for comparing metamers against each other
         or against the reference image
+    n_repeats : int or None, optional
+        How many repeats for each (image, scaling). Must be an even number (so
+        it's on the left and right an even number of times). Default (2) is
+        minimum, showing up on left and right each once. 6 is the value used
+        for our experiment.
 
     Returns
     -------
@@ -262,6 +266,8 @@ def generate_indices_split(df, seed, comparison='met_v_ref'):
         The 2 x n x 2 of presentation indices.
 
     """
+    if n_repeats % 2 != 0:
+        raise Exception(f"n_repeats must be even but got {n_repeats}!")
     np.random.seed(seed)
     # get the trial types array, which gives the indices for images to compare
     # against each other.
@@ -274,6 +280,9 @@ def generate_indices_split(df, seed, comparison='met_v_ref'):
         # 2. that is, for each set of metamers with same scaling and reference
         # image, get every possible combination of two, and both orderings
         trials = np.array([list(itertools.permutations(t, 2)) for t in mets])
+        # repeat the array as many times as necessary so we have n_repeats
+        # total
+        trials = np.repeat(trials, n_repeats // 2, 0)
         # then duplicate the first image (so it shows up on both left and
         # right)
         trials = np.dstack([trials[:, :, 0], trials])
@@ -284,6 +293,9 @@ def generate_indices_split(df, seed, comparison='met_v_ref'):
         # the reference image first on each trial.
         trials = np.array([[refs[i, 0], c] for i, comp in enumerate(mets) for c
                            in comp])
+        # repeat the array as many times as necessary so we have n_repeats
+        # total
+        trials = np.repeat(trials, n_repeats // 2, 0)
         # and now duplicate the first image (so it shows up on both left and
         # right)
         trials = trials[:, [0, 0, 1]]
