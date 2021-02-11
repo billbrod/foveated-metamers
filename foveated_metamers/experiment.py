@@ -14,10 +14,6 @@ import pandas as pd
 from ipd_calibration import csv_to_binocular_offset, clear_events
 from psychopy import visual, core, event, clock
 from psychopy.tools import imagetools
-try:
-    import pylink
-except ImportError:
-    warnings.warn("Unable to find pylink, will not be able to collect eye-tracking data")
 import analysis
 
 
@@ -108,31 +104,6 @@ def save(file_path, stimuli_path, idx_path, keys, timings, expt_params, idx, **k
                 _insert_into_hdf5(f, "%s" % k, v)
 
 
-def _setup_eyelink(win_size):
-    """set up the eyelink eye-tracking
-    """
-
-    # Connect to eyelink
-    eyetracker = pylink.EyeLink('192.168.1.5')
-    pylink.openGraphics()
-
-    # Set content of edf file
-    eyetracker.sendCommand('link_sample_data=LEFT,RIGHT,GAZE,AREA')
-    eyetracker.sendCommand('file_sample_data=LEFT,RIGHT,GAZE,AREA,GAZERES,STATUS')
-    eyetracker.sendCommand('file_event_filter=LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON')
-
-    # Set coords
-    eyetracker.sendCommand('screen_pixel_coords=0 0 {} {}'.format(*win_size))
-    eyetracker.sendMessage('DISPLAY_COORDS 0 0 {} {}'.format(*win_size))
-
-    # Calibrate
-    eyetracker.setCalibrationType('HV5')
-    eyetracker.doTrackerSetup(win_size)
-    pylink.closeGraphics()
-
-    return eyetracker
-
-
 def _set_params(stimuli_path, idx_path, size=[1920, 1080], monitor='CBI-prisma-projector',
                 units='pix', fullscr=True, screen=0, color=128, colorSpace='rgb255',
                 allowGUI=False, **monitor_kwargs):
@@ -221,9 +192,8 @@ def _create_bar_mask(bar_height, bar_width=200, fringe_proportion=.5):
 
 
 def _setup_run(stimuli_path, idx_path, fix_deg_size=.25, screen_size_deg=73.45,
-               eyetracker=None, edf_path=None, binocular_offset=[0, 0],
-               take_break=True, timings=[], start_from_stim=0,
-               **monitor_kwargs):
+               binocular_offset=[0, 0], take_break=True, timings=[],
+               start_from_stim=0, **monitor_kwargs):
     """Setup the run.
 
     Does the thigns that are constant across different tasks.
@@ -272,12 +242,6 @@ def _setup_run(stimuli_path, idx_path, fix_deg_size=.25, screen_size_deg=73.45,
     fixation = [visual.GratingStim(w, size=fix_pix_size, pos=p, sf=0, color='red',
                                    mask='circle') for w, p in zip(win, img_pos)]
 
-    if eyetracker is not None:
-        assert edf_path is not None, "edf_path must be set so we can save the eyetracker output!"
-        eyetracker.openDataFile('temp.EDF')
-        pylink.flushGetkeyQueue()
-        eyetracker.startRecording(1, 1, 1, 1)
-
     timer = clock.StaticPeriod(screenHz=60)
     expt_clock = clock.Clock()
     if timings:
@@ -309,7 +273,7 @@ def _explain_task(win, img_pos, expt_clock, comparison, flip_text=False,
         elif train_flag == 'model':
             train_text += "two possible synthesized image for each: one easy and one hard.\n\n"
             feedback_text += 'the easy trials, but will do worse on the hard ones.'
-        duration_text = 'one minute'
+        duration_text = 'two minutes'
     else:
         train_text = ""
         duration_text = "fifteen minutes"
@@ -340,8 +304,8 @@ def _explain_task(win, img_pos, expt_clock, comparison, flip_text=False,
 
 
 
-def _end_run(win, img_pos, timings, eyetracker, edf_path, save_frames,
-             flip_text, text_height, expt_clock, train_flag=False):
+def _end_run(win, img_pos, timings, save_frames, flip_text, text_height,
+             expt_clock, train_flag=False):
     """End the run.
 
     Do the things that are shared across task types.
@@ -357,10 +321,6 @@ def _end_run(win, img_pos, timings, eyetracker, edf_path, save_frames,
     timings.append(("run_end", '', expt_clock.getTime()))
     all_keys = event.getKeys(timeStamped=expt_clock)
     core.wait(4)
-    if eyetracker is not None:
-        eyetracker.stopRecording()
-        eyetracker.closeDataFile()
-        eyetracker.receiveDataFile('temp.EDF', edf_path)
     if save_frames is not None:
         [w.saveMovieFrames(save_frames) for w in win]
     if not train_flag:
@@ -368,12 +328,12 @@ def _end_run(win, img_pos, timings, eyetracker, edf_path, save_frames,
     return all_keys
 
 
-def run_split(stimuli_path, idx_path, save_path, comparison, on_msec_length=200,
-              off_msec_length=(500, 500), fix_deg_size=.25, screen_size_deg=73.45,
-              eyetracker=None, edf_path=None, save_frames=None,
-              binocular_offset=[0, 0], take_break=True, keys_pressed=[],
-              timings=[], start_from_stim=0, flip_text=False, text_height=50,
-              bar_deg_size=2, train_flag=False, **monitor_kwargs):
+def run_split(stimuli_path, idx_path, save_path, comparison,
+              on_msec_length=200, off_msec_length=(500, 500), fix_deg_size=.25,
+              screen_size_deg=73.45, save_frames=None, binocular_offset=[0, 0],
+              take_break=True, keys_pressed=[], timings=[], start_from_stim=0,
+              flip_text=False, text_height=50, bar_deg_size=2,
+              train_flag=False, **monitor_kwargs):
     r"""Run one run of the split task.
 
     stimuli_path specifies the path of the unshuffled experiment stimuli, while
@@ -421,14 +381,6 @@ def run_split(stimuli_path, idx_path, save_path, comparison, on_msec_length=200,
         the size of the fixation digits, in degrees.
     screen_size_deg : int or float.
         the max visual angle (in degrees) of the full screen.
-    eyetracker : EyeLink object or None
-        if None, will not collect eyetracking data. if not None, will
-        gather it. the EyeLink object must already be initialized (by
-        calling the _setup_eyelink function, as is done in the expt
-        function). if this is set, must also specify edf_path
-    edf_path : str or None
-        if eyetracker is not None, this must be a string, which is where
-        we will save the output of the eyetracker
     save_frames : None or str
         if not None, this should be the filename you wish to save frames
         at (one image will be made for each frame). WARNING: typically a
@@ -463,9 +415,8 @@ def run_split(stimuli_path, idx_path, save_path, comparison, on_msec_length=200,
 
     """
     setup_args = _setup_run(stimuli_path, idx_path, fix_deg_size,
-                            screen_size_deg, eyetracker, edf_path,
-                            binocular_offset, take_break, timings,
-                            start_from_stim, **monitor_kwargs)
+                            screen_size_deg, binocular_offset, take_break,
+                            timings, start_from_stim, **monitor_kwargs)
 
     (stimuli, idx, expt_params, monitor_kwargs, win, img_pos, break_time,
      fixation, timer, expt_clock, screen) = setup_args
@@ -529,8 +480,6 @@ def run_split(stimuli_path, idx_path, save_path, comparison, on_msec_length=200,
             timings.append(("stimulus_%d-%d" % (i+start_from_stim, j), "on", expt_clock.getTime()))
             # convert to sec
             core.wait(on_msec_length / 1000)
-            if eyetracker is not None:
-                eyetracker.sendMessage("TRIALID %02d" % i)
             if save_frames is not None:
                 [w.getMovieFrame() for w in win]
             if j == 1:
@@ -595,22 +544,21 @@ def run_split(stimuli_path, idx_path, save_path, comparison, on_msec_length=200,
             [w.flip() for w in win]
             core.wait(off_msec_length[1] / 1000)
         save(save_path, stimuli_path, idx_path, keys_pressed, timings, expt_params, idx,
-             screen=screen, edf_path=edf_path, screen_size_deg=screen_size_deg,
+             screen=screen, screen_size_deg=screen_size_deg,
              last_trial=i+start_from_stim, **monitor_kwargs)
         if check_for_keys(all_keys+paused_keys):
             break
-    all_keys = _end_run(win, img_pos, timings, eyetracker, edf_path,
-                        save_frames, flip_text, text_height, expt_clock,
-                        train_flag)
+    all_keys = _end_run(win, img_pos, timings, save_frames, flip_text,
+                        text_height, expt_clock, train_flag)
     if all_keys:
         keys_pressed.extend([(key[0], key[1]) for key in all_keys])
     return keys_pressed, timings, expt_params, idx, win, img_pos
 
 
 def expt(stimuli_path, subj_name, sess_num, run_num, comparison,
-         output_dir="data/raw_behavioral", eyetrack=False,
-         screen_size_pix=[3840, 2160], screen_size_deg=73.45, take_break=True, ipd_csv=None,
-         flip_text=False, text_height=50, screen=[0], train_flag=False, **kwargs):
+         output_dir="data/raw_behavioral", screen_size_pix=[3840, 2160],
+         screen_size_deg=73.45, take_break=True, ipd_csv=None, flip_text=False,
+         text_height=50, screen=[0], train_flag=False, **kwargs):
     """run a full experiment
 
     this just sets up the various paths, calls ``run``, and then saves
@@ -633,8 +581,6 @@ def expt(stimuli_path, subj_name, sess_num, run_num, comparison,
         kwargs_str += "_{}-{}".format(k, v)
     save_path = op.join(output_dir, "%s_%s_task-split_comp-%s_sess-{sess:02d}_run-{run:02d}%s.hdf5" %
                         (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name, comparison, kwargs_str))
-    edf_path = op.join(output_dir, "%s_%s_task-split_comp-%s_sess-{sess:02d}_run-{run:02d}%s.EDF" %
-                       (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name, comparison, kwargs_str))
     idx_path = op.join(op.dirname(stimuli_path), f'task-split_comp-{comparison}', subj_name,
                        f'{subj_name}_task-split_comp-{comparison}_idx_sess-{sess_num:02d}_run-{run_num:02d}.npy')
     save_path = save_path.format(sess=sess_num, run=run_num)
@@ -671,21 +617,12 @@ def expt(stimuli_path, subj_name, sess_num, run_num, comparison,
     print("Will use the following index:")
     print("\t%s" % idx_path)
     print("Will save at the following location:\n\t%s" % save_path)
-    # we pass through the same edf_path even if we're not using the eyetracker
-    # because it doesn't get used (and if set this to None or something, then
-    # this edf_path.format call will fail)
-    edf_path = edf_path.format(sess=sess_num, run=run_num)
-    if eyetrack:
-        eyetracker = _setup_eyelink(screen_size_pix)
-        print("Using eyetracker, saving output at:\n\t%s" % edf_path)
-    else:
-        eyetracker = None
     keys, timings, expt_params, idx, win, img_pos = run_split(
         stimuli_path, idx_path, save_path, comparison,
-        size=screen_size_pix, eyetracker=eyetracker, take_break=take_break,
+        size=screen_size_pix, take_break=take_break,
         screen_size_deg=screen_size_deg, start_from_stim=start_from_stim,
         flip_text=flip_text, binocular_offset=binocular_offset,
-        edf_path=edf_path, keys_pressed=keys, timings=timings,
+        keys_pressed=keys, timings=timings,
         text_height=text_height, screen=screen, train_flag=train_flag,
         **kwargs)
     save(save_path, stimuli_path, idx_path, keys, timings, expt_params, idx, **kwargs)
@@ -707,8 +644,6 @@ def expt(stimuli_path, subj_name, sess_num, run_num, comparison,
         all_keys = event.waitKeys(keyList=['return', 'space', 'q', 'escape', 'esc'])
         clear_events(win)
         [w.close() for w in win]
-    if eyetracker is not None:
-        eyetracker.close()
 
 
 if __name__ == '__main__':
@@ -725,10 +660,6 @@ if __name__ == '__main__':
                         default=op.expanduser('~/Desktop/metamers/ipd/ipd_correction.csv'))
     parser.add_argument("--output_dir", '-o', help="directory to place output in",
                         default=op.expanduser("~/Desktop/metamers/raw_behavioral"))
-    parser.add_argument("--eyetrack", '-e', action="store_true",
-                        help=("Pass this flag to tell the script to gather eye-tracking data. If"
-                              " pylink is not installed, this is impossible and will throw an "
-                              "exception"))
     parser.add_argument("--screen", '-s', default=[0], type=int, nargs='+',
                         help=("Screen number(s) to display experiment on."))
     parser.add_argument("--screen_size_pix", '-p', nargs=2, help="Size of the screen (in pixels)",
