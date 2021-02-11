@@ -1,5 +1,5 @@
 #!/usr/bin/python
-"""psychopy script for ABX experiment, run from the command line
+"""psychopy script for metamer experiment, run from the command line
 """
 
 import argparse
@@ -21,7 +21,7 @@ except ImportError:
 import analysis
 
 
-def calc_pct_correct(raw_behavioral_path, idx, stim_df, task):
+def calc_pct_correct(raw_behavioral_path, idx, stim_df):
     """Calculate percent correct, grouped by scaling.
 
     This is only intended for use during the training sessions, to give
@@ -38,8 +38,6 @@ def calc_pct_correct(raw_behavioral_path, idx, stim_df, task):
     stim_df : pd.DataFrame
         The metamer information dataframe, as created by
         stimuli.create_metamer_df
-    task : {'abx', 'split'}
-        whether this was the ABX or split-screen task
 
     Returns
     -------
@@ -47,12 +45,9 @@ def calc_pct_correct(raw_behavioral_path, idx, stim_df, task):
         Dataframe with the columns 'scaling' and 'pct_correct'
 
     """
-    trials = analysis.summarize_trials(raw_behavioral_path, task)
-    if task == 'abx':
-        df = analysis.create_experiment_df_abx(stim_df, idx)
-    elif task == 'split':
-        df = analysis.create_experiment_df_split(stim_df, idx)
-    df = analysis.add_response_info(df, trials, 'training', task, 'training', 'training')
+    trials = analysis.summarize_trials(raw_behavioral_path)
+    df = analysis.create_experiment_df_split(stim_df, idx)
+    df = analysis.add_response_info(df, trials, 'training', 'training', 'training')
     df = df.groupby('scaling').hit_or_miss_numeric.mean()
     return df.reset_index().rename(columns={'hit_or_miss_numeric': 'pct_correct'})
 
@@ -295,15 +290,14 @@ def _setup_run(stimuli_path, idx_path, fix_deg_size=.25, screen_size_deg=73.45,
 
 
 def _explain_task(win, img_pos, expt_clock, comparison, flip_text=False,
-                  text_height=50, task='split', train_flag=False):
+                  text_height=50, train_flag=False):
     """Draw some text explaining the task
     """
     if comparison == 'met':
         comp_text = "On this run, you'll be comparing two synthesized images."
     elif comparison == 'ref':
-        comp_text = "On this run, you'll be comparing natural and synthesized images."
-        if task == 'split':
-            comp_text += " The initial image will always be a natural image."
+        comp_text = ("On this run, you'll be comparing natural and synthesized images."
+                     " The first image in each pair will always be a natural image.")
     if train_flag:
         train_text = "For this training run, there will only be two natural images and "
         feedback_text = ("Because this is training run, we will show you your performance "
@@ -320,24 +314,21 @@ def _explain_task(win, img_pos, expt_clock, comparison, flip_text=False,
         train_text = ""
         duration_text = "fifteen minutes"
         feedback_text = "You will receive no feedback, either during or after the run."
-    if task == 'split':
-        text = ("In this experiment, you'll be performing a Two-Alternative Forced Choice task: "
-                "you'll view an image, split in half, and then, after a brief delay, a second "
-                "image, also split in half. One half of the second image will be the same as the "
-                "first, but the other half will have changed. Your task is to press the left or "
-                "right button to say which half you think changed. You have as much time as you "
-                "need, but respond as quickly as you can. All the images will be presented for a "
-                "very brief period of time, so pay attention. Sometimes the two images will be "
-                "very similar; sometimes they'll be very different. For the similar images, we "
-                f"expect the task to be hard. Just do your best!\n\n{comp_text}\n\n{train_text}"
-                "Fixate your eyes on the center of the image (there will be a fixation dot)"
-                " and try not to move them.\n\n"
-                f'{feedback_text}\n\n'
-                f"The run will last for about {duration_text} and there will be a break halfway "
-                "through. When you've finished the run, take a brief break before beginning the"
-                " next one.\n\nPress space to continue")
-    else:
-        raise Exception("Haven't implemented this yet!")
+    text = ("In this experiment, you'll be performing a Two-Alternative Forced Choice task: "
+            "you'll view an image, split in half, and then, after a brief delay, a second "
+            "image, also split in half. One half of the second image will be the same as the "
+            "first, but the other half will have changed. Your task is to press the left or "
+            "right button to say which half you think changed. You have as much time as you "
+            "need, but respond as quickly as you can. All the images will be presented for a "
+            "very brief period of time, so pay attention. Sometimes the two images will be "
+            "very similar; sometimes they'll be very different. For the similar images, we "
+            f"expect the task to be hard. Just do your best!\n\n{comp_text}\n\n{train_text}"
+            "Fixate your eyes on the center of the image (there will be a fixation dot)"
+            " and try not to move them.\n\n"
+            f'{feedback_text}\n\n'
+            f"The run will last for about {duration_text} and there will be a break halfway "
+            "through. When you've finished the run, take a brief break before beginning the"
+            " next one.\n\nPress space to continue")
     explain_text = [visual.TextStim(w, text, pos=p, flipHoriz=flip_text,
                                     height=text_height, wrapWidth=2000)
                     for w, p in zip(win, img_pos)]
@@ -500,7 +491,7 @@ def run_split(stimuli_path, idx_path, save_path, comparison, on_msec_length=200,
     del stimuli
 
     _explain_task(win, img_pos, expt_clock, comparison, flip_text, text_height,
-                  task='split', train_flag=train_flag)
+                  train_flag=train_flag)
 
     wait_text = [visual.TextStim(w, ("Press space to start\nq or esc will quit\nspace to pause"),
                                  pos=p, flipHoriz=flip_text, height=text_height)
@@ -616,227 +607,7 @@ def run_split(stimuli_path, idx_path, save_path, comparison, on_msec_length=200,
     return keys_pressed, timings, expt_params, idx, win, img_pos
 
 
-def run_abx(stimuli_path, idx_path, save_path, on_msec_length=200,
-            off_msec_length=(500, 1000, 500), fix_deg_size=.25,
-            screen_size_deg=73.45, eyetracker=None, edf_path=None,
-            save_frames=None, binocular_offset=[0, 0], take_break=True,
-            keys_pressed=[], timings=[], start_from_stim=0, flip_text=False,
-            text_height=50, foveal_mask_deg_size=1, train_flag=False,
-            **monitor_kwargs):
-    """run one run of the ABX task
-
-    stimuli_path specifies the path of the unshuffled experiment stimuli, while
-    idx_path specifies the path of the shuffled indices to use for this run.
-    This function will load in the stimuli at stimuli_path and rearrange them
-    using the indices found at idx_path, then simply go through those stimuli
-    in order, showing each stimuli for ``on_msec_length`` msecs and then a
-    blank screen for ``off_msec_length[i]`` msecs (or as close as possible,
-    given the monitor's refresh rate; ``i`` depends on which of the stimulus
-    just shown was A, B, or X in our ABX design; the last value has a slightly
-    different meaning: it's the length of the pause between trials; we also
-    wait for the user to respond.).
-
-    For fixation, we show a simple red dot whose size (in degrees) is
-    specified by ``fix_deg_size``
-
-    We load the arrays saved at stimuli_path and idx_path, and show the stimuli
-    whose indices are found in the index array. So if `idx=np.array([0, 4,
-    2])`, we would only show the 1st, 3rd, and 5th elements. This can be used
-    to show a subset of all stimuli
-
-    Arguments
-    ============
-    stimuli_path : string
-        path to .npy file where stimuli are stored (as 3d array)
-    idx_path : string
-        path to .npy file where shuffled indices are stored (as 2d
-        array)
-    save_path : string
-        path to .hdf5 file where we'll store the outputs of this
-        experiment (we save every trial)
-    on_msec_length : int
-        length of the ON blocks in milliseconds; that is, the length of
-        time to display each stimulus
-    off_msec_length : tuple
-        3-tuple of ints specifying the length of the length of the OFF blocks
-        in milliseconds. This is an ABX experiment, so the 3 ints correspond to
-        the number of milliseconds between A and B, B and X, and X and the A of
-        the next trial. The last one is actually the length of the pause
-        between trials, so the time between X and A of the next trial is the
-        subject's response time plus that.
-    fix_deg_size : int
-        the size of the fixation digits, in degrees.
-    screen_size_deg : int or float.
-        the max visual angle (in degrees) of the full screen.
-    eyetracker : EyeLink object or None
-        if None, will not collect eyetracking data. if not None, will
-        gather it. the EyeLink object must already be initialized (by
-        calling the _setup_eyelink function, as is done in the expt
-        function). if this is set, must also specify edf_path
-    edf_path : str or None
-        if eyetracker is not None, this must be a string, which is where
-        we will save the output of the eyetracker
-    save_frames : None or str
-        if not None, this should be the filename you wish to save frames
-        at (one image will be made for each frame). WARNING: typically a
-        large number of files will be saved (depends on the length of
-        your session), which means this may make the end of the run
-        (with the screen completely blank) take a while
-    binocular_offset : list
-        list of 2 ints, specifying the horizontal, vertical offset
-        between the stimuli (in pixels) presented on the two monitors in
-        order to allow the user to successfully fuse the image. This
-        should come from the calibration, run before this experiment.
-    take_break : bool
-        Whether to take a break half-way through the experiment or not.
-    keys_pressed : list
-        keys pressed. should be empty list unless resuming a run.
-    timings : list
-        timing of events. should be empty list unless resuming a run.
-    start_from_stim : int
-        the first stimulus to show. should be 0 unless resuming a run.
-    flip_text : bool
-        Whether to flip the text horizontally or not
-    text_height : int
-        The text height in pixels.
-    foveal_mask_deg_size : float
-        The width of the mask at the fovea, in degrees
-    train_flag : bool
-        Whether this is a training run or not. If so, the instruction text has
-        some extra words and we show the percent correct at the end.
-    monitor_kwargs :
-        passed to visual.Window
-
-    """
-    setup_args = _setup_run(stimuli_path, idx_path, fix_deg_size,
-                            screen_size_deg, eyetracker, edf_path,
-                            binocular_offset, take_break, timings,
-                            start_from_stim, **monitor_kwargs)
-    
-    (stimuli, idx, expt_params, monitor_kwargs, win, img_pos, break_time,
-     fixation, timer, expt_clock, screen) = setup_args
-    
-    foveal_mask_pix_size = foveal_mask_deg_size * (monitor_kwargs['size'][0] / screen_size_deg)
-    foveal_mask = [visual.GratingStim(w, size=foveal_mask_pix_size, pos=p, sf=0,
-                                      color=monitor_kwargs['color'], maskParams={'fringeWidth': .33},
-                                      mask='raisedCos', colorSpace=monitor_kwargs['colorSpace'])
-                   for w, p in zip(win, img_pos)]
-    # first one is special: we preload it, but we still want to include it in the iterator so the
-    # numbers all match up (we don't draw or wait during the on part of the first iteration)
-    img = [visual.ImageStim(w, image=imagetools.array2image(stimuli[0, 0]), pos=p,
-                            size=expt_params['stimuli_size']) for w, p in zip(win, img_pos)]
-    
-    wait_text = [visual.TextStim(w, ("Press space to start\nq or esc will quit\nspace to pause"),
-                                 pos=p, flipHoriz=flip_text, height=text_height)
-                 for w, p in zip(win, img_pos)]
-    query_text = [visual.TextStim(w, "Same as 1 or 2?", pos=p, flipHoriz=flip_text, height=text_height)
-                  for w, p in zip(win, img_pos)]
-    [text.draw() for text in wait_text]
-    [w.flip() for w in win]
-
-    all_keys = event.waitKeys(keyList=['return', 'space', 'q', 'escape', 'esc'], timeStamped=expt_clock)
-    clear_events(win)
-    if save_frames is not None:
-        [w.getMovieFrame() for w in win]
-
-    if check_for_keys(all_keys):
-        [w.close() for w in win]
-        return all_keys, [], expt_params, idx
-    countdown(win, img_pos, flip_text, text_height)
-
-    timings.append(("start", "off", expt_clock.getTime()))
-
-    # this outer for loop is per trial
-    for i, stim in enumerate(stimuli):
-        # and this one is for the three stimuli in each trial
-        all_keys = []
-        for j in range(len(stim)):
-            for im, f, m in zip(img, fixation, foveal_mask):
-                im.draw()
-                m.draw()
-                f.draw()
-            for w in win:
-                w.flip()
-            timings.append(("stimulus_%d-%d" % (i+start_from_stim, j), "on", expt_clock.getTime()))
-            # convert to sec
-            core.wait(on_msec_length / 1000)
-            if eyetracker is not None:
-                eyetracker.sendMessage("TRIALID %02d" % i)
-            if save_frames is not None:
-                [w.getMovieFrame() for w in win]
-            if j == 2:
-                [q.draw() for q in query_text]
-            else:
-                [f.draw() for f in fixation]
-            [w.flip() for w in win]
-            timings.append(("stimulus_%d-%d" % (i+start_from_stim, j), "off",
-                            expt_clock.getTime()))
-            if j != 2:
-                timer.start(off_msec_length[j] / 1000)
-            for im in img:
-                # off msec lengths are always longer than on msec length, so
-                # we preload the next image here
-                try:
-                    # we either load the next one in the set of three for
-                    # this trial...
-                    im.image = imagetools.array2image(stim[j+1])
-                except IndexError:
-                    # or, if we've gone through all those, we load the first
-                    # image for the next trial. if i+1==len(stimuli), then we've
-                    # gone through all images and will quit out
-                    if i+1 < len(stimuli):
-                        im.image = imagetools.array2image(stimuli[i+1][0])
-            if save_frames is not None:
-                [w.getMovieFrame() for w in win]
-            if j == 2:
-                response_keys = event.waitKeys(keyList=['q', 'escape', 'esc', '1', '2'],
-                                               timeStamped=expt_clock)
-                all_keys.extend(response_keys)
-            else:
-                timer.complete()
-                all_keys.extend(event.getKeys(timeStamped=expt_clock))
-            # we need this double break because we have two for loops
-            if check_for_keys(all_keys):
-                break
-        if all_keys:
-            keys_pressed.extend([(key[0], key[1]) for key in all_keys])
-        # python is 0-indexed, so add 1 to i in order to determine which trial
-        # we're on
-        if check_for_keys(all_keys, ['space', 'return']) or (take_break and i+1 == break_time):
-            timings.append(('pause', 'start', expt_clock.getTime()))
-            if take_break and i == break_time:
-                break_text = [visual.TextStim(w, "Break time!", pos=p, flipHoriz=flip_text,
-                                              height=text_height)
-                              for w, p in zip(win, img_pos)]
-                [text.draw() for text in break_text]
-                [w.flip() for w in win]
-                core.wait(2)
-            paused_keys = pause(i+1, len(stimuli), win, img_pos, expt_clock, flip_text)
-            timings.append(('pause', 'stop', expt_clock.getTime()))
-            keys_pressed.extend(paused_keys)
-            if not check_for_keys(paused_keys):
-                countdown(win, img_pos, flip_text, text_height)
-        else:
-            paused_keys = []
-        if not check_for_keys(all_keys+paused_keys):
-            timings.append(('post-stimulus_%d' % (i+start_from_stim), 'on', expt_clock.getTime()))
-            [f.draw() for f in fixation]
-            [w.flip() for w in win]
-            core.wait(off_msec_length[2] / 1000)
-        save(save_path, stimuli_path, idx_path, keys_pressed, timings, expt_params, idx,
-             screen=screen, edf_path=edf_path, screen_size_deg=screen_size_deg,
-             last_trial=i+start_from_stim, **monitor_kwargs)
-        if check_for_keys(all_keys+paused_keys):
-            break
-    all_keys = _end_run(win, img_pos, timings, eyetracker, edf_path,
-                        save_frames, flip_text, text_height, expt_clock,
-                        train_flag)
-    if all_keys:
-        keys_pressed.extend([(key[0], key[1]) for key in all_keys])
-    return keys_pressed, timings, expt_params, idx, win, img_pos
-
-
-def expt(stimuli_path, subj_name, sess_num, im_num, task, comparison,
+def expt(stimuli_path, subj_name, sess_num, im_num, comparison,
          output_dir="data/raw_behavioral", eyetrack=False,
          screen_size_pix=[3840, 2160], screen_size_deg=73.45, take_break=True, ipd_csv=None,
          flip_text=False, text_height=50, screen=[0], train_flag=False, **kwargs):
@@ -854,18 +625,18 @@ def expt(stimuli_path, subj_name, sess_num, im_num, task, comparison,
     if not (model_name.startswith('RGC') or model_name.startswith('V1') or model_name.startswith('training')):
         raise Exception(f"Can't find model_name from stimuli_path {stimuli_path}! "
                         f"Found {model_name} when trying to do so")
-    output_dir = op.join(output_dir, model_name, f'task-{task}_comp-{comparison}', subj_name)
+    output_dir = op.join(output_dir, model_name, f'task-split_comp-{comparison}', subj_name)
     if not op.exists(op.join(output_dir)):
         os.makedirs(op.join(output_dir))
     kwargs_str = ""
     for k, v in kwargs.items():
         kwargs_str += "_{}-{}".format(k, v)
-    save_path = op.join(output_dir, "%s_%s_task-%s_comp-%s_sess-{sess:02d}_im-{im:02d}%s.hdf5" %
-                        (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name, task, comparison, kwargs_str))
-    edf_path = op.join(output_dir, "%s_%s_task-%s_comp-%s_sess-{sess:02d}_im-{im:02d}%s.EDF" %
-                       (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name, task, comparison, kwargs_str))
-    idx_path = op.join(op.dirname(stimuli_path), f'task-{task}_comp-{comparison}', subj_name,
-                       f'{subj_name}_task-{task}_comp-{comparison}_idx_sess-{sess_num:02d}_im-{im_num:02d}.npy')
+    save_path = op.join(output_dir, "%s_%s_task-split_comp-%s_sess-{sess:02d}_im-{im:02d}%s.hdf5" %
+                        (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name, comparison, kwargs_str))
+    edf_path = op.join(output_dir, "%s_%s_task-split_comp-%s_sess-{sess:02d}_im-{im:02d}%s.EDF" %
+                       (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name, comparison, kwargs_str))
+    idx_path = op.join(op.dirname(stimuli_path), f'task-split_comp-{comparison}', subj_name,
+                       f'{subj_name}_task-split_comp-{comparison}_idx_sess-{sess_num:02d}_im-{im_num:02d}.npy')
     save_path = save_path.format(sess=sess_num, im=im_num)
     if os.path.isfile(save_path):
         print("Existing save data %s found! Will load in and append results" % save_path)
@@ -909,28 +680,18 @@ def expt(stimuli_path, subj_name, sess_num, im_num, task, comparison,
         print("Using eyetracker, saving output at:\n\t%s" % edf_path)
     else:
         eyetracker = None
-    if task == 'abx':
-        keys, timings, expt_params, idx, win, img_pos = run_abx(
-            stimuli_path, idx_path, save_path, size=screen_size_pix,
-            eyetracker=eyetracker, take_break=take_break,
-            screen_size_deg=screen_size_deg,
-            start_from_stim=start_from_stim, flip_text=flip_text,
-            binocular_offset=binocular_offset, edf_path=edf_path,
-            keys_pressed=keys, timings=timings, text_height=text_height,
-            screen=screen, train_flag=train_flag, **kwargs)
-    elif task == 'split':
-        keys, timings, expt_params, idx, win, img_pos = run_split(
-            stimuli_path, idx_path, save_path, comparison,
-            size=screen_size_pix, eyetracker=eyetracker, take_break=take_break,
-            screen_size_deg=screen_size_deg, start_from_stim=start_from_stim,
-            flip_text=flip_text, binocular_offset=binocular_offset,
-            edf_path=edf_path, keys_pressed=keys, timings=timings,
-            text_height=text_height, screen=screen, train_flag=train_flag,
-            **kwargs)
+    keys, timings, expt_params, idx, win, img_pos = run_split(
+        stimuli_path, idx_path, save_path, comparison,
+        size=screen_size_pix, eyetracker=eyetracker, take_break=take_break,
+        screen_size_deg=screen_size_deg, start_from_stim=start_from_stim,
+        flip_text=flip_text, binocular_offset=binocular_offset,
+        edf_path=edf_path, keys_pressed=keys, timings=timings,
+        text_height=text_height, screen=screen, train_flag=train_flag,
+        **kwargs)
     save(save_path, stimuli_path, idx_path, keys, timings, expt_params, idx, **kwargs)
     if train_flag:
         stim_df = pd.read_csv(stimuli_path.replace('stimuli_', 'stimuli_description_').replace('.npy', '.csv'))
-        pct_correct = calc_pct_correct(save_path, idx, stim_df, task)
+        pct_correct = calc_pct_correct(save_path, idx, stim_df)
         if len(pct_correct) == 1:
             pct_correct = f'{int(pct_correct.iloc[0].pct_correct * 100)}%'
         else:
@@ -954,7 +715,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description=("Run a psychophysical experiment to investigate metamers! Specify the location of the "
                      "stimuli, the session number, image set, and the subject name, and we'll handle the "
-                     "rest. Structure of experiment depends on task and comparison options."),
+                     "rest. Structure of experiment depends on comparison."),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("stimuli_path", help="Path to your unshuffled stimuli.")
     parser.add_argument("subj_name", help="Name of the subject")
@@ -980,8 +741,6 @@ if __name__ == '__main__':
                         help=("This script can be run on a haploscope or regular monitors. "
                               "If on a haploscope (and thus screen is viewed through a mirror), "
                               "the text must be flipped left-right. Use this to enable that flip."))
-    parser.add_argument("--task", '-t', default='split',
-                        help="{abx, split}. The task to run.")
     parser.add_argument("--comparison", '-c', default='ref',
                         help=("{ref, met}. Whether this run is comparing metamers against "
                               "reference images or other metamers."))

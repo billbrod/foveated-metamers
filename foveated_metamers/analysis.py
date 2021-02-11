@@ -6,7 +6,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-def summarize_trials(raw_behavioral_path, task):
+def summarize_trials(raw_behavioral_path):
     r"""Summarize trials in order to determine whether subject was correct or not.
 
     With this, we create a n_trials by 4 array with the following
@@ -36,8 +36,6 @@ def summarize_trials(raw_behavioral_path, task):
     raw_behavioral_path : str
         The str to the hdf5 file that contains the behavioral results,
         as saved by the experiment.py script
-    task : {'abx', 'split'}
-        whether this was the ABX or split-screen task
 
     Returns
     -------
@@ -61,10 +59,7 @@ def summarize_trials(raw_behavioral_path, task):
     # remove events corresponding to the beginning of the trial after each
     # pause (because the pause event takes its place).
     timing_data = np.delete(timing_data, np.where([b'pause' in t[0] for t in timing_data])[0]+1, 0)
-    if task == 'abx':
-        trial_end_timing = np.array([t for t in f['timing_data'][()] if (b'-2' in t[0] and b'off' in t[1])])
-    elif task == 'split':
-        trial_end_timing = np.array([t for t in f['timing_data'][()] if (b'-1' in t[0] and b'off' in t[1])])
+    trial_end_timing = np.array([t for t in f['timing_data'][()] if (b'-1' in t[0] and b'off' in t[1])])
     for i, trial_beg in enumerate(timing_data[:, 2].astype(float)):
         button_where = np.abs(trial_beg - button_presses[:, 1].astype(float)).argmin()
         trials.append([i, trial_beg, *button_presses[button_where], trial_end_timing[i, 2]])
@@ -79,7 +74,7 @@ def summarize_trials(raw_behavioral_path, task):
     return trials
 
 
-def plot_timing_info(trials, subject_name, task, session_number, image_set_number,
+def plot_timing_info(trials, subject_name, session_number, image_set_number,
                      figsize=(5,5)):
     """Create scatter plot of timing info.
 
@@ -90,7 +85,7 @@ def plot_timing_info(trials, subject_name, task, session_number, image_set_numbe
     the order of 1e-4 secs, with no dependence on response time, which will
     vary much more, and no dependence on button press.
 
-    We add a title to identify the subject, task, session and image set.
+    We add a title to identify the subject, session and image set.
 
     Parameters
     ----------
@@ -98,8 +93,6 @@ def plot_timing_info(trials, subject_name, task, session_number, image_set_numbe
         The n_trials by 5 array created by analysis.summarize_trials
     subject_name : str
         The name of this subject
-    task : str
-        The name of this task
     session_number : int
         Session number
     image_set_number : int
@@ -125,7 +118,7 @@ def plot_timing_info(trials, subject_name, task, session_number, image_set_numbe
     # summarize_trials()
     ax.set(ylabel='Time between button press and trial end', xlabel='Response time',
            ylim=(0, lim + .1*lim),
-           title=(f"{subject_name}, task {task}, session {session_number}, "
+           title=(f"{subject_name}, session {session_number}, "
                   f"image set {image_set_number}"))
     return fig
 
@@ -166,75 +159,6 @@ def _get_values(df, trial_num, correct_answers, idx=[], labels=[],
                                     "images %s in trial %s don't match: %s" %
                                     (idx, trial_num, possible_vals))
     return tmp
-
-
-def create_experiment_df_abx(df, presentation_idx, dep_variables=['scaling']):
-    r"""Create a dataframe summarizing the trials of the ABX experiment.
-
-    This function takes in the dataframe summarizing the stimuli, the
-    presentation indices, and some dependent variables, and creates a
-    dataframe summarizing each trial in the experiment. We have the
-    following columns:
-    - 'image_name': the name of the reference image to compare
-      against this metamer in the experiment
-    - 'image_1': the seed of the first image presented
-    - 'image_2': the seed of the second image presented
-    - 'image_X': the seed of the third image presented
-    - 'trial_number': the number of this trial
-    - 'correct_response': whether the correct response was 1 (if image_1
-      and image_X were identical) or 2 (if image_2 and image_X were
-      identical)
-    - 'model': the model used to generate this metamer
-    - 'trial_type': whether this trial was metamer_vs_metamer or
-      metamer_vs_reference
-    - an additional column for each item in ``dep_variable``
-
-    On some trials, one of the two images presented will be a
-    metamer. In that case, their seed (as stored in ``df``) is
-    ``np.nan``. In ``expt_df`` we replace this with the str
-    ``'reference'``.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        The metamer information dataframe, as created by
-        stimuli.create_metamer_df
-    presentation_idx : np.array
-        The n_trials by 3 array containing the stimuli presentation
-        indices for the run being analyzed.
-    dep_variable : list, optional
-        A list of strs, containing one or more of the columns of ``df``,
-        which tells us which additional variable(s) we want to include
-        in our dataframe. These are assumed to be identical in the two
-        images presented on each trial (function will raise an Exception
-        if this not true), and the intended use case if that these will
-        be the dependent variables against which we will plot our
-        psychometric function
-
-    Returns
-    -------
-    expt_df : pd.DataFrame
-        The experiment information dataframe, see above for description
-
-    """
-    dep_variables.append('model')
-    correct_answers = np.where(presentation_idx[:, 2] == presentation_idx[:, 0], 1, 2)
-    expt_df = []
-    for i, (a, b, x) in enumerate(presentation_idx):
-        tmp = _get_values(df, i, correct_answers, [a, b, x], ['1', '2', 'X'],
-                          dep_variables)
-        expt_df.append(pd.DataFrame(tmp, [i]))
-    expt_df = pd.concat(expt_df).reset_index(drop=True)
-    # all NaNs are where we have a reference image
-    expt_df = expt_df.fillna('reference')
-    # insert information on trial type: metamer vs metamer or metamer vs
-    # reference. if either image is a reference, then this is metamer vs
-    # reference; else, it's metamer vs metamer
-    metamer_vs_reference = np.logical_or((expt_df.image_1 == 'reference').values,
-                                         (expt_df.image_2 == 'reference').values)
-    expt_df['trial_type'] = np.where(metamer_vs_reference, 'metamer_vs_reference',
-                                     'metamer_vs_metamer')
-    return expt_df
 
 
 def create_experiment_df_split(df, presentation_idx, dep_variables=['scaling']):
@@ -320,7 +244,7 @@ def create_experiment_df_split(df, presentation_idx, dep_variables=['scaling']):
     return expt_df
 
 
-def add_response_info(expt_df, trials, subject_name, task, session_number, image_set_number):
+def add_response_info(expt_df, trials, subject_name, session_number, image_set_number):
     r"""Add information about subject's response and correctness to expt_df
 
     This function takes the expt_df, which summarizes the trials of the
@@ -336,7 +260,6 @@ def add_response_info(expt_df, trials, subject_name, task, session_number, image
       1, 'miss': 0}
     - 'subject_name', which contains the name of the subject corresponding to
       the trials array
-    - 'task', the name of this task
     - 'session_number', which gives the number of this experimental
       session
     - 'image_set_number', which gives the number of this image set (determines
@@ -351,8 +274,6 @@ def add_response_info(expt_df, trials, subject_name, task, session_number, image
         The n_trials by 5 array created by analysis.summarize_trials
     subject_name : str
         The name of this subject
-    task : str
-        The name of this task
     session_number : int
         Session number
     image_set_number : int
@@ -375,7 +296,6 @@ def add_response_info(expt_df, trials, subject_name, task, session_number, image
                                       'miss')
     expt_df['hit_or_miss_numeric'] = expt_df.hit_or_miss.apply(lambda x: {'hit': 1, 'miss': 0}[x])
     expt_df['subject_name'] = subject_name
-    expt_df['task'] = task
     expt_df['session_number'] = session_number
     expt_df['image_set_number'] = image_set_number
     return expt_df

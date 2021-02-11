@@ -28,7 +28,6 @@ wildcard_constraints:
     gpu="0|1",
     sess_num="|".join([f'{i:02d}' for i in range(3)]),
     im_num="|".join([f'{i:02d}' for i in range(4)]),
-    task='abx|split',
     comp='met|ref',
     save_all='|_saveall',
     gammacorrected='|_gamma-corrected'
@@ -924,14 +923,14 @@ rule generate_experiment_idx:
     input:
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description_comp-{comp}.csv'),
     output:
-        report(op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'task-{task}_comp-{comp}', '{subject}',
-                       '{subject}_task-{task}_comp-{comp}_idx_sess-{sess_num}_im-{im_num}.npy')),
+        report(op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'task-split_comp-{comp}', '{subject}',
+                       '{subject}_task-split_comp-{comp}_idx_sess-{sess_num}_im-{im_num}.npy')),
     log:
-        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'task-{task}_comp-{comp}', '{subject}',
-                '{subject}_task-{task}_comp-{comp}_idx_sess-{sess_num}_im-{im_num}.log'),
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'task-split_comp-{comp}', '{subject}',
+                '{subject}_task-split_comp-{comp}_idx_sess-{sess_num}_im-{im_num}.log'),
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'task-{task}_comp-{comp}', '{subject}',
-                '{subject}_task-{task}_comp-{comp}_idx_sess-{sess_num}_im-{im_num}_benchmark.txt'),
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', '{model_name}', 'task-split_comp-{comp}', '{subject}',
+                '{subject}_task-split_comp-{comp}_idx_sess-{sess_num}_im-{im_num}_benchmark.txt'),
     params:
         seed = get_experiment_seed,
     run:
@@ -958,31 +957,28 @@ rule generate_experiment_idx:
                 ref_image_to_include = stim_df.image_name.unique()[ref_image_idx]
                 stim_df = stim_df.query("image_name in @ref_image_to_include")
                 comp = 'met_v_' + wildcards.comp
-                if wildcards.task == 'abx':
-                    idx = fov.stimuli.generate_indices_abx(stim_df, params.seed, comp)
-                elif wildcards.task == 'split':
-                    idx = fov.stimuli.generate_indices_split(stim_df, params.seed, comp)
+                idx = fov.stimuli.generate_indices_split(stim_df, params.seed, comp)
                 np.save(output[0], idx)
 
 
 rule create_experiment_df:
     input:
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description_comp-{comp}.csv'),
-        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'task-{task}_comp-{comp}', '{subject}',
-                '{subject}_task-{task}_comp-{comp}_idx_sess-{sess_num}_im-{im_num}.npy'),
-        op.join(config["DATA_DIR"], 'raw_behavioral', '{model_name}', 'task-{task}_comp-{comp}', '{subject}',
-                '{date}_{subject}_task-{task}_comp-{comp}_sess-{sess_num}_im-{im_num}{kwargs}.hdf5'),
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'task-split_comp-{comp}', '{subject}',
+                '{subject}_task-split_comp-{comp}_idx_sess-{sess_num}_im-{im_num}.npy'),
+        op.join(config["DATA_DIR"], 'raw_behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
+                '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_im-{im_num}{kwargs}.hdf5'),
     output:
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-{task}_comp-{comp}', '{subject}',
-                '{date}_{subject}_task-{task}_comp-{comp}_sess-{sess_num}_im-{im_num}{kwargs}_expt.csv'),
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-{task}_comp-{comp}', '{subject}',
-                '{date}_{subject}_task-{task}_comp-{comp}_sess-{sess_num}_im-{im_num}{kwargs}_trials.png'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
+                '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_im-{im_num}{kwargs}_expt.csv'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
+                '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_im-{im_num}{kwargs}_trials.png'),
     log:
-        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-{task}_comp-{comp}',
-                '{subject}', '{date}_{subject}_task-{task}_comp-{comp}_sess-{sess_num}_im-{im_num}_expt{kwargs}.log'),
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                '{subject}', '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_im-{im_num}_expt{kwargs}.log'),
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-{task}_comp-{comp}',
-                '{subject}', '{date}_{subject}_task-{task}_comp-{comp}_sess-{sess_num}_im-{im_num}_expt{kwargs}_benchmark.txt'),
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                '{subject}', '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_im-{im_num}_expt{kwargs}_benchmark.txt'),
     run:
         import foveated_metamers as fov
         import numpy as np
@@ -993,15 +989,13 @@ rule create_experiment_df:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 stim_df = pd.read_csv(input[0])
                 idx = np.load(input[1])
-                trials = fov.analysis.summarize_trials(input[2], wildcards.task)
-                fig = fov.analysis.plot_timing_info(trials, wildcards.subject, wildcards.task,
-                                                    wildcards.sess_num, wildcards.im_num)
+                trials = fov.analysis.summarize_trials(input[2])
+                fig = fov.analysis.plot_timing_info(trials, wildcards.subject,
+                                                    wildcards.sess_num,
+                                                    wildcards.im_num)
                 fig.savefig(output[1], bbox_inches='tight')
-                if wildcards.task == 'abx':
-                    df = fov.analysis.create_experiment_df_abx(stim_df, idx)
-                elif wildcards.task == 'split':
-                    df = fov.analysis.create_experiment_df_split(stim_df, idx)
-                df = fov.analysis.add_response_info(df, trials, wildcards.subject, wildcards.task,
+                df = fov.analysis.create_experiment_df_split(stim_df, idx)
+                df = fov.analysis.add_response_info(df, trials, wildcards.subject,
                                                     wildcards.sess_num, wildcards.im_num)
                 # this will always start with a _. we want to get rid of that
                 # and add one at the end, given our regex
@@ -1015,17 +1009,17 @@ rule create_experiment_df:
 
 rule summarize_experiment:
     input:
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-{task}_comp-{comp}', '{subject}',
-                       '{date}_{subject}_task-{task}_comp-{comp}_sess-{sess_num}_im-{im_num}{kwargs}_expt.csv'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
+                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_im-{im_num}{kwargs}_expt.csv'),
     output:
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-{task}_comp-{comp}', '{subject}',
-                       '{date}_{subject}_task-{task}_comp-{comp}_sess-{sess_num}_im-{im_num}{kwargs}_summary.csv'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
+                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_im-{im_num}{kwargs}_summary.csv'),
     log:
-        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-{task}_comp-{comp}', '{subject}',
-                       '{date}_{subject}_task-{task}_comp-{comp}_sess-{sess_num}_im-{im_num}{kwargs}_summary.log'),
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
+                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_im-{im_num}{kwargs}_summary.log'),
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-{task}_comp-{comp}', '{subject}',
-                       '{date}_{subject}_task-{task}_comp-{comp}_sess-{sess_num}_im-{im_num}{kwargs}_summary_benchmark.txt'),
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
+                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_im-{im_num}{kwargs}_summary_benchmark.txt'),
     run:
         import foveated_metamers as fov
         import pandas as pd

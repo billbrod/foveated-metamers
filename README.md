@@ -448,17 +448,16 @@ or memory.
 The stimuli arrays will be located at:
 `~/Desktop/metamers/stimuli/{model_name}/stimuli_comp-{comp}.npy` and the presentation
 indices will be at
-`~/Desktop/metamers/stimuli/{model_name}/task-{task}_comp-{comp}/{subject}/{subject}_task-{task}_comp-{comp}_idx_sess-{sess_num}_im-{im_num}.npy`,
-where `{task}` is either `split` or `abx`, depending on whether you're using the
-split-screen or ABX task, and `{comp}` is `met` and `ref`, for the metamer vs
-metamer and metamer vs reference image comparisons, respectively. There will
-also be a pandas DataFrame, saved as a csv, at
+`~/Desktop/metamers/stimuli/{model_name}/task-split_comp-{comp}/{subject}/{subject}_task-split_comp-{comp}_idx_sess-{sess_num}_im-{im_num}.npy`,
+where `{comp}` is `met` and `ref`, for the metamer vs metamer and metamer vs
+reference image comparisons, respectively. There will also be a pandas
+DataFrame, saved as a csv, at
 `~/Desktop/metamers/stimuli/{model_name}/stimuli_description.csv`, which
 contains information about the metamers and their optimization. It's used to
 generate the presentation indices as well as to analyze the data.
 
 You can generate your own, novel presentation indices by running `snakemake -prk
-~/Desktop/metamers/stimuli/{model_name}/task-{task}_comp-{comp}/{subject}/{subject}_task-{task}_comp-{comp}_idx_sess-{sess_num}_im-{im_num}.npy`,
+~/Desktop/metamers/stimuli/{model_name}/task-split_comp-{comp}/{subject}/{subject}_task-split_comp-{comp}_idx_sess-{sess_num}_im-{im_num}.npy`,
 replacing `{model_name}` with one of `'RGC_norm_gaussian',
 'V1_norm_s6_gaussian'`, `{subject}` must be of the format `sub-##`, where `##`
 is some integer (ideally zero-padded, but this isn't required), `{sess_num}`
@@ -468,7 +467,7 @@ if you'd like to change this, see the snakemake rule `generate_experiment_idx`,
 and how the parameter `seed` is determined; as long as you modify this so that
 each subject/session combination gets a unique seed, everything should be fine),
 `{im_num}` is `00` or `01` (determines which set of 4 reference images are
-shown), and `task` and `comp` take one of the values explained above.
+shown), and `comp` take one of the values explained above.
 
 ### Demo / test experiment
 
@@ -586,75 +585,6 @@ Recommended explanation to subjects:
 > through. During the break, you can move away from the device, walk around, and
 > stretch, but please don't take more than 5 minutes. Tell me when you're ready
 > to begin again.
-
-### ABX Task
-
-Originally, was going to use the ABX task, as described in Freeman and
-Simoncelli, 2011. Each trial lasts 4.1 seconds and is structured like so:
-
-```
-|Image 1 | Blank  |Image 2 |  Blank  |Image X |  Blank  |
-|--------|--------|--------|---------|--------|---------|
-|200 msec|500 msec|200 msec|1000 msec|200 msec|2000 msec|
-```
-
-Image 1 and image 2 will always be two different images. They will either be two
-metamers generated from the same reference image with the same scaling value
-(and model, if `comp=met`), but different seeds, or one of those images and the
-reference image it was generated from (if `comp=ref`). Image X will always be a
-repeat of either image 1 or 2, and the subject's job is to press either 1 or 2
-on the keyboard, in order to indicate which image they think was repeated.
-
-To run the experiment:
-
-- Activate the `psypy` environment: `conda activate psypy`
-- Start the experiment script from the command line: `python
-   foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/{model
-   name}/stimuli_comp-{comp}.npy {subject} {sess_num} {im_num} -t abx -c {comp}`, where
-   `{model_name}, {subject}, {im_num}, {sess_num}, {comp}` are as above
-   - There are several other arguments the experiment script can take,
-     run `python foveated_metamers/experiment.py -h` to see them, and
-     see the [other arguments](#other-arguments) section for more
-     information.
-- Explain the task to the subject, as seen in the "say this to subject for
-  experiment" section (this text will also appear on screen before each run for
-  the participant to read)
-- When the subject is ready, press the space bar to begin the task.
-- You can press the space bar at any point to pause it, but the pause
-  won't happen until the end of the current trial, so don't press it a
-  bunch of times because it doesn't seem to be working. However, try
-  not to pause the experiment at all.
-- You can press q/esc to quit, but don't do this unless truly
-  necessary.
-- There will be a break half-way through the block. The subject can
-  get up, walk, and stretch during this period, but remind them to
-  take no more than 5 minutes. When they're ready to begin again,
-  press the space bar to resume.
-- The data will be saved on every trial, so if you do need to quit
-  out, all is not lost. You can run the same command as above, and the
-  experiment will pick up where you stopped.
-
-Recommended explanation to subjects:
-
-> In this experiment, you'll be asked to complete what we call an "ABX
-> task": you'll view three images in sequence; the first two will
-> always be different from each other, and the third will be a repeat
-> of either the first or second. After the third image finishes
-> displaying, you'll be prompted to answer whether the third image was
-> a repeat of the first or second image; press either the 1 or 2
-> button on the keyboard. All the images will be presented for a very
-> brief period of time, so pay attention. Sometimes, the two images
-> will be very similar; sometimes, they'll be very different. For the
-> very similar images, we expect the task to be hard. Just do your
-> best!
-
-> For this experiment, fixate on the center of the image the whole
-> time and try not to move your eyes.
-
-> The task will last for about an hour, but there will be a break
-> halfway through. During the break, you can move away from the
-> device, walk around, and stretch, but please don't take more than 5
-> minutes. Tell me when you're ready to begin again.
 
 ### Other arguments
 

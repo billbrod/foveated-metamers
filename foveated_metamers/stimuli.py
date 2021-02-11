@@ -232,60 +232,6 @@ def _gen_trial_types(df):
     return np.array(metamers), np.array(reference_images)
 
 
-def generate_indices_abx(df, seed, comparison='met_v_ref'):
-    r"""Generate the randomized presentation indices for ABX task.
-
-    We take in the dataframe describing the metamer images combined into our
-    stimuli array and correctly structure the presentation indices for the ABX
-    task (as used in our experiment.py file), randomize them using the given
-    seed, and return them.
-
-    For both met_v_ref and met_v_met comparisons, this randomizes which is
-    presented first.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        The dataframe containing the metamer information, as created by
-        ``create_metamer_df``
-    seed : int
-        The seed passed to ``np.random.seed``.
-    comparison : {'met_v_met', 'met_v_ref'}, optional
-        Whether to create the indices for comparing metamers against each other
-        or against the reference image
-
-    Returns
-    -------
-    trials : np.array
-        The n x 3 of presentation indices.
-
-    """
-    np.random.seed(seed)
-    # get the trial types array, which gives the indices for images to compare
-    # against each other.
-    mets, refs = _gen_trial_types(df)
-    # Now generate the indices for the trial. At the end of this, trials
-    # is a 2d array, n by 3, where each row corresponds to a single ABX
-    # trial: two images from the same row of trial_types and then a
-    # repeat of one of them
-    if comparison == 'met_v_met':
-        trials = np.array([list(itertools.permutations(t, 2)) for t in mets])
-        trials = trials.reshape(-1, trials.shape[-1])
-    elif comparison == 'met_v_ref':
-        # grab each metamer and reference image
-        trials = np.array([[c, refs[i, 0]] for i, comp in enumerate(mets) for c
-                           in comp])
-        # the above has reference image second, so this adds on all those same
-        # rows, but with the reference image first
-        trials = np.concatenate([trials, trials[:, [1, 0]]])
-    trials = np.array([[[i, j, i], [i, j, j]] for i, j in trials])
-    trials = trials.reshape(-1, trials.shape[-1])
-    # Now permute. we set the random seed at the top of this function for
-    # reproducibility
-    trials = np.random.permutation(trials)
-    return trials
-
-
 def generate_indices_split(df, seed, comparison='met_v_ref'):
     """Generate randomized presentation indices for split-screen task.
 
