@@ -232,7 +232,7 @@ def _gen_trial_types(df):
     return np.array(metamers), np.array(reference_images)
 
 
-def generate_indices_split(df, seed, comparison='met_v_ref', n_repeats=2):
+def generate_indices_split(df, seed, comparison='met_v_ref', n_repeats=None):
     """Generate randomized presentation indices for split-screen task.
 
     We take in the dataframe describing the metamer images combined into our
@@ -256,17 +256,19 @@ def generate_indices_split(df, seed, comparison='met_v_ref', n_repeats=2):
         or against the reference image
     n_repeats : int or None, optional
         How many repeats for each (image, scaling). Must be an even number (so
-        it's on the left and right an even number of times). Default (2) is
-        minimum, showing up on left and right each once. 6 is the value used
-        for our experiment.
+        it's on the left and right an even number of times). Default (None)
+        doesn't change anything, so that each (image, scaling, seed) shows up
+        on left and right each once. 6 is the value used for our experiment.
+        Will balance across seeds.
 
     Returns
     -------
     trials : np.array
-        The 2 x n x 2 of presentation indices.
+        The 2 x n x 2 of presentation indices. n is n_repeats * number of
+        images * number of scaling values.
 
     """
-    if n_repeats % 2 != 0:
+    if n_repeats is not None and n_repeats % 2 != 0:
         raise Exception(f"n_repeats must be even but got {n_repeats}!")
     np.random.seed(seed)
     # get the trial types array, which gives the indices for images to compare
@@ -276,26 +278,37 @@ def generate_indices_split(df, seed, comparison='met_v_ref', n_repeats=2):
     # left and right, respectively, of initial stimulus, and the final is the
     # image to change to.
     if comparison == 'met_v_met':
+        if n_repeats is not None and n_repeats != (mets.shape[-1] * mets.shape[-1]-1):
+            # there will be n*(n-1) number of repeats, where n is the number of
+            # seeds (equivalently, the number of metamers with the same image,
+            # scaling). need to think through how to implement any other values...
+            raise NotImplementedError("Haven't thought through how to implement"
+                                      " n_repeats for met_v_met yet!")
         # from each set of comparisons, grab all possible permutations of list
         # 2. that is, for each set of metamers with same scaling and reference
         # image, get every possible combination of two, and both orderings
         trials = np.array([list(itertools.permutations(t, 2)) for t in mets])
-        # repeat the array as many times as necessary so we have n_repeats
-        # total
-        trials = np.repeat(trials, n_repeats // 2, 0)
         # then duplicate the first image (so it shows up on both left and
         # right)
         trials = np.dstack([trials[:, :, 0], trials])
         # and make this 2d
         trials = trials.reshape(-1, trials.shape[-1])
     elif comparison == 'met_v_ref':
+        if n_repeats is not None:
+            # this is how many repeats of each (image, scaling) we would have
+            # if we didn't do anything more (mets.shape[-1] is the number of
+            # seeds, and we make sure each shows up once on left and once on
+            # right)
+            base_repeats = mets.shape[-1] * 2
+            # we pad out mets so that mets.shape[-1] is n_repeats//2 and that
+            # each seed shows up with the same frequency (or as close as
+            # possible)
+            mets = np.tile(mets, int(np.ceil(n_repeats / base_repeats)))
+            mets = mets[:, :n_repeats//2]
         # grab each reference image and metamer (in that order). We're showing
         # the reference image first on each trial.
         trials = np.array([[refs[i, 0], c] for i, comp in enumerate(mets) for c
                            in comp])
-        # repeat the array as many times as necessary so we have n_repeats
-        # total
-        trials = np.repeat(trials, n_repeats // 2, 0)
         # and now duplicate the first image (so it shows up on both left and
         # right)
         trials = trials[:, [0, 0, 1]]
