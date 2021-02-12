@@ -8,7 +8,6 @@ import os
 import re
 import os.path as op
 import datetime
-import warnings
 import numpy as np
 import pandas as pd
 from psychopy import visual, core, event, clock
