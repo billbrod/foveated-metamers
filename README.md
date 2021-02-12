@@ -244,14 +244,11 @@ as follows:
 2. Generate metamers for these models
 3. Use psychophysics to set model parameters
 
-The code for the models and general metamer synthesis are contained in
-the [plenoptic
-library](https://github.com/LabForComputationalVision/plenoptic/);
-this repo has four main components: generate metamers (2), prepare for
-the experiment (3), run the experiment (3), analyze the data from the
-experiment (3), and run an IPD calibration (3; only necessary for
-haploscope). How to use this repo for each of those tasks is described
-below.
+The code for the models and general metamer synthesis are contained in the
+[plenoptic library](https://github.com/LabForComputationalVision/plenoptic/);
+this repo has four main components: generate metamers (2), prepare for the
+experiment (3), run the experiment (3), and analyze the data from the experiment
+(3). How to use this repo for each of those tasks is described below.
 
 I use the [Snakemake](https://snakemake.readthedocs.io/en/stable/)
 workflow management tool to handle most of the work involved in
@@ -353,9 +350,7 @@ everything is working correctly, you could increase the `n` after `-j`
 to be greater than the one after `--resources gpu=`, and snakemake
 should be able to figure everything out; you should also replace `m`
 with the GB of RAM you have available). `snakemake` will create the
-directed acyclic graph (DAG) of jobs necessary to create those two txt
-files, which are just placeholders that require all the metamers as
-their input.
+directed acyclic graph (DAG) of jobs necessary to create all metamers.
 
 However, you probably can't create all metamers at once on one machine, because
 that would take too much time. You probably want to split things up. If you've
@@ -482,14 +477,10 @@ using `model_name=training`, `subject=sub-training`, `sess_num=0`, and `im_num=0
 
 ## Run experiment
 
-To run the experiment, make sure that the stimuli array and
-presentation indices have been generated and are at the appropriate
-path. If you're running this experiment in a binocular setup (e.g., a
-haploscope), make sure you've run the [IPD
-calibration](#ipd-calibration) for the subject you're about to
-run. It's recommended that you use a bite bar or eye-tracker or some
-other way to guarantee that your subject remains fixated on the center
-of the image; the results of the experiment rely very heavily on the
+To run the experiment, make sure that the stimuli array and presentation indices
+have been generated and are at the appropriate path. It's recommended that you
+use a chin-rest or bite bar to guarantee that your subject remains fixated on
+the center of the image; the results of the experiment rely very heavily on the
 subject's and model's foveations being identical.
 
 We want 6 sessions per subject per model. Each session will contain all trials
@@ -592,19 +583,12 @@ The `experiment.py` takes several optional arguments, several of which
 are probably relevant in order to re-run this on a different
 experiment set up:
 
-- `--screen` / `-s`: one or two integers which indicate which screens
-  to use. If two numbers are passed, we'll run the experiment in
-  binocular mode; if one is passed, we'll run it in monocular mode.
-- `--no_flip` / `-f`: by default, the script is meant to be run on a
-  haploscope, which means that all text is left-right flipped (because
-  the subject is viewing the screens through a mirror). Passing this
-  flag indicates that we should not flip the text.
-- `--scren_size_pix` / `-p`: two integers which indicate the size of
-  the screen(s) in pixels (if using two screens, they must have
-  identical resolution).
+- `--screen` / `-s`: one integer which indicate which screens
+  to use. 
+- `--screen_size_pix` / `-p`: two integers which indicate the size of
+  the screen(s) in pixels .
 - `--screen_size_deg` / `-d`: a single float which gives the length of
-  the longest screen side in degrees (again, if using two screens,
-  this must be identical for them).
+  the longest screen side in degrees.
 
 For more details on the other arguments, run `python
 foveated_metamers/experiment.py -h` to see the full docstring.
@@ -625,132 +609,6 @@ scaling value that leads to 50% accuracy should be about the same.
 ## Analyze experiment output
 
 *In progress*
-
-## IPD calibration
-
-We also include a script, `ipd_calibration.py`, which should work with
-the `psypy` environment set up from `environment-psychopy.yml` or the
-minimal experiment install above. This script is for use with a
-haploscope in order to determine how far apart the centers of the
-images in each eye should be to allow the subject to successfully fuse
-them. If their position is constant, this shouldn't change for a given
-subject (assuming your experimental setup doesn't change).
-
-### Task
-
-The IPD calibration involves two alternating tasks, repeated some
-number of times. In the first task, the subject will vertically align
-a long horizontal line with the center of a static circle. In the
-second, the subject will horizontally align a long vertical line with
-the center of a static circle. Some more details (reminder text will
-remind the subject of this before each run):
-
- - The subject presses `space` to start each task and to confirm that
-   the line is centered.
- - The subject adjusts the line using the numpad keys (by default) or
-   the arrows (if the `--arrow` flag is passed).
-    - If numpad keys, there are two sets of keys for each direction,
-      allowing both coarse and fine adjustment. `8`/`2` will do the
-      coarse adjustment, `7`/`1` the fine, for vertical; `4`/`6` will
-      do coarse, `1`/`3` the fine, for horizontal.
-    - If arrows, we only do the coarse adjustment (and they do as
-      you'd expect)
- - At any time, the subject can press `q` or `escape` to quit out of
-   the task, which will quit without saving anything.
-
-If the subject completes all runs, the outputs will be saved into a
-csv file, `ipd_correction.csv`, saved in the output directory (by
-default, on the user's Desktop within the `ipd` directory; this can be
-changed with the `--output_dir` flag). If the file exists, we will
-append the results to it, with the subject's name, their IPD, and an
-entry for each run, containing the amount of vertical and horizontal
-adjustment, in pixels and degrees, as well the monocular vergence
-angle (which we compute), the fixation distance, screen width (in
-pixels and cm), and a session number. See the [Using the
-output](#using-the-output) section for details on how to use this csv.
-
-### Usage
-
-To use, run from the command line (from this directory):
-
-```
-python ipd_calibration.py subject_name binocular_ipd -s 1 2
-```
-
-where `subject_name` is the name of the subject, as you want it stored
-for later retrieval, `binocular_ipd` is the subject's binocular IPD in
-*CM* (not mm), and the integers after `-s` specify which screens to
-run the task on (`1 2` is probably correct, but you may have to check
-your machine's specific display set up to confirm; the default runs it
-on screen `0`, which is only for testing purposes).
-
-There are many optional arguments, all set via flags, most of which
-you probably won't need to change. View the scripts help for more
-information about the different required arguments and options (by
-running `python ipd_calibration.py -h`), but here's a brief overview:
-
- - `--output_dir`/`-o`: set the directory where we look for the
-   `ipd_correction.csv` file where we save output.
- - A variety related to the physical setup of the experiment: fixation
-   distance (`--fixation_distance`), size of the screen in pixels
-   (`--size`/`-p`) and cm (`--monitor_cm_width`/`-c`). These are all
-   set for the FancyPants haploscope, and will probably need to change
-   for other setups.
- - `--num_runs`/`-n`: how many runs of the calibration we should do
-   (one run contains one vertical and horizontal calibration)
- - `--no_flip`/`-f`: by default, we flip everything horizontally since
-   we'll be displaying this on a haploscope, which subjects view
-   through a mirror. If your setup does not have a mirror between the
-   subject and the screen (e.g., you're testing it on your laptop),
-   pass this argument to remove the horizontal flip.
- - `--allow_large_ipd`: since we often talk about IPD in mm, but need
-   them in cm for this script, the script will raise an exception by
-   default if you pass an IPD larger than 10. If you actually do have
-   an IPD larger than 10, passing this argument will suppress the
-   exception and allow the script to continue.
- - Variety related to size of the stimuli: line length
-   (`--line_length`/`-l`), width (for both line and circle
-   `--line_width`/`-w`), and circle radius (`--circle_radius`/`-r`).
- - Arguments to control the timing of the line's blinking: the amount
-   of time on (`--line_on_duration`/`-on`) and off
-   (`--line_off_duration`/`-off`), both in seconds. The longer the on
-   duration, the more likely subjects are to see the line "chasing"
-   the circle, so you can play around with these to make sure it's not
-   too big of a problem.
- - `--arrows`: by default, the numpad controls the location of the
-   line, so we can allow for both coarse and fine adjustment. Passing
-   this argument uses the arrows instead, which only allow for
-   coarse. Use this if the keyboard you're using doesn't have a numpad
-   (e.g., while testing on a laptop) or if you're using the `glfw`
-   backend (see below).
- - `--win_type`: set the backend for the PsychoPy window. By default,
-   we use `pyglet`, but I've occasionally had issues with a weird
-   [`XF86VidModeGetGammaRamp failed`
-   error](https://github.com/psychopy/psychopy/issues/2061). If you
-   get that error and are unable to fix it, switching to the `glfw`
-   backend will probably work (if you followed the above install
-   instructions, you'll have the requirements for both on your
-   machine). However, as of the time of this writing, the `glfw`
-   backend does not [recognize the
-   numpad](https://github.com/psychopy/psychopy/issues/2639), so
-   you'll need to also pass the `--arrows` argument or the subject
-   will not be able to move the line.
-
-### Using the output
-
-The output of the calibration task will be an ever-expanding
-`ipd_correction.csv` file with all the information necessary you need
-to perform the IPD correction. However, if you're not familiar with
-interacting with this kind of information in python (using the
-fantastic [pandas](https://pandas.pydata.org/) library), this won't be
-that helpful to you.
-
-In order to get the specific numbers you need, I've provided a quick
-function, `csv_to_binocular_offset`, which provides the numbers most
-people want: the horizontal and vertical offset for a given subject,
-in either pixels or degrees, averaged across all runs they've
-done. This is used by the `experiment.py` script to calculate the
-proper offset.
 
 # Known issues
 

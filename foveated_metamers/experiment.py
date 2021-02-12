@@ -11,10 +11,31 @@ import datetime
 import warnings
 import numpy as np
 import pandas as pd
-from ipd_calibration import csv_to_binocular_offset, clear_events
 from psychopy import visual, core, event, clock
 from psychopy.tools import imagetools
 import analysis
+
+
+def clear_events(win):
+    """clear all keys from psychopy
+
+    I've been having issues with keys remaining in psychopy's buffer,
+    being pulled in at a later time (thus, pressing the spacebar once
+    gets parsed as pressing it twice, in rapid succession). This takes a
+    brief pause, .1 seconds, to rapidly flip the window several times
+    (should look like just a gray screen), calling ``event.getKeys()``
+    each time in order to make sure no keys are left in the buffer
+
+    Parameters
+    ----------
+    win : Psychophy.visual.Window
+        window to flip
+
+    """
+    for i in range(10):
+        win.flip()
+        core.wait(.01)
+        event.getKeys()
 
 
 def calc_pct_correct(raw_behavioral_path, idx, stim_df):
@@ -105,7 +126,7 @@ def save(file_path, stimuli_path, idx_path, keys, timings, expt_params, idx, **k
 
 
 def _set_params(stimuli_path, idx_path, size=[1920, 1080], monitor='CBI-prisma-projector',
-                units='pix', fullscr=True, screen=0, color=128, colorSpace='rgb255',
+                units='pix', fullscr=True, screen=[0], color=128, colorSpace='rgb255',
                 allowGUI=False, **monitor_kwargs):
     """set the various experiment parameters
     """
@@ -150,24 +171,20 @@ def check_for_keys(all_keys, keys_to_check=['q', 'esc', 'escape']):
     return any([k in all_keys for k in keys_to_check])
 
 
-def countdown(win, img_pos, flip_text=False, text_height=50):
-    countdown_text = [visual.TextStim(w, '3',
-                                      pos=p, flipHoriz=flip_text, height=text_height)
-                      for w, p in zip(win, img_pos)]
+def countdown(win, text_height=50):
+    countdown_text = visual.TextStim(win, '3', height=text_height)
     for i in range(3)[::-1]:
-        for text in countdown_text:
-            text.text = str(i+1)
-        [text.draw() for text in countdown_text]
-        [w.flip() for w in win]
+        countdown_text.text = str(i+1)
+        countdown_text.draw()
+        win.flip()
         core.wait(1)
 
 
-def pause(current_i, total_imgs, win, img_pos, expt_clock, flip_text=False, text_height=50):
-    pause_text = [visual.TextStim(w, f"{current_i}/{total_imgs}\nspace to resume\nq or esc to quit",
-                                  pos=p, flipHoriz=flip_text, height=text_height)
-                  for w, p in zip(win, img_pos)]
-    [text.draw() for text in pause_text]
-    [w.flip() for w in win]
+def pause(current_i, total_imgs, win, expt_clock, text_height=50):
+    pause_text = visual.TextStim(win, f"{current_i}/{total_imgs}\nspace to resume\nq or esc to quit",
+                                 height=text_height)
+    pause_text.draw()
+    win.flip()
     all_keys = event.waitKeys(keyList=['return', 'space', 'q', 'escape', 'esc'], timeStamped=expt_clock)
     clear_events(win)
     return [(key[0], key[1]) for key in all_keys]
@@ -192,8 +209,8 @@ def _create_bar_mask(bar_height, bar_width=200, fringe_proportion=.5):
 
 
 def _setup_run(stimuli_path, idx_path, fix_deg_size=.25, screen_size_deg=73.45,
-               binocular_offset=[0, 0], take_break=True, timings=[],
-               start_from_stim=0, **monitor_kwargs):
+               take_break=True, timings=[], start_from_stim=0,
+               **monitor_kwargs):
     """Setup the run.
 
     Does the thigns that are constant across different tasks.
@@ -212,24 +229,7 @@ def _setup_run(stimuli_path, idx_path, fix_deg_size=.25, screen_size_deg=73.45,
     if len(monitor_kwargs['screen']) == 1:
         screen = monitor_kwargs.pop('screen')[0]
         print('Doing single-monitor mode on screen %s' % screen)
-        win = [visual.Window(winType='pyglet', screen=screen, **monitor_kwargs)]
-        img_pos = [(0, 0)]
-    elif len(monitor_kwargs['screen']) == 2:
-        screen = monitor_kwargs.pop('screen')
-        # want these to be in increasing order
-        screen.sort()
-        print("Doing binocular mode on screens %s" % screen)
-        img_pos = [[int(-o // 2) for o in binocular_offset],
-                   [int(o // 2) for o in binocular_offset]]
-        print("Using binocular offsets: %s" % img_pos)
-        win = [visual.Window(winType='pyglet', screen=screen[0], swapInterval=1, **monitor_kwargs)]
-        # see here for the explanation of swapInterval and share args
-        # (basically, in order to make PsychoPy correctly update the two
-        # monitors together):
-        # https://discourse.psychopy.org/t/strange-behavior-with-retina-displays-external-monitors-in-1-90-2-py2/5485/5
-        # I know this works for glfw, need to double-check it works for pyglet
-        win.append(visual.Window(winType='pyglet', screen=screen[1], swapInterval=0, share=win[0],
-                                 **monitor_kwargs))
+        win = visual.Window(winType='pyglet', screen=screen, **monitor_kwargs)
     else:
         raise Exception("Can't handle %s screens!" % len(monitor_kwargs['screen']))
 
@@ -239,8 +239,8 @@ def _setup_run(stimuli_path, idx_path, fix_deg_size=.25, screen_size_deg=73.45,
               (total_trials, break_time))
 
     fix_pix_size = fix_deg_size * (monitor_kwargs['size'][0] / screen_size_deg)
-    fixation = [visual.GratingStim(w, size=fix_pix_size, pos=p, sf=0, color='red',
-                                   mask='circle') for w, p in zip(win, img_pos)]
+    fixation = visual.GratingStim(win, size=fix_pix_size, sf=0, color='red',
+                                  mask='circle')
 
     timer = clock.StaticPeriod(screenHz=60)
     expt_clock = clock.Clock()
@@ -249,12 +249,12 @@ def _setup_run(stimuli_path, idx_path, fix_deg_size=.25, screen_size_deg=73.45,
         # after it. for some reason, need to use the negative value of
         # it in order to add that to the expt_clock...
         expt_clock.reset(-float(timings[-1][-1]))
-    return (stimuli, idx, expt_params, monitor_kwargs, win, img_pos, break_time,
+    return (stimuli, idx, expt_params, monitor_kwargs, win, break_time,
             fixation, timer, expt_clock, screen)
 
 
-def _explain_task(win, img_pos, expt_clock, comparison, flip_text=False,
-                  text_height=50, train_flag=False):
+def _explain_task(win, expt_clock, comparison, text_height=50,
+                  train_flag=False):
     """Draw some text explaining the task
     """
     if comparison == 'met':
@@ -276,7 +276,7 @@ def _explain_task(win, img_pos, expt_clock, comparison, flip_text=False,
         duration_text = 'two minutes'
     else:
         train_text = ""
-        duration_text = "fifteen minutes"
+        duration_text = "twelve minutes"
         feedback_text = "You will receive no feedback, either during or after the run."
     text = ("In this experiment, you'll be performing a Two-Alternative Forced Choice task: "
             "you'll view an image, split in half, and then, after a brief delay, a second "
@@ -293,47 +293,46 @@ def _explain_task(win, img_pos, expt_clock, comparison, flip_text=False,
             f"The run will last for about {duration_text} and there will be a break halfway "
             "through. When you've finished the run, take a brief break before beginning the"
             " next one.\n\nPress space to continue")
-    explain_text = [visual.TextStim(w, text, pos=p, flipHoriz=flip_text,
-                                    height=text_height, wrapWidth=2000)
-                    for w, p in zip(win, img_pos)]
-    [text.draw() for text in explain_text]
-    [w.flip() for w in win]
+    explain_text = visual.TextStim(win, text, height=text_height, wrapWidth=2000)
+
+    explain_text.draw()
+    win.flip()
     all_keys = event.waitKeys(keyList=['return', 'space', ], timeStamped=expt_clock)
     clear_events(win)
     return [(key[0], key[1]) for key in all_keys]
 
 
 
-def _end_run(win, img_pos, timings, save_frames, flip_text, text_height,
-             expt_clock, train_flag=False):
+def _end_run(win, timings, save_frames, text_height, expt_clock,
+             train_flag=False):
     """End the run.
 
     Do the things that are shared across task types.
 
     """
     if not train_flag:
-        [visual.TextStim(w, "Run over\n\nGo notify experimenter", pos=p, flipHoriz=flip_text,
-                         height=text_height, wrapWidth=2000).draw() for w, p in zip(win, img_pos)]
+        visual.TextStim(win, "Run over\n\nGo notify experimenter", height=text_height,
+                        wrapWidth=2000).draw()
     else:
-        [visual.TextStim(w, "Run over\n\nWait a sec while we compute your performance...", pos=p, flipHoriz=flip_text,
-                         height=text_height, wrapWidth=2000).draw() for w, p in zip(win, img_pos)]
-    [w.flip() for w in win]
+        visual.TextStim(win, "Run over\n\nWait a sec while we compute your performance...",
+                        height=text_height, wrapWidth=2000).draw()
+    win.flip()
     timings.append(("run_end", '', expt_clock.getTime()))
     all_keys = event.getKeys(timeStamped=expt_clock)
     core.wait(4)
     if save_frames is not None:
-        [w.saveMovieFrames(save_frames) for w in win]
+        win.saveMovieFrames(save_frames)
     if not train_flag:
-        [w.close() for w in win]
+        win.close()
     return all_keys
 
 
 def run_split(stimuli_path, idx_path, save_path, comparison,
               on_msec_length=200, off_msec_length=(500, 500), fix_deg_size=.25,
-              screen_size_deg=73.45, save_frames=None, binocular_offset=[0, 0],
-              take_break=True, keys_pressed=[], timings=[], start_from_stim=0,
-              flip_text=False, text_height=50, bar_deg_size=2,
-              train_flag=False, **monitor_kwargs):
+              screen_size_deg=73.45, save_frames=None, take_break=True,
+              keys_pressed=[], timings=[], start_from_stim=0,
+              text_height=50, bar_deg_size=2, train_flag=False,
+              **monitor_kwargs):
     r"""Run one run of the split task.
 
     stimuli_path specifies the path of the unshuffled experiment stimuli, while
@@ -387,11 +386,6 @@ def run_split(stimuli_path, idx_path, save_path, comparison,
         large number of files will be saved (depends on the length of
         your session), which means this may make the end of the run
         (with the screen completely blank) take a while
-    binocular_offset : list
-        list of 2 ints, specifying the horizontal, vertical offset
-        between the stimuli (in pixels) presented on the two monitors in
-        order to allow the user to successfully fuse the image. This
-        should come from the calibration, run before this experiment.
     take_break : bool
         Whether to take a break half-way through the experiment or not.
     keys_pressed : list
@@ -400,8 +394,6 @@ def run_split(stimuli_path, idx_path, save_path, comparison,
         timing of events. should be empty list unless resuming a run.
     start_from_stim : int
         the first stimulus to show. should be 0 unless resuming a run.
-    flip_text : bool
-        Whether to flip the text horizontally or not
     text_height : int
         The text height in pixels.
     bar_deg_size : float
@@ -415,53 +407,48 @@ def run_split(stimuli_path, idx_path, save_path, comparison,
 
     """
     setup_args = _setup_run(stimuli_path, idx_path, fix_deg_size,
-                            screen_size_deg, binocular_offset, take_break,
-                            timings, start_from_stim, **monitor_kwargs)
+                            screen_size_deg, take_break, timings,
+                            start_from_stim, **monitor_kwargs)
 
-    (stimuli, idx, expt_params, monitor_kwargs, win, img_pos, break_time,
+    (stimuli, idx, expt_params, monitor_kwargs, win, break_time,
      fixation, timer, expt_clock, screen) = setup_args
 
     bar_pix_size = int(bar_deg_size * (monitor_kwargs['size'][0] / screen_size_deg))
     bar_size = [bar_pix_size, expt_params['stimuli_size'][1]]
-    center_mask = [visual.GratingStim(w, size=bar_size, pos=p, sf=0,
-                                      color=monitor_kwargs['color'],
-                                      mask=_create_bar_mask(*bar_size[::-1]),
-                                      colorSpace=monitor_kwargs['colorSpace'])
-                   for w, p in zip(win, img_pos)]
+    center_mask = visual.GratingStim(win, size=bar_size, sf=0,
+                                     color=monitor_kwargs['color'],
+                                     mask=_create_bar_mask(*bar_size[::-1]),
+                                     colorSpace=monitor_kwargs['colorSpace'])
 
     stim_size = [expt_params['stimuli_size'][0]/2, expt_params['stimuli_size'][1]]
-    left_pos = [[p[0] - stim_size[0]/2, p[1]] for p in img_pos]
     left_stimuli = stimuli[0]
-    left_img = [visual.ImageStim(w, image=imagetools.array2image(left_stimuli[0, 0]), pos=p,
-                                 size=stim_size) for w, p in zip(win, left_pos)]
+    left_img = visual.ImageStim(win, image=imagetools.array2image(left_stimuli[0, 0]),
+                                size=stim_size, pos=(-stim_size[0]/2, 0))
 
     right_stimuli = stimuli[1]
-    right_pos = [[p[0] + stim_size[0]/2, p[1]] for p in img_pos]
-    right_img = [visual.ImageStim(w, image=imagetools.array2image(right_stimuli[0, 0]), pos=p,
-                                 size=stim_size) for w, p in zip(win, right_pos)]
+    right_img = visual.ImageStim(win, image=imagetools.array2image(right_stimuli[0, 0]),
+                                 size=stim_size, pos=(stim_size[0]/2, 0))
     del stimuli
 
-    _explain_task(win, img_pos, expt_clock, comparison, flip_text, text_height,
+    _explain_task(win, expt_clock, comparison, text_height,
                   train_flag=train_flag)
 
-    wait_text = [visual.TextStim(w, ("Press space to start\nq or esc will quit\nspace to pause"),
-                                 pos=p, flipHoriz=flip_text, height=text_height)
-                 for w, p in zip(win, img_pos)]
-    query_text = [visual.TextStim(w, "Did image change on left or right?", pos=p,
-                                  flipHoriz=flip_text, height=text_height)
-                  for w, p in zip(win, img_pos)]
-    [text.draw() for text in wait_text]
-    [w.flip() for w in win]
+    wait_text = visual.TextStim(win, ("Press space to start\nq or esc will quit\nspace to pause"),
+                                height=text_height)
+    query_text = visual.TextStim(win, "Did image change on left or right?",
+                                 height=text_height)
+    wait_text.draw()
+    win.flip()
 
     all_keys = event.waitKeys(keyList=['return', 'space', 'q', 'escape', 'esc'], timeStamped=expt_clock)
     clear_events(win)
     if save_frames is not None:
-        [w.getMovieFrame() for w in win]
+        win.getMovieFrame()
 
     if check_for_keys(all_keys):
-        [w.close() for w in win]
+        win.close()
         return all_keys, [], expt_params, idx
-    countdown(win, img_pos, flip_text, text_height)
+    countdown(win, text_height)
 
     timings.append(("start", "off", expt_clock.getTime()))
 
@@ -470,44 +457,41 @@ def run_split(stimuli_path, idx_path, save_path, comparison,
         # and this one is for the two stimuli in each trial
         all_keys = []
         for j in range(len(l_stim)):
-            for l_im, r_im, f, m in zip(left_img, right_img, fixation, center_mask):
-                l_im.draw()
-                r_im.draw()
-                m.draw()
-                f.draw()
-            for w in win:
-                w.flip()
+            left_img.draw()
+            right_img.draw()
+            center_mask.draw()
+            fixation.draw()
+            win.flip()
             timings.append(("stimulus_%d-%d" % (i+start_from_stim, j), "on", expt_clock.getTime()))
             # convert to sec
             core.wait(on_msec_length / 1000)
             if save_frames is not None:
-                [w.getMovieFrame() for w in win]
+                win.getMovieFrame()
             if j == 1:
-                [q.draw() for q in query_text]
+                query_text.draw()
             else:
-                [f.draw() for f in fixation]
-            [w.flip() for w in win]
+                fixation.draw()
+            win.flip()
             timings.append(("stimulus_%d-%d" % (i+start_from_stim, j), "off",
                             expt_clock.getTime()))
             if j != 1:
                 timer.start(off_msec_length[j] / 1000)
-            for l_im, r_im in zip(left_img, right_img):
-                # off msec lengths are always longer than on msec length, so
-                # we preload the next image here
-                try:
-                    # we either load the next one in the set of three for
-                    # this trial...
-                    l_im.image = imagetools.array2image(l_stim[j+1])
-                    r_im.image = imagetools.array2image(r_stim[j+1])
-                except IndexError:
-                    # or, if we've gone through all those, we load the first
-                    # image for the next trial. if i+1==len(stimuli), then we've
-                    # gone through all images and will quit out
-                    if i+1 < len(left_stimuli):
-                        l_im.image = imagetools.array2image(left_stimuli[i+1][0])
-                        r_im.image = imagetools.array2image(right_stimuli[i+1][0])
+            # off msec lengths are always longer than on msec length, so
+            # we preload the next image here
+            try:
+                # we either load the next one in the set of three for
+                # this trial...
+                left_img.image = imagetools.array2image(l_stim[j+1])
+                right_img.image = imagetools.array2image(r_stim[j+1])
+            except IndexError:
+                # or, if we've gone through all those, we load the first
+                # image for the next trial. if i+1==len(stimuli), then we've
+                # gone through all images and will quit out
+                if i+1 < len(left_stimuli):
+                    left_img.image = imagetools.array2image(left_stimuli[i+1][0])
+                    right_img.image = imagetools.array2image(right_stimuli[i+1][0])
             if save_frames is not None:
-                [w.getMovieFrame() for w in win]
+                win.getMovieFrame()
             if j == 1:
                 response_keys = event.waitKeys(keyList=['q', 'escape', 'esc', '1', '2'],
                                                timeStamped=expt_clock)
@@ -525,50 +509,44 @@ def run_split(stimuli_path, idx_path, save_path, comparison,
         if check_for_keys(all_keys, ['return', 'space']) or (take_break and i+1 == break_time):
             timings.append(('pause', 'start', expt_clock.getTime()))
             if take_break and i == break_time:
-                break_text = [visual.TextStim(w, "Break time!", pos=p, flipHoriz=flip_text,
-                                              height=text_height)
-                              for w, p in zip(win, img_pos)]
-                [text.draw() for text in break_text]
-                [w.flip() for w in win]
+                break_text = visual.TextStim(win, "Break time!", height=text_height)
+                break_text.draw()
+                win.flip()
                 core.wait(2)
-            paused_keys = pause(i+1, len(left_stimuli), win, img_pos, expt_clock, flip_text)
+            paused_keys = pause(i+1, len(left_stimuli), win, expt_clock)
             timings.append(('pause', 'stop', expt_clock.getTime()))
             keys_pressed.extend(paused_keys)
             if not check_for_keys(paused_keys):
-                countdown(win, img_pos, flip_text, text_height)
+                countdown(win, text_height)
         else:
             paused_keys = []
         if not check_for_keys(all_keys+paused_keys):
             timings.append(('post-stimulus_%d' % (i+start_from_stim), 'on', expt_clock.getTime()))
-            [f.draw() for f in fixation]
-            [w.flip() for w in win]
+            fixation.draw()
+            win.flip()
             core.wait(off_msec_length[1] / 1000)
         save(save_path, stimuli_path, idx_path, keys_pressed, timings, expt_params, idx,
              screen=screen, screen_size_deg=screen_size_deg,
              last_trial=i+start_from_stim, **monitor_kwargs)
         if check_for_keys(all_keys+paused_keys):
             break
-    all_keys = _end_run(win, img_pos, timings, save_frames, flip_text,
-                        text_height, expt_clock, train_flag)
+    all_keys = _end_run(win, timings, save_frames, text_height, expt_clock,
+                        train_flag)
     if all_keys:
         keys_pressed.extend([(key[0], key[1]) for key in all_keys])
-    return keys_pressed, timings, expt_params, idx, win, img_pos
+    return keys_pressed, timings, expt_params, idx, win
 
 
 def expt(stimuli_path, subj_name, sess_num, run_num, comparison,
          output_dir="data/raw_behavioral", screen_size_pix=[3840, 2160],
-         screen_size_deg=73.45, take_break=True, ipd_csv=None, flip_text=False,
-         text_height=50, screen=[0], train_flag=False, **kwargs):
+         screen_size_deg=73.45, take_break=True, text_height=50, screen=[0],
+         train_flag=False, **kwargs):
     """run a full experiment
 
     this just sets up the various paths, calls ``run``, and then saves
     the output
 
     """
-    if ipd_csv is not None:
-        binocular_offset = csv_to_binocular_offset(ipd_csv, subj_name)
-    else:
-        binocular_offset = [0, 0]
     model_name = re.findall("/((?:RGC|V1|training).*?)/", stimuli_path)[0]
     if not (model_name.startswith('RGC') or model_name.startswith('V1') or model_name.startswith('training')):
         raise Exception(f"Can't find model_name from stimuli_path {stimuli_path}! "
@@ -617,11 +595,10 @@ def expt(stimuli_path, subj_name, sess_num, run_num, comparison,
     print("Will use the following index:")
     print("\t%s" % idx_path)
     print("Will save at the following location:\n\t%s" % save_path)
-    keys, timings, expt_params, idx, win, img_pos = run_split(
+    keys, timings, expt_params, idx, win = run_split(
         stimuli_path, idx_path, save_path, comparison,
         size=screen_size_pix, take_break=take_break,
         screen_size_deg=screen_size_deg, start_from_stim=start_from_stim,
-        flip_text=flip_text, binocular_offset=binocular_offset,
         keys_pressed=keys, timings=timings,
         text_height=text_height, screen=screen, train_flag=train_flag,
         **kwargs)
@@ -638,12 +615,12 @@ def expt(stimuli_path, subj_name, sess_num, run_num, comparison,
             pct_correct = pct_correct.sort_values('scaling')
             pct_correct = (f'\nEasy trials: {int(pct_correct.iloc[-1].pct_correct*100)}%'
                            f'\nHard trials: {int(pct_correct.iloc[0].pct_correct*100)}%')
-        [visual.TextStim(w, f"Percent correct: {pct_correct}\n\nPress space to finish.", pos=p, flipHoriz=flip_text,
-                         height=text_height, wrapWidth=2000).draw() for w, p in zip(win, img_pos)]
-        [w.flip() for w in win]
+        visual.TextStim(win, f"Percent correct: {pct_correct}\n\nPress space to finish.",
+                        height=text_height, wrapWidth=2000).draw()
+        win.flip()
         all_keys = event.waitKeys(keyList=['return', 'space', 'q', 'escape', 'esc'])
         clear_events(win)
-        [w.close() for w in win]
+        win.close()
 
 
 if __name__ == '__main__':
@@ -656,39 +633,25 @@ if __name__ == '__main__':
     parser.add_argument("subj_name", help="Name of the subject")
     parser.add_argument("sess_num", help=("Session number"), type=int)
     parser.add_argument("run_num", help=("Run number"), type=int)
-    parser.add_argument("--ipd_csv", '-i', help="Path to the csv containing ipd correction info",
-                        default=op.expanduser('~/Desktop/metamers/ipd/ipd_correction.csv'))
     parser.add_argument("--output_dir", '-o', help="directory to place output in",
                         default=op.expanduser("~/Desktop/metamers/raw_behavioral"))
-    parser.add_argument("--screen", '-s', default=[0], type=int, nargs='+',
-                        help=("Screen number(s) to display experiment on."))
+    parser.add_argument("--screen", '-s', default=0, type=int, nargs=1,
+                        help=("Screen number to display experiment on."))
     parser.add_argument("--screen_size_pix", '-p', nargs=2, help="Size of the screen (in pixels)",
                         default=[3840, 2160], type=float)
     parser.add_argument("--screen_size_deg", '-d', default=73.45, type=float,
                         help="Size of longest screen side (in degrees)")
     parser.add_argument('--no_break', '-n', action='store_true',
                         help=("If passed, we do not take a break at the half-way point"))
-    parser.add_argument("--flip", '-f', action='store_true',
-                        help=("This script can be run on a haploscope or regular monitors. "
-                              "If on a haploscope (and thus screen is viewed through a mirror), "
-                              "the text must be flipped left-right. Use this to enable that flip."))
     parser.add_argument("--comparison", '-c', default='ref',
                         help=("{ref, met}. Whether this run is comparing metamers against "
                               "reference images or other metamers."))
     args = vars(parser.parse_args())
     take_break = not args.pop('no_break')
-    flip = args.pop('flip')
-    ipd_csv = args.pop('ipd_csv')
     if 'training_noise' in args['stimuli_path']:
         train_flag = 'noise'
     elif 'training' in args['stimuli_path']:
         train_flag = 'model'
     else:
         train_flag = False
-    if op.exists(ipd_csv):
-        ipd_csv = pd.read_csv(ipd_csv)
-    else:
-        warnings.warn("Can't find ipd_csv, using zero binocular offset!")
-        ipd_csv = None
-    expt(ipd_csv=ipd_csv, take_break=take_break, flip_text=flip,
-         train_flag=train_flag, **args)
+    expt(take_break=take_break, train_flag=train_flag, **args)
