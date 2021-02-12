@@ -944,19 +944,24 @@ rule generate_experiment_idx:
                     sub_num = int(wildcards.subject.replace('sub-', ''))
                     # alternate sets A and B
                     img_set = {0: 'A', 1: 'B'}[sub_num % 2]
-                    # want to pick 5 of the 15 possible images per session.
+                    # grab all images that this subject will see
                     all_imgs = (config['PSYCHOPHYSICS']['IMAGE_SETS']['all'] +
                                 config['PSYCHOPHYSICS']['IMAGE_SETS'][img_set])
                     n_imgs = len(all_imgs)
+                    # set seed based on subject so that the permuted
+                    # ref_image_idx will be the same for different sessions and
+                    # runs
                     np.random.seed(sub_num)
                     ref_image_idx = np.random.permutation(np.arange(n_imgs))
+                    # want to pick 5 of the 15 possible images per session.
                     n_sets = len(config['PSYCHOPHYSICS']['SESSIONS'])
                     n_img_per_set = n_imgs / n_sets
-                    if int(n_img_per_set) != img_per_set:
+                    if int(n_img_per_set) != n_img_per_set:
                         raise Exception("Number of images must divide evenly into number of sessions!")
+                    n_img_per_set = int(n_img_per_set)
                     ref_image_idx = ref_image_idx[n_img_per_set*int(wildcards.sess_num):
                                                   n_img_per_set*(int(wildcards.sess_num)+1)]
-                    ref_image_to_include = all_imgs[ref_image_idx]
+                    ref_image_to_include = np.array(all_imgs)[ref_image_idx]
                 except ValueError:
                     # then this is the test subject
                     if 'training' not in wildcards.model_name:
