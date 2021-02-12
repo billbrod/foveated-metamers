@@ -303,7 +303,7 @@ def _explain_task(win, expt_clock, comparison, text_height=50,
 
 
 
-def _end_run(win, timings, save_frames, text_height, expt_clock,
+def _end_run(win, timings, text_height, expt_clock,
              train_flag=False):
     """End the run.
 
@@ -320,8 +320,6 @@ def _end_run(win, timings, save_frames, text_height, expt_clock,
     timings.append(("run_end", '', expt_clock.getTime()))
     all_keys = event.getKeys(timeStamped=expt_clock)
     core.wait(4)
-    if save_frames is not None:
-        win.saveMovieFrames(save_frames)
     if not train_flag:
         win.close()
     return all_keys
@@ -329,10 +327,9 @@ def _end_run(win, timings, save_frames, text_height, expt_clock,
 
 def run_split(stimuli_path, idx_path, save_path, comparison,
               on_msec_length=200, off_msec_length=(500, 500), fix_deg_size=.25,
-              screen_size_deg=73.45, save_frames=None, take_break=True,
-              keys_pressed=[], timings=[], start_from_stim=0,
-              text_height=50, bar_deg_size=2, train_flag=False,
-              **monitor_kwargs):
+              screen_size_deg=73.45, take_break=True, keys_pressed=[],
+              timings=[], start_from_stim=0, text_height=50, bar_deg_size=2,
+              train_flag=False, **monitor_kwargs):
     r"""Run one run of the split task.
 
     stimuli_path specifies the path of the unshuffled experiment stimuli, while
@@ -380,12 +377,6 @@ def run_split(stimuli_path, idx_path, save_path, comparison,
         the size of the fixation digits, in degrees.
     screen_size_deg : int or float.
         the max visual angle (in degrees) of the full screen.
-    save_frames : None or str
-        if not None, this should be the filename you wish to save frames
-        at (one image will be made for each frame). WARNING: typically a
-        large number of files will be saved (depends on the length of
-        your session), which means this may make the end of the run
-        (with the screen completely blank) take a while
     take_break : bool
         Whether to take a break half-way through the experiment or not.
     keys_pressed : list
@@ -442,8 +433,6 @@ def run_split(stimuli_path, idx_path, save_path, comparison,
 
     all_keys = event.waitKeys(keyList=['return', 'space', 'q', 'escape', 'esc'], timeStamped=expt_clock)
     clear_events(win)
-    if save_frames is not None:
-        win.getMovieFrame()
 
     if check_for_keys(all_keys):
         win.close()
@@ -465,8 +454,6 @@ def run_split(stimuli_path, idx_path, save_path, comparison,
             timings.append(("stimulus_%d-%d" % (i+start_from_stim, j), "on", expt_clock.getTime()))
             # convert to sec
             core.wait(on_msec_length / 1000)
-            if save_frames is not None:
-                win.getMovieFrame()
             if j == 1:
                 query_text.draw()
             else:
@@ -490,8 +477,6 @@ def run_split(stimuli_path, idx_path, save_path, comparison,
                 if i+1 < len(left_stimuli):
                     left_img.image = imagetools.array2image(left_stimuli[i+1][0])
                     right_img.image = imagetools.array2image(right_stimuli[i+1][0])
-            if save_frames is not None:
-                win.getMovieFrame()
             if j == 1:
                 response_keys = event.waitKeys(keyList=['q', 'escape', 'esc', '1', '2'],
                                                timeStamped=expt_clock)
@@ -530,7 +515,7 @@ def run_split(stimuli_path, idx_path, save_path, comparison,
              last_trial=i+start_from_stim, **monitor_kwargs)
         if check_for_keys(all_keys+paused_keys):
             break
-    all_keys = _end_run(win, timings, save_frames, text_height, expt_clock,
+    all_keys = _end_run(win, timings, text_height, expt_clock,
                         train_flag)
     if all_keys:
         keys_pressed.extend([(key[0], key[1]) for key in all_keys])
