@@ -456,14 +456,14 @@ shown), and `comp` take one of the values explained above.
 
 ### Demo / test experiment
 
-If you want to put together a quick demo, either to show someone what the
-experiment looks like or to teach someone how to run the experiment, a rule is
-provided for this. If you run `snakemake -prk
-~/Desktop/metamers/stimuli/training/task-split_comp-met/sub-training/sub-training_task-split_comp-met_idx_sess-00_im-00.npy`,
-we'll create a small stimulus array (it the azulejos and tiles reference images,
-as well as white and pink noise) and the indices necessary to present them. You
-can then follow the instructions in the following section to run the experiment,
-using `model_name=training`, `subject=sub-training`, `sess_num=0`, and `im_num=0`
+For teaching the subjects about the task, we have two brief training runs: one
+with noise images and one with a small number of metamers. To put them together,
+run `snakemake -prk
+~/Desktop/metamers/stimuli/training_noise/task-split_comp-met/sub-training/sub-training_task-split_comp-met_idx_sess-00_im-00.npy
+~/Desktop/metamers/stimuli/training_RGC_norm_gaussian/task-split_comp-met/sub-training/sub-training_task-split_comp-met_idx_sess-00_im-00.npy
+~/Desktop/metamers/stimuli/training_V1_norm_s6_gaussian/task-split_comp-met/sub-training/sub-training_task-split_comp-met_idx_sess-00_im-00.npy`.
+This will make sure the stimuli and index files are created. Then run the
+[training](#training) section below.
 
 ## Run experiment
 
@@ -481,22 +481,37 @@ reference images).
 ## Training
 
 To teach the subject about the experiment, we want to introduce them to the
-structure of the task and the images used.
+structure of the task and the images used. The first one probably only needs to
+be done the first time a given subject is collecting data for each model, the
+second should be done at the beginning of each session.
 
-1. First, run a simple training run (as described
-   [above](#demo--test-experiment)):
+1. First, run a simple training run (make sure the stimuli and indices are
+   created, as described [above](#demo--test-experiment)):
     - `conda activate psypy` 
-    - `python foveated_metamers.py
-      ~/Desktop/metamers/stimuli/training/stimuli_comp-{comp}.npy sub-training 0 0 -c
-      {comp}`, where `{comp}` is `met` or `ref` depending on which version
-      you're running.
+    - `python foveated_metamers.py ~/Desktop/metamers/stimuli/training_noise/stimuli_comp-{comp}.npy sub-training 0 -s 0 -c {comp} ; python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/training_{model}/stimuli_comp-{comp}.npy sub-training 0 -s 0 -c {comp}` 
+       where `{comp}` is `met` or `ref`, depending on which version you're
+       running, and `{model}` is `RGC_norm_gaussian` or `V1_norm_s6_gaussian`,
+       depending on which you're running.
     - Explanatory text will appear on screen, answer any questions.
-    - This should explain the basic structure of the experiment, and be easy.
-2. Run `python example_images.py {model}` where `{model}` is `V1` or `RGC`
-   depending on which model you're running.
-    - This will open up two image viewers, each with a separate reference image,
-      a metamer with the lowest scaling value, and one with the highest scaling
-      value (all linear).
+    - This will run two separate training runs, both about one or two minutes,
+      each followed by feedback. 
+    - The first one will just be comparing natural to noise images and so the
+      subject should get 100%. The goal of this one is to explain the basic
+      structure of the experiment.
+    - The second will have two metamers, one easy and one hard, for each of two
+      reference images. They should get 100% on the easy one, and do worse on
+      the hard. The goal of this one is to show what the task is like with
+      metamers and give them a feeling for what they may look like.
+2. Run: 
+   - `conda activate metamers`
+   - `python example_images.py {model} {subj_name} {sess_num}` where `{model}`
+     is `V1` or `RGC` depending on which model you're running, and `{subj_name}`
+     and `{sess_num}` give the name of the subject and number of this session,
+     respectively.
+   - This will open up three image viewers. Each has all 5 reference images the
+     subject will see this session. One shows the reference images themselves,
+     one the metamers with the lowest scaling value, and one the metamers with
+     the highest scaling value (all linear, not gamma-corrected).
     - Allow the participant to flip between these images at their leisure, so
       they understand what the images will look like.
 

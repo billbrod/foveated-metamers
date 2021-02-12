@@ -1,5 +1,6 @@
 """code to assemble stimuli for running experiment
 """
+import yaml
 import imageio
 import itertools
 import warnings
@@ -183,6 +184,58 @@ def create_metamer_df(image_paths, save_path=None):
     if save_path is not None:
         df.to_csv(save_path, index=False)
     return df
+
+
+def get_images_for_session(subject_name, session_number):
+    """Get names of images in specified session for a given subject
+
+    This is necessary for two reasons:
+
+    1. All subjects see the same 10 images, and then subjects alternate between
+       two sets (A and B), which determine the remaining 5 images they see.
+
+    2. Each session gives a different random subset of 5 of those 15 total
+       images.
+
+    Parameters
+    ----------
+    subject_name : str
+        str of the form `sub-{:02d}`, identifies the subject.
+    session_number : int
+        identifies the session
+
+    Returns
+    -------
+    ref_images_to_include : np.ndarray
+        array of strs giving the names of the images that are included. subset
+        of the values found in `config:DEFAULT_METAMERS:image_name`
+
+    """
+    with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
+        config = yaml.safe_load(f)
+
+    sub_num = int(subject_name.replace('sub-', ''))
+    # alternate sets A and B
+    img_set = {0: 'A', 1: 'B'}[sub_num % 2]
+    # grab all images that this subject will see
+    all_imgs = (config['PSYCHOPHYSICS']['IMAGE_SETS']['all'] +
+                config['PSYCHOPHYSICS']['IMAGE_SETS'][img_set])
+    n_imgs = len(all_imgs)
+    # set seed based on subject so that the permuted
+    # ref_image_idx will be the same for different sessions and
+    # runs
+    np.random.seed(sub_num)
+    ref_image_idx = np.random.permutation(np.arange(n_imgs))
+    # want to pick 5 of the 15 possible images per session.
+    n_sets = len(config['PSYCHOPHYSICS']['SESSIONS'])
+    n_img_per_set = n_imgs / n_sets
+    if int(n_img_per_set) != n_img_per_set:
+        raise Exception("Number of images must divide evenly into number of sessions!")
+    n_img_per_set = int(n_img_per_set)
+    ref_image_idx = ref_image_idx[n_img_per_set*session_number:
+                                  n_img_per_set*(session_number+1)]
+    return np.array(all_imgs)[ref_image_idx]
+
 
 
 def _gen_trial_types(df):

@@ -941,33 +941,16 @@ rule generate_experiment_idx:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 stim_df = pd.read_csv(input[0])
                 try:
-                    sub_num = int(wildcards.subject.replace('sub-', ''))
-                    # alternate sets A and B
-                    img_set = {0: 'A', 1: 'B'}[sub_num % 2]
-                    # grab all images that this subject will see
-                    all_imgs = (config['PSYCHOPHYSICS']['IMAGE_SETS']['all'] +
-                                config['PSYCHOPHYSICS']['IMAGE_SETS'][img_set])
-                    n_imgs = len(all_imgs)
-                    # set seed based on subject so that the permuted
-                    # ref_image_idx will be the same for different sessions and
-                    # runs
-                    np.random.seed(sub_num)
-                    ref_image_idx = np.random.permutation(np.arange(n_imgs))
-                    # want to pick 5 of the 15 possible images per session.
-                    n_sets = len(config['PSYCHOPHYSICS']['SESSIONS'])
-                    n_img_per_set = n_imgs / n_sets
-                    if int(n_img_per_set) != n_img_per_set:
-                        raise Exception("Number of images must divide evenly into number of sessions!")
-                    n_img_per_set = int(n_img_per_set)
-                    ref_image_idx = ref_image_idx[n_img_per_set*int(wildcards.sess_num):
-                                                  n_img_per_set*(int(wildcards.sess_num)+1)]
-                    ref_image_to_include = np.array(all_imgs)[ref_image_idx]
+                    ref_images_to_include = fov.stimuli.get_images_for_session(wildcards.subject_name,
+                                                                               int(wildcards.session_number))
+                    if 'training' in wildcards.model_name:
+                        raise Exception("training models only allowed for sub-training!")
                 except ValueError:
                     # then this is the test subject
+                    if int(wildcards.sess_num) > 0 or int(wildcards.run_num):
+                        raise Exception("only session 0 and run 0 allowed for sub-training!")
                     if 'training' not in wildcards.model_name:
-                        ref_image_idx = [0]
-                        scaling_val = config[wildcards.model_name.split('_')[0]]['scaling'][-1]
-                        stim_df = stim_df.fillna('None').query("scaling in [@scaling_val, 'None']")
+                        raise Exception("only training models allowed for sub-training!")
                     else:
                         # if it is the traning model, then the stimuli description
                         # has already been restricted to only the values we want

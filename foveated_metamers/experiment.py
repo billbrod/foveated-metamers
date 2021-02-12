@@ -227,7 +227,7 @@ def _setup_run(stimuli_path, idx_path, fix_deg_size=.25, screen_size_deg=73.45,
 
     if len(monitor_kwargs['screen']) == 1:
         screen = monitor_kwargs.pop('screen')[0]
-        print('Doing single-monitor mode on screen %s' % screen)
+        print('Running on screen %s' % screen)
         win = visual.Window(winType='pyglet', screen=screen, **monitor_kwargs)
     else:
         raise Exception("Can't handle %s screens!" % len(monitor_kwargs['screen']))
@@ -272,7 +272,7 @@ def _explain_task(win, expt_clock, comparison, text_height=50,
         elif train_flag == 'model':
             train_text += "two possible synthesized image for each: one easy and one hard.\n\n"
             feedback_text += 'the easy trials, but will do worse on the hard ones.'
-        duration_text = 'two minutes'
+        duration_text = 'one or two minutes'
     else:
         train_text = ""
         duration_text = "twelve minutes"
@@ -546,7 +546,8 @@ def expt(stimuli_path, subj_name, sess_num, run_num, comparison,
     idx_path = op.join(op.dirname(stimuli_path), f'task-split_comp-{comparison}', subj_name,
                        f'{subj_name}_task-split_comp-{comparison}_idx_sess-{sess_num:02d}_run-{run_num:02d}.npy')
     save_path = save_path.format(sess=sess_num, run=run_num)
-    if os.path.isfile(save_path):
+    # don't want to load in existing save data for training subject
+    if not 'training' in subj_name and os.path.isfile(save_path):
         print("Existing save data %s found! Will load in and append results" % save_path)
         f = h5py.File(save_path)
         saved_stim_path = f['stimuli_path'][()].decode()
@@ -574,7 +575,7 @@ def expt(stimuli_path, subj_name, sess_num, run_num, comparison,
     if subj_name not in idx_path:
         raise Exception("subj_name %s should be in idx_path %s, are you sure they correspond?" %
                         (subj_name, idx_path))
-    print("Running 1 run, with the following stimulus:")
+    print("Will use the following stimulus:")
     print("\t%s" % stimuli_path)
     print("Will use the following index:")
     print("\t%s" % idx_path)
@@ -616,10 +617,12 @@ if __name__ == '__main__':
     parser.add_argument("stimuli_path", help="Path to your unshuffled stimuli.")
     parser.add_argument("subj_name", help="Name of the subject")
     parser.add_argument("sess_num", help=("Session number"), type=int)
-    parser.add_argument("run_num", help=("Run number"), type=int)
+    parser.add_argument('-r', "--run_num",  type=int, default=None,
+                        help=("Run number. If unset, we do runs 0 through 4 "
+                              "(inclusive), one after the other."))
     parser.add_argument("--output_dir", '-o', help="directory to place output in",
                         default=op.expanduser("~/Desktop/metamers/raw_behavioral"))
-    parser.add_argument("--screen", '-s', default=0, type=int, nargs=1,
+    parser.add_argument("--screen", '-s', default=[0], type=int, nargs=1,
                         help=("Screen number to display experiment on."))
     parser.add_argument("--screen_size_pix", '-p', nargs=2, help="Size of the screen (in pixels)",
                         default=[3840, 2160], type=float)
@@ -631,6 +634,14 @@ if __name__ == '__main__':
                         help=("{ref, met}. Whether this run is comparing metamers against "
                               "reference images or other metamers."))
     args = vars(parser.parse_args())
+    runs = args.pop('run_num')
+    if runs is None:
+        if 'training' not in args['subj_name']:
+            runs = range(5)
+        else:
+            runs = range(1)
+    else:
+        runs = [runs]
     take_break = not args.pop('no_break')
     if 'training_noise' in args['stimuli_path']:
         train_flag = 'noise'
@@ -638,4 +649,7 @@ if __name__ == '__main__':
         train_flag = 'model'
     else:
         train_flag = False
-    expt(take_break=take_break, train_flag=train_flag, **args)
+    print(f"Running {len(runs)} runs.\n")
+    for run in runs:
+        expt(run_num=run, take_break=take_break, train_flag=train_flag, **args)
+        print()
