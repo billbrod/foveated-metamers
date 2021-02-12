@@ -979,6 +979,18 @@ rule generate_experiment_idx:
                 np.save(output[0], idx)
 
 
+rule generate_all_idx:
+    input:
+        [op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'task-split_comp-{comp}', '{subject}',
+                 '{subject}_task-split_comp-{comp}_idx_sess-%02d_run-%02d.npy') % (s, r)
+         for s in config['PSYCHOPHYSICS']['SESSIONS'] for r in config['PSYCHOPHYSICS']['RUNS']]
+    output:
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'task-split_comp-{comp}', '{subject}',
+                '{subject}_task-split_comp-{comp}_idx_tmp.txt')
+    shell:
+        'echo "This is a temporary file used by Snakemake to create all run index .npy files. It is otherwise unused." > {output}'
+
+
 rule create_experiment_df:
     input:
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description_comp-{comp}.csv'),
