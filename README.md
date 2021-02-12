@@ -125,25 +125,15 @@ normalize the V1 model and a small image of Albert Einstein for testing the
 setup.
 
 Authors' personal collection: 
-- WFB: azulejos, tiles, bike, graffiti, llama, rooves, store, terraces
-- EPS: apartments, church, graves, ivy, nyc, redrocks, redrocks2, rocks,
-  terracotta, valley, boats, charlesbroadway, gnarled, house, lettuce, lodge,
-  midtown, rowhouses, subway
+- WFB: azulejos, tiles, bike, graffiti, llama, terraces
+- EPS: ivy, nyc, rocks, boats, gnarled, lettuce
 
-UPenn Natural Image Database: baboons (cd01A/DSC_0003), puffballs
-(cd01A/DSC_0010), trunk (cd01A/DSC_0015), canopy (cd01A/DSC_0021), treetop
-(cd01A/DSC_0033), fern (cd01A/DSC_0041), base (cd01A/DSC_0064), grooming
-(cd02A/DSC_0011), eating (cd02A/DSC_0035), palm (cd02A/DSC_0043), lake
-(cd02A/DSC_0062), treetop2 (cd03A/DSC_0014), deadtrees (cd03A/DSC_0034), trees
-(cd03A/DSC_0042), ground (cd03A/DSC_0049), leaves (cd12A/DSC_0030), portrait
-(cd58A/DSC_0001), troop (cd58A/DSC_0008), termite (cd58A/DSC_0015), digging
-(cd58A/DSC_0063).
+UPenn Natural Image Database: treetop (cd01A/DSC_0033), grooming
+(cd02A/DSC_0011), palm (cd02A/DSC_0043), leaves (cd12A/DSC_0030), portrait
+(cd58A/DSC_0001), troop (cd58A/DSC_0008).
 
-Unpublished photos from David Brainard: plinth (AWAY/DSC_0152), quad
-(EXPOSURE_ASC/DSC_0014), plaza (EXPOSURE_DESC/DSC_0068), penn
-(PANORAMA/DSC_0156), dorm (SNAPSHOTS/DSC_0018), pillar (SNAPSHOTS/DSC_0098),
-train (SNAPSHOTS/DSC_0194), highway (SNAPSHOTS/DSC_0200), umbrellas
-(SNAPSHOTS/DSC_0266), park (SNAPSHOTS/DSC_0280), statue (SWEEP_UP/DSC_0086).
+Unpublished photos from David Brainard: quad (EXPOSURE_ASC/DSC_0014), highway
+(SNAPSHOTS/DSC_0200).
 
 ## Minimal experiment install
 

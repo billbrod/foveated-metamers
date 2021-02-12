@@ -1041,21 +1041,11 @@ rule summarize_experiment:
 rule calculate_heterogeneity:
     input:
         [op.join(config["DATA_DIR"], 'ref_images_preproc', '{img}{{gammacorrected}}_range-.05,.95_size-2048,2600.png').format(img=img)
-         for img in ['azulejos', 'tiles', 'bike', 'graffiti', 'llama', 'rooves', 'store', 'terraces', 'trunk_symmetric',
-                     'treetop_symmetric', 'grooming_symmetric', 'palm_symmetric', 'ground_symmetric', 'leaves_symmetric',
-                     'portrait_symmetric', 'troop_symmetric', 'termite_symmetric', 'digging_symmetric', 'plinth_symmetric',
-                     'quad_symmetric', 'plaza_symmetric', 'penn_symmetric', 'dorm_symmetric', 'pillar_symmetric', 'highway_symmetric',
-                     'statue_symmetric', 'graves', 'ivy', 'nyc', 'redrocks', 'redrocks2', 'rocks', 'terracotta', 'valley', 'boats',
-                     'charlesbroadway', 'gnarled', 'house', 'lettuce', 'lodge', 'rowhouses']]
+         for img in LINEAR_IMAGES]
     output:
         op.join(config['DATA_DIR'], 'figures', 'image_select', 'heterogeneity', 'heterogeneity{gammacorrected}.csv'),
         [op.join(config["DATA_DIR"], 'figures', 'image_select', 'heterogeneity', '{img}{{gammacorrected}}_map.png').format(img=img)
-         for img in ['azulejos', 'tiles', 'bike', 'graffiti', 'llama', 'rooves', 'store', 'terraces', 'trunk_symmetric',
-                     'treetop_symmetric', 'grooming_symmetric', 'palm_symmetric', 'ground_symmetric', 'leaves_symmetric',
-                     'portrait_symmetric', 'troop_symmetric', 'termite_symmetric', 'digging_symmetric', 'plinth_symmetric',
-                     'quad_symmetric', 'plaza_symmetric', 'penn_symmetric', 'dorm_symmetric', 'pillar_symmetric', 'highway_symmetric',
-                     'statue_symmetric', 'graves', 'ivy', 'nyc', 'redrocks', 'redrocks2', 'rocks', 'terracotta', 'valley', 'boats',
-                     'charlesbroadway', 'gnarled', 'house', 'lettuce', 'lodge', 'rowhouses']]
+         for img in LINEAR_IMAGES]
     log:
         op.join(config['DATA_DIR'], 'logs', 'figures', 'image_select', 'heterogeneity', 'heterogeneity{gammacorrected}.log'),
     benchmark:
