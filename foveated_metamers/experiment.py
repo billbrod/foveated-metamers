@@ -310,7 +310,7 @@ def _end_run(win, timings, text_height, expt_clock,
 
     """
     if not train_flag:
-        visual.TextStim(win, "Run over\n\nGo notify experimenter", height=text_height,
+        visual.TextStim(win, "Run over\n\nPress space when ready for next run.", height=text_height,
                         wrapWidth=2000).draw()
     else:
         visual.TextStim(win, "Run over\n\nWait a sec while we compute your performance...",
