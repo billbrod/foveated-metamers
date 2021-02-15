@@ -941,8 +941,8 @@ rule generate_experiment_idx:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 stim_df = pd.read_csv(input[0])
                 try:
-                    ref_images_to_include = fov.stimuli.get_images_for_session(wildcards.subject_name,
-                                                                               int(wildcards.session_number))
+                    ref_image_to_include = fov.stimuli.get_images_for_session(wildcards.subject,
+                                                                              int(wildcards.sess_num))
                     if 'training' in wildcards.model_name:
                         raise Exception("training models only allowed for sub-training!")
                 except ValueError:
