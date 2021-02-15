@@ -20,14 +20,14 @@ def main(model, subj_name, sess_num):
     low_scaling_mets = []
     print(im_names)
     for im in im_names:
-        ref_images.append(op.join(config["DATA_DIR"], 'ref_images_preproc', f"{im}_range-.05,.95_size-2048,2600.png"))
-        low_scaling_mets.append(glob(op.join(config['DATA_DIR'], 'metamers', model_name, f"{im}*", f'scaling-{scaling[0]}', '*', '*',
-                                 'seed-0_init-white_*metamer.png'))[0])
-        low_scaling_mets.append(glob(op.join(config['DATA_DIR'], 'metamers', model_name, f"{im}*", f'scaling-{scaling[-1]}', '*', '*',
-                                 'seed-0_init-white_*metamer.png'))[0])
-    subprocess.Popen(['eog', ref_images], shell=False)
-    subprocess.Popen(['eog', low_scaling_mets], shell=False)
-    subprocess.Popen(['eog', high_scaling_mets], shell=False)
+        ref_images.append(op.join(config["DATA_DIR"], 'ref_images_preproc', f"{im}.png"))
+        high_scaling_mets.append(glob(op.join(config['DATA_DIR'], 'metamers', model_name, f"{im}", f'scaling-{scaling[0]}', '*', '*',
+                                              'seed-*_init-white_*metamer.png'))[0])
+        low_scaling_mets.append(glob(op.join(config['DATA_DIR'], 'metamers', model_name, f"{im}", f'scaling-{scaling[-1]}', '*', '*',
+                                             'seed-*_init-white_*metamer.png'))[0])
+    subprocess.Popen(['eog', *ref_images], shell=False)
+    subprocess.Popen(['eog', *low_scaling_mets], shell=False)
+    subprocess.Popen(['eog', *high_scaling_mets], shell=False)
 
 
 if __name__ == '__main__':
