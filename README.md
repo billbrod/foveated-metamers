@@ -488,7 +488,7 @@ second should be done at the beginning of each session.
 1. First, run a simple training run (make sure the stimuli and indices are
    created, as described [above](#demo--test-experiment)):
     - `conda activate psypy` 
-    - `python foveated_metamers.py ~/Desktop/metamers/stimuli/training_noise/stimuli_comp-{comp}.npy sub-training 0 -s 0 -c {comp} ; python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/training_{model}/stimuli_comp-{comp}.npy sub-training 0 -s 0 -c {comp}` 
+    - `python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/training_noise/stimuli_comp-{comp}.npy sub-training 0 -s 0 -c {comp} ; python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/training_{model}/stimuli_comp-{comp}.npy sub-training 0 -s 0 -c {comp}` 
        where `{comp}` is `met` or `ref`, depending on which version you're
        running, and `{model}` is `RGC_norm_gaussian` or `V1_norm_s6_gaussian`,
        depending on which you're running.
