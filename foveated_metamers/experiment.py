@@ -301,16 +301,14 @@ def _explain_task(win, expt_clock, comparison, text_height=50,
     return [(key[0], key[1]) for key in all_keys]
 
 
-
-def _end_run(win, timings, text_height, expt_clock,
-             train_flag=False):
+def _end_run(win, timings, text_height, expt_clock, train_flag=False):
     """End the run.
 
     Do the things that are shared across task types.
 
     """
     if not train_flag:
-        visual.TextStim(win, "Run over\n\nPress space when ready for next run.", height=text_height,
+        visual.TextStim(win, "Run over.", height=text_height,
                         wrapWidth=2000).draw()
     else:
         visual.TextStim(win, "Run over\n\nWait a sec while we compute your performance...",
