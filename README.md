@@ -536,17 +536,17 @@ half changed. They have as long as they need to respond and receive no feedback.
 To run the experiment:
 
 - Activate the `psypy` environment: `conda activate psypy`
-- Start the experiment script from the command line: `python
-   foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/{model
-   name}/stimuli_comp-{comp}.npy {subject} {sess_num} {im_num} -t split -c {comp}`, where
-   `{model_name}, {subject}, {im_num}, {sess_num}, {comp}` are as above
+- Start the experiment script from the command line: 
+   - `python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/{model}/stimuli_comp-{comp}.npy {subject} {sess_num} -c {comp}` 
+     where `{model}, {subject}, {sess_num}, {comp}` are as described in the
+     [training](#training) section.
    - There are several other arguments the experiment script can take,
      run `python foveated_metamers/experiment.py -h` to see them, and
      see the [other arguments](#other-arguments) section for more
      information.
 - Explain the task to the subject, as seen in the "say this to subject for
-  experiment" section (this text will also appear on screen before each run for
-  the participant to read)
+  experiment" section (similar text will also appear on screen before each run
+  for the participant to read)
 - When the subject is ready, press the space bar to begin the task.
 - You can press the space bar at any point to pause it, but the pause
   won't happen until the end of the current trial, so don't press it a
@@ -556,11 +556,16 @@ To run the experiment:
   necessary.
 - There will be a break half-way through the block. The subject can
   get up, walk, and stretch during this period, but remind them to
-  take no more than 5 minutes. When they're ready to begin again,
+  take no more than a minute. When they're ready to begin again,
   press the space bar to resume.
-- The data will be saved on every trial, so if you do need to quit
-  out, all is not lost. You can run the same command as above, and the
-  experiment will pick up where you stopped.
+- The data will be saved on every trial, so if you do need to quit out, all is
+  not lost. If you restart from the same run, we'll pick up where we left off.
+- The above command will loop through all five runs for a given session. To do a
+  particular set of runs pass `-r {run_1} {run_2} ... {run_n}` to the call to
+  `experiment.py` (where `{run_1}` through `{run_n}` are 0-indexed integers
+  specifying the runs to include). For example, if you quit out on the third run
+  and wanted to finish that one and then do runs 4 and 5, pass: `-r 2 3 4`. If
+  you just want to finish that run, you'd only pass `-r 2`.
 
 Recommended explanation to subjects:
 
@@ -574,13 +579,23 @@ Recommended explanation to subjects:
 > be very different. For the very similar images, we expect the task to be hard.
 > Just do your best!
 
+> You'll be comparing natural and synthesized images. The first image in each
+> pair will always be a natural image. You will receive no feedback, either
+> during or after the run.
+
 > For this experiment, fixate on the center of the image the whole time and try
 > not to move your eyes.
 
-> The run will last for about twenty minutes, but there will be a break halfway
+> The run will last for about twelve minutes, but there will be a break halfway
 > through. During the break, you can move away from the device, walk around, and
-> stretch, but please don't take more than 5 minutes. Tell me when you're ready
-> to begin again.
+> stretch, but please don't take more than a minute. 
+
+This part will not be shown on screen, and so is important:
+
+> You'll complete 5 runs total. After each run, there will be a brief pause, and
+> then the instruction text will appear again, to start the next run. You can
+> take a break at this point, and press the spacebar when you're ready to begin
+> the next run.
 
 ### Other arguments
 
@@ -598,18 +613,18 @@ experiment set up:
 For more details on the other arguments, run `python
 foveated_metamers/experiment.py -h` to see the full docstring.
 
-NOTE: While the above options allow you to run the experiment on a
-setup that has a different screen size (both in pixels and in degrees)
-than the intended one, the metamers were created with this specific
-set up in mind. Things should be approximately correct on a different
-setup (in particular, double-check that images are cropped, not
-stretched, when presented on a smaller monitor), but there's no
-guarantee. If you run this experiment, with these stimuli, on a
-different setup, my guess is that the psychophysical curves will look
-different, but that their critical scaling values should match; that
-is, there's no guarantee that all scaling values will give images that
-will be equally confusable on different setups, but the maximum
-scaling value that leads to 50% accuracy should be about the same.
+NOTE: While the above options allow you to run the experiment on a setup that
+has a different screen size (both in pixels and in degrees) than the intended
+one, the metamers were created with this specific set up in mind. Things should
+be approximately correct on a different setup (in particular, double-check that
+images are cropped, not stretched, when presented on a smaller monitor), but
+there's no guarantee. If you run this experiment, with these stimuli, on a
+different setup, my guess is that the psychophysical curves will look different,
+but that their critical scaling values should approximately match; that is,
+there's no guarantee that all scaling values will give images that will be
+equally confusable on different setups, but the maximum scaling value that leads
+to 50% accuracy should be about the same. The more different the viewing
+conditions, the less likely that this will hold.
 
 ## Analyze experiment output
 

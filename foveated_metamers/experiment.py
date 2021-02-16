@@ -615,7 +615,7 @@ if __name__ == '__main__':
     parser.add_argument("stimuli_path", help="Path to your unshuffled stimuli.")
     parser.add_argument("subj_name", help="Name of the subject")
     parser.add_argument("sess_num", help=("Session number"), type=int)
-    parser.add_argument('-r', "--run_num",  type=int, default=None,
+    parser.add_argument('-r', "--run_num",  type=int, default=None, nargs='+',
                         help=("Run number. If unset, we do runs 0 through 4 "
                               "(inclusive), one after the other."))
     parser.add_argument("--output_dir", '-o', help="directory to place output in",
@@ -638,7 +638,7 @@ if __name__ == '__main__':
             runs = range(5)
         else:
             runs = range(1)
-    else:
+    elif not hasattr(runs, '__iter__'):
         runs = [runs]
     take_break = not args.pop('no_break')
     if 'training_noise' in args['stimuli_path']:
