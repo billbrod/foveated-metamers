@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
-"""misc plotting functions """
+"""Misc plotting functions."""
 import numpy as np
 import matplotlib.pyplot as plt
 
 
 def _jitter_data(data, jitter):
-    """optionally jitter data some amount
+    """Optionally jitter data some amount.
 
-    jitter can be None / False (in which case no jittering is done), a number (in which case we add
-    uniform noise with a min of -jitter, max of jitter), or True (in which case we do the uniform
-    thing with min/max of -.1/.1)
+    jitter can be None / False (in which case no jittering is done), a number
+    (in which case we add uniform noise with a min of -jitter, max of jitter),
+    or True (in which case we do the uniform thing with min/max of -.1/.1)
 
     based on seaborn.linearmodels._RegressionPlotter.scatter_data
+
     """
     if jitter is None or jitter is False:
         return data
@@ -22,10 +23,10 @@ def _jitter_data(data, jitter):
 
 
 def is_numeric(s):
-    """check whether data s is numeric
+    """Check whether data s is numeric.
 
-    s should be something that can be converted to an array: list,
-    Series, array, column from a DataFrame, etc
+    s should be something that can be converted to an array: list, Series,
+    array, column from a DataFrame, etc
 
     this is based on the function
     seaborn.categorical._CategoricalPlotter.infer_orient.is_not_numeric
@@ -39,6 +40,7 @@ def is_numeric(s):
     -------
     is_numeric : bool
         whether s is numeric or not
+
     """
     try:
         np.asarray(s, dtype=np.float)
@@ -47,8 +49,9 @@ def is_numeric(s):
     return True
 
 
-def _map_dataframe_prep(data, x, y, estimator, x_jitter, x_dodge, x_order, ci=68):
-    """prepare dataframe for plotting
+def _map_dataframe_prep(data, x, y, estimator, x_jitter, x_dodge, x_order,
+                        ci=68):
+    """Prepare dataframe for plotting.
 
     Several of the plotting functions are called by map_dataframe and
     need a bit of prep work before plotting. These include:
@@ -124,10 +127,10 @@ def _map_dataframe_prep(data, x, y, estimator, x_jitter, x_dodge, x_order, ci=68
     return x_data, plot_data, plot_cis, x_numeric
 
 
-def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False, estimator=np.median,
-                    draw_ctr_pts=True, ci_mode='lines', ci_alpha=.2, size=5, x_dodge=None,
-                    **kwargs):
-    """plot center points and specified CIs, for use with seaborn's map_dataframe
+def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
+                    estimator=np.median, draw_ctr_pts=True, ci_mode='lines',
+                    ci_alpha=.2, size=5, x_dodge=None, **kwargs):
+    """Plot center points and specified CIs, for use with map_dataframe.
 
     based on seaborn.linearmodels.scatterplot. CIs are taken from a
     distribution in this function. Therefore, it's assumed that the
@@ -198,8 +201,11 @@ def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False, estimator=np.median,
     data = kwargs.pop('data')
     ax = kwargs.pop('ax', plt.gca())
     x_order = kwargs.pop('x_order', None)
-    x_data, plot_data, plot_cis, x_numeric = _map_dataframe_prep(data, x, y, estimator, x_jitter,
-                                                                 x_dodge, x_order, ci)
+    x_data, plot_data, plot_cis, x_numeric = _map_dataframe_prep(data, x, y,
+                                                                 estimator,
+                                                                 x_jitter,
+                                                                 x_dodge,
+                                                                 x_order, ci)
     if draw_ctr_pts:
         # scatter expects s to be the size in pts**2, whereas we expect
         # size to be the diameter, so we convert that (following how
@@ -218,11 +224,71 @@ def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False, estimator=np.median,
         for x, (ci_low, ci_high) in zip(x_data, zip(*plot_cis)):
             cis = ax.plot([x, x], [ci_low, ci_high], **kwargs)
     elif ci_mode == 'fill':
-        cis = ax.fill_between(x_data, plot_cis[0].values, plot_cis[1].values, alpha=ci_alpha,
-                              **kwargs)
+        cis = ax.fill_between(x_data, plot_cis[0].values, plot_cis[1].values,
+                              alpha=ci_alpha, **kwargs)
     else:
         raise Exception(f"Don't know how to handle ci_mode {ci_mode}!")
     # if we do the following when x is numeric, things get messed up.
     if (x_jitter is not None or x_dodge is not None) and not x_numeric:
-        ax.set(xticks=range(len(plot_data)), xticklabels=plot_data.index.values)
+        ax.set(xticks=range(len(plot_data)),
+               xticklabels=plot_data.index.values)
     return dots, lines, cis
+
+
+def map_flat_line(x, y, data, linestyles='--', colors='k', ax=None, **kwargs):
+    """Plot a flat line across every axis in a FacetGrid.
+
+    For use with seaborn's map_dataframe, this will plot a horizontal or
+    vertical line across all axes in a FacetGrid.
+
+    Parameters
+    ----------
+    x, y : str, float, or list of floats
+        One of these must be a float (or list of floats), one a str. The str
+        must correspond to a column in the mapped dataframe, and we plot the
+        line from the minimum to maximum value from that column. If the axes
+        x/ylim looks very different than these values (and thus we assume this
+        was a seaborn categorical plot), we instead map from 0 to
+        data[x/y].nunique()-1
+    The float
+        corresponds to the x/y value of the line; if a list, then we plot
+        multiple lines.
+    data : pd.DataFrame
+        The mapped dataframe
+    linestyles, colors : str, optional
+        The linestyles and colors to use for the plotted lines.
+    ax : axis or None, optional
+        The axis to plot on. If None, we grab current axis.
+    kwargs :
+        Passed to plt.hlines / plt.vlines.
+
+    Returns
+    -------
+    lines : matplotlib.collections.LineCollection
+        Artists for the plotted lines
+
+    """
+    if ax is None:
+        ax = plt.gca()
+    # we set color with the colors kwarg, don't want to confuse it.
+    kwargs.pop('color')
+    if isinstance(x, str):
+        xmin, xmax = data[x].min(), data[x].max()
+        # then this looks like a categorical plot
+        if (ax.get_xlim()[-1] - xmax) / xmax > 5:
+            xmin = 0
+            xmax = data[x].nunique()-1
+        lines = ax.hlines(y, xmin, xmax, linestyles=linestyles, colors=colors,
+                          **kwargs)
+    elif isinstance(y, str):
+        ymin, ymax = data[y].min(), data[y].max()
+        # then this looks like a categorical plot
+        if (ax.get_ylim()[-1] - ymax) / ymax > 5:
+            ymin = 0
+            ymax = data[y].nunique()-1
+        lines = ax.vlines(x, ymin, ymax, linestyles=linestyles, colors=colors,
+                          **kwargs)
+    else:
+        raise Exception("One of x or y must be a str corresponding to a "
+                        "column in the dataframe!")
+    return lines

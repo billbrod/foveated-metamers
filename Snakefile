@@ -985,7 +985,7 @@ rule create_experiment_df:
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
                 '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run-{run_num}_expt.csv'),
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run-{run_num}_trials.png'),
+                '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run-{run_num}_trials.svg'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
                 '{subject}', '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run-{run_num}_expt.log'),
@@ -1013,29 +1013,46 @@ rule create_experiment_df:
                 df.to_csv(output[0], index=False)
 
 
-rule summarize_experiment:
+# we will remove this (or, change it so it combines across all sessions as
+# well) once we've finished collecting data
+rule combine_runs:
     input:
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run-{run_num}_expt.csv'),
+        [op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
+                       f'{{date}}_{{subject}}_task-split_comp-{{comp}}_sess-{{sess_num}}_run-{i:02d}_expt.csv')
+         for i in range(5)]
     output:
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run-{run_num}_summary.csv'),
+                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_all-runs.csv'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
+                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_performance.svg'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run-{run_num}_summary.log'),
+                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_summary.log'),
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run-{run_num}_summary_benchmark.txt'),
+                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_summary_benchmark.txt'),
     run:
         import foveated_metamers as fov
         import pandas as pd
+        import seaborn as sns
         import contextlib
+        import matplotlib.pyplot as plt
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                expt_df = pd.read_csv(input[0])
-                dep_variables = ['scaling', 'trial_type']
-                summary_df = fov.analysis.summarize_expt(expt_df, dep_variables)
-                summary_df.to_csv(output[0], index=False)
+                expt_df = pd.concat([pd.read_csv(i) for i in input])
+                expt_df.to_csv(output[0], index=False)
+                ci = 95
+                g = sns.catplot(x='scaling', y='hit_or_miss_numeric', data=expt_df, kind='point', col='image_name',
+                                col_order=sorted(expt_df.image_name.unique()), ci=ci)
+                g.map_dataframe(fov.plotting.map_flat_line, x='scaling', y=.5, colors='k')
+                g.set_ylabels(f'Proportion correct (with {ci}% CI)')
+                g.set_xlabels('Scaling')
+                g.set(ylim=(.3, 1.05))
+                comp_str = {'ref': 'reference images', 'met': 'other metamers'}[wildcards.comp]
+                g.fig.suptitle(f"Performance for {wildcards.subject}, session {wildcards.sess_num}."
+                               f" Comparing metamers and {comp_str}.")
+                g.fig.subplots_adjust(top=.88)
+                g.fig.savefig(output[1], bbox_inches='tight')
 
 
 rule calculate_heterogeneity:
