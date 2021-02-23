@@ -478,7 +478,7 @@ in the experiment for 4 of the 8 reference images, the only thing that differs
 is the presentation order (each subject gets presented a different split of 4
 reference images). 
 
-## Training
+### Training
 
 To teach the subject about the experiment, we want to introduce them to the
 structure of the task and the images used. The first one probably only needs to
@@ -625,6 +625,83 @@ there's no guarantee that all scaling values will give images that will be
 equally confusable on different setups, but the maximum scaling value that leads
 to 50% accuracy should be about the same. The more different the viewing
 conditions, the less likely that this will hold.
+
+### Checklist
+
+The following is a checklist for how to run the experiment. Print it out and
+keep it by the computer.
+
+Every time:
+
+1. Make sure monitor is using the correct icc profile (`linear-profile`;
+   everything should look weirdly washed out). If not, hit the super key (the
+   Windows key on a Windows keyboard) and type `icc`, open up the color manager
+   and enable the linear profile.
+   
+First session only (on later sessions, ask if they need a refresher):
+   
+2. Show the participant the set up and show the participants the wipes and say
+   they can use them to wipe down the chinrest and button box.
+   
+3. Tell the participant:
+
+> In this task, a natural image will briefly flash on screen, followed by a gray
+> screen, followed by another image. Half of that second image will be the same
+> as the first, half will have changed. Your task is to say which half has
+> changed, using these buttons to say "left" or "right". You have as long as
+> you'd like to respond, and you will not receive feedback. There will be a
+> pause halfway through, as well as between runs; take a break and press the
+> center button (labeled "space") to continue when you're ready. You won't press
+> the buttons in the bottom row.
+
+4. Train the participant. Say:
+
+> Now, we'll do two brief training runs, each of which will last about a minute.
+> In the first, you'll be comparing natural images and noise patches; the goal
+> is so you understand the basic structure of the experiment. In the second,
+> you'll be comparing those same natural images to some of the stimuli from the
+> experiment; some will be easy, some hard. You'll receive feedback at the end
+> of the run, to make sure you understand the task. I'll remain in the room to
+> answer any questions.
+
+5. Run (replace `{model}` with `V1_norm_s6_gaussian` or `RGC_norm_gaussian`):
+
+``` sh
+conda activate psypy
+python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/training_noise/stimuli_comp-ref.npy sub-training 0 -c ref ; python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/training_{model}/stimuli_comp-ref.npy sub-training 0 -c ref
+```
+
+6. Answer any questions.
+
+Every time:
+
+7. Show the participant the images they'll see this session, replacing `{model}`
+   as above, and `{subj_name}` and `{sess_num}` as appropriate:
+
+``` sh
+conda activate metamers
+python example_images.py {model} {subj_name} {sess_num}
+```
+
+8. Say the following and answer any questions:
+
+> These are the natural images you'll be seeing this session, as well as some
+> easy and hard stimuli. You can look through them for as long as you'd like.
+ 
+9. Ask if they have any questions before the experiment.
+
+10. Say:
+
+> This will run through all 5 runs for this session. Each should take you 10 to
+> 12 minutes. Come get me when you're done. As a reminder, you have as long as
+> you'd like to respond, and you won't receive any feedback.
+
+10. Run, replacing `{model}`, `{subject}`, `{sess_num}` as above:
+
+``` sh
+conda activate metamers
+python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/{model}/stimuli_comp-ref.npy {subject} {sess_num} -c ref
+```
 
 ## Analyze experiment output
 
