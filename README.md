@@ -433,7 +433,7 @@ or memory.
 The stimuli arrays will be located at:
 `~/Desktop/metamers/stimuli/{model_name}/stimuli_comp-{comp}.npy` and the presentation
 indices will be at
-`~/Desktop/metamers/stimuli/{model_name}/task-split_comp-{comp}/{subject}/{subject}_task-split_comp-{comp}_idx_sess-{sess_num}_im-{im_num}.npy`,
+`~/Desktop/metamers/stimuli/{model_name}/task-split_comp-{comp}/{subj_name}/{subj_name}_task-split_comp-{comp}_idx_sess-{sess_num}_im-{im_num}.npy`,
 where `{comp}` is `met` and `ref`, for the metamer vs metamer and metamer vs
 reference image comparisons, respectively. There will also be a pandas
 DataFrame, saved as a csv, at
@@ -442,9 +442,9 @@ contains information about the metamers and their optimization. It's used to
 generate the presentation indices as well as to analyze the data.
 
 You can generate your own, novel presentation indices by running `snakemake -prk
-~/Desktop/metamers/stimuli/{model_name}/task-split_comp-{comp}/{subject}/{subject}_task-split_comp-{comp}_idx_sess-{sess_num}_im-{im_num}.npy`,
+~/Desktop/metamers/stimuli/{model_name}/task-split_comp-{comp}/{subj_name}/{subj_name}_task-split_comp-{comp}_idx_sess-{sess_num}_im-{im_num}.npy`,
 replacing `{model_name}` with one of `'RGC_norm_gaussian',
-'V1_norm_s6_gaussian'`, `{subject}` must be of the format `sub-##`, where `##`
+'V1_norm_s6_gaussian'`, `{subj_name}` must be of the format `sub-##`, where `##`
 is some integer (ideally zero-padded, but this isn't required), `{sess_num}`
 must also be an integer (this is because we use the number in the subject name
 and session number to determine the seed for randomizing the presentation order;
@@ -537,8 +537,8 @@ To run the experiment:
 
 - Activate the `psypy` environment: `conda activate psypy`
 - Start the experiment script from the command line: 
-   - `python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/{model}/stimuli_comp-{comp}.npy {subject} {sess_num} -c {comp}` 
-     where `{model}, {subject}, {sess_num}, {comp}` are as described in the
+   - `python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/{model}/stimuli_comp-{comp}.npy {subj_name} {sess_num} -c {comp}` 
+     where `{model}, {subj_name}, {sess_num}, {comp}` are as described in the
      [training](#training) section.
    - There are several other arguments the experiment script can take,
      run `python foveated_metamers/experiment.py -h` to see them, and
@@ -696,11 +696,11 @@ python example_images.py {model} {subj_name} {sess_num}
 > 12 minutes. Come get me when you're done. As a reminder, you have as long as
 > you'd like to respond, and you won't receive any feedback.
 
-10. Run, replacing `{model}`, `{subject}`, `{sess_num}` as above:
+10. Run, replacing `{model}`, `{subj_name}`, `{sess_num}` as above:
 
 ``` sh
 conda activate metamers
-python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/{model}/stimuli_comp-ref.npy {subject} {sess_num} -c ref
+python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/{model}/stimuli_comp-ref.npy {subj_name} {sess_num} -c ref
 ```
 
 ## Analyze experiment output
