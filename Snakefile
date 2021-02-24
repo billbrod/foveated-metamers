@@ -1023,7 +1023,8 @@ rule combine_runs:
     input:
         [op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
                        f'{{date}}_{{subject}}_task-split_comp-{{comp}}_sess-{{sess_num}}_run-{i:02d}_expt.csv')
-         for i in range(5)]
+         for i in range(5)],
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description_comp-{comp}.csv'),
     output:
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
                        '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_all-runs.csv'),
@@ -1031,6 +1032,8 @@ rule combine_runs:
                        '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_performance.svg'),
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
                        '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run_lengths.svg'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
+                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_loss_comparison.svg'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
                        '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_summary.log'),
@@ -1045,12 +1048,15 @@ rule combine_runs:
         import matplotlib.pyplot as plt
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                expt_df = pd.concat([pd.read_csv(i) for i in input])
+                stim_df = pd.read_csv(input[-1])
+                expt_df = pd.concat([pd.read_csv(i) for i in input[:-1]])
                 expt_df.to_csv(output[0], index=False)
                 g = fov.figures.performance_plot(expt_df, comparison=wildcards.comp)
                 g.fig.savefig(output[1], bbox_inches='tight')
                 g = fov.figures.run_length_plot(expt_df, comparison=wildcards.comp)
                 g.fig.savefig(output[2], bbox_inches='tight')
+                g = fov.figures.compare_loss_and_performance_plot(expt_df, stim_df)
+                g.fig.savefig(output[3], bbox_inches='tight')
 
 
 rule combine_behavioral_data:
@@ -1058,7 +1064,8 @@ rule combine_behavioral_data:
         lambda wildcards: [op.join(config["DATA_DIR"], 'behavioral', '{{model_name}}', 'task-split_comp-{{comp}}', '{{subject}}',
                                    '{date}_{{subject}}_task-split_comp-{{comp}}_sess-{sess_num:02d}_run-{i:02d}_expt.csv').format(
                                        i=i, sess_num=ses, date=BEHAVIORAL_DATA_DATES[wildcards.subject][f'sess-{ses:02d}'])
-                           for i in range(5) for ses in range(2)]
+                           for i in range(5) for ses in range(3)],
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description_comp-{comp}.csv'),
     output:
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
                        '{subject}_task-split_comp-{comp}_data.csv'),
@@ -1066,6 +1073,8 @@ rule combine_behavioral_data:
                        '{subject}_task-split_comp-{comp}_performance.svg'),
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
                        '{subject}_task-split_comp-{comp}_run_lengths.svg'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
+                       '{subject}_task-split_comp-{comp}_loss_comparison.svg'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
                        '{subject}_task-split_comp-{comp}_summary.log'),
@@ -1080,12 +1089,15 @@ rule combine_behavioral_data:
         import matplotlib.pyplot as plt
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                expt_df = pd.concat([pd.read_csv(i) for i in input])
+                stim_df = pd.read_csv(input[-1])
+                expt_df = pd.concat([pd.read_csv(i) for i in input[:-1]])
                 expt_df.to_csv(output[0], index=False)
                 g = fov.figures.performance_plot(expt_df, comparison=wildcards.comp)
                 g.fig.savefig(output[1], bbox_inches='tight')
                 g = fov.figures.run_length_plot(expt_df, comparison=wildcards.comp)
                 g.fig.savefig(output[2], bbox_inches='tight')
+                g = fov.figures.compare_loss_and_performance_plot(expt_df, stim_df)
+                g.fig.savefig(output[3], bbox_inches='tight')
 
 
 rule calculate_heterogeneity:

@@ -292,3 +292,86 @@ def map_flat_line(x, y, data, linestyles='--', colors='k', ax=None, **kwargs):
         raise Exception("One of x or y must be a str corresponding to a "
                         "column in the dataframe!")
     return lines
+
+
+def get_log_ax_lims(vals, base=10):
+    """Get good limits for log-scale axis.
+
+    Since several plotting functions have trouble automatically doing this.
+
+    Parameters
+    ----------
+    vals : array_like
+        The values plotted on the axis.
+    base : float, optional
+        The base of the axis
+
+    Returns
+    -------
+    lims : tuple
+        tuple of floats for the min and max value. Both will be of the form
+        base**i, where i is the smallest / largest int larger / smaller than
+        all values in vals.
+
+    """
+    i_min = 50
+    while base**i_min > vals.min():
+        i_min -= 1
+    i_max = -50
+    while base**i_max < vals.max():
+        i_max += 1
+    return base**i_min, base**i_max
+
+
+def title_experiment_summary_plots(g, expt_df, summary_text, comparison='ref',
+                                   post_text=''):
+    """Handle suptitle for FacetGrids summarizing experiment.
+
+    We want to handle the suptitle for these FacetGrids in a standard way:
+
+    - Add suptitle that describes contents (what subjects, sessions,
+      comparison)
+
+    - Make sure it's visible
+
+    Currently, used by: run_length_plot, compare_loss_and_performance_plot,
+    performance_plot
+
+    Parameters
+    ----------
+    g : sns.FacetGrid
+        FacetGrid containing the figure.
+    expt_df : pd.DataFrame
+        DataFrame containing the results of at least one session for at least
+        one subject, as created by a combination of
+        `analysis.create_experiment_df` and `analysis.add_response_info`, then
+        concatenating them across runs (and maybe sessions / subjects).
+    summary_text : str
+         String summarizing what's shown in the plot, such as "Performance" or
+         "Run length". Will go at beginning of suptitle.
+    comparison : {'ref', 'met'}, optional
+        Whether this comparison is between metamers and reference images
+        ('ref') or two metamers ('met').
+    post_text : str, optional
+        Text to put at the end of the suptitle, e.g., info on how to interpret
+        the plot.
+
+    Returns
+    -------
+    g : sns.FacetGrid
+        The modified FacetGrid.
+
+    """
+    if expt_df.subject_name.nunique() > 1:
+        subj_str = 'all subjects'
+    else:
+        subj_str = expt_df.subject_name.unique()[0]
+    if 'session_number' not in expt_df.columns or expt_df.session_number.nunique() > 1:
+        sess_str = 'all sessions'
+    else:
+        sess_str = f'session {expt_df.session_number.unique()[0]:02d}'
+    comp_str = {'ref': 'reference images', 'met': 'other metamers'}[comparison]
+    g.fig.suptitle(f"{summary_text} for {subj_str}, {sess_str}."
+                   f" Comparing metamers and {comp_str}. {post_text}\n",
+                   va='bottom')
+    return g
