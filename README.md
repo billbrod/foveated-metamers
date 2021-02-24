@@ -663,6 +663,9 @@ First session only (on later sessions, ask if they need a refresher):
 > experiment; some will be easy, some hard. You'll receive feedback at the end
 > of the run, to make sure you understand the task. I'll remain in the room to
 > answer any questions.
+>
+> There will be fixation dot in the center of some explanatory text at the
+> beginning, use that to center yourself.
 
 5. Run (replace `{model}` with `V1_norm_s6_gaussian` or `RGC_norm_gaussian`):
 
