@@ -53,6 +53,10 @@ CONTINUE_LOG_PATH = CONTINUE_TEMPLATE_PATH.replace('metamers_continue/{model_nam
 TEXTURE_DIR = config['TEXTURE_DIR']
 if TEXTURE_DIR.endswith(os.sep) or TEXTURE_DIR.endswith('/'):
     TEXTURE_DIR = TEXTURE_DIR[:-1]
+BEHAVIORAL_DATA_DATES = {
+    'sub-01': {'sess-00': '2021-Feb-23', 'sess-01': '2021-Feb-23'},
+    'sub-02': {'sess-00': '2021-Feb-24'},
+}
 
 
 # quick rule to check that there are GPUs available and the environment
@@ -1064,6 +1068,57 @@ rule combine_runs:
                 g.fig.subplots_adjust(top=.88)
                 g.fig.savefig(output[2], bbox_inches='tight')
 
+
+rule combine_behavioral_data:
+    input:
+        lambda wildcards: [op.join(config["DATA_DIR"], 'behavioral', '{{model_name}}', 'task-split_comp-{{comp}}', '{{subject}}',
+                                   '{date}_{{subject}}_task-split_comp-{{comp}}_sess-{sess_num:02d}_run-{i:02d}_expt.csv').format(
+                                       i=i, sess_num=ses, date=BEHAVIORAL_DATA_DATES[wildcards.subject][f'sess-{ses:02d}'])
+                           for i in range(5) for ses in range(3)]
+    output:
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
+                       '{subject}_task-split_comp-{comp}_data.csv'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
+                       '{subject}_task-split_comp-{comp}_performance.svg'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
+                       '{subject}_task-split_comp-{comp}_run_lengths.svg'),
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
+                       '{subject}_task-split_comp-{comp}_summary.log'),
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
+                       '{subject}_task-split_comp-{comp}_summary_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import pandas as pd
+        import seaborn as sns
+        import contextlib
+        import matplotlib.pyplot as plt
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                expt_df = pd.concat([pd.read_csv(i) for i in input])
+                expt_df.to_csv(output[0], index=False)
+                ci = 95
+                g = sns.catplot(x='scaling', y='hit_or_miss_numeric', data=expt_df, kind='point', col='image_name',
+                                col_order=sorted(expt_df.image_name.unique()), ci=ci, col_wrap=5)
+                g.map_dataframe(fov.plotting.map_flat_line, x='scaling', y=.5, colors='k')
+                g.set_ylabels(f'Proportion correct (with {ci}% CI)')
+                g.set_xlabels('Scaling')
+                g.set(ylim=(.3, 1.05))
+                comp_str = {'ref': 'reference images', 'met': 'other metamers'}[wildcards.comp]
+                g.fig.suptitle(f"Performance for {wildcards.subject}, all sessions."
+                               f" Comparing metamers and {comp_str}.")
+                n_rows = int(np.ceil(expt_df.image_name.nunique() / 5))
+                g.fig.subplots_adjust(top={1: .88, 2: .92, 3: .94}.get(n_rows, 1))
+                g.fig.savefig(output[1], bbox_inches='tight')
+                expt_df['approximate_run_length'] = expt_df.approximate_run_length / 60
+                g = sns.catplot(x='session_number', y='approximate_run_length', kind='strip',
+                                data=expt_df.drop_duplicates(['session_number', 'run_number']))
+                g.set_ylabels("Approximate run length (in minutes)")
+                g.fig.suptitle(f"Performance for {wildcards.subject}, all sessions."
+                               f" Comparing metamers and {comp_str}.")
+                g.fig.subplots_adjust(top=.88)
+                g.fig.savefig(output[2], bbox_inches='tight')
 
 
 rule calculate_heterogeneity:
