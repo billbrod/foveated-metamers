@@ -252,7 +252,7 @@ def _setup_run(stimuli_path, idx_path, fix_deg_size=.25, screen_size_deg=73.45,
             fixation, timer, expt_clock, screen)
 
 
-def _explain_task(win, expt_clock, comparison, text_height=50,
+def _explain_task(win, expt_clock, comparison, fixation, text_height=50,
                   train_flag=False):
     """Draw some text explaining the task
     """
@@ -295,6 +295,7 @@ def _explain_task(win, expt_clock, comparison, text_height=50,
     explain_text = visual.TextStim(win, text, height=text_height, wrapWidth=2000)
 
     explain_text.draw()
+    fixation.draw()
     win.flip()
     all_keys = event.waitKeys(keyList=['return', 'space', ], timeStamped=expt_clock)
     clear_events(win)
@@ -418,7 +419,7 @@ def run_split(stimuli_path, idx_path, save_path, comparison,
                                  size=stim_size, pos=(stim_size[0]/2, 0))
     del stimuli
 
-    _explain_task(win, expt_clock, comparison, text_height,
+    _explain_task(win, expt_clock, comparison, fixation, text_height,
                   train_flag=train_flag)
 
     wait_text = visual.TextStim(win, ("Press space to start\nq or esc will quit\nspace to pause"),
