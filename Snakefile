@@ -1047,25 +1047,9 @@ rule combine_runs:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 expt_df = pd.concat([pd.read_csv(i) for i in input])
                 expt_df.to_csv(output[0], index=False)
-                ci = 95
-                g = sns.catplot(x='scaling', y='hit_or_miss_numeric', data=expt_df, kind='point', col='image_name',
-                                col_order=sorted(expt_df.image_name.unique()), ci=ci)
-                g.map_dataframe(fov.plotting.map_flat_line, x='scaling', y=.5, colors='k')
-                g.set_ylabels(f'Proportion correct (with {ci}% CI)')
-                g.set_xlabels('Scaling')
-                g.set(ylim=(.3, 1.05))
-                comp_str = {'ref': 'reference images', 'met': 'other metamers'}[wildcards.comp]
-                g.fig.suptitle(f"Performance for {wildcards.subject}, session {wildcards.sess_num}."
-                               f" Comparing metamers and {comp_str}.")
-                g.fig.subplots_adjust(top=.88)
+                g = fov.figures.performance_plot(expt_df, comparison=wildcards.comp)
                 g.fig.savefig(output[1], bbox_inches='tight')
-                expt_df['approximate_run_length'] = expt_df.approximate_run_length / 60
-                g = sns.catplot(x='session_number', y='approximate_run_length', kind='strip',
-                                data=expt_df.drop_duplicates('run_number'))
-                g.set_ylabels("Approximate run length (in minutes)")
-                g.fig.suptitle(f"Performance for {wildcards.subject}, session {wildcards.sess_num}."
-                               f" Comparing metamers and {comp_str}.")
-                g.fig.subplots_adjust(top=.88)
+                g = fov.figures.run_length_plot(expt_df, comparison=wildcards.comp)
                 g.fig.savefig(output[2], bbox_inches='tight')
 
 
@@ -1074,7 +1058,7 @@ rule combine_behavioral_data:
         lambda wildcards: [op.join(config["DATA_DIR"], 'behavioral', '{{model_name}}', 'task-split_comp-{{comp}}', '{{subject}}',
                                    '{date}_{{subject}}_task-split_comp-{{comp}}_sess-{sess_num:02d}_run-{i:02d}_expt.csv').format(
                                        i=i, sess_num=ses, date=BEHAVIORAL_DATA_DATES[wildcards.subject][f'sess-{ses:02d}'])
-                           for i in range(5) for ses in range(3)]
+                           for i in range(5) for ses in range(2)]
     output:
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
                        '{subject}_task-split_comp-{comp}_data.csv'),
@@ -1098,26 +1082,9 @@ rule combine_behavioral_data:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 expt_df = pd.concat([pd.read_csv(i) for i in input])
                 expt_df.to_csv(output[0], index=False)
-                ci = 95
-                g = sns.catplot(x='scaling', y='hit_or_miss_numeric', data=expt_df, kind='point', col='image_name',
-                                col_order=sorted(expt_df.image_name.unique()), ci=ci, col_wrap=5)
-                g.map_dataframe(fov.plotting.map_flat_line, x='scaling', y=.5, colors='k')
-                g.set_ylabels(f'Proportion correct (with {ci}% CI)')
-                g.set_xlabels('Scaling')
-                g.set(ylim=(.3, 1.05))
-                comp_str = {'ref': 'reference images', 'met': 'other metamers'}[wildcards.comp]
-                g.fig.suptitle(f"Performance for {wildcards.subject}, all sessions."
-                               f" Comparing metamers and {comp_str}.")
-                n_rows = int(np.ceil(expt_df.image_name.nunique() / 5))
-                g.fig.subplots_adjust(top={1: .88, 2: .92, 3: .94}.get(n_rows, 1))
+                g = fov.figures.performance_plot(expt_df, comparison=wildcards.comp)
                 g.fig.savefig(output[1], bbox_inches='tight')
-                expt_df['approximate_run_length'] = expt_df.approximate_run_length / 60
-                g = sns.catplot(x='session_number', y='approximate_run_length', kind='strip',
-                                data=expt_df.drop_duplicates(['session_number', 'run_number']))
-                g.set_ylabels("Approximate run length (in minutes)")
-                g.fig.suptitle(f"Performance for {wildcards.subject}, all sessions."
-                               f" Comparing metamers and {comp_str}.")
-                g.fig.subplots_adjust(top=.88)
+                g = fov.figures.run_length_plot(expt_df, comparison=wildcards.comp)
                 g.fig.savefig(output[2], bbox_inches='tight')
 
 

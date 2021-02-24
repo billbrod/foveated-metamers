@@ -534,3 +534,124 @@ def simulate_num_trials(params, row='critical_scaling_true', col='variable'):
     g.map_dataframe(plotting.scatter_ci_dist, 'num_trials', 'value')
     g.map(plt.plot, 'num_trials', 'true_value', color='k', linestyle='--')
     return g
+
+
+def performance_plot(expt_df, col='image_name', row=None, hue=None, col_wrap=5,
+                     ci=95, comparison='ref'):
+    """Plot performance as function of scaling.
+
+    With default arguments, this is meant to show the results for all sessions
+    and a single subject, showing the different images on each column. It
+    should be flexible enough to handle other variants.
+
+    Parameters
+    ----------
+    expt_df : pd.DataFrame
+        DataFrame containing the results of at least one session for at least
+        one subject, as created by a combination of
+        `analysis.create_experiment_df` and `analysis.add_response_info`, then
+        concatenating them across runs (and maybe sessions / subjects).
+    col, row, hue : str or None, optional
+        The variables in expt_df to facet along the columns, rows, and hues,
+        respectively.
+    col_wrap : int or None, optional
+        If row is None, how many columns to have before wrapping to the next
+        row. If this is not None and row is not None, will raise an Exception
+    ci : int, optional
+        What confidence interval to draw on the performance.
+    comparison : {'ref', 'met'}, optional
+        Whether this comparison is between metamers and reference images
+        ('ref') or two metamers ('met').
+
+    Returns
+    -------
+    g : sns.FacetGrid
+        FacetGrid containing the figure.
+
+    """
+    g = sns.catplot(x='scaling', y='hit_or_miss_numeric', data=expt_df,
+                    kind='point', col=col, row=row, hue=hue,
+                    col_order=sorted(expt_df[col].unique()), ci=ci,
+                    col_wrap=col_wrap)
+
+    g.map_dataframe(plotting.map_flat_line, x='scaling', y=.5, colors='k')
+    g.set_ylabels(f'Proportion correct (with {ci}% CI)')
+    g.set_xlabels('Scaling')
+    g.set(ylim=(.3, 1.05))
+    comp_str = {'ref': 'reference images', 'met': 'other metamers'}[comparison]
+    if expt_df.subject_name.nunique() > 1:
+        subj_str = 'all subjects'
+    else:
+        subj_str = expt_df.subject_name.unique()[0]
+    if expt_df.session_number.nunique() > 1:
+        sess_str = 'all sessions'
+    else:
+        sess_str = expt_df.session_number.unique()[0]
+    g.fig.suptitle(f"Performance for {subj_str}, {sess_str}."
+                   f" Comparing metamers and {comp_str}.")
+    n_rows = 1
+    if row is None:
+        if col_wrap is not None:
+            n_rows = int(np.ceil(expt_df[col].nunique() / col_wrap))
+    else:
+        n_rows = expt_df[row].nunique()
+    g.fig.subplots_adjust(top={1: .88, 2: .92, 3: .94}.get(n_rows, 1))
+    return g
+
+
+def run_length_plot(expt_df, col=None, row=None, hue=None, col_wrap=None,
+                    comparison='ref'):
+    """Plot run length.
+
+    With default arguments, this is meant to show the results for all sessions
+    and a single subject. It should be flexible enough to handle other
+    variants.
+
+    Parameters
+    ----------
+    expt_df : pd.DataFrame
+        DataFrame containing the results of at least one session for at least
+        one subject, as created by a combination of
+        `analysis.create_experiment_df` and `analysis.add_response_info`, then
+        concatenating them across runs (and maybe sessions / subjects).
+    col, row, hue : str or None, optional
+        The variables in expt_df to facet along the columns, rows, and hues,
+        respectively.
+    col_wrap : int or None, optional
+        If row is None, how many columns to have before wrapping to the next
+        row. If this is not None and row is not None, will raise an Exception
+    comparison : {'ref', 'met'}, optional
+        Whether this comparison is between metamers and reference images
+        ('ref') or two metamers ('met').
+
+    Returns
+    -------
+    g : sns.FacetGrid
+        FacetGrid containing the figure.
+
+    """
+    expt_df['approximate_run_length_min'] = expt_df.approximate_run_length / 60
+    g = sns.catplot(x='session_number', y='approximate_run_length_min',
+                    kind='strip', col=col, row=row, hue=hue, col_wrap=col_wrap,
+                    data=expt_df.drop_duplicates(['subject_name', 'session_number',
+                                                  'run_number']))
+    g.set_ylabels("Approximate run length (in minutes)")
+    if expt_df.subject_name.nunique() > 1:
+        subj_str = 'all subjects'
+    else:
+        subj_str = expt_df.subject_name.unique()[0]
+    if expt_df.session_number.nunique() > 1:
+        sess_str = 'all sessions'
+    else:
+        sess_str = expt_df.session_number.unique()[0]
+    comp_str = {'ref': 'reference images', 'met': 'other metamers'}[comparison]
+    g.fig.suptitle(f"Performance for {subj_str}, {sess_str}."
+                   f" Comparing metamers and {comp_str}.")
+    n_rows = 1
+    if row is None:
+        if col_wrap is not None:
+            n_rows = int(np.ceil(expt_df[col].nunique() / col_wrap))
+    else:
+        n_rows = expt_df[row].nunique()
+    g.fig.subplots_adjust(top={1: .88, 2: .92, 3: .94}.get(n_rows, 1))
+    return g
