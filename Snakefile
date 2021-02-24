@@ -1025,6 +1025,8 @@ rule combine_runs:
                        '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_all-runs.csv'),
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
                        '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_performance.svg'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
+                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run_lengths.svg'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
                        '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_summary.log'),
@@ -1053,6 +1055,15 @@ rule combine_runs:
                                f" Comparing metamers and {comp_str}.")
                 g.fig.subplots_adjust(top=.88)
                 g.fig.savefig(output[1], bbox_inches='tight')
+                expt_df['approximate_run_length'] = expt_df.approximate_run_length / 60
+                g = sns.catplot(x='session_number', y='approximate_run_length', kind='strip',
+                                data=expt_df.drop_duplicates('run_number'))
+                g.set_ylabels("Approximate run length (in minutes)")
+                g.fig.suptitle(f"Performance for {wildcards.subject}, session {wildcards.sess_num}."
+                               f" Comparing metamers and {comp_str}.")
+                g.fig.subplots_adjust(top=.88)
+                g.fig.savefig(output[2], bbox_inches='tight')
+
 
 
 rule calculate_heterogeneity:

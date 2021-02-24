@@ -309,6 +309,10 @@ def add_response_info(expt_df, trials, subject_name, session_number, run_number)
         expt_df['extra_image_set'] = 'training'
     expt_df['session_number'] = session_number
     expt_df['run_number'] = run_number
+    # this is the difference between the time of trial end for the last and
+    # first trials, in seconds .So it won't count the tear-down time, but that
+    # shouldn't take too long.
+    expt_df['approximate_run_length'] = trials[-1, 1] - trials[0, 1]
     return expt_df
 
 
