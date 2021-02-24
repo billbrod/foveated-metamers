@@ -54,8 +54,10 @@ TEXTURE_DIR = config['TEXTURE_DIR']
 if TEXTURE_DIR.endswith(os.sep) or TEXTURE_DIR.endswith('/'):
     TEXTURE_DIR = TEXTURE_DIR[:-1]
 BEHAVIORAL_DATA_DATES = {
-    'sub-01': {'sess-00': '2021-Feb-23', 'sess-01': '2021-Feb-23', 'sess-02': '2021-Feb-24'},
-    'sub-02': {'sess-00': '2021-Feb-24'},
+    'V1_norm_s6_gaussian': {
+        'sub-01': {'sess-00': '2021-Feb-23', 'sess-01': '2021-Feb-23', 'sess-02': '2021-Feb-24'},
+        'sub-02': {'sess-00': '2021-Feb-24'},
+        }
 }
 
 
@@ -1017,54 +1019,12 @@ rule create_experiment_df:
                 df.to_csv(output[0], index=False)
 
 
-# we will remove this (or, change it so it combines across all sessions as
-# well) once we've finished collecting data
-rule combine_runs:
-    input:
-        [op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                       f'{{date}}_{{subject}}_task-split_comp-{{comp}}_sess-{{sess_num}}_run-{i:02d}_expt.csv')
-         for i in range(5)],
-        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description_comp-{comp}.csv'),
-    output:
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_all-runs.csv'),
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_performance.svg'),
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run_lengths.svg'),
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_loss_comparison.svg'),
-    log:
-        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_summary.log'),
-    benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                       '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_summary_benchmark.txt'),
-    run:
-        import foveated_metamers as fov
-        import pandas as pd
-        import seaborn as sns
-        import contextlib
-        import matplotlib.pyplot as plt
-        with open(log[0], 'w', buffering=1) as log_file:
-            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                stim_df = pd.read_csv(input[-1])
-                expt_df = pd.concat([pd.read_csv(i) for i in input[:-1]])
-                expt_df.to_csv(output[0], index=False)
-                g = fov.figures.performance_plot(expt_df, comparison=wildcards.comp)
-                g.fig.savefig(output[1], bbox_inches='tight')
-                g = fov.figures.run_length_plot(expt_df, comparison=wildcards.comp)
-                g.fig.savefig(output[2], bbox_inches='tight')
-                g = fov.figures.compare_loss_and_performance_plot(expt_df, stim_df)
-                g.fig.savefig(output[3], bbox_inches='tight')
-
-
-rule combine_behavioral_data:
+rule combine_subject_behavior:
     input:
         lambda wildcards: [op.join(config["DATA_DIR"], 'behavioral', '{{model_name}}', 'task-split_comp-{{comp}}', '{{subject}}',
-                                   '{date}_{{subject}}_task-split_comp-{{comp}}_sess-{sess_num:02d}_run-{i:02d}_expt.csv').format(
-                                       i=i, sess_num=ses, date=BEHAVIORAL_DATA_DATES[wildcards.subject][f'sess-{ses:02d}'])
-                           for i in range(5) for ses in range(3)],
+                                   '{date}_{{subject}}_task-split_comp-{{comp}}_{sess}_run-{i:02d}_expt.csv').format(
+                                       i=i, sess=ses, date=date)
+                           for i in range(5) for ses, date in BEHAVIORAL_DATA_DATES[wildcards.model_name][wildcards.subject].items()],
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description_comp-{comp}.csv'),
     output:
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
@@ -1084,9 +1044,7 @@ rule combine_behavioral_data:
     run:
         import foveated_metamers as fov
         import pandas as pd
-        import seaborn as sns
         import contextlib
-        import matplotlib.pyplot as plt
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 stim_df = pd.read_csv(input[-1])
@@ -1095,6 +1053,44 @@ rule combine_behavioral_data:
                 g = fov.figures.performance_plot(expt_df, comparison=wildcards.comp)
                 g.fig.savefig(output[1], bbox_inches='tight')
                 g = fov.figures.run_length_plot(expt_df, comparison=wildcards.comp)
+                g.fig.savefig(output[2], bbox_inches='tight')
+                g = fov.figures.compare_loss_and_performance_plot(expt_df, stim_df)
+                g.fig.savefig(output[3], bbox_inches='tight')
+
+
+rule combine_all_behavior:
+    input:
+        lambda wildcards: [op.join(config["DATA_DIR"], 'behavioral', '{{model_name}}', 'task-split_comp-{{comp}}', '{subject}',
+                                   '{subject}_task-split_comp-{{comp}}_data.csv').format(subject=subj)
+                           for subj in BEHAVIORAL_DATA_DATES[wildcards.model_name]],
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description_comp-{comp}.csv'),
+    output:
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                       'task-split_comp-{comp}_data.csv'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                       'task-split_comp-{comp}_performance.svg'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                       'task-split_comp-{comp}_run_lengths.svg'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                       'task-split_comp-{comp}_loss_comparison.svg'),
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                       'task-split_comp-{comp}_plots.log'),
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                       'task-split_comp-{comp}_plots_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import pandas as pd
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                stim_df = pd.read_csv(input[-1])
+                expt_df = pd.concat([pd.read_csv(i) for i in input[:-1]])
+                expt_df.to_csv(output[0], index=False)
+                g = fov.figures.performance_plot(expt_df, hue='subject_name', comparison=wildcards.comp)
+                g.fig.savefig(output[1], bbox_inches='tight')
+                g = fov.figures.run_length_plot(expt_df, hue='subject_name', comparison=wildcards.comp)
                 g.fig.savefig(output[2], bbox_inches='tight')
                 g = fov.figures.compare_loss_and_performance_plot(expt_df, stim_df)
                 g.fig.savefig(output[3], bbox_inches='tight')
