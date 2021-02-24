@@ -54,7 +54,7 @@ TEXTURE_DIR = config['TEXTURE_DIR']
 if TEXTURE_DIR.endswith(os.sep) or TEXTURE_DIR.endswith('/'):
     TEXTURE_DIR = TEXTURE_DIR[:-1]
 BEHAVIORAL_DATA_DATES = {
-    'sub-01': {'sess-00': '2021-Feb-23', 'sess-01': '2021-Feb-23'},
+    'sub-01': {'sess-00': '2021-Feb-23', 'sess-01': '2021-Feb-23', 'sess-02': '2021-Feb-24'},
     'sub-02': {'sess-00': '2021-Feb-24'},
 }
 
