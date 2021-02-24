@@ -120,7 +120,10 @@ def plot_timing_info(trials, subject_name, session_number, run_number,
     ax.set(ylabel='Time between button press and trial end', xlabel='Response time',
            ylim=(0, lim + .1*lim),
            title=(f"{subject_name}, session {session_number}, "
-                  f"run {run_number}"))
+                  f"run {run_number}\nThis is a diagnostic plot: y-values should be "
+                  "pretty constant, on order of 1e-4 seconds,\nwith no dependency on "
+                  "response time, which will vary more but should have no "
+                  "relationship with button press."))
     return fig
 
 
