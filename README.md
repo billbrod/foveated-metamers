@@ -702,7 +702,7 @@ python example_images.py {model} {subj_name} {sess_num}
 10. Run, replacing `{model}`, `{subj_name}`, `{sess_num}` as above:
 
 ``` sh
-conda activate metamers
+conda activate psypy
 python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/{model}/stimuli_comp-ref.npy {subj_name} {sess_num} -c ref
 ```
 
