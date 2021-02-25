@@ -371,7 +371,16 @@ def title_experiment_summary_plots(g, expt_df, summary_text, comparison='ref',
     else:
         sess_str = f'session {expt_df.session_number.unique()[0]:02d}'
     comp_str = {'ref': 'reference images', 'met': 'other metamers'}[comparison]
+    # got this from https://stackoverflow.com/a/36369238/4659293
+    n_rows = g.fig.axes[0].get_subplotspec().get_gridspec().get_geometry()[0]
+    # we want to add some newlines at end of title, based on number of rows, to
+    # make sure there's enough space
+    end_newlines = ''
+    if n_rows > 1:
+        end_newlines += '\n'
+    if n_rows > 3:
+        end_newlines += '\n'
     g.fig.suptitle(f"{summary_text} for {subj_str}, {sess_str}."
-                   f" Comparing metamers and {comp_str}. {post_text}\n",
+                   f" Comparing metamers and {comp_str}. {post_text}{end_newlines}",
                    va='bottom')
     return g
