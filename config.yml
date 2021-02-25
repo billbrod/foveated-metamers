@@ -42,6 +42,28 @@ OLD_SEEDS:
     - 'graffiti_range-.05,.95_size-2048,2600'
     - 'llama_range-.05,.95_size-2048,2600'
     - 'terraces_range-.05,.95_size-2048,2600'
+  scaling:
+    RGC:
+      - .01
+      - .013
+      - .017
+      - .021
+      - .027
+      - .035
+      - .045
+      - .058
+      - .075
+    V1:
+      - .095
+      - .12
+      - .14
+      - .18
+      - .22
+      - .27
+      - .33
+      - .4
+      - .5
+
 
 # this dict gives us a specific image index for a set of images (whose metamers
 # were already generated using that value, back when I was looking at a broader
@@ -71,17 +93,28 @@ FIXED_IMAGE_IDX:
   lettuce_range-.05,.95_size-2048,2600: 53
 # same as above, but for scaling values
 FIXED_SCALING_IDX:
-  .063: 9
-  .078: 10
-  .095: 0
-  .12: 1
-  .14: 2
-  .18: 3
-  .22: 4
-  .27: 5
-  .33: 6
-  .4: 7
-  .5: 8
+  RGC:
+    .01: 0
+    .013: 1
+    .017: 2
+    .021: 3
+    .027: 4
+    .035: 5
+    .045: 6
+    .058: 7
+    .075: 8
+  V1:
+    .063: 9
+    .078: 10
+    .095: 0
+    .12: 1
+    .14: 2
+    .18: 3
+    .22: 4
+    .27: 5
+    .33: 6
+    .4: 7
+    .5: 8
 
 # metamers with scaling below this value will use 0 gpus, metamers with scaling
 # above will use 1

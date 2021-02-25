@@ -380,7 +380,7 @@ def generate_metamer_seeds_dict(model_name):
         if kind == 'image':
             fixed_idx = defaults['FIXED_IMAGE_IDX'].copy()
         elif kind == 'scaling':
-            fixed_idx = defaults['FIXED_SCALING_IDX'].copy()
+            fixed_idx = defaults['FIXED_SCALING_IDX'][model_name].copy()
         # we now loop through the values we want to show and, if they're not
         # already in fixed_idx, give them the lowest index that is not already
         # used.
@@ -403,7 +403,8 @@ def generate_metamer_seeds_dict(model_name):
         image_base = fixed_image_idx[im] * image_name_sep
         for sc in scaling:
             scaling_base = fixed_scaling_idx[sc] * scaling_sep
-            if im in defaults['OLD_SEEDS']['image_names']:
+            if ((im in defaults['OLD_SEEDS']['image_names']
+                 and sc in defaults['OLD_SEEDS']['scaling'][model_name])):
                 seed = [k for k in defaults['OLD_SEEDS']['seeds']]
                 seed += [model_name_base + image_base + scaling_base + k for k
                          in range(len(seed), n_seeds)]
@@ -456,8 +457,9 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
         default scaling values we use. If 'ref' (the defualt), we use those
         under the model:scaling key in the config file. If 'met', we look for
         model:met_v_met_scaling key; we use these plus the highest ones from
-        model:scaling so that we end up with 9 total values. If there is no
-        model:met_v_met_scaling key, we return the same values as before.
+        model:scaling so that we end up with the same number of values. If
+        there is no model:met_v_met_scaling key, we return the same values as
+        before.
     seed_n : list, optional
         List specifying which seeds to grab for each (model, image, scaling).
         If seed is in kwargs, this is ignored.
@@ -509,7 +511,7 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
                 if comp == 'met':
                     try:
                         more_scaling = defaults[model.split('_')[0]]['met_v_met_scaling']
-                        scaling = scaling[-(9-len(more_scaling)):] + more_scaling
+                        scaling = scaling[-(len(scaling)-len(more_scaling)):] + more_scaling
                     except KeyError:
                         pass
             else:
