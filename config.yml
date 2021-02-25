@@ -70,6 +70,10 @@ FIXED_IMAGE_IDX:
   gnarled_range-.05,.95_size-2048,2600: 51
   lettuce_range-.05,.95_size-2048,2600: 53
 
+# metamers with scaling below this value will use 0 gpus, metamers with scaling
+# above will use 1
+GPU_SPLIT: .09
+
 DEFAULT_METAMERS:
   image_name:
     - 'azulejos_range-.05,.95_size-2048,2600'
@@ -108,7 +112,6 @@ DEFAULT_METAMERS:
   loss_thresh: 1e-09
   loss_change_iter: 50
   max_iter: 15000
-  gpu: 0
   save_all: ''
 
 RGC:
@@ -125,20 +128,21 @@ RGC:
   met_v_met_scaling:
     - .075
   max_iter: 5000
-  training_scaling: 0.5
 
 V1:
   model_name: 'V1_norm_s6_gaussian'
   scaling:
+    - .063
+    - .078
     - .095
     - .12
     - .14
     - .18
     - .22
     - .27
+  met_v_met_scaling:
     - .33
     - .4
-  met_v_met_scaling:
     - .5
     - .66
     - .87
@@ -148,8 +152,6 @@ V1:
   optimizer: 'Adam-SWA_s-50_f-5'
   coarse_to_fine: 'together'
   clamp_each_iter: False
-  gpu: 1
-  training_scaling: 1.0
 
 PSYCHOPHYSICS:
   SESSIONS:

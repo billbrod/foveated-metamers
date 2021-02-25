@@ -157,7 +157,7 @@ def _find_img_size(image_name):
     return np.array(image_size.split(',')).astype(int)
 
 
-def find_attempts(wildcards, increment=False, extra_iter=None):
+def find_attempts(wildcards, increment=False, extra_iter=None, gpu_split=.09):
     """Find most recently-generated metamer with specified wilcards.
 
     We allow for the possibility of continuing metamer synthesis, and so need a
@@ -196,6 +196,13 @@ def find_attempts(wildcards, increment=False, extra_iter=None):
     CONTINUE_TEMPLATE_PATH = (METAMER_TEMPLATE_PATH.replace('metamers/{model_name}', 'metamers_continue/{model_name}')
                               .replace("{clamp_each_iter}/", "{clamp_each_iter}/attempt-{num}_iter-{extra_iter}/"))
     num = wildcards.pop('num', None)
+    gpu = wildcards.pop('gpu', None)
+    if gpu is None:
+        if wildcards['scaling'] < gpu_split:
+            gpu = 0
+        else:
+            gpu = 1
+    wildcards['gpu'] = gpu
     wildcards.pop('extra_iter', None)
     wildcards['max_ecc'] = float(wildcards['max_ecc'])
     wildcards['min_ecc'] = float(wildcards['min_ecc'])
@@ -522,7 +529,8 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
                         raise Exception(f"{tmp['image_name']} and {tmp['scaling']} (for model {model}) "
                                         "not found in the default set of metamers with pre-generated seeds"
                                         " -- please specify the seed argument")
-                p = find_attempts(tmp, increment=increment, extra_iter=extra_iter)
+                p = find_attempts(tmp, increment=increment, extra_iter=extra_iter,
+                                  gpu_split=defaults['GPU_SPLIT'])
                 if gamma_corrected:
                     p = p.replace('metamer.png', 'metamer_gamma-corrected.png')
                 paths.append(p)
