@@ -418,7 +418,7 @@ def get_mem_estimate(wildcards, partition=None):
         if 'size-2048,2600' in wildcards.image_name:
             if 'gaussian' in wildcards.model_name:
                 if 'V1' in wildcards.model_name:
-                    if float(wildcards.scaling) < .01:
+                    if float(wildcards.scaling) < .1:
                         mem = 128
                     else:
                         mem = 64
