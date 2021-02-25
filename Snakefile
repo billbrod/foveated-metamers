@@ -56,7 +56,7 @@ if TEXTURE_DIR.endswith(os.sep) or TEXTURE_DIR.endswith('/'):
 BEHAVIORAL_DATA_DATES = {
     'V1_norm_s6_gaussian': {
         'sub-01': {'sess-00': '2021-Feb-23', 'sess-01': '2021-Feb-23', 'sess-02': '2021-Feb-24'},
-        'sub-02': {'sess-00': '2021-Feb-24'},
+        'sub-02': {'sess-00': '2021-Feb-24', 'sess-01': '2021-Feb-25'},
         }
 }
 
