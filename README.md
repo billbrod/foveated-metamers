@@ -679,7 +679,8 @@ python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/training_noise
 Every time:
 
 7. Show the participant the images they'll see this session, replacing `{model}`
-   as above, and `{subj_name}` and `{sess_num}` as appropriate:
+   with `V1` or `RGC` (no need to use the full name), and `{subj_name}` and
+   `{sess_num}` as appropriate:
 
 ``` sh
 conda activate metamers

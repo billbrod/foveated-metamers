@@ -13,7 +13,10 @@ def main(model, subj_name, sess_num):
         config = yaml.safe_load(f)
 
     im_names = stimuli.get_images_for_session(subj_name, sess_num)
-    model_name = config[model]['model_name']
+    try:
+        model_name = config[model]['model_name']
+    except KeyError:
+        model_name = model
     scaling = [config[model]['scaling'][0], config[model]['scaling'][-1]]
     ref_images = []
     high_scaling_mets = []
