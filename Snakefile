@@ -659,7 +659,7 @@ rule create_metamers:
         cpus_per_task = get_cpu_num,
         mem = get_mem_estimate,
         # this seems to be the best, anymore doesn't help and will eventually hurt
-        num_threads = 12,
+        num_threads = 9,
     params:
         rusty_mem = lambda wildcards: get_mem_estimate(wildcards, 'rusty'),
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
