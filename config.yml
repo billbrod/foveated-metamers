@@ -69,6 +69,19 @@ FIXED_IMAGE_IDX:
   boats_range-.05,.95_size-2048,2600: 49
   gnarled_range-.05,.95_size-2048,2600: 51
   lettuce_range-.05,.95_size-2048,2600: 53
+# same as above, but for scaling values
+FIXED_SCALING_IDX:
+  .063: 9
+  .078: 10
+  .095: 0
+  .12: 1
+  .14: 2
+  .18: 3
+  .22: 4
+  .27: 5
+  .33: 6
+  .4: 7
+  .5: 8
 
 # metamers with scaling below this value will use 0 gpus, metamers with scaling
 # above will use 1

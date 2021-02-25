@@ -375,24 +375,34 @@ def generate_metamer_seeds_dict(model_name):
     scaling = defaults[model_name]['scaling'] + met_v_met
     seeds = {}
     model_name_base = {'RGC': 0, 'V1': 1}[model_name] * model_name_sep
-    # the fixed_idx dict gives us a specific image index for a set of images
-    # (whose metamers were already generated using that value, back when I was
-    # looking at a broader set of images).
-    fixed_idx = defaults['FIXED_IMAGE_IDX'].copy()
-    # we now loop through the images we want to show and, if they're not
-    # already in fixed_idx, give them the lowest index that is not already
-    # used.
-    i = 0
-    for im in image_names:
-        if im not in fixed_idx.keys():
-            while i in fixed_idx.values():
+
+    def _get_fixed_idx_dict(vals, kind='image'):
+        if kind == 'image':
+            fixed_idx = defaults['FIXED_IMAGE_IDX'].copy()
+        elif kind == 'scaling':
+            fixed_idx = defaults['FIXED_SCALING_IDX'].copy()
+        # we now loop through the values we want to show and, if they're not
+        # already in fixed_idx, give them the lowest index that is not already
+        # used.
+        i = 0
+        for v in vals:
+            if v not in fixed_idx.keys():
+                while i in fixed_idx.values():
+                    i += 1
+                fixed_idx[v] = i
                 i += 1
-            fixed_idx[im] = i
-            i += 1
+        return fixed_idx
+
+    # the fixed_idx dict gives us a specific image index for a set of images or
+    # scaling values (whose metamers were already generated using that value,
+    # back when I was looking at a broader set of images / different set of
+    # scaling values).
+    fixed_image_idx = _get_fixed_idx_dict(image_names, 'image')
+    fixed_scaling_idx = _get_fixed_idx_dict(scaling, 'scaling')
     for im in image_names:
-        image_base = fixed_idx[im] * image_name_sep
-        for j, sc in enumerate(scaling):
-            scaling_base = j * scaling_sep
+        image_base = fixed_image_idx[im] * image_name_sep
+        for sc in scaling:
+            scaling_base = fixed_scaling_idx[sc] * scaling_sep
             if im in defaults['OLD_SEEDS']['image_names']:
                 seed = [k for k in defaults['OLD_SEEDS']['seeds']]
                 seed += [model_name_base + image_base + scaling_base + k for k
