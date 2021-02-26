@@ -200,7 +200,7 @@ def create_experiment_df_split(df, presentation_idx, dep_variables=['scaling']):
         The metamer information dataframe, as created by
         stimuli.create_metamer_df
     presentation_idx : np.array
-        The n_trials by 3 array containing the stimuli presentation
+        The 2 x n_trials x 2 array containing the stimuli presentation
         indices for the run being analyzed.
     dep_variable : list, optional
         A list of strs, containing one or more of the columns of ``df``,
