@@ -960,7 +960,7 @@ rule generate_experiment_idx:
                     if r > 4 or len(idx) != 5:
                         raise Exception("This only works for 5 runs per session!")
                     idx = idx[r:r+3] + idx[:max(0, r-2)]
-                    ref_image_to_include
+                    ref_image_to_include = ref_image_to_include[idx]
                 except ValueError:
                     # then this is the test subject
                     if int(wildcards.sess_num) > 0 or int(wildcards.run_num):
