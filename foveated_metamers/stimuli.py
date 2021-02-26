@@ -293,9 +293,7 @@ def generate_indices_split(df, seed, comparison='met_v_ref', n_repeats=None):
     split-screen task (as used in our experiment.py file), randomize them using
     the given seed, and return them.
 
-    This task always presents the reference image first for met_v_ref
-    comparison (for met_v_met, presentation order is randomized; thus there
-    will be more trials).
+    In both comparisons, we randomize which image is shown first.
 
     Parameters
     ----------
@@ -308,11 +306,12 @@ def generate_indices_split(df, seed, comparison='met_v_ref', n_repeats=None):
         Whether to create the indices for comparing metamers against each other
         or against the reference image
     n_repeats : int or None, optional
-        How many repeats for each (image, scaling). Must be an even number (so
-        it's on the left and right an even number of times). Default (None)
-        doesn't change anything, so that each (image, scaling, seed) shows up
-        on left and right each once. 6 is the value used for our experiment.
-        Will balance across seeds.
+        How many repeats for each (image, scaling). Must be divisible by 4 (so
+        it's on the left and right an equal number of times, as well as
+        balanced across whether reference or metamer is presented first).
+        Default (None) doesn't change anything, so that each (image, scaling,
+        seed) shows up on left and right each once. 12 is the value used for our
+        experiment. Will balance across seeds as best as possible.
 
     Returns
     -------
@@ -321,7 +320,7 @@ def generate_indices_split(df, seed, comparison='met_v_ref', n_repeats=None):
         images * number of scaling values.
 
     """
-    if n_repeats is not None and n_repeats % 2 != 0:
+    if n_repeats is not None and n_repeats % 4 != 0:
         raise Exception(f"n_repeats must be even but got {n_repeats}!")
     np.random.seed(seed)
     # get the trial types array, which gives the indices for images to compare
@@ -351,17 +350,21 @@ def generate_indices_split(df, seed, comparison='met_v_ref', n_repeats=None):
             # this is how many repeats of each (image, scaling) we would have
             # if we didn't do anything more (mets.shape[-1] is the number of
             # seeds, and we make sure each shows up once on left and once on
-            # right)
-            base_repeats = mets.shape[-1] * 2
-            # we pad out mets so that mets.shape[-1] is n_repeats//2 and that
+            # right, and each shows up once with the metamer first, once with
+            # the reference first)
+            base_repeats = mets.shape[-1] * 4
+            # we pad out mets so that mets.shape[-1] is n_repeats//4 and that
             # each seed shows up with the same frequency (or as close as
             # possible)
             mets = np.tile(mets, int(np.ceil(n_repeats / base_repeats)))
-            mets = mets[:, :n_repeats//2]
+            mets = mets[:, :n_repeats//4]
         # grab each reference image and metamer (in that order). We're showing
         # the reference image first on each trial.
         trials = np.array([[refs[i, 0], c] for i, comp in enumerate(mets) for c
                            in comp])
+        # the above has reference image first, so this adds on all those same
+        # rows, but with the reference image second
+        trials = np.concatenate([trials, trials[:, [1, 0]]])
         # and now duplicate the first image (so it shows up on both left and
         # right)
         trials = trials[:, [0, 0, 1]]

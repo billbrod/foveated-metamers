@@ -245,6 +245,20 @@ def create_experiment_df_split(df, presentation_idx, dep_variables=['scaling']):
         else:
             return None
     expt_df['unique_seed'] = expt_df[['image_left_2', 'image_right_2']].apply(find_seed, 1)
+    if not (expt_df.image_left_1 == expt_df.image_right_1).all():
+        raise Exception("This assumes first image is always the one "
+                        "where both sides are identical that participants are comparing too!"
+                        " That doesn't look true here, so we don't know what to do.")
+
+    def ref_or_not(x):
+        try:
+            # then this is numeric
+            float(x)
+            return 'metamer'
+        except ValueError:
+            # then it's a string, reference
+            return x
+    expt_df['first_image'] = expt_df.image_left_1.map(ref_or_not)
     return expt_df
 
 

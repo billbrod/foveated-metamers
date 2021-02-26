@@ -951,6 +951,16 @@ rule generate_experiment_idx:
                                                                               int(wildcards.sess_num))
                     if 'training' in wildcards.model_name:
                         raise Exception("training models only allowed for sub-training!")
+                    # in a session, we show 5 images. each run has 3 of those
+                    # images, and we rotate so that each image shows up in 3
+                    # runs.
+                    idx = list(range(len(config['PSYCHOPHYSICS']['RUNS'])))
+                    r = int(wildcards.run_num)
+                    # we're 0-indexed, so r==4 is the 5th run
+                    if r > 4 or len(idx) != 5:
+                        raise Exception("This only works for 5 runs per session!")
+                    idx = idx[r:r+3] + idx[:max(0, r-2)]
+                    ref_image_to_include
                 except ValueError:
                     # then this is the test subject
                     if int(wildcards.sess_num) > 0 or int(wildcards.run_num):
@@ -964,7 +974,7 @@ rule generate_experiment_idx:
                     ref_image_to_include = stim_df.image_name.unique()[ref_image_idx]
                 stim_df = stim_df.query("image_name in @ref_image_to_include")
                 comp = 'met_v_' + wildcards.comp
-                idx = fov.stimuli.generate_indices_split(stim_df, params.seed, comp, n_repeats=6)
+                idx = fov.stimuli.generate_indices_split(stim_df, params.seed, comp, n_repeats=12)
                 np.save(output[0], idx)
 
 
