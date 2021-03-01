@@ -1260,18 +1260,21 @@ rule window_area_figure:
         import foveated_metamers as fov
         import seaborn as sns
         import contextlib
+        import torch
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 font_scale = {'poster': 1.7}.get(wildcards.context, 1)
                 min_ecc = config['DEFAULT_METAMERS']['min_ecc']
                 max_ecc = config['DEFAULT_METAMERS']['max_ecc']
+                size = [int(i) for i in config['IMAGE_NAME']['size'].split(',')]
+                image = torch.rand((1, 1, *size))
                 with sns.plotting_context(wildcards.context, font_scale=font_scale):
                     # remove the normalizing aspect, since we don't need it here
                     model, _, _, _ = fov.create_metamers.setup_model(wildcards.model_name.replace('_norm', ''),
                                                                      float(wildcards.scaling),
                                                                      image, min_ecc, max_ecc, params.cache_dir)
                     fig = fov.figures.pooling_window_area(model.PoolingWindows)
-                    fig.savefig(output[0])
+                    fig.savefig(output[0], bbox_inches='tight')
 
 
 rule window_example_figure:

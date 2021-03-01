@@ -527,7 +527,7 @@ def pooling_window_area(windows, windows_scale=0, units='degrees'):
 
     """
     fig = windows.plot_window_areas(units, scale_num=windows_scale,
-                                    figsize=(15, 5), ax=ax)
+                                    figsize=(15, 5))
     if units == 'degrees':
         # half is the smallest windows (for our models, which use gaussian
         # windows), full the largest.
