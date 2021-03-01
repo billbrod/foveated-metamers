@@ -1341,7 +1341,7 @@ rule pixelwise_diff_figure:
                 font_scale = 1
                 stim = np.load(input[0])
                 stim_df = pd.read_csv(input[1])
-                with sns.plotting_context(wildcards.context, font_scale=font_scale):
+                with sns.plotting_context('paper', font_scale=font_scale):
                     fig, errors = fov.figures.synthesis_pixel_diff(stim, stim_df, float(wildcards.scaling))
                     fig.savefig(output[0], bbox_inches='tight')
                     np.save(output[1], errors)
@@ -1349,9 +1349,9 @@ rule pixelwise_diff_figure:
 
 rule all_pixelwise_diff_figure:
     input:
-        lambda wildcards, params: [op.join(config['DATA_DIR'], 'errors', '{{model_name}}',
-                                           'scaling-{}_comp-{{comp}}_pixelwise_errors.npy').format(sc)
-                                   for sc in params.model_dict['scaling']],
+        lambda wildcards: [op.join(config['DATA_DIR'], 'errors', '{{model_name}}',
+                                   'scaling-{}_comp-{{comp}}_pixelwise_errors.npy').format(sc)
+                           for sc in config[wildcards.model_name.split('_')[0]]['scaling']],
     output:
         op.join(config['DATA_DIR'], 'figures', 'paper', '{model_name}',
                 'comp-{comp}_all_pixelwise_errors.png'),
