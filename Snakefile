@@ -540,18 +540,33 @@ def get_windows(wildcards):
     """
     window_template = op.join(config["DATA_DIR"], 'windows_cache', 'scaling-{scaling}_size-{size}'
                               '_e0-{min_ecc:.03f}_em-{max_ecc:.01f}_w-{t_width}_{window_type}.pt')
-    if 'size-' in wildcards.image_name:
-        im_shape = wildcards.image_name[wildcards.image_name.index('size-') + len('size-'):]
+    try:
+        if 'size-' in wildcards.image_name:
+            im_shape = wildcards.image_name[wildcards.image_name.index('size-') + len('size-'):]
+            im_shape = im_shape.replace('.png', '')
+            im_shape = [int(i) for i in im_shape.split(',')]
+        else:
+            try:
+                im = imageio.imread(REF_IMAGE_TEMPLATE_PATH.format(image_name=wildcards.image_name))
+                im_shape = im.shape
+            except FileNotFoundError:
+                raise Exception("Can't find input image %s or infer its shape, so don't know what "
+                                "windows to cache!" %
+                                REF_IMAGE_TEMPLATE_PATH.format(image_name=wildcards.image_name))
+    except AttributeError:
+        # then there was no wildcards.image_name, so grab the first one from
+        # the DEFAULT_METAMERS list
+        default_im = IMAGES[0]
+        im_shape = default_im[default_im.index('size-') + len('size-'):]
         im_shape = im_shape.replace('.png', '')
         im_shape = [int(i) for i in im_shape.split(',')]
-    else:
-        try:
-            im = imageio.imread(REF_IMAGE_TEMPLATE_PATH.format(image_name=wildcards.image_name))
-            im_shape = im.shape
-        except FileNotFoundError:
-            raise Exception("Can't find input image %s or infer its shape, so don't know what "
-                            "windows to cache!" %
-                            REF_IMAGE_TEMPLATE_PATH.format(image_name=wildcards.image_name))
+    try:
+        max_ecc=float(wildcards.max_ecc)
+        min_ecc=float(wildcards.min_ecc)
+    except AttributeError:
+        # then there was no wildcards.max/min_ecc, so grab the default values
+        min_ecc = config['DEFAULT_METAMERS']['min_ecc']
+        max_ecc = config['DEFAULT_METAMERS']['max_ecc']
     if 'cosine' in wildcards.model_name:
         window_type = 'cosine'
         t_width = 1.0
@@ -561,8 +576,8 @@ def get_windows(wildcards):
     if wildcards.model_name.startswith("RGC"):
         size = ','.join([str(i) for i in im_shape])
         return window_template.format(scaling=wildcards.scaling, size=size,
-                                      max_ecc=float(wildcards.max_ecc), t_width=t_width,
-                                      min_ecc=float(wildcards.min_ecc), window_type=window_type,)
+                                      max_ecc=max_ecc, t_width=t_width,
+                                      min_ecc=min_ecc, window_type=window_type,)
     elif wildcards.model_name.startswith('V1'):
         windows = []
         # need them for every scale
@@ -573,8 +588,8 @@ def get_windows(wildcards):
         for i in range(num_scales):
             output_size = ','.join([str(int(np.ceil(j / 2**i))) for j in im_shape])
             windows.append(window_template.format(scaling=wildcards.scaling, size=output_size,
-                                                  max_ecc=float(wildcards.max_ecc),
-                                                  min_ecc=float(wildcards.min_ecc),
+                                                  max_ecc=max_ecc,
+                                                  min_ecc=min_ecc,
                                                   t_width=t_width, window_type=window_type))
         return windows
 
@@ -1227,7 +1242,39 @@ rule scaling_comparison_figure:
                     fig.savefig(output[0], bbox_inches='tight')
 
 
-rule window_size_figure:
+rule window_area_figure:
+    input:
+        windows = get_windows,
+    output:
+        report(op.join(config['DATA_DIR'], 'figures', '{context}', '{model_name}',
+                       'scaling-{scaling}_window_area.svg'))
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
+                'scaling-{scaling}_window_area.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
+                'scaling-{scaling}_window_area_benchmark.txt')
+    params:
+        cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
+    run:
+        import foveated_metamers as fov
+        import seaborn as sns
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                font_scale = {'poster': 1.7}.get(wildcards.context, 1)
+                min_ecc = config['DEFAULT_METAMERS']['min_ecc']
+                max_ecc = config['DEFAULT_METAMERS']['max_ecc']
+                with sns.plotting_context(wildcards.context, font_scale=font_scale):
+                    # remove the normalizing aspect, since we don't need it here
+                    model, _, _, _ = fov.create_metamers.setup_model(wildcards.model_name.replace('_norm', ''),
+                                                                     float(wildcards.scaling),
+                                                                     image, min_ecc, max_ecc, params.cache_dir)
+                    fig = fov.figures.pooling_window_area(model.PoolingWindows)
+                    fig.savefig(output[0])
+
+
+rule window_example_figure:
     input:
         image = lambda wildcards: [m.replace('metamer.png', 'metamer_gamma-corrected.png') for m in
                                    utils.generate_metamer_paths(**wildcards)],
@@ -1261,7 +1308,7 @@ rule window_size_figure:
                     model, _, _, _ = fov.create_metamers.setup_model(wildcards.model_name.replace('_norm', ''),
                                                                      float(wildcards.scaling),
                                                                      image, min_ecc, max_ecc, params.cache_dir)
-                    fig = fov.figures.pooling_window_size(model.PoolingWindows, image)
+                    fig = fov.figures.pooling_window_example(model.PoolingWindows, image)
                     fig.savefig(output[0])
 
 

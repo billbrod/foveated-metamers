@@ -31,7 +31,7 @@
     {
         "mem": "{resources.mem}GB"
     },
-    "window_size_figure":
+    "window_example_figure":
     {
         "mem": "{resources.mem}GB"
     },

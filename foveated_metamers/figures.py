@@ -264,8 +264,8 @@ def scaling_comparison_figure(model_name, image_name, scaling_vals, seed, window
     return fig
 
 
-def pooling_window_size(windows, image, target_eccentricity=24,
-                        windows_scale=0, **kwargs):
+def pooling_window_example(windows, image, target_eccentricity=24,
+                           windows_scale=0, **kwargs):
     """Plot example window on image.
 
     This plots a single window, as close to the target_eccentricity as
@@ -500,6 +500,53 @@ def synthesis_video(metamer_save_path, model_name=None):
             anim.save(path)
         else:
             fig.savefig(path)
+
+
+def pooling_window_area(windows, windows_scale=0, units='degrees'):
+    """Plot window area as function of eccentricity.
+
+    Plots the area of the window bands as function of eccentricity, with a
+    horizontal line corresponding to a single pixel.
+
+    Parameters
+    ----------
+    windows : po.simul.PoolingWindows
+        The PoolingWindows object to plot.
+    windows_scale : int, optional
+        The scale of the windows to plot. If greater than 0, we down-sampled
+        image by a factor of 2 that many times so they plot correctly. If
+        units=='degrees', only the one-pixel line will change for different
+        scales.
+    units: {'degrees', 'pixels'}, optional
+        Which unit to plot eccentricity and area in.
+
+    Returns
+    -------
+    fig : plt.Figure
+        The figure containing the plot.
+
+    """
+    fig = windows.plot_window_areas(units, scale_num=windows_scale,
+                                    figsize=(15, 5), ax=ax)
+    if units == 'degrees':
+        # half is the smallest windows (for our models, which use gaussian
+        # windows), full the largest.
+        ylim = (windows.window_approx_area_degrees['half'].min(),
+                windows.window_approx_area_degrees['full'].max())
+        one_pixel_line = 1 / windows.deg_to_pix[windows_scale]
+    elif units == 'pixels':
+        # half is the smallest windows (for our models, which use gaussian
+        # windows), full the largest.
+        ylim = (windows.window_approx_area_pixels['half'].min(),
+                windows.window_approx_area_pixels['full'].max())
+        one_pixel_line = 1
+    ylim = plotting.get_log_ax_lims(np.array(ylim), base=10)
+    xlim = fig.axes[0].get_xlim()
+    fig.axes[0].hlines(one_pixel_line, *xlim, colors='r', linestyles='--',
+                       label='one pixel')
+    fig.axes[0].set(yscale='log', xscale='log', ylim=ylim, xlim=xlim)
+    fig.axes[0].legend()
+    return fig
 
 
 def simulate_num_trials(params, row='critical_scaling_true', col='variable'):
