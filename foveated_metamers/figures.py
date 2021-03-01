@@ -513,10 +513,9 @@ def pooling_window_area(windows, windows_scale=0, units='degrees'):
     windows : po.simul.PoolingWindows
         The PoolingWindows object to plot.
     windows_scale : int, optional
-        The scale of the windows to plot. If greater than 0, we down-sampled
-        image by a factor of 2 that many times so they plot correctly. If
-        units=='degrees', only the one-pixel line will change for different
-        scales.
+        The scale of the windows to plot. If units=='degrees', only the
+        one-pixel line will change for different scales (in pixels, areas will
+        drop by factor of 4).
     units: {'degrees', 'pixels'}, optional
         Which unit to plot eccentricity and area in.
 
@@ -544,7 +543,13 @@ def pooling_window_area(windows, windows_scale=0, units='degrees'):
     xlim = fig.axes[0].get_xlim()
     fig.axes[0].hlines(one_pixel_line, *xlim, colors='r', linestyles='--',
                        label='one pixel')
-    fig.axes[0].set(yscale='log', xscale='log', ylim=ylim, xlim=xlim)
+    fig.axes[0].set(yscale='log', xscale='log', ylim=ylim, xlim=xlim,
+                    title=("Window area as function of eccentricity.\n"
+                           "Half: at half-max amplitude, Full: $\pm$ 3 std dev, Top: 0 for Gaussians\n"
+                           "Area is radial width * angular width * $\pi$/4\n"
+                           "(radial width is double angular at half-max, "
+                           "more than that at full, but ratio approaches "
+                           "two as scaling shrinks / windows get smaller)"))
     fig.axes[0].legend()
     return fig
 
@@ -616,6 +621,8 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, col_wrap=5,
         FacetGrid containing the figure.
 
     """
+    ## CHANGE THIS TO A LINEPLOT, using markers=True, err_style='bars' (and
+    ## might need to turn on style)
     g = sns.catplot(x='scaling', y='hit_or_miss_numeric', data=expt_df,
                     kind='point', col=col, row=row, hue=hue,
                     col_order=sorted(expt_df[col].unique()), ci=ci,
