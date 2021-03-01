@@ -554,6 +554,61 @@ def pooling_window_area(windows, windows_scale=0, units='degrees'):
     return fig
 
 
+def synthesis_pixel_diff(stim, stim_df, scaling):
+    """Show average pixel-wise squared error for a given scaling value.
+
+    WARNING: This is reasonably memory-intensive.
+
+    stim has dtype np.uint8. We convert back to np.float32 (and rescale to [0,
+    1] interval) for these calculations.
+
+    Parameters
+    ----------
+    stim : np.ndarray
+        The array of metamers we want to check, should correspond to stim_df
+    stim_df : pd.DataFrame
+        The metamer information dataframe, as created by
+        stimuli.create_metamer_df
+    scaling : float
+        The scaling value to check
+
+    Returns
+    -------
+    fig : plt.Figure
+        The figure containing the plot.
+    errors : np.ndarray
+        array of shape (stim_df.image_name.nunique(), *stim.shape[-2:])
+        containing the squared pixel-wise errors
+
+    """
+    stim_df = stim_df.query('scaling in [@scaling, None]')
+    num_seeds = stim_df.groupby('image_name').seed.nunique().mean()
+    if int(num_seeds) != num_seeds:
+        raise Exception("not all images have same number of seeds!")
+    errors = np.zeros((int(num_seeds), stim_df.image_name.nunique(),
+                       *stim.shape[-2:]), dtype=np.float32)
+    errors *= np.nan
+    for i, (im, g) in enumerate(stim_df.groupby('image_name')):
+        target_img = stim[g.query('scaling in [None]').index[0]]
+        # convert to float in a piecemeal fashion (rather than all at once in
+        # the beginning) to reduce memory load. Can't select the subset of
+        # images we want either, because then indices no longer line up
+        target_img = utils.convert_im_to_float(target_img)
+        for j, (seed, h) in enumerate(g.groupby('seed')):
+            if len(h.index) > 1:
+                raise Exception(f"Got more than 1 image with seed {seed} and "
+                                f"image name {im}")
+            synth_img = utils.convert_im_to_float(stim[h.index[0]])
+            errors[j, i] = np.square(synth_img - target_img)
+    errors = np.nanmean(errors, 0)
+    titles = [t.replace('_range-.05,.95_size-2048,2600', '')
+              for t in stim_df.image_name.unique()]
+    fig = pt.imshow(errors, zoom=.5, col_wrap=5, title=sorted(titles))
+    fig.suptitle(f'Pixelwise squared errors for scaling {scaling}, averaged across seeds',
+                 va='bottom', fontsize=fig.axes[0].title.get_fontsize()*1.25)
+    return fig, errors
+
+
 def simulate_num_trials(params, row='critical_scaling_true', col='variable'):
     """Create figure summarizing num_trials simulations.
 

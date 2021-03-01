@@ -1315,6 +1315,77 @@ rule window_example_figure:
                     fig.savefig(output[0])
 
 
+rule pixelwise_diff_figure:
+    input:
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_comp-{comp}.npy'),
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description_comp-{comp}.csv'),
+    output:
+        op.join(config['DATA_DIR'], 'figures', 'paper', '{model_name}',
+                'scaling-{scaling}_comp-{comp}_pixelwise_errors.png'),
+        op.join(config['DATA_DIR'], 'errors', '{model_name}',
+                'scaling-{scaling}_comp-{comp}_pixelwise_errors.npy'),
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', 'paper', '{model_name}',
+                'scaling-{scaling}_comp-{comp}_pixelwise_errors.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', 'paper', '{model_name}',
+                'scaling-{scaling}_comp-{comp}_pixelwise_errors_benchmark.txt')
+    run:
+        import foveated_metamers as fov
+        import seaborn as sns
+        import contextlib
+        import numpy as np
+        import pandas as pd
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                font_scale = 1
+                stim = np.load(input[0])
+                stim_df = pd.read_csv(input[1])
+                with sns.plotting_context(wildcards.context, font_scale=font_scale):
+                    fig, errors = fov.figures.synthesis_pixel_diff(stim, stim_df, float(wildcards.scaling))
+                    fig.savefig(output[0], bbox_inches='tight')
+                    np.save(output[1], errors)
+
+
+rule all_pixelwise_diff_figure:
+    input:
+        lambda wildcards, params: [op.join(config['DATA_DIR'], 'errors', '{{model_name}}',
+                                           'scaling-{}_comp-{{comp}}_pixelwise_errors.npy').format(sc)
+                                   for sc in params.model_dict['scaling']],
+    output:
+        op.join(config['DATA_DIR'], 'figures', 'paper', '{model_name}',
+                'comp-{comp}_all_pixelwise_errors.png'),
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', 'paper', '{model_name}',
+                'comp-{comp}_all_pixelwise_errors.log'),
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', 'paper', '{model_name}',
+                'comp-{comp}_all_pixelwise_errors_benchmark.txt'),
+    params:
+        model_dict = lambda wildcards: config[wildcards.model_name.split('_')[0]]
+    run:
+        import foveated_metamers as fov
+        import seaborn as sns
+        import contextlib
+        import numpy as np
+        import pandas as pd
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                font_scale = 1
+                scaling = params.model_dict['scaling']
+                errors = np.zeros((len(scaling),
+                                   *[int(i) for i in config['IMAGE_NAME']['size'].split(',')]),
+                                  dtype=np.float32)
+                for i, f in enumerate(input):
+                    errors[i] = np.load(f).mean(0)
+                with sns.plotting_context(wildcards.context, font_scale=font_scale):
+                    fig = pt.imshow(errors, title=[f'scaling {sc}' for sc in scaling],
+                                    zoom=.5, col_wrap=4)
+                    fig.suptitle('Pixelwise squared errors, averaged across images',
+                                 va='bottom', fontsize=fig.axes[0].title.get_fontsize()*1.25)
+                    fig.savefig(output[0], bbox_inches='tight')
+
+
 rule synthesis_video:
     input:
         METAMER_TEMPLATE_PATH.replace('_metamer.png', '.pt'),
