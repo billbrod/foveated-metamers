@@ -1368,6 +1368,7 @@ rule all_pixelwise_diff_figure:
         import seaborn as sns
         import contextlib
         import numpy as np
+        import pyrtools as pt
         import pandas as pd
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
@@ -1378,10 +1379,10 @@ rule all_pixelwise_diff_figure:
                                   dtype=np.float32)
                 for i, f in enumerate(input):
                     errors[i] = np.load(f).mean(0)
-                with sns.plotting_context(wildcards.context, font_scale=font_scale):
-                    fig = pt.imshow(errors, title=[f'scaling {sc}' for sc in scaling],
-                                    zoom=.5, col_wrap=4)
-                    fig.suptitle('Pixelwise squared errors, averaged across images',
+                with sns.plotting_context('paper', font_scale=font_scale):
+                    fig = pt.imshow([e for e in errors], zoom=.5, col_wrap=4,
+                                    title=[f'scaling {sc}' for sc in scaling])
+                    fig.suptitle('Pixelwise squared errors, averaged across images\n',
                                  va='bottom', fontsize=fig.axes[0].title.get_fontsize()*1.25)
                     fig.savefig(output[0], bbox_inches='tight')
 
