@@ -306,11 +306,13 @@ def generate_indices_split(df, seed, comparison='met_v_ref', n_repeats=None):
         Whether to create the indices for comparing metamers against each other
         or against the reference image
     n_repeats : int or None, optional
-        How many repeats for each (image, scaling). Must be divisible by 4 (so
-        it's on the left and right an equal number of times, as well as
-        balanced across whether reference or metamer is presented first).
-        Default (None) doesn't change anything, so that each (image, scaling,
-        seed) shows up on left and right each once. 12 is the value used for our
+        How many repeats for each (image, scaling).
+        - If comparison='met_v_ref': must be divisible by 4 (so we're balanced
+          across the left and right, as well as across whether reference or
+          metamer is presented first).
+        - If comparison='met_v_met': must be divisible by 2 (so we're balanced
+          across the left and right).
+        Default (None) doesn't change anything . 12 is the value used for our
         experiment. Will balance across seeds as best as possible.
 
     Returns
@@ -320,8 +322,13 @@ def generate_indices_split(df, seed, comparison='met_v_ref', n_repeats=None):
         images * number of scaling values.
 
     """
-    if n_repeats is not None and n_repeats % 4 != 0:
-        raise Exception(f"n_repeats must be even but got {n_repeats}!")
+    if n_repeats is not None:
+        if comparison == 'met_v_ref' and n_repeats % 4 != 0:
+            raise Exception("When comparison is 'met_v_ref', n_repeats"
+                            f" must be divisible by 4 but got {n_repeats}!")
+        elif comparison == 'met_v_met' and n_repeats % 2 != 0:
+            raise Exception("When comparison is 'met_v_met', n_repeats "
+                            f"must be even but got {n_repeats}!")
     np.random.seed(seed)
     # get the trial types array, which gives the indices for images to compare
     # against each other.
@@ -330,16 +337,25 @@ def generate_indices_split(df, seed, comparison='met_v_ref', n_repeats=None):
     # left and right, respectively, of initial stimulus, and the final is the
     # image to change to.
     if comparison == 'met_v_met':
-        if n_repeats is not None and n_repeats != (mets.shape[-1] * mets.shape[-1]-1):
-            # there will be n*(n-1) number of repeats, where n is the number of
-            # seeds (equivalently, the number of metamers with the same image,
-            # scaling). need to think through how to implement any other values...
-            raise NotImplementedError("Haven't thought through how to implement"
-                                      " n_repeats for met_v_met yet!")
         # from each set of comparisons, grab all possible permutations of list
         # 2. that is, for each set of metamers with same scaling and reference
         # image, get every possible combination of two, and both orderings
         trials = np.array([list(itertools.permutations(t, 2)) for t in mets])
+        if n_repeats is not None:
+            # if we don't change anything from above, there will be 2*n*(n-1)
+            # number of repeats, where n is the number of seeds (equivalently,
+            # the number of metamers with the same image, scaling): n choices
+            # for the first image, n for the second, and 2 because we want them
+            # to show up on both the left and the right. trials.shape[-1] will
+            # be n*n-1 already (because that's how many permutations of n
+            # elements of length 2 there are).
+            base_repeats = 2 * trials.shape[-1]
+            # then we pad out trials so that trials.shape[-1] is n_repeats//2
+            # and that each seed shows up with the same frequency (or as close
+            # as possible)
+            trials = np.tile(trials, (1, int(np.ceil(n_repeats / base_repeats)),
+                                      1))
+            trials = trials[:, :n_repeats//2]
         # then duplicate the first image (so it shows up on both left and
         # right)
         trials = np.dstack([trials[:, :, 0], trials])
