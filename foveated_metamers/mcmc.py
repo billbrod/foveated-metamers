@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
+"""Code for using MCMC to fit psychophysical data."""
 import pyro
+import xarray
+import numpy as np
 import pyro.distributions as dist
 import torch
 import arviz as az
@@ -43,53 +46,126 @@ def response_model(scaling, model='V1'):
     prob_corr = pyro.deterministic('probability_correct',
                                    ((1 - lapse_rate) * prop_corr +
                                     lapse_rate * chance_correct))
-    return pyro.sample('responses', dist.Bernoulli(prob_corr, validate_args=True))
+    with pyro.plate('subject_name', 3):
+        return pyro.sample('responses', dist.Bernoulli(prob_corr, validate_args=True))
 
 
-def _add_coords(inf_data, scaling, trials):
-    """Add coordinates to inf_data
+def assemble_dataset_from_expt_df(expt_df,
+                                  dep_variables=['image_name', 'trial_type',
+                                                 'subject_name']):
+    """Create Dataset from expt_df.
 
-    Modifies inf_data in place to add scaling and trials coordinates to
-    probability_correct and responses data.
+    Creates the xarray Dataset necessary for using MCMC to fit psychophysical
+    curve to the expt_df, as created by `analysis.create_experiment_df` and
+    `analysis.add_response_info`.
 
     Parameters
     ----------
-    inf_data : arviz.InferenceData
-        InferenceData object with posterior_predictive, prior_predictive, and
-        observed_data Datasets.
-    scaling, trials : torch.Tensor
-        The tensors containing data to add as scaling and trial coordinates.
+    expt_df : pd.DataFrame
+        DataFrame containing the results of at least one session for at least
+        one subject, as created by a combination of
+        `analysis.create_experiment_df` and `analysis.add_response_info`, then
+        concatenating them across runs (and maybe sessions / subjects).
+    dep_variables : list, optional
+        List of columns in expt_df to hold onto for investigation when fitting
+        the curve (in addition to scaling).
+
+    Returns
+    -------
+    dataset : xarray.Dataset
+        Dataset containing the response data, with coordinates properly
+        labeled. The data variable 'observed_responses' holds the data (was
+        called 'hit_or_miss_numeric' in expt_df).
 
     """
-    def _add_coords_helper(dataset):
-        # this hacky approach is modified from from
-        # https://stackoverflow.com/a/49916326/4659293
-        dims = ['probability_correct_dim_0', 'responses_dim_0', 'responses_dim_1']
-        dims = [d for d in dims if d in dataset]
-        remap_dims = {}
-        for d in dims:
-            if dataset[d].shape == scaling.shape:
-                remap_dims[d] = 'scaling'
-            else:
-                remap_dims[d] = 'trials'
-        new_coords = {name: val.numpy() for name, val in zip(['scaling', 'trials'],
-                                                             [scaling, trials])}
-        dataset = dataset.reset_index(dims, drop=True)
-        dataset = dataset.assign_coords({k: new_coords[k] for k in set(remap_dims.values())})
-        for col in ['probability_correct', 'responses']:
-            restricted_remap_dims = {k: remap_dims[k] for k in remap_dims if col in k}
-            dataset[col] = dataset[col].rename(restricted_remap_dims)
-        return dataset
-    # need to use the inf_data.col syntax (instead fo inf_data['col']), so
-    # can't loop through this and need to do each individually
-    inf_data.posterior_predictive = _add_coords_helper(inf_data.posterior_predictive)
-    inf_data.prior_predictive = _add_coords_helper(inf_data.prior_predictive)
-    inf_data.observed_data = _add_coords_helper(inf_data.observed_data)
-    # this modifies it in place, so don't need to return anything
+    expt_df = expt_df[dep_variables + ['scaling', 'hit_or_miss_numeric']]
+    expt_df = expt_df.set_index(dep_variables + ['scaling'])
+    for n in expt_df.index.unique():
+        expt_df.loc[n, 'trials'] = np.arange(len(expt_df.loc[n]))
+    dataset = expt_df.reset_index().set_index(['trials', 'scaling'] +
+                                              dep_variables).to_xarray()
+    dataset = dataset.rename({'hit_or_miss_numeric': 'observed_responses'})
+    return dataset
 
 
-def run_inference(scaling, observed_responses, model='V1', step_size=.1, num_draws=1000,
-                  num_chains=1, warmup_steps=500, **nuts_kwargs):
+def simulate_dataset(critical_scaling, proportionality_factor,
+                     scaling=torch.logspace(-1, -.3, steps=8),
+                     num_trials=30):
+    r"""Simulate a dataset to fit psychophysical curve to.
+
+    Parameters
+    ----------
+    proportionality_factor : float
+        The "gain" of the curve, determines how quickly it rises, parameter
+        $\alpha_0$ in [1]_, equation 17. Currently only handle single values
+        for this (i.e., one curve)
+    critical_scaling : float
+        The "threshold" of the curve, the scaling value at which
+        discriminability falls to 0 and thus performance falls to chance,
+        parameter $s_0$ in [1]_, equation 17. This should be more consistent,
+        and is the focus of this study. Currently only handle single values
+        for this (i.e., one curve)
+    scaling : torch.tensor, optional
+        The scaling values to test. Default corresponds roughly to V1 tested
+        values.
+    num_trials : int, optional
+        The number of trials to have per scaling value.
+
+    Returns
+    -------
+    simul : xarray.Dataset
+
+        simulated dataset containing the response data, with coordinates
+        properly labeled.
+
+    """
+    prop_corr = curve_fit.proportion_correct_curve(scaling,
+                                                   proportionality_factor,
+                                                   critical_scaling)
+    obs = torch.distributions.Bernoulli(prop_corr).sample((num_trials,))
+    dims = ('trials', 'scaling', 'image_name',
+            'trial_type', 'subject_name')
+    while obs.ndim < len(dims):
+        # add an extra dimension for each of these
+        obs = obs.unsqueeze(-1)
+    coords = {'scaling': scaling.numpy(), 'trials': np.arange(num_trials),
+              'subject_name': [1], 'image_name': ['simulated'],
+              'trial_type': ['simulated']}
+    return xarray.Dataset({'observed_responses': (dims, obs.numpy())}, coords)
+
+
+def _assign_inf_dims(samples_dict, dataset,
+                     vars=['responses', 'probability_correct']):
+    """Figure out the mapping between vars and coords.
+
+    It's annoying to line up variables and coordinates. this does the best it
+    can: if a variable has a coordinate, it will be in the same order as in the
+    dataset and have the same number of values. So if dataset has coords
+    (trials, scaling, image_name, trial_type, subject_name) with shape (30, 8,
+    3, 2, 3), then variables could have coords (trials, scaling, image_name,
+    subject_name) but not (trials, scaling, subject_name, image_name). In this
+    example, if the variable was shape (30, 8, 3), we would not know if that
+    corresponded to (trials, scaling, subject_name) or (trials, scaling,
+    image_name) -- would assume the latter.
+
+    """
+    dims = {}
+    for v in vars:
+        var_shape = samples_dict[v].shape
+        dims[v] = []
+        i = 1
+        for d in dataset.observed_responses.dims:
+            if len(dataset.coords[d]) == var_shape[i]:
+                dims[v] += [d]
+                i += 1
+            if i >= len(var_shape):
+                break
+    return dims
+
+
+def run_inference(dataset, model='V1', step_size=.1,
+                  num_draws=1000, num_chains=1, warmup_steps=500,
+                  **nuts_kwargs):
     """Run MCMC inference for our response_model, conditioned on data.
 
     Uses NUTS sampler.
@@ -128,6 +204,16 @@ def run_inference(scaling, observed_responses, model='V1', step_size=.1, num_dra
         posterior_predictive, prior, prior_predictive, and observed_data.
 
     """
+    if dataset.observed_responses.dims[:2] != ('trials', 'scaling'):
+        raise Exception("First two dimensions of observed responses must "
+                        "be trials and scaling!")
+    observed_responses = torch.tensor(dataset.observed_responses.values,
+                                      dtype=torch.float32)
+    scaling = torch.tensor(dataset.scaling.values, dtype=torch.float32)
+    # get scaling into the appropriate shape -- scaling on the first dimension,
+    # and then repeated to match the shape of observed_responses after that
+    scaling = scaling.expand(*([1]*(observed_responses.ndim-2)), len(scaling))
+    scaling = scaling.transpose(-1, 0).repeat(1, *observed_responses.shape[2:])
     conditioned_responses = pyro.condition(response_model,
                                            data={'responses': observed_responses})
     mcmc_kernel = pyro.infer.NUTS(conditioned_responses, step_size=step_size,
@@ -140,11 +226,29 @@ def run_inference(scaling, observed_responses, model='V1', step_size=.1, num_dra
                                   num_samples=num_draws*num_chains)
     posterior_pred = pyro.infer.Predictive(response_model,
                                            posterior_samples=mcmc.get_samples())
-    inf_data = az.from_pyro(mcmc,
-                            prior=prior(scaling, model),
-                            posterior_predictive=posterior_pred(scaling, model))
-    # this changes inf_data in place, so don't need to grab it
-    _add_coords(inf_data, scaling, torch.arange(observed_responses.shape[0],))
+    # need to create each of these separately because they have different coords
+    prior = prior(scaling, 'V1')
+    # for some reason, prior squeezes everything out when creating inf data
+    prior_dims = _assign_inf_dims({k: v.squeeze() for k, v in prior.items()},
+                                  dataset)
+    prior = az.from_pyro(prior=prior, coords=dataset.coords, dims=prior_dims)
+    posterior_pred = posterior_pred(scaling, 'V1')
+    # for some reason, this has a weird dummy dimension. this removes that
+    # (assuming it's only shape 1; else I should probably be aware of it)
+    posterior_pred['probability_correct'] = posterior_pred['probability_correct'].squeeze(1)
+    post_dims = _assign_inf_dims(posterior_pred, dataset)
+    posterior_pred = az.from_pyro(posterior_predictive=posterior_pred,
+                                  coords=dataset.coords, dims=post_dims)
+    # the observed data will have a trials dim first
+    post_dims['responses'].insert(0, 'trials')
+    inf_data = (az.from_pyro(mcmc, coords=dataset.coords, dims=post_dims) +
+                prior + posterior_pred)
+    # because of how we create it, prior predictive gets mushed up with prior
+    # -- we move that around here.
+    inf_data.add_groups({'prior_predictive':
+                         inf_data.prior[['responses', 'probability_correct']]})
+    inf_data.prior = inf_data.prior.drop_vars(['responses', 'probability_correct',
+                                               'scaling'])
     # drop probability_correct from observed data because it doesn't make sense
     # -- the probability correct in our response_model has lapse_chance (one of
     # our parameters) built in and so doesn't make sense to talk about
