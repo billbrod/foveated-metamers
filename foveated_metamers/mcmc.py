@@ -14,6 +14,8 @@ def response_model(scaling, model='V1'):
     - critical_scaling: Beta(5,25) for V1, Beta(2, 70) for RGC
     - proportionality_factor: Exponential(.2)
 
+    This works on both GPU and CPU.
+
     Parameters
     ----------
     scaling : torch.Tensor
@@ -28,11 +30,19 @@ def response_model(scaling, model='V1'):
 
     """
     lapse_rate = pyro.sample('pi_l', dist.Beta(2, 50))
-    # Beta(5, 25) for V1, Beta(2, 70) for RGC
-    critical_scaling = pyro.sample('s_0', dist.Beta(5, 25))
+    # different priors for the two models
+    if model == 'V1':
+        critical_scaling = pyro.sample('s_0', dist.Beta(5, 25))
+    elif model == 'RGC':
+        critical_scaling = pyro.sample('s_0', dist.Beta(2, 70))
     # expected value of 5. don't really have a good reason to do anything for this, but it can't be negative
     proportionality_factor = pyro.sample('a_0', dist.Exponential(.2))
-    # because this is a 2AFC task
+    # check if devices got mismatched
+    if scaling.device != lapse_rate.device:
+        lapse_rate = lapse_rate.to(scaling.device)
+        critical_scaling = critical_scaling.to(scaling.device)
+        proportionality_factor = proportionality_factor.to(scaling.device)
+        # because this is a 2AFC task
     chance_correct = .5
     # this is the value without the lapse rate
     prop_corr = curve_fit.proportion_correct_curve(scaling, proportionality_factor, critical_scaling)
@@ -91,6 +101,10 @@ def run_inference(scaling, observed_responses, model='V1', step_size=.1, num_dra
 
     Uses NUTS sampler.
 
+    This currently doesn't work on GPU, see
+    https://github.com/arviz-devs/arviz/issues/1529. However GPU also appears
+    to be about 2x slower than CPU (at least on my laptop), which is weird.
+
     Parameters
     ----------
     scaling : torch.Tensor
@@ -121,6 +135,10 @@ def run_inference(scaling, observed_responses, model='V1', step_size=.1, num_dra
         posterior_predictive, prior, prior_predictive, and observed_data.
 
     """
+    if scaling.device != torch.device('cpu'):
+        torch.set_default_tensor_type(torch.cuda.FloatTensor)
+    else:
+        torch.set_default_tensor_type(torch.FloatTensor)
     conditioned_responses = pyro.condition(response_model,
                                            data={'responses': observed_responses})
     mcmc_kernel = pyro.infer.NUTS(conditioned_responses, step_size=step_size,

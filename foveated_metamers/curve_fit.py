@@ -44,7 +44,8 @@ def calculate_discriminability(scaling, proportionality_factor, critical_scaling
        Neuroscience, 14(9), 1195–1201. http://dx.doi.org/10.1038/nn.2889
 
     """
-    scaling = torch.tensor(scaling)
+    if not isinstance(scaling, torch.Tensor):
+        scaling = torch.tensor(scaling)
     discrim = torch.zeros_like(scaling)
     masks = [scaling <= critical_scaling, scaling > critical_scaling]
     vals = [torch.zeros_like(scaling),
