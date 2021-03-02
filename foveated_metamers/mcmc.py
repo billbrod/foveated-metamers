@@ -176,11 +176,9 @@ def run_inference(dataset, model='V1', step_size=.1,
 
     Parameters
     ----------
-    scaling : torch.Tensor
-        1d, scaling value(s) to calculate discriminability for.
-    observed_responses : torch.Tensor
-        Tensor of shape (num_trials, len(scaling)). The observed responses,
-        which we'll use to condition on our model.
+    dataset: xarray.Dataset
+        Dataset containing observed_responses data variable and at least the
+        coordinates trials and scaling (must be first two).
     model : {'V1', 'RGC'}
         Whether we should use V1 or RGC prior for critical_scaling.
     step_size : float, optional
