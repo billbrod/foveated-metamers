@@ -273,7 +273,15 @@ def map_flat_line(x, y, data, linestyles='--', colors='k', ax=None, **kwargs):
     # we set color with the colors kwarg, don't want to confuse it.
     kwargs.pop('color')
     if isinstance(x, str):
-        xmin, xmax = data[x].min(), data[x].max()
+        try:
+            xmin, xmax = data[x].min(), data[x].max()
+        except KeyError:
+            # it looks like the above works with catplot / related functions
+            # (i.e., when seaborn thought the data was categorical), but not
+            # when it's relplot / related functions (i.e., when seaborn thought
+            # data was numeric). in that case, the columns have been renamed to
+            # 'x', 'y', etc.
+            xmin, xmax = data['x'].min(), data['x'].max()
         # then this looks like a categorical plot
         if (ax.get_xlim()[-1] - xmax) / xmax > 5:
             xmin = 0
@@ -281,7 +289,15 @@ def map_flat_line(x, y, data, linestyles='--', colors='k', ax=None, **kwargs):
         lines = ax.hlines(y, xmin, xmax, linestyles=linestyles, colors=colors,
                           **kwargs)
     elif isinstance(y, str):
-        ymin, ymax = data[y].min(), data[y].max()
+        try:
+            ymin, ymax = data[y].min(), data[y].max()
+        except KeyError:
+            # it looks like the above works with catplot / related functions
+            # (i.e., when seaborn thought the data was categorical), but not
+            # when it's relplot / related functions (i.e., when seaborn thought
+            # data was numeric). in that case, the columns have been renamed to
+            # 'x', 'y', etc.
+            ymin, ymax = data['y'].min(), data['y'].max()
         # then this looks like a categorical plot
         if (ax.get_ylim()[-1] - ymax) / ymax > 5:
             ymin = 0

@@ -679,12 +679,21 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, col_wrap=5,
         FacetGrid containing the figure.
 
     """
-    ## CHANGE THIS TO A LINEPLOT, using markers=True, err_style='bars' (and
-    ## might need to turn on style)
-    g = sns.catplot(x='scaling', y='hit_or_miss_numeric', data=expt_df,
-                    kind='point', col=col, row=row, hue=hue,
-                    col_order=sorted(expt_df[col].unique()), ci=ci,
-                    col_wrap=col_wrap)
+    # copying from how seaborn.pointplot handles this, because they look nicer
+    lw = mpl.rcParams["lines.linewidth"] * 1.8
+    # annoyingly, scatter and plot interpret size / markersize differently: for
+    # plot, it's roughly the area, whereas for scatter it's the diameter. so
+    # the following (which uses plot), should use sqrt of the value that gets
+    # used in pointplot (which uses scatter). I also added an extra factor of
+    # sqrt(2) (by changing the 2 to a 4 in the sqrt below), which looks
+    # necessary
+    ms = np.sqrt(np.pi * np.square(lw) * 4)
+    g = sns.relplot(x='scaling', y='hit_or_miss_numeric', data=expt_df,
+                    kind='line', style=hue, col=col, row=row, hue=hue,
+                    markers=expt_df[hue].nunique()*['o'], dashes=False,
+                    err_style='bars', col_order=sorted(expt_df[col].unique()), ci=ci,
+                    col_wrap=col_wrap, linewidth=lw, markersize=ms,
+                    err_kws={'linewidth': lw})
 
     g.map_dataframe(plotting.map_flat_line, x='scaling', y=.5, colors='k')
     g.set_ylabels(f'Proportion correct (with {ci}% CI)')
