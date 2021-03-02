@@ -8,3 +8,4 @@ from . import curve_fit
 from . import simulate
 from . import plotting
 from . import statistics
+from . import mcmc
