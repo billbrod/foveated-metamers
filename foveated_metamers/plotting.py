@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Misc plotting functions."""
 import numpy as np
+import seaborn as sns
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 
 def _jitter_data(data, jitter):
@@ -399,4 +401,75 @@ def title_experiment_summary_plots(g, expt_df, summary_text, comparison='ref',
     g.fig.suptitle(f"{summary_text} for {subj_str}, {sess_str}."
                    f" Comparing metamers and {comp_str}. {post_text}{end_newlines}",
                    va='bottom')
+    return g
+
+
+def lineplot_like_pointplot(data, x, y, col=None, row=None, hue=None, ci=95,
+                            col_wrap=None, ax=None, **kwargs):
+    """Make a lineplot that looks like pointplot
+
+    Pointplot looks nicer than lineplot for data with few points, but it
+    assumes the data is categorical. This makes a lineplot that looks like
+    pointplot, but can handle numeric data.
+
+    Two modes here:
+
+    - relplot: if ax is None, we call relplot, which allows for row and col to
+      be set and creates a whole figure
+
+    - lineplot: if ax is either an axis to plot on or `'map'` (in which case we
+      grab `ax=plt.gca()`), then we call lineplot and create a single axis.
+      Obviously, col and row can't be set, but you also have to be carefulf or
+      how hue is mapped across multiple facets
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        DataFrame to plot
+    x, y, col, row, hue : str or None
+        The columns of data to plot / facet on those dimensions.
+    ci : int, optional
+        What size confidence interval to draw
+    col_wrap : int or None
+        How many columns before wrapping
+    ax : {None, matplotlib axis, 'map'}, optional
+        If None, we create a new figure using relplot. If axis, we plot on that
+        axis using lineplot. If `'map'`, we grab the current axis and plot on
+        that with lineplot.
+    kwargs :
+        passed to relplot / lineplot
+
+    Returns
+    -------
+    g : FacetGrid or axis
+        In relplot mode, a FacetGrid; in lineplot mode, an axis
+
+    """
+    # copying from how seaborn.pointplot handles this, because they look nicer
+    lw = mpl.rcParams["lines.linewidth"] * 1.8
+    # annoyingly, scatter and plot interpret size / markersize differently: for
+    # plot, it's roughly the area, whereas for scatter it's the diameter. so
+    # the following (which uses plot), should use sqrt of the value that gets
+    # used in pointplot (which uses scatter). I also added an extra factor of
+    # sqrt(2) (by changing the 2 to a 4 in the sqrt below), which looks
+    # necessary
+    ms = np.sqrt(np.pi * np.square(lw) * 4)
+    if ax is None:
+        if col is not None:
+            col_order = kwargs.pop('col_order', sorted(data[col].unique()))
+        else:
+            col_order = None
+        g = sns.relplot(x=x, y=y, data=data, kind='line', style=hue, col=col,
+                        row=row, hue=hue, markers=data[hue].nunique()*['o'],
+                        dashes=False, err_style='bars', ci=ci,
+                        col_order=col_order, col_wrap=col_wrap, linewidth=lw,
+                        markersize=ms, err_kws={'linewidth': lw}, **kwargs)
+    else:
+        if isinstance(ax, str) and ax == 'map':
+            ax = plt.gca()
+        ax = sns.lineplot(x=x, y=y, data=data, style=hue, hue=hue,
+                          markers=data[hue].nunique()*['o'], dashes=False,
+                          err_style='bars', ci=ci, linewidth=lw, markersize=ms,
+                          err_kws={'linewidth': lw}, **kwargs)
+        g = ax
     return g

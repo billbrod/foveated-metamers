@@ -11,17 +11,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import os.path as op
-from . import utils, plotting, analysis
-
-V1_TEMPLATE_PATH = op.join('/home/billbrod/Desktop/metamers', 'metamers_display', 'V1_norm_s6_'
-                           'gaussian', '{image_name}', 'scaling-{scaling}', 'opt-Adam',
-                           'fr-0_lc-1_cf-0.01_clamp-True', 'seed-{seed}_init-white_lr-0.01'
-                           'rate}_e0-0.5_em-30.2_iter-{max_iter}_thresh-1e-08_gpu-{gpu}_metamer_'
-                           'gamma-corrected.png')
-RGC_TEMPLATE_PATH = op.join('/home/billbrod/Desktop/metamers', 'metamers_display', 'RGC_gaussian',
-                            '{image_name}', 'scaling-{scaling}', 'opt-Adam', 'fr-0_lc-'
-                            '1_cf-0_clamp-True', 'seed-{seed}_init-white_lr-0.01_e0-3.71_em-30.2_'
-                            'iter-750_thresh-1e-08_gpu-0_metamer_gamma-corrected.png')
+import arviz as az
+from . import utils, plotting, analysis, mcmc
 
 
 def add_cutout_box(axes, window_size=400, periphery_offset=(-800, -1000), colors='r',
@@ -679,21 +670,9 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, col_wrap=5,
         FacetGrid containing the figure.
 
     """
-    # copying from how seaborn.pointplot handles this, because they look nicer
-    lw = mpl.rcParams["lines.linewidth"] * 1.8
-    # annoyingly, scatter and plot interpret size / markersize differently: for
-    # plot, it's roughly the area, whereas for scatter it's the diameter. so
-    # the following (which uses plot), should use sqrt of the value that gets
-    # used in pointplot (which uses scatter). I also added an extra factor of
-    # sqrt(2) (by changing the 2 to a 4 in the sqrt below), which looks
-    # necessary
-    ms = np.sqrt(np.pi * np.square(lw) * 4)
-    g = sns.relplot(x='scaling', y='hit_or_miss_numeric', data=expt_df,
-                    kind='line', style=hue, col=col, row=row, hue=hue,
-                    markers=expt_df[hue].nunique()*['o'], dashes=False,
-                    err_style='bars', col_order=sorted(expt_df[col].unique()), ci=ci,
-                    col_wrap=col_wrap, linewidth=lw, markersize=ms,
-                    err_kws={'linewidth': lw})
+    g = plotting.lineplot_like_pointplot(expt_df, 'scaling',
+                                         'hit_or_miss_numeric', ci=ci, col=col,
+                                         row=row, hue=hue, col_wrap=col_wrap)
 
     g.map_dataframe(plotting.map_flat_line, x='scaling', y=.5, colors='k')
     g.set_ylabels(f'Proportion correct (with {ci}% CI)')
@@ -815,4 +794,128 @@ def compare_loss_and_performance_plot(expt_df, stim_df, col='scaling',
     g = plotting.title_experiment_summary_plots(g, expt_df,
                                                 'Performance vs. synthesis loss',
                                                 'ref', '\nHopefully no relationship here')
+    return g
+
+
+def posterior_predictive_check(inf_data, jitter_scaling=True):
+    """Plot posterior predictive check.
+
+    In order to make sure that our MCMC gave us a reasonable fit, we plot the
+    posterior predictive responses and probability correct against the observed
+    responses.
+
+    Parameters
+    ----------
+    inf_data : arviz.InferenceData
+        arviz InferenceData object (xarray-like) created by `run_inference`.
+    jitter_scaling : bool or float, optional
+        If not False, we jitter scaling values (so they don't get plotted on
+        top of each other). If True, we jitter by 5e-3, else, the amount to
+        jitter by. Will need to rework this for log axis.
+
+
+    Returns
+    -------
+    g : sns.FacetGrid
+        FacetGrid containing the figure.
+
+    """
+    df = mcmc.inf_data_to_df(inf_data, 'predictive', jitter_scaling)
+    df = df.query('distribution!="prior_predictive"')
+    g = sns.FacetGrid(df, height=5)
+    g.map_dataframe(plotting.lineplot_like_pointplot, x='scaling',
+                    y='responses', ax='map', hue='distribution', linestyle='')
+    g.map_dataframe(sns.lineplot, x='scaling', y='probability_correct',
+                    hue='distribution',
+                    linewidth=mpl.rcParams['lines.linewidth']*1.8)
+    g.add_legend()
+    g.set(xlabel='scaling', ylabel='Proportion correct',
+          title='Posterior predictive check')
+    return g
+
+
+def parameter_distributions(inf_data):
+    """Check prior and posterior parameter distributions for MCMC.
+
+    Goal of this plot is to show that data mattered, i.e., that posteriors have
+    shifted from priors.
+
+    Parameters
+    ----------
+    inf_data : arviz.InferenceData
+        arviz InferenceData object (xarray-like) created by `run_inference`.
+
+    Returns
+    -------
+    g : sns.FacetGrid
+        FacetGrid containing the figure.
+
+    """
+    df = mcmc.inf_data_to_df(inf_data, 'parameters')
+    g = sns.displot(df, hue='distribution', x='value', col='variable',
+                    facet_kws=dict(sharex=False, sharey=False), kind='kde')
+    return g
+
+
+def mcmc_diagnostics_plot(inf_data):
+    """Plot MCMC diagnostics.
+
+    This plot contains the posterior distributions and sampling trace for all
+    parameters (each chain showne), with r-hat and effective sample size (both
+    diagnostic stats) on the plots.
+
+    r-hat: ratio of average variance of samples within each chain to the
+    variance of pooled samples across chains. If all chains have converged,
+    this should be 1.
+
+    effective sample size (ESS): computed, from autocorrelation, measures
+    effective number of samples. different draws in a chain should be
+    independent samples from the posterior, so they shouldn't be
+    autocorrelated. therefore, this number should be large. if it's small,
+    probably need more warmup steps and draws.
+
+    Parameters
+    ----------
+    inf_data : arviz.InferenceData
+        arviz InferenceData object (xarray-like) created by `run_inference`.
+
+    Returns
+    -------
+    fig : plt.Figure
+        matplotlib figure containing the plots.
+
+    """
+    axes = az.plot_trace(inf_data)
+    rhat = az.rhat(inf_data.posterior)
+    ess = az.ess(inf_data.posterior)
+    for ax in axes:
+        var = ax[0].get_title()
+        ax[0].set_title(ax[0].get_title()+
+                        f', r_hat={rhat[var].data:.05f}')
+        ax[1].set_title(ax[1].get_title()+
+                        f', effective sample size={ess[var].data:.02f}')
+    fig = axes[0, 0].figure
+    fig.suptitle("Diagnostics plot for MCMC, showing distribution and sampling"
+                 " trace for each parameter", va='baseline')
+    return fig
+
+
+def parameter_jointplot(inf_data):
+    """Joint distributions of posterior parameter values.
+
+    Parameters
+    ----------
+    inf_data : arviz.InferenceData
+        arviz InferenceData object (xarray-like) created by `run_inference`.
+
+    Returns
+    -------
+    g : sns.PairGrid
+        sns PairGrid containing the plots.
+
+    """
+    g = sns.pairplot(inf_data.posterior.to_dataframe().reset_index(),
+                     vars=['pi_l', 's_0', 'a_0'],
+                     corner=True, diag_kind='kde')
+    g.fig.suptitle('Joint distributions of model parameters')
     return g

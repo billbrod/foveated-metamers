@@ -145,3 +145,49 @@ def run_inference(scaling, observed_responses, model='V1', step_size=.1, num_dra
     # observations and we need to infer the probability correct
     inf_data.observed_data = inf_data.observed_data.drop_vars('probability_correct')
     return inf_data
+
+
+def inf_data_to_df(inf_data, kind='predictive', jitter_scaling=False):
+    """Convert inf_data to a dataframe, for plotting.
+
+    Parameters
+    ----------
+    inf_data : arviz.InferenceData
+        arviz InferenceData object (xarray-like) created by `run_inference`.
+    kind : {'predictive', 'parameters'}, optional
+        Whether to create df containing predictive info (responses and
+        probability_correct) or model parameter info
+    jitter_scaling : bool or float, optional
+        If not False, we jitter scaling values (so they don't get plotted on
+        top of each other). If True, we jitter by 5e-3, else, the amount to
+        jitter by. Will need to rework this for log axis.
+
+    Returns
+    -------
+    df : pd.DataFrame
+        The DataFrame described above
+
+    """
+    if kind == 'predictive':
+        df = inf_data.observed_data.to_dataframe().reset_index()
+        df['distribution'] = 'observed_data'
+        tmp = inf_data.posterior_predictive.to_dataframe().reset_index()
+        tmp['distribution'] = 'posterior_predictive'
+        df = df.append(tmp).reset_index(drop=True)
+        tmp = inf_data.prior_predictive.to_dataframe().reset_index()
+        tmp['distribution'] = 'prior_predictive'
+        df = df.append(tmp).reset_index(drop=True)
+    elif kind == 'parameters':
+        df = inf_data.prior.to_dataframe().reset_index().melt(['chain', 'draw'])
+        df['distribution'] = 'prior'
+        tmp = inf_data.posterior.to_dataframe().reset_index().melt(['chain', 'draw'])
+        tmp['distribution'] = 'posterior'
+        df = df.append(tmp).reset_index(drop=True)
+    if jitter_scaling:
+        if jitter_scaling is True:
+            jitter_scaling = 5e-3
+        df = df.set_index('distribution')
+        for i, v in enumerate(df.index.unique()):
+            df.loc[v, 'scaling'] += i*jitter_scaling
+        df = df.reset_index()
+    return df
