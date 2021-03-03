@@ -579,9 +579,9 @@ Recommended explanation to subjects:
 > be very different. For the very similar images, we expect the task to be hard.
 > Just do your best!
 
-> You'll be comparing natural and synthesized images. The first image in each
-> pair will always be a natural image. You will receive no feedback, either
-> during or after the run.
+> You'll be comparing natural and synthesized images. The first image can be
+> either natural or synthesized, so pay attention! You will receive no feedback,
+> either during or after the run.
 
 > For this experiment, fixate on the center of the image the whole time and try
 > not to move your eyes.
@@ -657,9 +657,9 @@ First session only (on later sessions, ask if they need a refresher):
 4. Train the participant. Say:
 
 > Now, we'll do two brief training runs, each of which will last about a minute.
-> In the first, you'll be comparing natural images and noise patches; the goal
-> is so you understand the basic structure of the experiment. In the second,
-> you'll be comparing those same natural images to some of the stimuli from the
+> In the first, you'll be comparing natural images and noise; the goal is so you
+> understand the basic structure of the experiment. In the second, you'll be
+> comparing those same natural images to some of the stimuli from the
 > experiment; some will be easy, some hard. You'll receive feedback at the end
 > of the run, to make sure you understand the task. I'll remain in the room to
 > answer any questions.

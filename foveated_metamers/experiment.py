@@ -260,7 +260,7 @@ def _explain_task(win, expt_clock, comparison, fixation, text_height=50,
         comp_text = "On this run, you'll be comparing two synthesized images."
     elif comparison == 'ref':
         comp_text = ("On this run, you'll be comparing natural and synthesized images."
-                     " The first image in each pair will always be a natural image.")
+                     " The first image can be either natural or synthesized, so pay attention!")
     if train_flag:
         train_text = "For this training run, there will only be two natural images and "
         feedback_text = ("Because this is training run, we will show you your performance "
