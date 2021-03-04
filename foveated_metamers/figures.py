@@ -594,8 +594,6 @@ def synthesis_pixel_diff(stim, stim_df, scaling):
     errors = np.nanmean(errors, 0)
     titles = [t.replace('_range-.05,.95_size-2048,2600', '')
               for t in stim_df.image_name.unique()]
-    print(errors.shape)
-    print(titles, len(titles))
     fig = pt.imshow([e for e in errors], zoom=.5, col_wrap=5,
                     title=sorted(titles))
     fig.suptitle(f'Pixelwise squared errors for scaling {scaling}, averaged across seeds\n',
