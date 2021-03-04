@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Code for using MCMC to fit psychophysical data."""
 import pyro
-import pandas as pd
 import xarray
 import numpy as np
 import pyro.distributions as dist
@@ -47,9 +46,9 @@ def response_model(scaling, model='V1'):
     chance_correct = .5
     with pyro.plate('subject_name', scaling.shape[1], dim=-3):
         critical_scaling = pyro.sample('log_s0', dist.Normal(s0_global_mean,
-                                                          s0_global_sd))
+                                                             s0_global_sd))
         proportionality_factor = pyro.sample('log_a0', dist.Normal(a0_global_mean,
-                                                                a0_global_sd))
+                                                                   a0_global_sd))
         lapse_rate = pyro.sample('pi_l', dist.Beta(2, 50))
         # this is the value without the lapse rate
         prop_corr = curve_fit.proportion_correct_curve(scaling,
@@ -147,8 +146,8 @@ def simulate_dataset(critical_scaling, proportionality_factor,
               'image_name': ['simulated'],
               'trial_type': ['simulated']}
     return xarray.Dataset({'observed_responses': (dims, obs.numpy()),
-                           'true_proportionality_factor': (('subject_name') , a0.numpy()),
-                           'true_critical_scaling': (('subject_name') , s0.numpy())},
+                           'true_proportionality_factor': (('subject_name'), a0.numpy()),
+                           'true_critical_scaling': (('subject_name'), s0.numpy())},
                           coords)
 
 
@@ -244,6 +243,7 @@ def run_inference(dataset, model='V1', step_size=.1,
                            warmup_steps=warmup_steps)
     mcmc.run(scaling, model)
     return mcmc
+
 
 def assemble_inf_data(mcmc, dataset):
     """Convert mcmc into properly-formatted inference data object.
