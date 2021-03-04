@@ -839,7 +839,7 @@ def posterior_predictive_check(inf_data, jitter_scaling=True,
 
 
 def parameter_distributions(inf_data, col='variable', hue='distribution',
-                            **kwargs):
+                            clip=(0, 20), **kwargs):
     """Check prior and posterior parameter distributions for MCMC.
 
     Goal of this plot is to show that data mattered, i.e., that posteriors have
@@ -849,6 +849,15 @@ def parameter_distributions(inf_data, col='variable', hue='distribution',
     ----------
     inf_data : arviz.InferenceData
         arviz InferenceData object (xarray-like) created by `run_inference`.
+    col, hue : str, optional
+        variables to facet along. 'variable' gives the parameters from
+        inf_data, other possible values are its coords
+    clip : pair of numbers or list of such, optional
+        Values to clip the evaluation of KDE along. See sns.kdeplot docstring
+        for more details. Prior ends up including way larger values than
+        posterior, so we clip to get a reasonable view
+    kwargs :
+        passed to sns.displot
 
     Returns
     -------
@@ -857,7 +866,7 @@ def parameter_distributions(inf_data, col='variable', hue='distribution',
 
     """
     df = mcmc.inf_data_to_df(inf_data, 'parameters')
-    g = sns.displot(df, hue=hue, x='value', col=col, kind='kde',
+    g = sns.displot(df, hue=hue, x='value', col=col, kind='kde', clip=clip,
                     facet_kws=dict(sharex='col', sharey=False),
                     **kwargs)
     return g
@@ -929,9 +938,24 @@ def parameter_jointplot(inf_data, vars=None, **kwargs):
         sns PairGrid containing the plots.
 
     """
-    df = inf_data.posterior.to_dataframe()
-    vars = df.columns
+    df = mcmc.inf_data_to_df(inf_data, 'parameters').query('distribution == "posterior"')
+    pivot_idx = [c for c in df.columns if c not in ['value', 'variable']]
+    df = df.pivot_table('value', pivot_idx, 'variable')
+    def key_func(x):
+        # want these to be first
+        if 'log' in x:
+            return '__' + x
+        # then these
+        elif 'global' in x:
+            return '_' + x
+        # and this last
+        elif x == 'pi_l':
+            return 'z' + x
+        else:
+            return x
+    if vars is None:
+        vars = sorted(df.columns, key=key_func)
     g = sns.pairplot(df.reset_index(), vars=vars, corner=True, diag_kind='kde',
-                     **kwargs)
+                     diag_kws={'cut': 0}, **kwargs)
     g.fig.suptitle('Joint distributions of model parameters')
     return g

@@ -2,6 +2,7 @@
 """Code for using MCMC to fit psychophysical data."""
 import pyro
 import xarray
+import pandas as pd
 import numpy as np
 import pyro.distributions as dist
 import torch
@@ -34,12 +35,17 @@ def response_model(scaling, model='V1'):
         Samples of responses
 
     """
-    a0_global_mean = pyro.sample('log_a0_global_mean', dist.Normal(5, 1))
+    # expected value of 5 for exponentiated version, which looks reasonable
+    a0_global_mean = pyro.sample('log_a0_global_mean', dist.Normal(1.6, 1))
     # different priors for the two models
     if model == 'V1':
+        # expected value of .25 for exponentiated version, from Freeman and
+        # Simoncelli, 2011
         s0_global_mean = pyro.sample('log_s0_global_mean', dist.Normal(-1.38, 1))
     elif model == 'RGC':
+        # expected value of .018 for exponentiated version, from Dacey, 1992
         s0_global_mean = pyro.sample('log_s0_global_mean', dist.Normal(-4, 1))
+    # something vague and positive
     s0_global_sd = pyro.sample('log_s0_global_sd', dist.HalfCauchy(.1))
     a0_global_sd = pyro.sample('log_a0_global_sd', dist.HalfCauchy(.1))
     # because this is a 2AFC task
@@ -306,6 +312,9 @@ def assemble_inf_data(mcmc, dataset):
 def inf_data_to_df(inf_data, kind='predictive', jitter_scaling=False):
     """Convert inf_data to a dataframe, for plotting.
 
+    We exponentiate the log_s0, log_a0, log_s0_global_mean, and
+    log_a0_global_mean variables (but not the global_sd variables).
+
     Parameters
     ----------
     inf_data : arviz.InferenceData
@@ -325,28 +334,25 @@ def inf_data_to_df(inf_data, kind='predictive', jitter_scaling=False):
 
     """
     if kind == 'predictive':
-        df = inf_data.observed_data.to_dataframe().reset_index()
-        df['distribution'] = 'observed_data'
-        tmp = inf_data.posterior_predictive.to_dataframe().reset_index()
-        tmp['distribution'] = 'posterior_predictive'
-        df = df.append(tmp).reset_index(drop=True)
-        tmp = inf_data.prior_predictive.to_dataframe().reset_index()
-        tmp['distribution'] = 'prior_predictive'
-        df = df.append(tmp).reset_index(drop=True)
+        dists = ['observed_data', 'posterior_predictive', 'prior_predictive']
+        df = []
+        for d in dists:
+            tmp = inf_data[d].to_dataframe().reset_index()
+            tmp['distribution'] = d
+            df.append(tmp)
+        df = pd.concat(df).reset_index(drop=True)
     elif kind == 'parameters':
-        df = inf_data.prior.to_dataframe()
-        for c in df.columns:
-            if c.startswith('log') and 'sd' not in c:
-                df[c.replace('log_', '')] = df[c].map(np.exp)
-        df = df.reset_index().melt(df.index.names)
-        df['distribution'] = 'prior'
-        tmp = inf_data.posterior.to_dataframe()
-        for c in tmp.columns:
-            if c.startswith('log') and 'sd' not in c:
-                tmp[c.replace('log_', '')] = tmp[c].map(np.exp)
-        tmp = tmp.reset_index().melt(tmp.index.names)
-        tmp['distribution'] = 'posterior'
-        df = df.append(tmp).reset_index(drop=True)
+        dists = ['prior', 'posterior']
+        df = []
+        for d in dists:
+            tmp = inf_data[d].to_dataframe()
+            for c in tmp.columns:
+                if c.startswith('log') and 'sd' not in c:
+                    tmp[c.replace('log_', '')] = tmp[c].map(np.exp)
+            tmp = tmp.reset_index().melt(tmp.index.names)
+            tmp['distribution'] = d
+            df.append(tmp)
+        df = pd.concat(df).reset_index(drop=True)
         vars = [v for v in df.variable.unique() if 'log' not in v
                 or 'sd' in v]
         df = df.query("variable in @vars")
