@@ -46,13 +46,9 @@ def calculate_discriminability(scaling, proportionality_factor, critical_scaling
     """
     if not isinstance(scaling, torch.Tensor):
         scaling = torch.tensor(scaling)
-    discrim = torch.zeros_like(scaling)
-    masks = [scaling <= critical_scaling, scaling > critical_scaling]
-    vals = [torch.zeros_like(scaling),
-            proportionality_factor * (1 - (critical_scaling**2 / scaling**2))]
-    for m, v in zip(masks, vals):
-        discrim[m] = v[m]
-    return discrim
+    vals = proportionality_factor * (1 - (critical_scaling**2 / scaling**2))
+    # this has to be non-negative
+    return vals.clamp(min=0)
 
 
 def proportion_correct_curve(scaling, proportionality_factor, critical_scaling):
@@ -89,8 +85,12 @@ def proportion_correct_curve(scaling, proportionality_factor, critical_scaling):
     norm = torch.distributions.Normal(0, 1)
     discrim = calculate_discriminability(scaling, proportionality_factor,
                                          critical_scaling)
-    return (norm.cdf(discrim / np.sqrt(2)) * norm.cdf(discrim / 2)
-            + norm.cdf(-discrim / np.sqrt(2)) * norm.cdf(-discrim / 2))
+    # we use the fact that norm.cdf(-x) = 1 - norm.cdf(x) to speed up the
+    # following, which is equivalent to: norm.cdf(d/sqrt(2)) * norm.cdf(d/2) +
+    # norm.cdf(-d/sqrt(2)) * norm.cdf(-d/2)
+    norm_cdf_sqrt_2 = norm.cdf(discrim / np.sqrt(2))
+    norm_cdf_2 = norm.cdf(discrim / 2)
+    return norm_cdf_sqrt_2 * norm_cdf_2 + (1-norm_cdf_sqrt_2) * (1-norm_cdf_2)
 
 
 def fit_psychophysical_parameters(scaling, proportion_correct, lr=.001,
