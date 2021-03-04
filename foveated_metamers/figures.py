@@ -797,7 +797,8 @@ def compare_loss_and_performance_plot(expt_df, stim_df, col='scaling',
     return g
 
 
-def posterior_predictive_check(inf_data, jitter_scaling=True):
+def posterior_predictive_check(inf_data, jitter_scaling=True,
+                               facetgrid_kwargs={}):
     """Plot posterior predictive check.
 
     In order to make sure that our MCMC gave us a reasonable fit, we plot the
@@ -812,7 +813,8 @@ def posterior_predictive_check(inf_data, jitter_scaling=True):
         If not False, we jitter scaling values (so they don't get plotted on
         top of each other). If True, we jitter by 5e-3, else, the amount to
         jitter by. Will need to rework this for log axis.
-
+    facetgrid_kwargs : dict, optional
+        additional kwargs to pass to sns.FacetGrid. Cannot contain 'hue'.
 
     Returns
     -------
@@ -820,21 +822,24 @@ def posterior_predictive_check(inf_data, jitter_scaling=True):
         FacetGrid containing the figure.
 
     """
+    if 'hue' in facetgrid_kwargs:
+        raise Exception("Can't set hue!")
     df = mcmc.inf_data_to_df(inf_data, 'predictive', jitter_scaling)
     df = df.query('distribution!="prior_predictive"')
-    g = sns.FacetGrid(df, height=5)
+    g = sns.FacetGrid(df, height=5, **facetgrid_kwargs)
     g.map_dataframe(plotting.lineplot_like_pointplot, x='scaling',
                     y='responses', ax='map', hue='distribution', linestyle='')
     g.map_dataframe(sns.lineplot, x='scaling', y='probability_correct',
                     hue='distribution',
                     linewidth=mpl.rcParams['lines.linewidth']*1.8)
     g.add_legend()
-    g.set(xlabel='scaling', ylabel='Proportion correct',
-          title='Posterior predictive check')
+    g.set(xlabel='scaling', ylabel='Proportion correct',)
+    g.fig.suptitle('Posterior predictive check', va='bottom')
     return g
 
 
-def parameter_distributions(inf_data):
+def parameter_distributions(inf_data, col='variable', hue='distribution',
+                            **kwargs):
     """Check prior and posterior parameter distributions for MCMC.
 
     Goal of this plot is to show that data mattered, i.e., that posteriors have
@@ -852,8 +857,9 @@ def parameter_distributions(inf_data):
 
     """
     df = mcmc.inf_data_to_df(inf_data, 'parameters')
-    g = sns.displot(df, hue='distribution', x='value', col='variable',
-                    facet_kws=dict(sharex=False, sharey=False), kind='kde')
+    g = sns.displot(df, hue=hue, x='value', col=col, kind='kde',
+                    facet_kws=dict(sharex='col', sharey=False),
+                    **kwargs)
     return g
 
 
@@ -891,22 +897,31 @@ def mcmc_diagnostics_plot(inf_data):
     for ax in axes:
         var = ax[0].get_title()
         ax[0].set_title(ax[0].get_title()+
-                        f', r_hat={rhat[var].data:.05f}')
+                        f', mean r_hat={rhat[var].data.mean():.05f}')
         ax[1].set_title(ax[1].get_title()+
-                        f', effective sample size={ess[var].data:.02f}')
+                        f', mean effective sample size={ess[var].data.mean():.02f}')
     fig = axes[0, 0].figure
+    # want monospace so table prints correctly
+    fig.text(1, .33, rhat.to_dataframe().transpose().to_markdown(),
+             ha='left', va='center', family='monospace')
+    fig.text(1, .66, ess.to_dataframe().transpose().to_markdown(),
+             ha='left', va='center', family='monospace')
     fig.suptitle("Diagnostics plot for MCMC, showing distribution and sampling"
                  " trace for each parameter", va='baseline')
     return fig
 
 
-def parameter_jointplot(inf_data):
+def parameter_jointplot(inf_data, vars=None, **kwargs):
     """Joint distributions of posterior parameter values.
 
     Parameters
     ----------
     inf_data : arviz.InferenceData
         arviz InferenceData object (xarray-like) created by `run_inference`.
+    vars : list or None, optional
+        List of strs giving the parameters to plot here. If None, will plot all.
+    kwargs :
+        passed to sns.pairplot
 
     Returns
     -------
@@ -914,8 +929,9 @@ def parameter_jointplot(inf_data):
         sns PairGrid containing the plots.
 
     """
-    g = sns.pairplot(inf_data.posterior.to_dataframe().reset_index(),
-                     vars=['pi_l', 's_0', 'a_0'],
-                     corner=True, diag_kind='kde')
+    df = inf_data.posterior.to_dataframe()
+    vars = df.columns
+    g = sns.pairplot(df.reset_index(), vars=vars, corner=True, diag_kind='kde',
+                     **kwargs)
     g.fig.suptitle('Joint distributions of model parameters')
     return g
