@@ -796,7 +796,7 @@ def compare_loss_and_performance_plot(expt_df, stim_df, col='scaling',
 
 
 def posterior_predictive_check(inf_data, jitter_scaling=True,
-                               facetgrid_kwargs={}):
+                               facetgrid_kwargs={}, query_str=None):
     """Plot posterior predictive check.
 
     In order to make sure that our MCMC gave us a reasonable fit, we plot the
@@ -813,6 +813,9 @@ def posterior_predictive_check(inf_data, jitter_scaling=True,
         jitter by. Will need to rework this for log axis.
     facetgrid_kwargs : dict, optional
         additional kwargs to pass to sns.FacetGrid. Cannot contain 'hue'.
+    query_str : str or None, optional
+        If not None, the string to query dataframe with to limit the plotted
+        data (e.g., "distribution == 'posterior'").
 
     Returns
     -------
@@ -822,7 +825,7 @@ def posterior_predictive_check(inf_data, jitter_scaling=True,
     """
     if 'hue' in facetgrid_kwargs:
         raise Exception("Can't set hue!")
-    df = mcmc.inf_data_to_df(inf_data, 'predictive', jitter_scaling)
+    df = mcmc.inf_data_to_df(inf_data, 'predictive', jitter_scaling, query_str)
     df = df.query('distribution!="prior_predictive"')
     g = sns.FacetGrid(df, height=5, **facetgrid_kwargs)
     g.map_dataframe(plotting.lineplot_like_pointplot, x='scaling',
@@ -837,7 +840,7 @@ def posterior_predictive_check(inf_data, jitter_scaling=True,
 
 
 def parameter_distributions(inf_data, col='variable', hue='distribution',
-                            clip=(0, 20), **kwargs):
+                            clip=(0, 20), query_str=None, **kwargs):
     """Check prior and posterior parameter distributions for MCMC.
 
     Goal of this plot is to show that data mattered, i.e., that posteriors have
@@ -853,6 +856,9 @@ def parameter_distributions(inf_data, col='variable', hue='distribution',
     clip : pair of numbers or list of such, optional
         Values to clip the evaluation of KDE along. See sns.kdeplot docstring
         for more details. Prior ends up including way larger values than
+    query_str : str or None, optional
+        If not None, the string to query dataframe with to limit the plotted
+        data (e.g., "distribution == 'posterior'").
         posterior, so we clip to get a reasonable view
     kwargs :
         passed to sns.displot
@@ -863,7 +869,7 @@ def parameter_distributions(inf_data, col='variable', hue='distribution',
         FacetGrid containing the figure.
 
     """
-    df = mcmc.inf_data_to_df(inf_data, 'parameters')
+    df = mcmc.inf_data_to_df(inf_data, 'parameters', query_str=query_str)
     g = sns.displot(df, hue=hue, x='value', col=col, kind='kde', clip=clip,
                     facet_kws=dict(sharex='col', sharey=False),
                     **kwargs)
@@ -918,7 +924,8 @@ def mcmc_diagnostics_plot(inf_data):
     return fig
 
 
-def parameter_jointplot(inf_data, vars=None, **kwargs):
+def parameter_jointplot(inf_data, vars=None,
+                        query_str="distribution=='posterior'", **kwargs):
     """Joint distributions of posterior parameter values.
 
     Parameters
@@ -927,6 +934,11 @@ def parameter_jointplot(inf_data, vars=None, **kwargs):
         arviz InferenceData object (xarray-like) created by `run_inference`.
     vars : list or None, optional
         List of strs giving the parameters to plot here. If None, will plot all.
+    query_str : str or None, optional
+        If not None, the string to query dataframe with to limit the plotted
+        data (e.g., "distribution == 'posterior'"). Should almost certainly
+        include that distribution selection to your query_str for this plot.
+
     kwargs :
         passed to sns.pairplot
 
@@ -936,7 +948,7 @@ def parameter_jointplot(inf_data, vars=None, **kwargs):
         sns PairGrid containing the plots.
 
     """
-    df = mcmc.inf_data_to_df(inf_data, 'parameters').query('distribution == "posterior"')
+    df = mcmc.inf_data_to_df(inf_data, 'parameters', query_str=query_str)
     pivot_idx = [c for c in df.columns if c not in ['value', 'variable']]
     df = df.pivot_table('value', pivot_idx, 'variable')
     def key_func(x):

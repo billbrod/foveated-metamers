@@ -35,36 +35,39 @@ def response_model(scaling, model='V1'):
         Samples of responses
 
     """
-    # expected value of 5 for exponentiated version, which looks reasonable
-    a0_global_mean = pyro.sample('log_a0_global_mean', dist.Normal(1.6, 1))
-    # different priors for the two models
-    if model == 'V1':
-        # expected value of .25 for exponentiated version, from Freeman and
-        # Simoncelli, 2011
-        s0_global_mean = pyro.sample('log_s0_global_mean', dist.Normal(-1.38, 1))
-    elif model == 'RGC':
-        # expected value of .018 for exponentiated version, from Dacey, 1992
-        s0_global_mean = pyro.sample('log_s0_global_mean', dist.Normal(-4, 1))
-    # something vague and positive
-    s0_global_sd = pyro.sample('log_s0_global_sd', dist.HalfCauchy(.1))
-    a0_global_sd = pyro.sample('log_a0_global_sd', dist.HalfCauchy(.1))
     # because this is a 2AFC task
     chance_correct = .5
-    with pyro.plate('subject_name', scaling.shape[1], dim=-3):
-        critical_scaling = pyro.sample('log_s0', dist.Normal(s0_global_mean,
-                                                             s0_global_sd))
-        proportionality_factor = pyro.sample('log_a0', dist.Normal(a0_global_mean,
-                                                                   a0_global_sd))
-        lapse_rate = pyro.sample('pi_l', dist.Beta(2, 50))
-        # this is the value without the lapse rate
-        prop_corr = curve_fit.proportion_correct_curve(scaling,
-                                                       torch.exp(proportionality_factor),
-                                                       torch.exp(critical_scaling))
-        # now with the lapse rate
-        prob_corr = pyro.deterministic('probability_correct',
-                                       ((1 - lapse_rate) * prop_corr +
-                                        lapse_rate * chance_correct))
-        return pyro.sample('responses', dist.Bernoulli(prob_corr, validate_args=True))
+    trial_type_plate = pyro.plate('trial_type', scaling.shape[-1], dim=-1)
+    subject_name_plate = pyro.plate('subject_name', scaling.shape[-3], dim=-3)
+    with trial_type_plate:
+        # expected value of 5 for exponentiated version, which looks reasonable
+        a0_global_mean = pyro.sample('log_a0_global_mean', dist.Normal(1.6, 1))
+        # different priors for the two models
+        if model == 'V1':
+            # expected value of .25 for exponentiated version, from Freeman and
+            # Simoncelli, 2011
+            s0_global_mean = pyro.sample('log_s0_global_mean', dist.Normal(-1.38, 1))
+        elif model == 'RGC':
+            # expected value of .018 for exponentiated version, from Dacey, 1992
+            s0_global_mean = pyro.sample('log_s0_global_mean', dist.Normal(-4, 1))
+        # something vague and positive
+        s0_global_sd = pyro.sample('log_s0_global_sd', dist.HalfCauchy(.1))
+        a0_global_sd = pyro.sample('log_a0_global_sd', dist.HalfCauchy(.1))
+        with subject_name_plate:
+            critical_scaling = pyro.sample('log_s0', dist.Normal(0, s0_global_sd))
+            proportionality_factor = pyro.sample('log_a0', dist.Normal(0, a0_global_sd))
+            lapse_rate = pyro.sample('pi_l', dist.Beta(2, 50))
+            # this is the value without the lapse rate
+            a0 = a0_global_mean + proportionality_factor
+            s0 = s0_global_mean + critical_scaling
+            prop_corr = curve_fit.proportion_correct_curve(scaling, torch.exp(a0),
+                                                           torch.exp(s0))
+            # now with the lapse rate
+            prob_corr = pyro.deterministic('probability_correct',
+                                           ((1 - lapse_rate) * prop_corr +
+                                            lapse_rate * chance_correct))
+            return pyro.sample('responses', dist.Bernoulli(prob_corr, validate_args=True))
+
 
 
 def assemble_dataset_from_expt_df(expt_df,
@@ -107,26 +110,32 @@ def assemble_dataset_from_expt_df(expt_df,
 
 def simulate_dataset(critical_scaling, proportionality_factor,
                      scaling=torch.logspace(-1, -.3, steps=8),
-                     num_trials=30, num_subjects=1):
+                     num_trials=30, num_subjects=1, trial_types=1):
     r"""Simulate a dataset to fit psychophysical curve to.
 
     Parameters
     ----------
-    proportionality_factor : float
-        The "gain" of the curve, determines how quickly it rises, parameter
-        $\alpha_0$ in [1]_, equation 17. Currently only handle single values
-        for this (i.e., one curve)
     critical_scaling : float
         The "threshold" of the curve, the scaling value at which
         discriminability falls to 0 and thus performance falls to chance,
         parameter $s_0$ in [1]_, equation 17. This should be more consistent,
         and is the focus of this study. Currently only handle single values
         for this (i.e., one curve)
+    proportionality_factor : float
+        The "gain" of the curve, determines how quickly it rises, parameter
+        $\alpha_0$ in [1]_, equation 17. Currently only handle single values
+        for this (i.e., one curve)
     scaling : torch.tensor, optional
         The scaling values to test. Default corresponds roughly to V1 tested
         values.
     num_trials : int, optional
         The number of trials to have per scaling value.
+    num_subjects : int, optional
+        The number of subjects to simulate. These will be sampled from a
+        lognormal distribution with the appropriate mean.
+    trial_types : {1, 2}
+        How many trial types to have. If 2, one will have half the true
+        critical scaling as the other.
 
     Returns
     -------
@@ -136,24 +145,29 @@ def simulate_dataset(critical_scaling, proportionality_factor,
         properly labeled.
 
     """
-    a0 = torch.exp(torch.distributions.Normal(np.log(proportionality_factor),
+    a0 = np.log([proportionality_factor])
+    s0 = np.log([critical_scaling])
+    scaling = scaling.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
+    if trial_types == 2:
+        a0 = np.concatenate([a0, np.log([proportionality_factor/2])])
+        s0 = np.concatenate([s0, np.log([critical_scaling/2])])
+    # if we add something for image_name, go here
+    a0 = torch.from_numpy(a0).unsqueeze(-2)
+    s0 = torch.from_numpy(s0).unsqueeze(-2)
+    a0 = torch.exp(torch.distributions.Normal(a0,
                                               .2).sample((num_subjects, )))
-    s0 = torch.exp(torch.distributions.Normal(np.log(critical_scaling),
+    s0 = torch.exp(torch.distributions.Normal(s0,
                                               .3).sample((num_subjects, )))
-    prop_corr = torch.stack([curve_fit.proportion_correct_curve(scaling, a, s)
-                            for a, s in zip(a0, s0)], dim=-1)
+    prop_corr = curve_fit.proportion_correct_curve(scaling, a0, s0)
     obs = torch.distributions.Bernoulli(prop_corr).sample((num_trials,))
     dims = ('trials', 'scaling', 'subject_name', 'image_name', 'trial_type')
-    while obs.ndim < len(dims):
-        # add an extra dimension for each of these
-        obs = obs.unsqueeze(-1)
-    coords = {'scaling': scaling.numpy(), 'trials': np.arange(num_trials),
+    coords = {'scaling': scaling.squeeze().numpy(), 'trials': np.arange(num_trials),
               'subject_name': np.arange(num_subjects),
               'image_name': ['simulated'],
-              'trial_type': ['simulated']}
+              'trial_type': np.arange(trial_types)}
     return xarray.Dataset({'observed_responses': (dims, obs.numpy()),
-                           'true_proportionality_factor': (('subject_name'), a0.numpy()),
-                           'true_critical_scaling': (('subject_name'), s0.numpy())},
+                           'true_proportionality_factor': (dims[2:], a0.numpy()),
+                           'true_critical_scaling': (dims[2:], s0.numpy())},
                           coords)
 
 
@@ -309,7 +323,7 @@ def assemble_inf_data(mcmc, dataset):
     return inf_data
 
 
-def inf_data_to_df(inf_data, kind='predictive', jitter_scaling=False):
+def inf_data_to_df(inf_data, kind='predictive', jitter_scaling=False, query_str=None):
     """Convert inf_data to a dataframe, for plotting.
 
     We exponentiate the log_s0, log_a0, log_s0_global_mean, and
@@ -326,6 +340,9 @@ def inf_data_to_df(inf_data, kind='predictive', jitter_scaling=False):
         If not False, we jitter scaling values (so they don't get plotted on
         top of each other). If True, we jitter by 5e-3, else, the amount to
         jitter by. Will need to rework this for log axis.
+    query_str : str or None, optional
+        If not None, the string to query dataframe with to limit the plotted
+        data (e.g., "distribution == 'posterior'").
 
     Returns
     -------
@@ -363,4 +380,6 @@ def inf_data_to_df(inf_data, kind='predictive', jitter_scaling=False):
         for i, v in enumerate(df.index.unique()):
             df.loc[v, 'scaling'] += i*jitter_scaling
         df = df.reset_index()
+    if query_str is not None:
+        df = df.query(query_str)
     return df
