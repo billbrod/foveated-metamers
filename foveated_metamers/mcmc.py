@@ -11,16 +11,61 @@ from . import curve_fit
 
 
 def response_model(scaling, model='V1'):
-    """Probabilistic model of responses, with lapse rate.
+    r"""Probabilistic model of responses, with lapse rate.
+
+    - Critical scaling ($s_0$) and proportionality factor / gain ($\alpha_0$)
+      are both modeled on a natural log-scale, where they're the sum of
+      trial_type, image_name (crossed with trial_type), and subject_name
+      (crossed with trial_type) effects. Inspired by Wallis et al, 2019.
+
+    - Lapse rate is modeled as a completely unpooled manner, independently for
+      each (trial_type, subject) (shared across images)
+   
+    Parameters:
+
+    - log_a0_global_mean, log_s0_global_mean: independent for each trial_type,
+      this is the high-level mean for the gain and critical scaling.
+
+    - log_a0_subject_sd, log_s0_subject_sd: independent for each trial type,
+      this is the noise for the subject-level effects for the gain and critical
+      scaling.
+
+    - log_a0_image_sd, log_s0_image_sd: independent for each trial type,
+      this is the noise for the image-level effects for the gain and critical
+      scaling.
+
+    - log_a0_image, log_s0_image: partially pooled within trial_type across
+      images, this is the image-level effect.
+
+    - log_a0_subject, log_s0_subject: partially pooled within trial_type across
+      subjects, this is the subject-level effect.
+
+    - pi_l: lapse rate, independent for each (trial_type, subject).
+
+    NOTE: no interaction between subject and image effects!
 
     Priors:
-    - lapse_rate: Beta(2, 50)
-    - critical_scaling: Beta(5,25) for V1, Beta(2, 70) for RGC
-    - proportionality_factor: Exponential(.2)
 
-    Following Wallis et al, 2019, we fit critical_scaling and
-    proportionality_factor on a natural log scale, which makes our lives a bit
-    easier.
+    - pi_l: Beta(2, 50)
+
+    - log_a0_global_mean: Normal(1.6, 1), this gives expected value of 5 for
+      the exponentiated version.
+
+    - log_s0_global_mean: Normal(-1.38, 1) for V1 (expected value ~.25 of
+      exponentiated version, following from Freeman and Simoncelli, 2011);
+      Normal(-4, 1) for RGC (expected value ~.018 of exponentiated version,
+      from Dacey, 1992)
+
+    - log_a0_subject_sd, log_s0_subject_sd, log_a0_image_sd, log_s0_image_sd:
+      HalfCauchy(.1)
+
+    - log_a0_image: Normal(0, a0_image_sd)
+
+    - log_s0_image: Normal(0, s0_image_sd)
+
+    - log_a0_subject: Normal(0, a0_subject_sd)
+
+    - log_s0_subject: Normal(0, s0_subject_sd)
 
     Parameters
     ----------
@@ -38,6 +83,7 @@ def response_model(scaling, model='V1'):
     # because this is a 2AFC task
     chance_correct = .5
     trial_type_plate = pyro.plate('trial_type', scaling.shape[-1], dim=-1)
+    image_name_plate = pyro.plate('image_name', scaling.shape[-2], dim=-2)
     subject_name_plate = pyro.plate('subject_name', scaling.shape[-3], dim=-3)
     with trial_type_plate:
         # expected value of 5 for exponentiated version, which looks reasonable
@@ -51,22 +97,31 @@ def response_model(scaling, model='V1'):
             # expected value of .018 for exponentiated version, from Dacey, 1992
             s0_global_mean = pyro.sample('log_s0_global_mean', dist.Normal(-4, 1))
         # something vague and positive
-        s0_global_sd = pyro.sample('log_s0_global_sd', dist.HalfCauchy(.1))
-        a0_global_sd = pyro.sample('log_a0_global_sd', dist.HalfCauchy(.1))
+        s0_subject_sd = pyro.sample('log_s0_subject_sd', dist.HalfCauchy(.1))
+        a0_subject_sd = pyro.sample('log_a0_subject_sd', dist.HalfCauchy(.1))
+        s0_image_sd = pyro.sample('log_s0_image_sd', dist.HalfCauchy(.1))
+        a0_image_sd = pyro.sample('log_a0_image_sd', dist.HalfCauchy(.1))
+        with image_name_plate:
+            s0_image = pyro.sample('log_s0_image', dist.Normal(0, s0_image_sd))
+            a0_image = pyro.sample('log_a0_image', dist.Normal(0, a0_image_sd))
         with subject_name_plate:
-            critical_scaling = pyro.sample('log_s0', dist.Normal(0, s0_global_sd))
-            proportionality_factor = pyro.sample('log_a0', dist.Normal(0, a0_global_sd))
+            s0_subject = pyro.sample('log_s0_subject', dist.Normal(0, s0_subject_sd))
+            a0_subject = pyro.sample('log_a0_subject', dist.Normal(0, a0_subject_sd))
             lapse_rate = pyro.sample('pi_l', dist.Beta(2, 50))
-            # this is the value without the lapse rate
-            a0 = a0_global_mean + proportionality_factor
-            s0 = s0_global_mean + critical_scaling
-            prop_corr = curve_fit.proportion_correct_curve(scaling, torch.exp(a0),
-                                                           torch.exp(s0))
-            # now with the lapse rate
-            prob_corr = pyro.deterministic('probability_correct',
-                                           ((1 - lapse_rate) * prop_corr +
-                                            lapse_rate * chance_correct))
-            return pyro.sample('responses', dist.Bernoulli(prob_corr, validate_args=True))
+            with image_name_plate:
+                # combine global, subject, and image effects
+                a0 = a0_global_mean + a0_subject + a0_image
+                s0 = s0_global_mean + s0_subject + s0_image
+                # this is the value without the lapse rate
+                prop_corr = curve_fit.proportion_correct_curve(scaling,
+                                                               torch.exp(a0),
+                                                               torch.exp(s0))
+                # now with the lapse rate
+                prob_corr = pyro.deterministic('probability_correct',
+                                               ((1 - lapse_rate) * prop_corr +
+                                                lapse_rate * chance_correct))
+                return pyro.sample('responses', dist.Bernoulli(prob_corr,
+                                                               validate_args=True))
 
 
 
@@ -109,8 +164,10 @@ def assemble_dataset_from_expt_df(expt_df,
 
 
 def simulate_dataset(critical_scaling, proportionality_factor,
-                     scaling=torch.logspace(-1, -.3, steps=8),
-                     num_trials=30, num_subjects=1, trial_types=1):
+                     scaling=torch.logspace(-1, -.3, steps=8), num_trials=30,
+                     num_subjects=1, num_images=1, trial_types=1,
+                     proportionality_factor_noise=.2,
+                     critical_scaling_noise=.3):
     r"""Simulate a dataset to fit psychophysical curve to.
 
     Parameters
@@ -131,40 +188,51 @@ def simulate_dataset(critical_scaling, proportionality_factor,
     num_trials : int, optional
         The number of trials to have per scaling value.
     num_subjects : int, optional
-        The number of subjects to simulate. These will be sampled from a
-        lognormal distribution with the appropriate mean.
-    trial_types : {1, 2}
+        The number of subjects to simulate. Their parameter values will be
+        sampled from a lognormal distribution with the appropriate means.
+    num_images : int, optional
+        The number of images to simulate. Like subjects, parameter values
+        sampled from lognormal distributions with appropriate means (sampled
+        from same distribution).
+    trial_types : {1, 2}, optional
         How many trial types to have. If 2, one will have half the true
-        critical scaling as the other.
+        parameter values of the other.
+    {proportionality_factor, critical_scaling}_noise : float, optional
+        The noise on these distributions. Note that since they're sampled in
+        log-space, these should be relatively small (the sampled paramters can
+        get large quickly!) and you should examine the true values returned in
+        the returned Dataset to make sure they look reasonable.
 
     Returns
     -------
     simul : xarray.Dataset
-
         simulated dataset containing the response data, with coordinates
         properly labeled.
 
     """
+    # get this the right number of dimensions so we can broadcast correctly
+    scaling = scaling.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
     a0 = np.log([proportionality_factor])
     s0 = np.log([critical_scaling])
-    scaling = scaling.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
     if trial_types == 2:
         a0 = np.concatenate([a0, np.log([proportionality_factor/2])])
         s0 = np.concatenate([s0, np.log([critical_scaling/2])])
-    # if we add something for image_name, go here
-    a0 = torch.from_numpy(a0).unsqueeze(-2)
-    s0 = torch.from_numpy(s0).unsqueeze(-2)
-    a0 = torch.exp(torch.distributions.Normal(a0,
-                                              .2).sample((num_subjects, )))
-    s0 = torch.exp(torch.distributions.Normal(s0,
-                                              .3).sample((num_subjects, )))
+    # convert to numpy
+    a0 = torch.from_numpy(a0)
+    s0 = torch.from_numpy(s0)
+    # set up distributions
+    a0 = torch.distributions.Normal(a0, proportionality_factor_noise)
+    s0 = torch.distributions.Normal(s0, critical_scaling_noise)
+    # sample appropriately
+    a0 = torch.exp(a0.sample((num_subjects, num_images)))
+    s0 = torch.exp(s0.sample((num_subjects, num_images)))
     prop_corr = curve_fit.proportion_correct_curve(scaling, a0, s0)
     obs = torch.distributions.Bernoulli(prop_corr).sample((num_trials,))
     dims = ('trials', 'scaling', 'subject_name', 'image_name', 'trial_type')
     coords = {'scaling': scaling.squeeze().numpy(), 'trials': np.arange(num_trials),
-              'subject_name': np.arange(num_subjects),
-              'image_name': ['simulated'],
-              'trial_type': np.arange(trial_types)}
+              'subject_name': [f'sub-{s:02d}' for s in range(num_subjects)],
+              'image_name': [f'image_{i:02d}' for i in range(num_images)],
+              'trial_type': [f'trial_type_{i:02d}' for i in range(trial_types)]}
     return xarray.Dataset({'observed_responses': (dims, obs.numpy()),
                            'true_proportionality_factor': (dims[2:], a0.numpy()),
                            'true_critical_scaling': (dims[2:], s0.numpy())},
@@ -296,14 +364,23 @@ def assemble_inf_data(mcmc, dataset):
                                   dataset)
     prior = az.from_pyro(prior=prior, coords=dataset.coords, dims=prior_dims)
     posterior_pred = posterior_pred(scaling, 'V1')
-    # for some reason, this has a weird dummy dimension. this removes that
-    # (assuming it's only shape 1; else I should probably be aware of it)
+    # for some reason, this has a weird dummy dimension (I think for
+    # broadcasting purposes). this removes that (assuming it's only shape 1;
+    # else I should probably be aware of it)
     posterior_pred['probability_correct'] = posterior_pred['probability_correct'].squeeze(1)
     post_dims = _assign_inf_dims(posterior_pred, dataset)
     posterior_pred = az.from_pyro(posterior_predictive=posterior_pred,
                                   coords=dataset.coords, dims=post_dims)
     # the observed data will have a trials dim first
     post_dims['responses'].insert(0, 'trials')
+    # similar to above, our subject-level parameters will have a dummy
+    # dimension (along the image_name dimension) for broadcasting purposes --
+    # we remove that (assuming it's only shape 1). this is an exceedingly hacky
+    # way of doing it, but it works
+    samples = mcmc.get_samples(group_by_chain=True)
+    for k in ['log_a0_subject', 'log_s0_subject', 'pi_l']:
+        samples[k] = samples[k].squeeze(-2)
+    mcmc._samples = samples
     variable_dims = _assign_inf_dims(mcmc.get_samples(), dataset)
     variable_dims.update(post_dims)
     inf_data = (az.from_pyro(mcmc, coords=dataset.coords, dims=variable_dims) +
@@ -382,4 +459,7 @@ def inf_data_to_df(inf_data, kind='predictive', jitter_scaling=False, query_str=
         df = df.reset_index()
     if query_str is not None:
         df = df.query(query_str)
+    if 'image_name' in df.columns:
+        # clean up the plots by removing this redundant text
+        df.image_name = df.image_name.map(lambda x: x.replace('_range-.05,.95_size-2048,2600', ''))
     return df
