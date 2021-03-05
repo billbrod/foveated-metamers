@@ -915,17 +915,17 @@ def mcmc_diagnostics_plot(inf_data):
                         f', mean effective sample size={ess[var].data.mean():.02f}')
     fig = axes[0, 0].figure
     # want monospace so table prints correctly
-    fig.text(1, .33, rhat.to_dataframe().transpose().to_markdown(),
-             ha='left', va='center', family='monospace')
-    fig.text(1, .66, ess.to_dataframe().transpose().to_markdown(),
-             ha='left', va='center', family='monospace')
+    fig.text(1, 1, "rhat\n"+rhat.to_dataframe().to_markdown(),
+             ha='left', va='top', family='monospace')
+    fig.text(1, .5, "effective sample size\n"+ess.to_dataframe().to_markdown(),
+             ha='left', va='top', family='monospace')
     fig.suptitle("Diagnostics plot for MCMC, showing distribution and sampling"
                  " trace for each parameter", va='baseline')
     return fig
 
 
-def parameter_jointplot(inf_data, vars=None,
-                        query_str="distribution=='posterior'", **kwargs):
+def parameter_pairplot(inf_data, vars=None,
+                       query_str="distribution=='posterior'", **kwargs):
     """Joint distributions of posterior parameter values.
 
     Parameters
