@@ -90,7 +90,7 @@ def proportion_correct_curve(scaling, proportionality_factor, critical_scaling):
     return norm_cdf_sqrt_2 * norm_cdf_2 + (1-norm_cdf_sqrt_2) * (1-norm_cdf_2)
 
 
-def response_model(scaling, model='V1'):
+def response_model(scaling, model='V1', observed_responses=None):
     r"""Probabilistic model of responses, with lapse rate.
 
     - Critical scaling ($s_0$) and proportionality factor / gain ($\alpha_0$)
@@ -150,9 +150,12 @@ def response_model(scaling, model='V1'):
     Parameters
     ----------
     scaling : jnp.ndarray
-        1d, scaling value(s) to calculate discriminability for.
+        scaling value(s) to calculate discriminability for. Must be 4d:
+        (scaling, subject_name, image_name, trial_type).
     model : {'V1', 'RGC'}
-        Whether we should use V1 or RGC prior for critical_scaling.
+        Whether we should use V1 or RGC prior for log_s0_global_mean.
+    observed_responses : jnp.ndarray or None
+        observed responses to condition our pulls on. If None, don't condition.
 
     Returns
     -------
@@ -162,10 +165,37 @@ def response_model(scaling, model='V1'):
     """
     # because this is a 2AFC task
     chance_correct = .5
-    trial_type_plate = numpyro.plate('trial_type', scaling.shape[-1], dim=-1)
-    image_name_plate = numpyro.plate('image_name', scaling.shape[-2], dim=-2)
-    subject_name_plate = numpyro.plate('subject_name', scaling.shape[-3], dim=-3)
-    with trial_type_plate:
+    # we have to do a weird hacky workaround if we only have one trial_type:
+    # for some reason, we can't plate over it (we get a really strange error
+    # when calling mcmc.run, which I think is a numpyro bug, though this
+    # function itself can be called without a problem). So, instead, we squeeze
+    # out trial_types (and add it back in later when we construct the
+    # InferenceData object)
+    dim_offset = 0
+    if scaling.shape[-1] == 1:
+        scaling = scaling.squeeze(-1)
+        if observed_responses is not None:
+            observed_responses = observed_responses.squeeze(-1)
+        dim_offset = 1
+        trial_type_plate = None
+    else:
+        trial_type_plate = numpyro.plate('trial_type', scaling.shape[-1], dim=-1)
+    image_name_plate = numpyro.plate('image_name', scaling.shape[-(2-dim_offset)],
+                                     dim=-(2-dim_offset))
+    subject_name_plate = numpyro.plate('subject_name', scaling.shape[-(3-dim_offset)],
+                                       dim=-(3-dim_offset))
+    scaling_plate = numpyro.plate('scaling', scaling.shape[-(4-dim_offset)],
+                                  dim=-(4-dim_offset))
+    obs_nans = None
+    if observed_responses is not None:
+        # where's the missing data?
+        obs_nans = jnp.isnan(observed_responses)
+        trials_plate = numpyro.plate('trials', observed_responses.shape[0],
+                                     dim=-(5-dim_offset))
+    else:
+        trials_plate = numpyro.plate('trials', 1, dim=-(5-dim_offset))
+
+    def _sample(scaling, observed_responses, obs_nans):
         # expected value of 5 for exponentiated version, which looks reasonable
         a0_global_mean = numpyro.sample('log_a0_global_mean', dist.Normal(1.6, 1))
         # different priors for the two models
@@ -198,8 +228,29 @@ def response_model(scaling, model='V1'):
                 prob_corr = numpyro.deterministic('probability_correct',
                                                   ((1 - lapse_rate) * prop_corr +
                                                    lapse_rate * chance_correct))
-                return numpyro.sample('responses', dist.Bernoulli(prob_corr,
-                                                                  validate_args=True))
+                with trials_plate, scaling_plate:
+                    if obs_nans is not None:
+                        # expand this out, for broadcasting purposes
+                        prob_corr_nan = jnp.expand_dims(prob_corr, 0).tile((observed_responses.shape[0],
+                                                                            *([1]*prob_corr.ndim)))
+                        # sample the responses...
+                        imputed_responses = numpyro.sample(
+                            'responses_imputed',
+                            dist.Bernoulli(prob_corr_nan, validate_args=True).mask(False)
+                        )
+                        # ...and insert the imputed responses where there are
+                        # NaNs in the observed data.
+                        observed_responses = jnp.where(obs_nans,
+                                                       imputed_responses,
+                                                       observed_responses)
+                    return numpyro.sample('responses', dist.Bernoulli(prob_corr,
+                                                                      validate_args=True),
+                                          obs=observed_responses)
+    if trial_type_plate is not None:
+        with trial_type_plate:
+            return _sample(scaling, observed_responses, obs_nans)
+    else:
+        return _sample(scaling, observed_responses, obs_nans)
 
 
 def assemble_dataset_from_expt_df(expt_df,
@@ -244,7 +295,7 @@ def simulate_dataset(critical_scaling, proportionality_factor,
                      scaling=jnp.logspace(-1, -.3, num=8), num_trials=30,
                      num_subjects=1, num_images=1, trial_types=1,
                      proportionality_factor_noise=.2,
-                     critical_scaling_noise=.3, seed=0):
+                     critical_scaling_noise=.3, seed=10):
     r"""Simulate a dataset to fit psychophysical curve to.
 
     Parameters
@@ -271,9 +322,10 @@ def simulate_dataset(critical_scaling, proportionality_factor,
         The number of images to simulate. Like subjects, parameter values
         sampled from lognormal distributions with appropriate means (sampled
         from same distribution).
-    trial_types : {1, 2}, optional
-        How many trial types to have. If 2, one will have half the true
-        parameter values of the other.
+    trial_types : {1, 2, 3}, optional
+        How many trial types to have. If 2, the second will have half the true
+        parameter values of the first. If 3, the third trial type will have
+        double the true parameter values fo the first.
     {proportionality_factor, critical_scaling}_noise : float, optional
         The noise on these distributions. Note that since they're sampled in
         log-space, these should be relatively small (the sampled paramters can
@@ -299,9 +351,14 @@ def simulate_dataset(critical_scaling, proportionality_factor,
     scaling = jnp.expand_dims(scaling, (-1, -2, -3))
     a0 = np.log([proportionality_factor])
     s0 = np.log([critical_scaling])
-    if trial_types == 2:
+    if trial_types > 1:
         a0 = np.concatenate([a0, np.log([proportionality_factor/2])])
         s0 = np.concatenate([s0, np.log([critical_scaling/2])])
+    if trial_types > 2:
+        a0 = np.concatenate([a0, np.log([proportionality_factor*2])])
+        s0 = np.concatenate([s0, np.log([critical_scaling*2])])
+    if trial_types > 3:
+        raise Exception(f"trial_types must be one of {1, 2, 3}, but got {trial_types}!")
     # convert to jax.numpy
     a0 = jnp.asarray(a0)
     s0 = jnp.asarray(s0)
@@ -339,6 +396,8 @@ def _assign_inf_dims(samples_dict, dataset, dummy_dim=None):
 
     """
     dims = {}
+    if dummy_dim is not None and not hasattr(dummy_dim, '__iter__'):
+        dummy_dim = [dummy_dim]
     for k, v in samples_dict.items():
         var_shape = v.shape
         dims[k] = []
@@ -349,11 +408,11 @@ def _assign_inf_dims(samples_dict, dataset, dummy_dim=None):
             if len(dataset.coords[d]) == var_shape[i]:
                 dims[k] += [d]
                 i += 1
-            elif (dummy_dim is not None and
-                  i in [dummy_dim, len(var_shape)+dummy_dim] and
-                  var_shape[dummy_dim] == 1):
-                dims[k] += ['dummy']
-                i += 1
+            elif dummy_dim is not None:
+                for dummy in dummy_dim:
+                    if (i in [dummy, len(var_shape)+dummy] and var_shape[dummy] == 1):
+                        dims[k] += ['dummy']
+                        i += 1
     return dims
 
 
@@ -415,21 +474,18 @@ def run_inference(dataset, model='V1', step_size=.1, num_draws=1000,
 
     """
     scaling, observed_responses = _arrange_vars(dataset)
-    conditioned_responses = numpyro.handlers.condition(response_model,
-                                                       data={'responses': observed_responses})
-    mcmc_kernel = numpyro.infer.NUTS(conditioned_responses, step_size=step_size,
-                                     # jit_compile=True, ignore_jit_warnings=True,
+    mcmc_kernel = numpyro.infer.NUTS(response_model, step_size=step_size,
                                      **nuts_kwargs)
     # for now, progress bar doesn't show for multiple chains:
     # https://github.com/pyro-ppl/numpyro/issues/309
     mcmc = numpyro.infer.MCMC(mcmc_kernel, num_samples=num_draws,
                               num_chains=num_chains,
                               num_warmup=num_warmup, progress_bar=True)
-    mcmc.run(PRNGKey(seed), scaling, model)
+    mcmc.run(PRNGKey(seed), scaling, model, observed_responses)
     return mcmc
 
 
-def assemble_inf_data(mcmc, dataset, seed=0):
+def assemble_inf_data(mcmc, dataset, seed=1):
     """Convert mcmc into properly-formatted inference data object.
 
     Parameters
@@ -449,33 +505,49 @@ def assemble_inf_data(mcmc, dataset, seed=0):
         posterior_predictive, prior, prior_predictive, and observed_data.
 -
     """
-    seed = PRNGKey(seed)
-    scaling, _ = _arrange_vars(dataset)
+    scaling, obs = _arrange_vars(dataset)
+    # different dummy dimensions when there was a single trial_type (which gets
+    # squeezed out in the response model) vs. more than one
+    if scaling.shape[-1] == 1:
+        dummy_dims = [[-1, 1, 2], [1, 2], -1]
+    else:
+        dummy_dims = [[-2, 1], 1, -2]
     n_total_samples = list(mcmc.get_samples().values())[0].shape[0]
     prior = numpyro.infer.Predictive(response_model, num_samples=n_total_samples)
     posterior_pred = numpyro.infer.Predictive(response_model,
                                               posterior_samples=mcmc.get_samples())
     # need to create each of these separately because they have different
     # coords
-    prior = prior(seed, scaling, 'V1')
+    prior = prior(PRNGKey(seed), scaling, 'V1')
     # the subject-level variables have a dummy dimension at the same place as
     # the image_name dimension, in order to allow broadcasting. we allow it
     # here, and then drop it later
-    prior_dims = _assign_inf_dims(prior, dataset, dummy_dim=-2)
+    prior_dims = _assign_inf_dims(prior, dataset, dummy_dim=dummy_dims[0])
     prior = az.from_numpyro(prior=prior, coords=dataset.coords, dims=prior_dims)
-    posterior_pred = posterior_pred(seed, scaling, 'V1')
-    post_dims = _assign_inf_dims(posterior_pred, dataset)
+    posterior_pred = posterior_pred(PRNGKey(seed+1), scaling, 'V1')
+    post_dims = _assign_inf_dims(posterior_pred, dataset,
+                                 dummy_dim=dummy_dims[1])
     posterior_pred = az.from_numpyro(posterior_predictive=posterior_pred,
                                      coords=dataset.coords, dims=post_dims)
     # the observed data will have a trials dim first
-    post_dims['responses'].insert(0, 'trials')
+    post_dims['responses'][0] = 'trials'
+    # in this case, there was only one trial_type, and the shape of the
+    # responses from the posterior predictive has an extra dummy dimension for
+    # some reason. but I think it doesn't happen when there's missing (and thus
+    # imputed) data for some reason?
+    if obs.shape[-1] == 1 and post_dims['responses'].count('dummy') > 1:
+        post_dims['responses'].pop(1)
     # the subject-level variables these have a dummy dimension at the same
     # place as the image_name dimension, in order to allow broadcasting. we
     # allow it here, and then drop it later
-    variable_dims = _assign_inf_dims(mcmc.get_samples(), dataset, dummy_dim=-2)
+    variable_dims = _assign_inf_dims(mcmc.get_samples(), dataset,
+                                     dummy_dim=dummy_dims[2])
     variable_dims.update(post_dims)
-    inf_data = (az.from_numpyro(mcmc, coords=dataset.coords, dims=variable_dims) +
-                prior + posterior_pred)
+    # if there was missing data, it will need to the imputation in order to
+    # compute log-likelihood, so we need the seed handler
+    with numpyro.handlers.seed(rng_seed=seed+2):
+        inf_data = (az.from_numpyro(mcmc, coords=dataset.coords, dims=variable_dims) +
+                    prior + posterior_pred)
     # because of how we create it, prior predictive gets mushed up with prior
     # -- we move that around here.
     inf_data.add_groups({'prior_predictive':
@@ -483,8 +555,32 @@ def assemble_inf_data(mcmc, dataset, seed=0):
     inf_data.prior = inf_data.prior.drop_vars(['responses', 'probability_correct',
                                                'scaling'])
     # drop the dummy dimension -- it gets broadcasted out but filled with NaNs.
-    inf_data.posterior = inf_data.posterior.dropna('dummy').squeeze('dummy').drop('dummy')
-    inf_data.prior = inf_data.prior.dropna('dummy').squeeze('dummy').drop('dummy')
+    # also the probability_correct shouldn't be in the posterior
+    inf_data.posterior = inf_data.posterior.dropna('dummy').squeeze('dummy', True).drop(['probability_correct', 'scaling'])
+    inf_data.prior = inf_data.prior.dropna('dummy').squeeze('dummy', True)
+    # for the predictives, there's no NaNs in the dummy dimensions, they're
+    # just extra single dimensions, so we can squeeze them right out
+    inf_data.posterior_predictive = inf_data.posterior_predictive.squeeze('dummy', True)
+    inf_data.prior_predictive = inf_data.prior_predictive.squeeze('dummy', True)
+    # then there was missing data, so we imputed the responses
+    if np.isnan(dataset.observed_responses).any():
+        inf_data.observed_data = inf_data.observed_data.rename({'responses': 'imputed_responses'})
+        # if everything else had trial_type squeezed out of it, want to squeeze
+        # it out here too.
+        try:
+            inf_data.observed_data['responses'] = dataset.observed_responses.squeeze('trial_type')
+        except ValueError:
+            inf_data.observed_data['responses'] = dataset.observed_responses
+    # this gets weirdly shaped, so just remove it
+    del inf_data.log_likelihood
+    if obs.shape[-1] == 1:
+        # then there was only one trial type and it was squeezed out during
+        # fitting -- add it in now.
+        inf_data.posterior = inf_data.posterior.expand_dims('trial_type', -1).assign_coords({'trial_type': dataset.trial_type})
+        inf_data.posterior_predictive = inf_data.posterior_predictive.expand_dims('trial_type', -1).assign_coords({'trial_type': dataset.trial_type})
+        inf_data.prior = inf_data.prior.expand_dims('trial_type', -1).assign_coords({'trial_type': dataset.trial_type})
+        inf_data.prior_predictive = inf_data.prior_predictive.expand_dims('trial_type', -1).assign_coords({'trial_type': dataset.trial_type})
+        inf_data.observed_data = inf_data.observed_data.expand_dims('trial_type', -1).assign_coords({'trial_type': dataset.trial_type})
     return inf_data
 
 
