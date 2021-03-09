@@ -1152,7 +1152,6 @@ rule mcmc:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 print(f"Running on {jax.lib.xla_bridge.device_count()} cpus!")
-                print(os.environ.get('XLA_FLAGS', 'NONE'))
                 if 'V1' in wildcards.model_name:
                     model = 'V1'
                 elif 'RGC' in wildcards.model_name:
