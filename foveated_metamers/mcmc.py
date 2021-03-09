@@ -505,6 +505,10 @@ def assemble_inf_data(mcmc, dataset, seed=1):
         posterior_predictive, prior, prior_predictive, and observed_data.
 -
     """
+    if len(dataset.subject_name) == 1 or len(dataset.image_name) == 1:
+        raise Exception("This will fail if subject_name or image_name only "
+                        "has one value! We can handle only 1 trial_type, "
+                        "but others must have multiple")
     scaling, obs = _arrange_vars(dataset)
     # different dummy dimensions when there was a single trial_type (which gets
     # squeezed out in the response model) vs. more than one
