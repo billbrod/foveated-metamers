@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Misc plotting functions."""
 import numpy as np
+import warnings
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -131,7 +132,8 @@ def _map_dataframe_prep(data, x, y, estimator, x_jitter, x_dodge, x_order,
 
 def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
                     estimator=np.median, draw_ctr_pts=True, ci_mode='lines',
-                    ci_alpha=.2, size=5, x_dodge=None, **kwargs):
+                    ci_alpha=.2, size=5, x_dodge=None, all_labels=None,
+                    like_pointplot=False, **kwargs):
     """Plot center points and specified CIs, for use with map_dataframe.
 
     based on seaborn.linearmodels.scatterplot. CIs are taken from a
@@ -182,6 +184,15 @@ def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
         array of the same shape as x (we will dodge by calling `x_data =
         x_data + x_dodge`). if None, we don't dodge at all. If True, we
         dodge as if x_dodge=.01
+    all_labels : list or None, optional
+        To dodge across hue, set `all_labels=list(df[hue].unique())` when
+        calling `map_dataframe`. This will allow us to dodge each hue level by
+        a consistent amount across plots, and make sure the data is roughly
+        centered.
+    like_pointplot: bool, optional
+        If True, we tweak the aesthetics a bit (right now, just size of points
+        and lines) to look more like seaborn's pointplot. Good when there's
+        relatively little data. If True, this overrides the size option.
     kwargs :
         must contain data. Other expected keys:
         - ax: the axis to draw on (otherwise, we grab current axis)
@@ -200,6 +211,22 @@ def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
         control over what shows up in the legend.
 
     """
+    if all_labels is not None and 'label' in kwargs.keys():
+        orig_x_dodge = .01 if x_dodge is True else x_dodge
+        x_dodge = all_labels.index(kwargs['label']) * orig_x_dodge
+        x_dodge -= orig_x_dodge * ((len(all_labels)-1) / 2)
+    if like_pointplot:
+        # copying from how seaborn.pointplot handles this, because they look nicer
+        lw = mpl.rcParams["lines.linewidth"] * 1.8
+        # annoyingly, scatter and plot interpret size / markersize differently:
+        # for plot, it's roughly the area, whereas for scatter it's the
+        # diameter. In the following, we can use either; we use the sqrt of the
+        # value here so it has same interpretation as the size parameter.
+        warnings.warn(f"with like_pointplot, overriding user-specified size {size}")
+        size = np.sqrt(np.pi * np.square(lw) * 2)
+    else:
+        # use default
+        lw = mpl.rcParams['lines.linewidth']
     data = kwargs.pop('data')
     ax = kwargs.pop('ax', plt.gca())
     x_order = kwargs.pop('x_order', None)
@@ -216,7 +243,8 @@ def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
     else:
         dots = None
     if join is True:
-        lines = ax.plot(x_data, plot_data.values, **kwargs)
+        lines = ax.plot(x_data, plot_data.values, linewidth=lw,
+                        markersize=size, **kwargs)
     else:
         lines = None
     # if we attach label to the CI, then the legend may use the CI
@@ -224,7 +252,7 @@ def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
     kwargs.pop('label', None)
     if ci_mode == 'lines':
         for x, (ci_low, ci_high) in zip(x_data, zip(*plot_cis)):
-            cis = ax.plot([x, x], [ci_low, ci_high], **kwargs)
+            cis = ax.plot([x, x], [ci_low, ci_high], linewidth=lw, **kwargs)
     elif ci_mode == 'fill':
         cis = ax.fill_between(x_data, plot_cis[0].values, plot_cis[1].values,
                               alpha=ci_alpha, **kwargs)

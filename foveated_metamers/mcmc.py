@@ -584,7 +584,8 @@ def assemble_inf_data(mcmc, dataset, seed=1):
     return inf_data
 
 
-def inf_data_to_df(inf_data, kind='predictive', jitter_scaling=False, query_str=None):
+def inf_data_to_df(inf_data, kind='predictive', jitter_scaling=False,
+                   query_str=None):
     """Convert inf_data to a dataframe, for plotting.
 
     We exponentiate the log_s0, log_a0, log_s0_global_mean, and
@@ -594,9 +595,13 @@ def inf_data_to_df(inf_data, kind='predictive', jitter_scaling=False, query_str=
     ----------
     inf_data : arviz.InferenceData
         arviz InferenceData object (xarray-like) created by `assemble_inf_data`.
-    kind : {'predictive', 'parameters'}, optional
+    kind : {'predictive', 'parameters', 'psychophysical curve parameters'}, optional
         Whether to create df containing predictive info (responses and
-        probability_correct) or model parameter info
+        probability_correct), model parameter info, or psychophysical curve
+        parameters (where we've combined across the different effects and
+        exponentiated them in order to get the critical scaling and
+        proportionality factor values for each separate image, subject, and
+        trial type).
     jitter_scaling : bool or float, optional
         If not False, we jitter scaling values (so they don't get plotted on
         top of each other). If True, we jitter by 5e-3, else, the amount to
@@ -634,6 +639,21 @@ def inf_data_to_df(inf_data, kind='predictive', jitter_scaling=False, query_str=
         vars = [v for v in df.variable.unique() if 'log' not in v
                 or 'sd' in v]
         df = df.query("variable in @vars")
+    elif kind == 'psychophysical curve parameters':
+        dists = ['prior', 'posterior']
+        params = ['a0', 's0']
+        df = []
+        for d in dists:
+            coords = {k: inf_data[d][k].values for k in
+                      ['trial_type', 'image_name', 'subject_name']}
+            for p in params:
+                tmp = np.exp(inf_data[d][f'log_{p}_global_mean'] + inf_data[d][f'log_{p}_image'] +
+                             inf_data[d][f'log_{p}_subject'])
+                tmp = tmp.to_dataframe('value').reset_index()
+                tmp['distribution'] = d
+                tmp['parameter'] = p
+                df.append(tmp)
+        df = pd.concat(df).reset_index(drop=True)
     if jitter_scaling:
         if jitter_scaling is True:
             jitter_scaling = 5e-3

@@ -971,3 +971,62 @@ def parameter_pairplot(inf_data, vars=None,
                      diag_kws={'cut': 0}, **kwargs)
     g.fig.suptitle('Joint distributions of model parameters')
     return g
+
+
+def psychophysical_parameters(inf_data, x='image_name', y='value',
+                              hue='subject_name', col='parameter',
+                              row='trial_type',
+                              query_str="distribution=='posterior'", height=5,
+                              x_dodge=.1, ci=95, **kwargs):
+    """Show psychophysical curve parameters.
+
+    This plots the psychophysical curve parameters for all full curves we can
+    draw. That is, we combine the effects of our model and show the values for
+    each trial type, image, and subject.
+
+
+    Parameters
+    ----------
+    inf_data : arviz.InferenceData
+        arviz InferenceData object (xarray-like) created by `run_inference`.
+    x, y, hue, col, row : str, optional
+        variables to plot on axes or facet along. 'value' is the value of the
+        parameters, 'parameter' is the identity of the parameter (e.g., 's0',
+        'a0'), all other are the coords of inf_data
+    query_str : str or None, optional
+        If not None, the string to query dataframe with to limit the plotted
+        data (e.g., "distribution == 'posterior'").
+        posterior, so we clip to get a reasonable view
+    height : float, optional
+        Height of the facets
+    x_dodge : float, None, or bool, optional
+        to improve visibility with many points that have the same x-values (or
+        are categorical), we can dodge the data along the x-axis,
+        deterministically shifting it. If a float, x_dodge is the amount we
+        shift each level of hue by; if None, we don't dodge at all; if True, we
+        dodge as if x_dodge=.01
+    ci : int, optinoal
+        The width fo the CI to draw (in percentiles)
+    kwargs :
+        passed to sns.FacetGrid
+
+    Returns
+    -------
+    g : sns.FacetGrid
+        FacetGrid containing the figure.
+
+    """
+    kwargs.setdefault('sharey', False)
+    df = mcmc.inf_data_to_df(inf_data, 'psychophysical curve parameters',
+                             query_str=query_str)
+
+    g = sns.FacetGrid(hue=hue, col=col, row=row, data=df, height=height,
+                      **kwargs)
+    g.map_dataframe(plotting.scatter_ci_dist, y=y, x=x, x_dodge=x_dodge,
+                    all_labels=list(df[hue].unique()), like_pointplot=True,
+                    ci=ci)
+    g.add_legend()
+    g.set_xlabels(x)
+    g.set_ylabels(y)
+    g.fig.suptitle("Psychophysical curve parameter values\n", va='bottom')
+    return g
