@@ -6,6 +6,9 @@ import os.path as op
 import numpy as np
 from plenoptic.simulate import pooling
 from foveated_metamers import utils
+import numpyro
+import multiprocessing
+
 
 configfile:
     "config.yml"
@@ -14,8 +17,10 @@ if not op.isdir(config["DATA_DIR"]):
 if os.system("module list") == 0:
     # then we're on the cluster
     ON_CLUSTER = True
+    numpyro.set_host_device_count(multiprocessing.cpu_count())
 else:
     ON_CLUSTER = False
+    numpyro.set_host_device_count(4)
 wildcard_constraints:
     num="[0-9]+",
     pad_mode="constant|symmetric",
@@ -1054,21 +1059,21 @@ rule combine_all_behavior:
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description_comp-{comp}.csv'),
     output:
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                       'task-split_comp-{comp}_data.csv'),
+                'task-split_comp-{comp}_data.csv'),
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                       'task-split_comp-{comp}_performance.svg'),
+                'task-split_comp-{comp}_performance.svg'),
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                       'task-split_comp-{comp}_run_lengths.svg'),
+                'task-split_comp-{comp}_run_lengths.svg'),
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                       'task-split_comp-{comp}_loss_comparison.svg'),
+                'task-split_comp-{comp}_loss_comparison.svg'),
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                       'task-split_comp-{comp}_loss_comparison_subjects.svg'),
+                'task-split_comp-{comp}_loss_comparison_subjects.svg'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                       'task-split_comp-{comp}_plots.log'),
+                'task-split_comp-{comp}_plots.log'),
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                       'task-split_comp-{comp}_plots_benchmark.txt'),
+                'task-split_comp-{comp}_plots_benchmark.txt'),
     run:
         import foveated_metamers as fov
         import pandas as pd
@@ -1091,13 +1096,13 @@ rule combine_all_behavior:
 rule simulate_dataset:
     output:
         op.join(config["DATA_DIR"], 'behavioral', 'simulated_{model_name}', 'task-split_comp-ref',
-                       'task-split_comp-ref_data.csv'),
+                'task-split_comp-ref_data.csv'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', 'simulated_{model_name}', 'task-split_comp-ref',
-                       'task-split_comp-ref_data.log'),
+                'task-split_comp-ref_data.log'),
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', 'simulated_{model_name}', 'task-split_comp-ref',
-                       'task-split_comp-ref_data_benchmark.txt'),
+                'task-split_comp-ref_data_benchmark.txt'),
     run:
         import foveated_metamers as fov
         import contextlib
@@ -1122,6 +1127,48 @@ rule simulate_dataset:
                 simul['model'] = f'simulated_{wildcards.model_name}'
                 simul.to_csv(output[0], index=False)
 
+
+rule mcmc:
+    input:
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_data.csv'),
+    output:
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
+                'd-{num_draws}_w-{num_warmup}_s-{seed}.nc'),
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
+                'd-{num_draws}_w-{num_warmup}_s-{seed}.log'),
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
+                'd-{num_draws}_w-{num_warmup}_s-{seed}_benchmark.txt'),
+    run:
+        import contextlib
+        import foveated_metamers as fov
+        import pandas as pd
+        import jax
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                print(f"Running on {jax.lib.xla_bridge.device_count()} cpus!")
+                print(os.environ.get('XLA_FLAGS', 'NONE'))
+                if 'V1' in wildcards.model_name:
+                    model = 'V1'
+                elif 'RGC' in wildcards.model_name:
+                    model = 'RGC'
+                dataset = fov.mcmc.assemble_dataset_from_expt_df(pd.read_csv(input[0]))
+                mcmc = fov.mcmc.run_inference(dataset, model,
+                                              float(wildcards.step_size),
+                                              int(wildcards.num_draws),
+                                              int(wildcards.num_chains),
+                                              int(wildcards.num_warmup),
+                                              int(wildcards.seed))
+                # want to have a different seed for constructing the inference
+                # data object than we did for inference itself
+                inf_data = fov.mcmc.assemble_inf_data(mcmc, dataset, int(wildcards.seed)+1)
+                inf_data.to_netcdf(output[0])
+                
 
 rule calculate_heterogeneity:
     input:
