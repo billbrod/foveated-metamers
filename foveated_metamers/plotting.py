@@ -237,28 +237,6 @@ def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
     return dots, lines, cis
 
 
-def scatter_ci_xy(x, y, ci_col='percentile', size=5, **kwargs):
-    """
-    """
-    data = kwargs.pop('data')
-    ax = kwargs.pop('ax', plt.gca())
-    ci_vals = sorted(data[ci_col].unique())
-    assert(len(ci_vals) == 3), "Need 3 percentile values!"
-    x_ctrs = data.query("percentile == 50")[x]
-    y_ctrs = data.query("percentile == 50")[y]
-    dots = ax.scatter(x_ctrs, y_ctrs, s=size**2, **kwargs)
-    cis = []
-    cis.append(ax.plot([x_ctrs, x_ctrs],
-                       [data.query(f"percentile == {ci_vals[0]}")[y],
-                        data.query(f"percentile == {ci_vals[-1]}")[y]],
-                       **kwargs))
-    cis.append(ax.plot([data.query(f"percentile == {ci_vals[0]}")[x],
-                        data.query(f"percentile == {ci_vals[-1]}")[x]],
-                       [y_ctrs, y_ctrs],
-                       **kwargs))
-    return dots, cis
-
-
 def map_flat_line(x, y, data, linestyles='--', colors='k', ax=None, **kwargs):
     """Plot a flat line across every axis in a FacetGrid.
 
@@ -329,21 +307,7 @@ def map_flat_line(x, y, data, linestyles='--', colors='k', ax=None, **kwargs):
         lines = ax.vlines(x, ymin, ymax, linestyles=linestyles, colors=colors,
                           **kwargs)
     else:
-        try:
-            xmin, xmax = data[x].min(), data[x].max()
-            ymin, ymax = data[y].min(), data[y].max()
-        except KeyError:
-            # it looks like the above works with catplot / related functions
-            # (i.e., when seaborn thought the data was categorical), but not
-            # when it's relplot / related functions (i.e., when seaborn thought
-            # data was numeric). in that case, the columns have been renamed to
-            # 'x', 'y', etc.
-            xmin, xmax = data['x'].min(), data['x'].max()
-            ymin, ymax = data['y'].min(), data['y'].max()
-            xmin = min(xmin, ymin)
-            xmax = max(xmax, ymax)
-        lines = ax.plot([xmin, xmax], [xmin, xmax], linestyle=linestyles,
-                        color=colors, **kwargs)
+        raise Exception("Exactly one of x or y must be a string!")
     return lines
 
 
