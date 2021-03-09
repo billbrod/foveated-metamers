@@ -915,9 +915,11 @@ def mcmc_diagnostics_plot(inf_data):
                         f', mean effective sample size={ess[var].data.mean():.02f}')
     fig = axes[0, 0].figure
     # want monospace so table prints correctly
-    fig.text(1, 1, "rhat\n"+rhat.to_dataframe().to_markdown(),
+    rhat = rhat.to_dataframe().reorder_levels(['trial_type', 'image_name', 'subject_name'])
+    fig.text(1, 1, "rhat\n"+rhat.sort_index().to_markdown(),
              ha='left', va='top', family='monospace')
-    fig.text(1, .5, "effective sample size\n"+ess.to_dataframe().to_markdown(),
+    ess = ess.to_dataframe().reorder_levels(['trial_type', 'image_name', 'subject_name'])
+    fig.text(1, .5, "effective sample size\n"+ess.sort_index().to_markdown(),
              ha='left', va='top', family='monospace')
     fig.suptitle("Diagnostics plot for MCMC, showing distribution and sampling"
                  " trace for each parameter", va='baseline')
