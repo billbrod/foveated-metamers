@@ -1088,6 +1088,41 @@ rule combine_all_behavior:
                 g.fig.savefig(output[4], bbox_inches='tight')
 
 
+rule simulate_dataset:
+    output:
+        op.join(config["DATA_DIR"], 'behavioral', 'simulated_{model_name}', 'task-split_comp-ref',
+                       'task-split_comp-ref_data.csv'),
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', 'simulated_{model_name}', 'task-split_comp-ref',
+                       'task-split_comp-ref_data.log'),
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', 'simulated_{model_name}', 'task-split_comp-ref',
+                       'task-split_comp-ref_data_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                if 'V1' in wildcards.model_name:
+                    scaling = config['V1']['scaling']
+                    s0 = .08
+                elif 'RGC' in wildcards.model_name:
+                    scaling = config['RGC']['scaling']
+                    s0 = .01
+                simul = fov.mcmc.simulate_dataset(s0, 5, num_subjects=4,
+                                                  trial_types=1, num_images=20,
+                                                  num_trials=36)
+                obs = simul.observed_responses.copy().astype(np.float32)
+                # block out simulated data like our actual data is blocked out
+                obs[:, :, :len(simul.subject_name):2, 10:15] = np.nan
+                obs[:, :, 1:len(simul.subject_name):2, 15:] = np.nan
+                simul['observed_responses'] = obs
+                simul = simul.to_dataframe().reset_index()
+                simul = simul.rename(columns={'observed_responses': 'hit_or_miss_numeric'})
+                simul['model'] = f'simulated_{wildcards.model_name}'
+                simul.to_csv(output[0], index=False)
+
+
 rule calculate_heterogeneity:
     input:
         [op.join(config["DATA_DIR"], 'ref_images_preproc', '{img}{{gammacorrected}}_range-.05,.95_size-2048,2600.png').format(img=img)
