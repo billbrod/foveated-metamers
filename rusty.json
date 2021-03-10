@@ -58,6 +58,7 @@
     "mcmc":
     {
         "partition": "ccn",
-        "mem" : ""
+        "mem" : "",
+        "time": "6:00:00"
     }
 }
