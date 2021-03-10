@@ -70,14 +70,14 @@ def _map_dataframe_prep(data, x, y, estimator, x_jitter, x_dodge, x_order,
         which column of data to plot on the x-axis
     y : str
         which column of data to plot on the y-axis
-    estimator : callable, optional
+    estimator : callable
         what function to use for estimating central trend of the data
-    x_jitter : float, bool, or None, optional
+    x_jitter : float, bool, or None
         whether to jitter the data along the x-axis. if None or False,
         don't jitter. if a float, add uniform noise (drawn from
         -x_jitter to x_jitter) to each point's x value. if True, act as
         if x_jitter=.1
-    x_dodge : float, None, or bool, optional
+    x_dodge : float, None, or bool
         to improve visibility with many points that have the same
         x-values (or are categorical), we can jitter the data along the
         x-axis, but we can also "dodge" it, which operates
@@ -85,27 +85,36 @@ def _map_dataframe_prep(data, x, y, estimator, x_jitter, x_dodge, x_order,
         array of the same shape as x (we will dodge by calling `x_data =
         x_data + x_dodge`). if None, we don't dodge at all. If True, we
         dodge as if x_dodge=.01
-    x_order: np.array or None, optional
+    x_order: np.array or None
         the order to plot x-values in. If None, don't reorder
-    ci : int, optinoal
-        The width fo the CI to draw (in percentiles)
+    ci : int or 'hdi', optinoal
+        The width of the CI to draw (in percentiles). If 'hdi', data must
+        contain a column with 'hdi', which contains 50 and two other values
+        giving the median and the endpoints of the HDI.
 
     Returns
     -------
     x_data : np.array
         the x data to plot
-    plot_data : np.array
+    plot_data : pd.Series
         the y data of the central trend
-    plot_cis : np.array
+    plot_cis : list of pd.Series
         the y data of the CIs
     x_numeric : bool
         whether the x data is numeric or not (used to determine if/how
         we should update the x-ticks)
 
     """
-    plot_data = data.groupby(x)[y].agg(estimator)
-    ci_vals = [50 - ci/2, 50 + ci/2]
-    plot_cis = [data.groupby(x)[y].agg(np.percentile, val) for val in ci_vals]
+    if ci == 'hdi':
+        plot_data = data.set_index(x).query("hdi==50")[y]
+        ci_vals = list(data.hdi.unique())
+        ci_vals.remove(50)
+        assert len(ci_vals) == 2, "should only have median and two endpoints for HDI!"
+        plot_cis = [data.set_index(x).query("hdi==@val")[y] for val in ci_vals]
+    else:
+        plot_data = data.groupby(x)[y].agg(estimator)
+        ci_vals = [50 - ci/2, 50 + ci/2]
+        plot_cis = [data.groupby(x)[y].agg(np.percentile, val) for val in ci_vals]
     if x_order is not None:
         plot_data = plot_data.reindex(x_order)
         plot_cis = [p.reindex(x_order) for p in plot_cis]
@@ -137,8 +146,10 @@ def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
     """Plot center points and specified CIs, for use with map_dataframe.
 
     based on seaborn.linearmodels.scatterplot. CIs are taken from a
-    distribution in this function. Therefore, it's assumed that the
-    values being passed to it are values from a bootstrap distribution.
+    distribution in this function. Therefore, it's assumed that the values
+    being passed to it are values from a bootstrap distribution or a Bayesian
+    posterior. seaborn.pointplot draws the CI on the *mean* (or other central
+    tendency) of a distribution, not the distribution itself.
 
     by default, this draws the 68% confidence interval. to change this,
     change the ci argument. for instance, if you only want to draw the
@@ -150,8 +161,10 @@ def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
         which column of data to plot on the x-axis
     y : str
         which column of data to plot on the y-axis
-    ci : int, optinoal
-        The width fo the CI to draw (in percentiles)
+    ci : int or 'hdi', optinoal
+        The width of the CI to draw (in percentiles). If 'hdi', data must
+        contain a column with 'hdi', which contains 50 and two other values
+        giving the median and the endpoints of the HDI.
     x_jitter : float, bool, or None, optional
         whether to jitter the data along the x-axis. if None or False,
         don't jitter. if a float, add uniform noise (drawn from

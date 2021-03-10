@@ -977,7 +977,8 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
                               hue='subject_name', col='parameter',
                               row='trial_type',
                               query_str="distribution=='posterior'", height=5,
-                              x_dodge=.1, ci=95, **kwargs):
+                              x_dodge=.1, hdi=.95, rotate_xticklabels=False,
+                              **kwargs):
     """Show psychophysical curve parameters.
 
     This plots the psychophysical curve parameters for all full curves we can
@@ -1005,8 +1006,13 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
         deterministically shifting it. If a float, x_dodge is the amount we
         shift each level of hue by; if None, we don't dodge at all; if True, we
         dodge as if x_dodge=.01
-    ci : int, optinoal
-        The width fo the CI to draw (in percentiles)
+    hdi : float, optional
+        The width of the HDI to draw (in range (0, 1]). See docstring of
+        fov.mcmc.inf_data_to_df for more details.
+    rotate_xticklabels : bool or int, optional
+        whether to rotate the x-axis labels or not. if True, we rotate
+        by 25 degrees. if an int, we rotate by that many degrees. if
+        False, we don't rotate.
     kwargs :
         passed to sns.FacetGrid
 
@@ -1018,15 +1024,23 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
     """
     kwargs.setdefault('sharey', False)
     df = mcmc.inf_data_to_df(inf_data, 'psychophysical curve parameters',
-                             query_str=query_str)
+                             query_str=query_str, hdi=hdi)
 
     g = sns.FacetGrid(hue=hue, col=col, row=row, data=df, height=height,
                       **kwargs)
     g.map_dataframe(plotting.scatter_ci_dist, y=y, x=x, x_dodge=x_dodge,
                     all_labels=list(df[hue].unique()), like_pointplot=True,
-                    ci=ci)
+                    ci='hdi')
     g.add_legend()
     g.set_xlabels(x)
     g.set_ylabels(y)
     g.fig.suptitle("Psychophysical curve parameter values\n", va='bottom')
+    if rotate_xticklabels:
+        if rotate_xticklabels is True:
+            rotate_xticklabels = 25
+        for ax in g.axes.flatten():
+            labels = ax.get_xticklabels()
+            if labels:
+                ax.set_xticklabels(labels, rotation=rotate_xticklabels,
+                                   ha='right')
     return g

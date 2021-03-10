@@ -589,7 +589,7 @@ def assemble_inf_data(mcmc, dataset, seed=1):
 
 
 def inf_data_to_df(inf_data, kind='predictive', jitter_scaling=False,
-                   query_str=None):
+                   query_str=None, hdi=False):
     """Convert inf_data to a dataframe, for plotting.
 
     We exponentiate the log_s0, log_a0, log_s0_global_mean, and
@@ -613,14 +613,37 @@ def inf_data_to_df(inf_data, kind='predictive', jitter_scaling=False,
     query_str : str or None, optional
         If not None, the string to query dataframe with to limit the plotted
         data (e.g., "distribution == 'posterior'").
+    hdi : bool or float, optional
+        Whether to compute the HDI (highest density interval) on the parameters
+        or return the full distributions. If True, we compute the 95% HDI, if a
+        float, must lie in (0, 1] and give the percentage HDI (we also include
+        the median). The HDI is one way of constructing a summary credible
+        interval, the other common way is to use the equal-tailed interval
+        (ETI), where a 95% ETI has 2.5% of the distribution on either side of
+        its limits (so it goes from the 2.5th to 97.5th percentile). The 95%
+        HDI, on the other hand, contains the central 95% with the highest
+        probability density; with symmetric distirbutions, this will be the
+        same as ETI. See
+        https://www.sciencedirect.com/topics/mathematics/highest-density-interval
+        for some more discussion, excerpted from [2]_
+
+    To quote
 
     Returns
     -------
     df : pd.DataFrame
         The DataFrame described above
 
+    References
+    ----------
+    .. [2] Kruschke, J. K. (2015). Doing Bayesian Data Analysis. : Elsevier.
+
     """
+    if hdi is True:
+        hdi = .95
     if kind == 'predictive':
+        if hdi:
+            raise Exception("Can't compute HDI for predictive df!")
         dists = ['observed_data', 'posterior_predictive', 'prior_predictive']
         df = []
         for d in dists:
@@ -632,7 +655,14 @@ def inf_data_to_df(inf_data, kind='predictive', jitter_scaling=False,
         dists = ['prior', 'posterior']
         df = []
         for d in dists:
-            tmp = inf_data[d].to_dataframe()
+            tmp = inf_data[d]
+            if hdi:
+                hdi_xr = az.hdi(tmp, hdi)
+                hdi_xr['hdi'] = 100 * np.array([.5-hdi/2, .5+hdi/2])
+                tmp = tmp.assign_coords({'hdi': 50})
+                tmp = tmp.median(['chain', 'draw']).expand_dims('hdi')
+                tmp = xarray.concat([hdi_xr, tmp], 'hdi')
+            tmp = tmp.to_dataframe()
             for c in tmp.columns:
                 if c.startswith('log') and 'sd' not in c:
                     tmp[c.replace('log_', '')] = tmp[c].map(np.exp)
@@ -648,11 +678,15 @@ def inf_data_to_df(inf_data, kind='predictive', jitter_scaling=False,
         params = ['a0', 's0']
         df = []
         for d in dists:
-            coords = {k: inf_data[d][k].values for k in
-                      ['trial_type', 'image_name', 'subject_name']}
             for p in params:
                 tmp = np.exp(inf_data[d][f'log_{p}_global_mean'] + inf_data[d][f'log_{p}_image'] +
                              inf_data[d][f'log_{p}_subject'])
+                if hdi:
+                    hdi_xr = az.hdi(tmp, hdi)
+                    hdi_xr['hdi'] = 100 * np.array([.5-hdi/2, .5+hdi/2])
+                    tmp = tmp.assign_coords({'hdi': 50})
+                    tmp = tmp.median(['chain', 'draw']).expand_dims('hdi')
+                    tmp = xarray.concat([hdi_xr.x, tmp], 'hdi')
                 tmp = tmp.to_dataframe('value').reset_index()
                 tmp['distribution'] = d
                 tmp['parameter'] = p
