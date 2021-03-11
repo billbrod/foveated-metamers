@@ -1169,6 +1169,61 @@ rule mcmc:
                 inf_data.to_netcdf(output[0])
                 
 
+rule mcmc_plots:
+    input:
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
+                'd-{num_draws}_w-{num_warmup}_s-{seed}.nc'),
+    output:
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
+                'd-{num_draws}_w-{num_warmup}_s-{seed}_post-pred-check.svg'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
+                'd-{num_draws}_w-{num_warmup}_s-{seed}_diagnostics.svg'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
+                'd-{num_draws}_w-{num_warmup}_s-{seed}_psychophysical-params.svg'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
+                'd-{num_draws}_w-{num_warmup}_s-{seed}_pairplot.svg'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
+                'd-{num_draws}_w-{num_warmup}_s-{seed}_distribs.svg'),
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
+                'd-{num_draws}_w-{num_warmup}_s-{seed}_plots.log'),
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
+                'd-{num_draws}_w-{num_warmup}_s-{seed}_plots_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import arviz as az
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                inf_data = az.from_netcdf(input[0])
+                print("Creating posterior predictive check.")
+                g = fov.figures.posterior_predictive_check(inf_data,
+                                                           facetgrid_kwargs={'col': 'subject_name',
+                                                                             'row': 'image_name'})
+                g.fig.savefig(output[0], bbox_inches='tight')
+                print("Creating MCMC diagnostics plot.")
+                fig = fov.figures.mcmc_diagnostics_plot(inf_data)
+                fig.savefig(output[1], bbox_inches='tight')
+                print("Creating psychophysical parameters plot.")
+                g = fov.figures.psychophysical_parameters(inf_data, rotate_xticklabels=True, aspect=1.2)
+                g.fig.savefig(output[2], bbox_inches='tight')
+                print("Creating parameter pairplot.")
+                g = fov.figures.parameter_pairplot(inf_data, hue='subject_name')
+                g.fig.savefig(output[3], bbox_inches='tight')
+                print("Creating parameter distribution plot.")
+                g = fov.figures.parameter_distributions(inf_data, row='subject_name')
+                g.fig.savefig(output[4], bbox_inches='tight')
+
+
 rule calculate_heterogeneity:
     input:
         [op.join(config["DATA_DIR"], 'ref_images_preproc', '{img}{{gammacorrected}}_range-.05,.95_size-2048,2600.png').format(img=img)
