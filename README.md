@@ -219,11 +219,7 @@ Google Sheets, a text editor, LibreOffice Calc, or loaded in to pandas
       performance, as well as how many trials are required.
     - `figures.py`: creates various figures.
     - `utils.py`: various utility functions.
-    - `sampling.py`: checks sampling and aliasing issues, not used in main
-      analysis.
   - `notebooks/`: Jupyter notebooks.
-    - `Sampling_and_aliasing`: example of how to check for sampling / aliasing
-      issues.
 
 # Usage
 
