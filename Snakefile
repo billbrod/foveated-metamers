@@ -1177,27 +1177,15 @@ rule mcmc_plots:
     output:
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
                 'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
-                'd-{num_draws}_w-{num_warmup}_s-{seed}_post-pred-check.svg'),
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
-                'd-{num_draws}_w-{num_warmup}_s-{seed}_diagnostics.svg'),
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
-                'd-{num_draws}_w-{num_warmup}_s-{seed}_psychophysical-params.svg'),
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
-                'd-{num_draws}_w-{num_warmup}_s-{seed}_pairplot.svg'),
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
-                'd-{num_draws}_w-{num_warmup}_s-{seed}_distribs.svg'),
+                'd-{num_draws}_w-{num_warmup}_s-{seed}_{plot_type}.png'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
                 'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
-                'd-{num_draws}_w-{num_warmup}_s-{seed}_plots.log'),
+                'd-{num_draws}_w-{num_warmup}_s-{seed}_{plot_type}.log'),
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
                 'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
-                'd-{num_draws}_w-{num_warmup}_s-{seed}_plots_benchmark.txt'),
+                'd-{num_draws}_w-{num_warmup}_s-{seed}_{plot_type}_benchmark.txt'),
     run:
         import foveated_metamers as fov
         import arviz as az
@@ -1205,23 +1193,28 @@ rule mcmc_plots:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 inf_data = az.from_netcdf(input[0])
-                print("Creating posterior predictive check.")
-                g = fov.figures.posterior_predictive_check(inf_data,
-                                                           facetgrid_kwargs={'col': 'subject_name',
-                                                                             'row': 'image_name'})
-                g.fig.savefig(output[0], bbox_inches='tight')
-                print("Creating MCMC diagnostics plot.")
-                fig = fov.figures.mcmc_diagnostics_plot(inf_data)
-                fig.savefig(output[1], bbox_inches='tight')
-                print("Creating psychophysical parameters plot.")
-                g = fov.figures.psychophysical_parameters(inf_data, rotate_xticklabels=True, aspect=1.2)
-                g.fig.savefig(output[2], bbox_inches='tight')
-                print("Creating parameter pairplot.")
-                g = fov.figures.parameter_pairplot(inf_data, hue='subject_name')
-                g.fig.savefig(output[3], bbox_inches='tight')
-                print("Creating parameter distribution plot.")
-                g = fov.figures.parameter_distributions(inf_data, row='subject_name')
-                g.fig.savefig(output[4], bbox_inches='tight')
+                if wildcards.plot_type == 'post-pred-check':
+                    print("Creating posterior predictive check.")
+                    g = fov.figures.posterior_predictive_check(inf_data,
+                                                               facetgrid_kwargs={'col': 'subject_name',
+                                                                                 'row': 'image_name'})
+                    fig = g.fig
+                elif wildcards.plot_type == 'diagnostics':
+                    print("Creating MCMC diagnostics plot.")
+                    fig = fov.figures.mcmc_diagnostics_plot(inf_data)
+                elif wildcards.plot_type == 'psychophysical-params':
+                    print("Creating psychophysical parameters plot.")
+                    g = fov.figures.psychophysical_parameters(inf_data, rotate_xticklabels=True, aspect=1.2)
+                    fig = g.fig
+                elif wildcards.plot_type == 'pairplot':
+                    print("Creating parameter pairplot.")
+                    g = fov.figures.parameter_pairplot(inf_data, hue='subject_name')
+                    fig = g.fig
+                elif wildcards.plot_type == 'distribs':
+                    print("Creating parameter distribution plot.")
+                    g = fov.figures.parameter_distributions(inf_data, row='subject_name')
+                    fig = g.fig
+                fig.savefig(output[0], bbox_inches='tight')
 
 
 rule calculate_heterogeneity:

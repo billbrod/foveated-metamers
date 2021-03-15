@@ -968,7 +968,7 @@ def parameter_pairplot(inf_data, vars=None,
     if vars is None:
         vars = sorted(df.columns, key=key_func)
     g = sns.pairplot(df.reset_index(), vars=vars, corner=True, diag_kind='kde',
-                     diag_kws={'cut': 0}, **kwargs)
+                     kind='kde', diag_kws={'cut': 0}, **kwargs)
     g.fig.suptitle('Joint distributions of model parameters')
     return g
 
