@@ -7,16 +7,15 @@ from torch import optim
 import torchcontrib
 import numpy as np
 import warnings
-from ..tools.data import to_numpy, _find_min_int
+import plenoptic as po
+from plenoptic.simulate.models.naive import Identity
 from ..tools.optim import l2_norm
 import matplotlib.pyplot as plt
-import pyrtools as pt
-from ..tools.display import rescale_ylim, plot_representation, update_plot, imshow
+from ..tools.display import rescale_ylim, plot_representation, update_plot
 from matplotlib import animation
-from ..simulate.models.naive import Identity
 from tqdm import tqdm
 import dill
-from ..tools.metamer_utils import RangeClamper
+from ..tools.clamps import RangeClamper
 
 
 class Synthesis(metaclass=abc.ABCMeta):
@@ -926,7 +925,7 @@ class Synthesis(metaclass=abc.ABCMeta):
             # for some reason, pytorch doesn't have the equivalent of
             # np.random.permutation, something that returns a shuffled copy
             # of a tensor, so we use numpy's version
-            idx_shuffled = torch.LongTensor(np.random.permutation(to_numpy(error_idx)))
+            idx_shuffled = torch.LongTensor(np.random.permutation(po.to_numpy(error_idx)))
             # then we optionally randomly select some subset of those.
             idx_sub = idx_shuffled[:int((1 - self.fraction_removed) * idx_shuffled.numel())]
             synthesized_rep = self.synthesized_representation.flatten()[idx_sub]
@@ -1425,9 +1424,9 @@ class Synthesis(metaclass=abc.ABCMeta):
                                 " your figure")
         if title is None:
             title = self.__class__.__name__
-        fig = imshow(image, ax=ax, title=title, zoom=imshow_zoom,
-                     batch_idx=batch_idx, channel_idx=channel_idx,
-                     vrange=vrange, as_rgb=as_rgb)
+        fig = po.imshow(image, ax=ax, title=title, zoom=imshow_zoom,
+                        batch_idx=batch_idx, channel_idx=channel_idx,
+                        vrange=vrange, as_rgb=as_rgb)
         ax.xaxis.set_visible(False)
         ax.yaxis.set_visible(False)
         return fig
@@ -1493,8 +1492,8 @@ class Synthesis(metaclass=abc.ABCMeta):
             fig, ax = plt.subplots(1, 1, figsize=figsize)
         else:
             fig = ax.figure
-        image = to_numpy(image).flatten()
-        base_signal = to_numpy(base_signal).flatten()
+        image = po.to_numpy(image).flatten()
+        base_signal = po.to_numpy(base_signal).flatten()
         ax.hist(image, bins=min(_freedman_diaconis_bins(image), 50),
                 label='synthesized image', **kwargs)
         ax.hist(base_signal, bins=min(_freedman_diaconis_bins(image), 50),
@@ -1633,7 +1632,7 @@ class Synthesis(metaclass=abc.ABCMeta):
             fig, ax = plt.subplots(1, 1, figsize=figsize, subplot_kw={'aspect': 1})
         else:
             fig = ax.figure
-        plot_vals = to_numpy(self._grab_value_for_comparison(value, batch_idx,
+        plot_vals = po.to_numpy(self._grab_value_for_comparison(value, batch_idx,
                                                              channel_idx, iteration,
                                                              scatter_subsample,
                                                              **kwargs)).squeeze()
@@ -1729,32 +1728,32 @@ class Synthesis(metaclass=abc.ABCMeta):
             n_subplots += 1
             width_ratios.append(synthesized_image_width)
             if 'image' not in axes_idx.keys():
-                axes_idx['image'] = _find_min_int(axes_idx.values())
+                axes_idx['image'] = po.tools.data._find_min_int(axes_idx.values())
         if plot_loss:
             n_subplots += 1
             width_ratios.append(loss_width)
             if 'loss' not in axes_idx.keys():
-                axes_idx['loss'] = _find_min_int(axes_idx.values())
+                axes_idx['loss'] = po.tools.data._find_min_int(axes_idx.values())
         if plot_representation_error:
             n_subplots += 1
             width_ratios.append(representation_error_width)
             if 'rep_error' not in axes_idx.keys():
-                axes_idx['rep_error'] = _find_min_int(axes_idx.values())
+                axes_idx['rep_error'] = po.tools.data._find_min_int(axes_idx.values())
         if plot_image_hist:
             n_subplots += 1
             width_ratios.append(image_hist_width)
             if 'hist' not in axes_idx.keys():
-                axes_idx['hist'] = _find_min_int(axes_idx.values())
+                axes_idx['hist'] = po.tools.data._find_min_int(axes_idx.values())
         if plot_rep_comparison:
             n_subplots += 1
             width_ratios.append(rep_comparison_width)
             if 'rep_comp' not in axes_idx.keys():
-                axes_idx['rep_comp'] = _find_min_int(axes_idx.values())
+                axes_idx['rep_comp'] = po.tools.data._find_min_int(axes_idx.values())
         if plot_signal_comparison:
             n_subplots += 1
             width_ratios.append(signal_comparison_width)
             if 'signal_comp' not in axes_idx.keys():
-                axes_idx['signal_comp'] = _find_min_int(axes_idx.values())
+                axes_idx['signal_comp'] = po.tools.data._find_min_int(axes_idx.values())
         if fig is None:
             width_ratios = np.array(width_ratios)
             if figsize is None:

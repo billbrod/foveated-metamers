@@ -4,7 +4,6 @@ import imageio
 import time
 import os.path as op
 import numpy as np
-from plenoptic.simulate import pooling
 from foveated_metamers import utils
 import numpyro
 import multiprocessing
@@ -28,7 +27,7 @@ wildcard_constraints:
     size="[0-9,]+",
     bits="[0-9]+",
     img_preproc="full|degamma|gamma-corrected|gamma-corrected_full|range-[,.0-9]+|gamma-corrected_range-[,.0-9]+",
-    preproc_image_name="|".join([im+'_?[a-z]*' for im in config['IMAGE_NAME']['ref_image']]),
+    preproc_image_name="|".join([im+'_?[a-z]*' for im in config['IMAGE_NAME']['ref_image']])+"|einstein",
     preproc="|_degamma|degamma",
     gpu="0|1",
     sess_num="|".join([f'{i:02d}' for i in config['PSYCHOPHYSICS']['SESSIONS']]),
@@ -68,48 +67,26 @@ BEHAVIORAL_DATA_DATES = {
 
 # quick rule to check that there are GPUs available and the environment
 # has been set up correctly.
+rule test_setup_all:
+    input:
+        [op.join(config['DATA_DIR'], 'test_setup', '{}_gpu-{}', 'einstein').format(m, g) for g in [0, 1]
+         for m in MODELS],
+
+
 rule test_setup:
     input:
-        METAMER_TEMPLATE_PATH.format(model_name=MODELS[0],
-                                     image_name='einstein_degamma_size-256,256',
-                                     scaling=.1, optimizer='Adam', fract_removed=0, loss_fract=1,
-                                     coarse_to_fine=False, seed=0, init_type='white',
-                                     learning_rate=1, min_ecc=.5, max_ecc=15,
-                                     max_iter=100, loss_thresh=1e-8, gpu=0,
-                                     clamp='clamp', clamp_each_iter=True, loss='l2',
-                                     loss_change_thresh=.1, loss_change_iter=50,
-                                     save_all=''),
-        METAMER_TEMPLATE_PATH.format(model_name=MODELS[1],
-                                     image_name='einstein_degamma_size-256,256',
-                                     scaling=.5, optimizer='Adam', fract_removed=0, loss_fract=1,
-                                     loss_change_thresh=0.01, seed=0, init_type='white',
-                                     learning_rate=.1, min_ecc=.5, max_ecc=15, max_iter=100,
-                                     loss_thresh=1e-8, gpu=0, coarse_to_fine='together',
-                                     clamp='clamp', clamp_each_iter=True, loss='l2',
-                                     loss_change_iter=50, save_all=''),
-        METAMER_TEMPLATE_PATH.format(model_name=MODELS[0],
-                                     image_name='einstein_degamma_size-256,256',
-                                     scaling=.1, optimizer='Adam', fract_removed=0, loss_fract=1,
-                                     coarse_to_fine=False, seed=0, init_type='white',
-                                     learning_rate=1, min_ecc=.5, max_ecc=15,
-                                     max_iter=100, loss_thresh=1e-8, gpu=1,
-                                     clamp='clamp', clamp_each_iter=True, loss='l2',
-                                     loss_change_thresh=.1, loss_change_iter=50, save_all=''),
-        METAMER_TEMPLATE_PATH.format(model_name=MODELS[1],
-                                     image_name='einstein_degamma_size-256,256',
-                                     scaling=.5, optimizer='Adam', fract_removed=0, loss_fract=1,
-                                     loss_change_thresh=0.01, seed=0, init_type='white',
-                                     learning_rate=.1, min_ecc=.5, max_ecc=15,
-                                     max_iter=100, loss_thresh=1e-8, gpu=1, clamp='clamp',
-                                     clamp_each_iter=True, loss='l2', coarse_to_fine='together',
-                                     loss_change_iter=50, save_all=''),
+        lambda wildcards: utils.generate_metamer_paths(model_name=wildcards.model_name,
+                                                       image_name='einstein_degamma_size-256,256',
+                                                       scaling=1.0,
+                                                       gpu=wildcards.gpu_num,
+                                                       max_iter=210,
+                                                       seed=0)[0].replace('metamer.png', 'synthesis-1.png')
     output:
-        directory(op.join(config['DATA_DIR'], 'test_setup', MODELS[0], 'einstein')),
-        directory(op.join(config['DATA_DIR'], 'test_setup', MODELS[1], 'einstein'))
+        directory(op.join(config['DATA_DIR'], 'test_setup', '{model_name}_gpu-{gpu_num}', 'einstein')),
     log:
-        op.join(config['DATA_DIR'], 'logs', 'test_setup.log')
+        op.join(config['DATA_DIR'], 'logs', 'test_setup', '{model_name}_gpu-{gpu_num}', 'einstein.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'test_setup_benchmark.txt')
+        op.join(config['DATA_DIR'], 'logs', 'test_setup', '{model_name}_gpu-{gpu_num}', 'einstein_benchmark.txt')
     run:
         import contextlib
         import shutil
@@ -118,8 +95,6 @@ rule test_setup:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 print("Copying outputs from %s to %s" % (op.dirname(input[0]), output[0]))
                 shutil.copytree(op.dirname(input[0]), output[0])
-                print("Copying outputs from %s to %s" % (op.dirname(input[1]), output[1]))
-                shutil.copytree(op.dirname(input[1]), output[1])
 
 
 rule all_refs:
@@ -368,13 +343,15 @@ rule gen_norm_stats:
     params:
         index = lambda wildcards: (int(wildcards.num) * 100, (int(wildcards.num)+1) * 100)
     run:
-        import plenoptic as po
         import contextlib
+        import sys
+        sys.path.append(op.join(op.dirname(op.realpath(__file__)), 'extra_packages'))
+        import plenoptic_part as pop
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 # scaling doesn't matter here
-                v1 = po.simul.PooledV1(1, (512, 512), num_scales=6)
-                po.optim.generate_norm_stats(v1, input[0], output[0], (512, 512),
+                v1 = pop.PooledV1(1, (512, 512), num_scales=6)
+                pop.optim.generate_norm_stats(v1, input[0], output[0], (512, 512),
                                              index=params.index)
 
 
@@ -510,6 +487,9 @@ rule cache_windows:
     run:
         import contextlib
         import plenoptic as po
+        import sys
+        sys.path.append(op.join(op.dirname(op.realpath(__file__)), '..', 'extra_packages', 'pooling-windows'))
+        import pooling
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 img_size = [int(i) for i in wildcards.size.split(',')]
@@ -522,10 +502,10 @@ rule cache_windows:
                     std_dev = float(wildcards.t_width)
                     t_width = None
                     min_ecc = float(wildcards.min_ecc)
-                po.simul.PoolingWindows(float(wildcards.scaling), img_size, min_ecc,
-                                        float(wildcards.max_ecc), cache_dir=op.dirname(output[0]),
-                                        transition_region_width=t_width, std_dev=std_dev,
-                                        window_type=wildcards.window_type, **kwargs)
+                pooling.PoolingWindows(float(wildcards.scaling), img_size, min_ecc,
+                                       float(wildcards.max_ecc), cache_dir=op.dirname(output[0]),
+                                       transition_region_width=t_width, std_dev=std_dev,
+                                       window_type=wildcards.window_type, **kwargs)
 
 
 def get_norm_dict(wildcards):

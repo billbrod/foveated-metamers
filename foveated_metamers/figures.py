@@ -13,6 +13,9 @@ import matplotlib as mpl
 import os.path as op
 import arviz as az
 from . import utils, plotting, analysis, mcmc
+import sys
+sys.path.append(op.join(op.dirname(op.realpath(__file__)), '..', 'extra_packages'))
+import plenoptic_part as pop
 
 
 def add_cutout_box(axes, window_size=400, periphery_offset=(-800, -1000), colors='r',
@@ -265,7 +268,7 @@ def pooling_window_example(windows, image, target_eccentricity=24,
 
     Parameters
     ----------
-    windows : po.simul.PoolingWindows
+    windows : pooling.PoolingWindows
         The PoolingWindows object to plot.
     image : np.ndarray or str
         The image to plot the window on. If a np.ndarray, then this should
@@ -316,7 +319,7 @@ def synthesis_schematic(metamer, iteration=0, plot_synthesized_image=True,
 
     Parameters
     ----------
-    metamer : po.synth.Metamer
+    metamer : pop.Metamer
         The Metamer object to grab data from
     iteration : int or None, optional
         Which iteration to display. If None, we show the most recent one.
@@ -423,6 +426,12 @@ def synthesis_schematic(metamer, iteration=0, plot_synthesized_image=True,
                                         **kwargs)
     # plot_synthesis_status can update axes_idx
     axes_idx = metamer._axes_idx
+    # I think plot_synthesis_status will turn this into a list (in the general
+    # case, this can contain multiple plots), but for these models and Metamer,
+    # it will always be a single value
+    if 'rep_comp' in axes_idx.keys() and isinstance(axes_idx['rep_comp'], list):
+        assert len(axes_idx['rep_comp']) == 1
+        axes_idx['rep_comp'] = axes_idx['rep_comp'][0]
     fig.axes[0].set_title('')
     if plot_signal_comparison:
         fig.axes[2].set(xlabel='', ylabel='', title='Pixel values')
@@ -457,10 +466,10 @@ def synthesis_video(metamer_save_path, model_name=None):
         # try to infer from path
         model_name = re.findall('/((?:RGC|V1)_.*?)/', metamer_save_path)[0]
     if model_name.startswith('RGC'):
-        model_constructor = po.simul.PooledRGC.from_state_dict_reduced
+        model_constructor = pop.PooledRGC.from_state_dict_reduced
     elif model_name.startswith('V1'):
-        model_constructor = po.simul.PooledV1.from_state_dict_reduced
-    metamer = po.synth.Metamer.load(metamer_save_path, model_constructor=model_constructor)
+        model_constructor = pop.PooledV1.from_state_dict_reduced
+    metamer = pop.Metamer.load(metamer_save_path, model_constructor=model_constructor)
     kwargs = {'plot_synthesized_image': False, 'plot_rep_comparison': False,
               'plot_signal_comparison': False}
     formats = ['png', 'png', 'png', 'mp4', 'png', 'mp4']
@@ -501,7 +510,7 @@ def pooling_window_area(windows, windows_scale=0, units='degrees'):
 
     Parameters
     ----------
-    windows : po.simul.PoolingWindows
+    windows : pooling.PoolingWindows
         The PoolingWindows object to plot.
     windows_scale : int, optional
         The scale of the windows to plot. If units=='degrees', only the

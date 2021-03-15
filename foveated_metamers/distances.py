@@ -9,6 +9,9 @@ from . import utils
 import os.path as op
 import itertools
 import re
+import sys
+sys.path.append(op.join(op.dirname(op.realpath(__file__)), '..', 'extra_packages'))
+import plenoptic_part as pop
 
 
 def _find_seed(x):
@@ -70,11 +73,11 @@ def model_distance(model, synth_model_name, ref_image_name, scaling):
     for i, (im, p) in enumerate(zip(synth_images, paths)):
         image_name = op.splitext(op.basename(p))[0]
         reps[image_name] = model(im)
-        dist = po.optim.mse(reps[image_name], ref_image_rep).item()
+        dist = pop.optim.mse(reps[image_name], ref_image_rep).item()
         df.append(pd.DataFrame({'distance': dist, 'image_1': image_name,
                                 'image_2': ref_image_name}, index=[0]))
     for im_1, im_2 in itertools.combinations(reps, 2):
-        dist = po.optim.mse(reps[im_1], reps[im_2]).item()
+        dist = pop.optim.mse(reps[im_1], reps[im_2]).item()
         df.append(pd.DataFrame({'distance': dist, 'image_1': im_1,
                                 'image_2': im_2}, index=[0]))
     df = pd.concat(df).reset_index(drop=True)
