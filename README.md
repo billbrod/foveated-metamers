@@ -219,7 +219,22 @@ Google Sheets, a text editor, LibreOffice Calc, or loaded in to pandas
       performance, as well as how many trials are required.
     - `figures.py`: creates various figures.
     - `utils.py`: various utility functions.
-  - `notebooks/`: Jupyter notebooks.
+  - `extra_packages/`: additional python code used by this repo. The bits that
+    live here were originally part of
+    [plenoptic](https://github.com/LabForComputationalVision/plenoptic/), but
+    were pulled out because it's a bad idea for a research project to be so
+    heavily reliant on a project currently under development.
+    - `pooling-windows`: git submodule that points to [this
+      repo](https://github.com/LabForComputationalVision/pooling-windows).
+    - `plenoptic-part`: contains the models and metamer synthesis code (as well
+      as some utilities) that were pulled out of plenoptic, branching at [this
+      commit](https://github.com/LabForComputationalVision/plenoptic/tree/fb1c4d29c645c9a054baa021c7ffd07609b181d4)
+      (I used [git filter-repo](https://github.com/newren/git-filter-repo/) and
+      so the history should be preserved). While the model code (and some of the
+      utilities) have been deleted from `plenoptic` and are unique to this repo,
+      the synthesis code here is a modified version of the one in plenoptic. If
+      you wish to use synthesis for your own work *use the plenoptic version*,
+      which is regularly tested and supported.
 
 # Usage
 
