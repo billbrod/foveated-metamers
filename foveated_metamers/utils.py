@@ -229,9 +229,16 @@ def find_attempts(wildcards, increment=False, extra_iter=None, gpu_split=.09):
             p = glob(CONTINUE_TEMPLATE_PATH.format(num=i-1, extra_iter='*', **wildcards))[0]
         else:
             p = METAMER_TEMPLATE_PATH.format(**wildcards)
+    # the next bit will remove all slashes from the string, so we need to
+    # figure out whether we want to start with os.sep or not
+    if p.startswith('/'):
+        start = os.sep
+    else:
+        start = ''
     # this makes sure we're using the right os.sep and also removes any double
     # slashes we might have accidentally introduced
-    return os.sep + op.join(*p.split('/'))
+    p = op.join(*p.split('/'))
+    return start + p
 
 
 def get_ref_image_full_path(image_name,
