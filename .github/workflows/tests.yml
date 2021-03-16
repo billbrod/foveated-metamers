@@ -65,5 +65,3 @@ jobs:
         run: |
           source activate metamers
           snakemake -j 5 -prk data/metamers/test_setup/RGC_norm_gaussian_gpu-0/einstein data/metamers/test_setup/V1_norm_s6_gaussian_gpu-0/einstein
-      - name: Debugging with tmate
-        uses: mxschmitt/action-tmate@v3.3
