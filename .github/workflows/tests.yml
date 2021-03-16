@@ -12,14 +12,16 @@ jobs:
     name: tests
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
       - name: Setup conda
         uses: s-weigand/setup-conda@v1.0.5
         with:
           update-conda: true
           python-version: 3.7
           conda-channels: anaconda, conda-forge, bioconda
-      - name: Checkout submodules
-        uses: textbook/git-checkout-submodule-action@master
+      # - name: Checkout submodules
+      #   uses: textbook/git-checkout-submodule-action@master
       - name: Create environment
         run: |
           conda env install -f environment.yml
