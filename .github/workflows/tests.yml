@@ -59,4 +59,4 @@ jobs:
           sed -i 's|TEXTURE_DIR:.*|TEXTURE_DIR: "data/textures-subset-for-testing"|g' config.yml
       - name: run snakemake test
         run: |
-          snakemake -j 5 -prk ~/Desktop/metamer_test/test_setup/RGC_norm_gaussian_gpu-0/einstein ~/Desktop/metamer_test/test_setup/V1_norm_s6_gaussian_gpu-0/einstein
+          snakemake -j 5 -prk data/metamers/test_setup/RGC_norm_gaussian_gpu-0/einstein data/metamers/test_setup/V1_norm_s6_gaussian_gpu-0/einstein
