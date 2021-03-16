@@ -22,6 +22,7 @@ jobs:
       - name: Create environment
         run: |
           conda env create -f environment.yml
+          source activate metamers
           pip install git+https://github.com/LabForComputationalVision/plenoptic.git@binder
           pip install pytest
       - name: Run tests with pytest
@@ -46,6 +47,7 @@ jobs:
       - name: Create environment
         run: |
           conda env create -f environment.yml
+          source activate metamers
           pip install git+https://github.com/LabForComputationalVision/plenoptic.git@binder
       - name: Setup FFmpeg
         uses: FedericoCarboni/setup-ffmpeg@v1
