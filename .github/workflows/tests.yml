@@ -20,11 +20,9 @@ jobs:
           update-conda: true
           python-version: 3.7
           conda-channels: anaconda, conda-forge, bioconda
-      # - name: Checkout submodules
-      #   uses: textbook/git-checkout-submodule-action@master
       - name: Create environment
         run: |
-          conda env install -f environment.yml
+          conda env create -f environment.yml
           pip install git+https://github.com/LabForComputationalVision/plenoptic.git@master
 
   test_models:
