@@ -1,4 +1,5 @@
 import os
+import math
 import re
 import imageio
 import time
@@ -57,6 +58,9 @@ CONTINUE_LOG_PATH = CONTINUE_TEMPLATE_PATH.replace('metamers_continue/{model_nam
 TEXTURE_DIR = config['TEXTURE_DIR']
 if TEXTURE_DIR.endswith(os.sep) or TEXTURE_DIR.endswith('/'):
     TEXTURE_DIR = TEXTURE_DIR[:-1]
+if len(os.listdir(TEXTURE_DIR)) <= 800 and 'textures-subset-for-testing' not in TEXTURE_DIR:
+    raise Exception(f"TEXTURE_DIR {TEXTURE_DIR} is incomplete!")
+
 BEHAVIORAL_DATA_DATES = {
     'V1_norm_s6_gaussian': {
         'sub-01': {'sess-00': '2021-Feb-23', 'sess-01': '2021-Feb-23', 'sess-02': '2021-Feb-24'},
@@ -360,7 +364,7 @@ rule combine_norm_stats:
     input:
         lambda wildcards: [op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture'
                                    '{preproc}_norm_stats-{num}.pt').format(num=i, **wildcards)
-                           for i in range(9)]
+                           for i in range(math.ceil(len(os.listdir(TEXTURE_DIR))/100))]
     output:
         op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture{preproc}_norm_stats.pt' )
     log:
