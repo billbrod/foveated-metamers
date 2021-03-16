@@ -53,7 +53,7 @@ jobs:
         uses: FedericoCarboni/setup-ffmpeg@v1
       - name: Download data
         run: |
-          mkdir -p data/metamers
+          mkdir -p data/metamers/ref_images/
           curl -O -J -L https://osf.io/4wyg3/download
           tar xf textures-subset-for-testing.tar.gz -C data
           rm textures-subset-for-testing.tar.gz
@@ -64,4 +64,5 @@ jobs:
       - name: run snakemake test
         run: |
           source activate metamers
+          cp extra_packages/data/einstein.pgm data/metamers/ref_images/einstein_size-256,256.png
           snakemake -j 5 -prk data/metamers/test_setup/RGC_norm_gaussian_gpu-0/einstein data/metamers/test_setup/V1_norm_s6_gaussian_gpu-0/einstein
