@@ -219,7 +219,23 @@ Google Sheets, a text editor, LibreOffice Calc, or loaded in to pandas
       performance, as well as how many trials are required.
     - `figures.py`: creates various figures.
     - `utils.py`: various utility functions.
-  - `notebooks/`: Jupyter notebooks.
+  - `extra_packages/`: additional python code used by this repo. The bits that
+    live here were originally part of
+    [plenoptic](https://github.com/LabForComputationalVision/plenoptic/), but
+    were pulled out because it's a bad idea for a research project to be so
+    heavily reliant on a project currently under development.
+    - `pooling-windows`: git submodule that points to [this
+      repo](https://github.com/LabForComputationalVision/pooling-windows),
+      containing the pooling windows we use.
+    - `plenoptic_part`: contains the models and metamer synthesis code (as well
+      as some utilities) that were pulled out of plenoptic, branching at [this
+      commit](https://github.com/LabForComputationalVision/plenoptic/tree/fb1c4d29c645c9a054baa021c7ffd07609b181d4)
+      (I used [git filter-repo](https://github.com/newren/git-filter-repo/) and
+      so the history should be preserved). While the model code (and some of the
+      utilities) have been deleted from `plenoptic` and are unique to this repo,
+      the synthesis code here is a modified version of the one in plenoptic. If
+      you wish to use synthesis for your own work *use the plenoptic version*,
+      which is regularly tested and supported.
 
 # Usage
 
@@ -298,7 +314,7 @@ will use the `.tiff` files found in `ref_images`).
 ## Test setup
 
 A quick snakemake rule is provided to test whether your setup is
-working: `snakemake -j 4 -prk test_setup`. This will create a small number
+working: `snakemake -j 4 -prk test_setup_all`. This will create a small number
 of metamers, without running the optimization to completion. If this
 runs without throwing any exceptions, your environment should be set
 up correctly and you should have gpus available.

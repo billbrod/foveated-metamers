@@ -229,9 +229,15 @@ def find_attempts(wildcards, increment=False, extra_iter=None, gpu_split=.09):
             p = glob(CONTINUE_TEMPLATE_PATH.format(num=i-1, extra_iter='*', **wildcards))[0]
         else:
             p = METAMER_TEMPLATE_PATH.format(**wildcards)
+    # the next bit will remove all slashes from the string, so we need to
+    # figure out whether we want to start with os.sep or not
+    if p.startswith('/'):
+        start = os.sep
+    else:
+        start = ''
     # this makes sure we're using the right os.sep and also removes any double
     # slashes we might have accidentally introduced
-    return os.sep + op.join(*p.split('/'))
+    return start + op.join(*p.split('/'))
 
 
 def get_ref_image_full_path(image_name,
@@ -261,7 +267,15 @@ def get_ref_image_full_path(image_name,
     if any([i in image_name for i in preproc_methods]):
         template = template.replace('ref_images', 'ref_images_preproc')
     template = template.format(image_name=image_name, DATA_DIR=DATA_DIR)
-    return os.sep + op.join(*template.split('/'))
+    # the next bit will remove all slashes from the string, so we need to
+    # figure out whether we want to start with os.sep or not
+    if template.startswith('/'):
+        start = os.sep
+    else:
+        start = ''
+    # this makes sure we're using the right os.sep and also removes any double
+    # slashes we might have accidentally introduced
+    return start + op.join(*template.split('/'))
 
 
 def get_gamma_corrected_ref_image(image_name):

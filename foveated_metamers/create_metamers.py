@@ -20,8 +20,10 @@ from .utils import convert_im_to_float, convert_im_to_int
 # by default matplotlib uses the TK gui toolkit which can cause problems
 # when I'm trying to render an image into a file, see
 # https://stackoverflow.com/questions/27147300/matplotlib-tcl-asyncdelete-async-handler-deleted-by-the-wrong-thread
+import sys
 mpl.use('Agg')
-
+sys.path.append(op.join(op.dirname(op.realpath(__file__)), '..', 'extra_packages'))
+import plenoptic_part as pop
 
 def convert_seconds_to_str(secs):
     r"""Convert seconds into a human-readable string
@@ -271,14 +273,14 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
             normalize_dict = {}
         if not normalize_dict and 'norm' in model_name:
             raise Exception("If model_name is RGC_norm, normalize_dict must be set!")
-        model = po.simul.PooledRGC(scaling, image.shape[-2:],
-                                   min_eccentricity=min_ecc,
-                                   max_eccentricity=max_ecc,
-                                   window_type=window_type,
-                                   transition_region_width=t_width,
-                                   cache_dir=cache_dir,
-                                   std_dev=std_dev,
-                                   normalize_dict=normalize_dict)
+        model = pop.PooledRGC(scaling, image.shape[-2:],
+                              min_eccentricity=min_ecc,
+                              max_eccentricity=max_ecc,
+                              window_type=window_type,
+                              transition_region_width=t_width,
+                              cache_dir=cache_dir,
+                              std_dev=std_dev,
+                              normalize_dict=normalize_dict)
     elif model_name.startswith('V1'):
         if 'norm' not in model_name:
             if normalize_dict:
@@ -290,15 +292,15 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
             num_scales = int(re.findall('_s([0-9]+)_', model_name)[0])
         except (IndexError, ValueError):
             num_scales = 4
-        model = po.simul.PooledV1(scaling, image.shape[-2:],
-                                  min_eccentricity=min_ecc,
-                                  max_eccentricity=max_ecc,
-                                  std_dev=std_dev,
-                                  transition_region_width=t_width,
-                                  cache_dir=cache_dir,
-                                  normalize_dict=normalize_dict,
-                                  num_scales=num_scales,
-                                  window_type=window_type)
+        model = pop.PooledV1(scaling, image.shape[-2:],
+                             min_eccentricity=min_ecc,
+                             max_eccentricity=max_ecc,
+                             std_dev=std_dev,
+                             transition_region_width=t_width,
+                             cache_dir=cache_dir,
+                             normalize_dict=normalize_dict,
+                             num_scales=num_scales,
+                             window_type=window_type)
     else:
         raise Exception("Don't know how to handle model_name %s" % model_name)
     animate_figsize, rep_image_figsize, img_zoom = find_figsizes(model_name, model,
@@ -471,7 +473,7 @@ def summarize_history(metamer, save_path, **kwargs):
 
     Parameters
     ----------
-    metamer : po.synth.Metamer
+    metamer : pop.Metamer
         Metamer object to summarize
     save_path : str
         path to the csv where we should save the DataFrame we create
@@ -550,7 +552,7 @@ def summarize(metamer, save_path, **kwargs):
 
     Parameters
     ----------
-    metamer : po.synth.Metamer
+    metamer : pop.Metamer
         Metamer object to summarize
     save_path : str
         path to the csv where we should save the DataFrame we create
@@ -1005,31 +1007,31 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     initial_image = setup_initial_image(initial_image_type, model, image)
     image, initial_image, model = setup_device(image, initial_image, model, gpu_id=gpu_id)
     if clamper_name == 'clamp':
-        clamper = po.RangeClamper((0, 1))
+        clamper = pop.clamps.RangeClamper((0, 1))
     elif clamper_name.startswith('clamp.'):
         a, b = re.findall('clamp([.0-9]+),([.0-9]+)', clamper_name)[0]
-        clamper = po.RangeClamper((float(a), float(b)))
+        clamper = pop.clamps.RangeClamper((float(a), float(b)))
     elif clamper_name == 'clamp2':
-        clamper = po.TwoMomentsClamper(image)
+        clamper = pop.clamps.TwoMomentsClamper(image)
     elif clamper_name == 'clamp4':
-        clamper = po.FourMomentsClamper(image)
+        clamper = pop.clamps.FourMomentsClamper(image)
     elif clamper_name == 'remap':
-        clamper = po.RangeRemapper((0, 1))
+        clamper = pop.clamps.RangeRemapper((0, 1))
     else:
         clamper = None
     if loss_func == 'l2':
-        loss = po.optim.l2_norm
+        loss = pop.optim.l2_norm
         loss_kwargs = {}
     elif loss_func == 'mse':
-        loss = po.optim.mse
+        loss = pop.optim.mse
         loss_kwargs = {}
     else:
         lf, a, b, c = re.findall('([a-z0-9]+)_range-([.0-9]+),([.0-9]+)_lmbda-([.0-9]+)',
                                  loss_func)[0]
         if lf == 'l2':
-            loss = po.optim.l2_and_penalize_range
+            loss = pop.optim.l2_and_penalize_range
         elif lf == 'mse':
-            loss = po.optim.mse_and_penalize_range
+            loss = pop.optim.mse_and_penalize_range
         else:
             raise Exception(f"Don't know how to interpret loss func {loss_func}!")
         loss_kwargs = {'allowed_range': (float(a), float(b)), 'lmbda': float(c)}
@@ -1064,11 +1066,11 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         inprogress_path = save_path.replace('.pt', '_inprogress.pt')
     else:
         inprogress_path = None
-    if continue_path is not None or op.exists(inprogress_path):
+    if continue_path is not None or (inprogress_path is not None and op.exists(inprogress_path)):
         if op.exists(inprogress_path):
             continue_path = inprogress_path
         print("Resuming synthesis saved at %s" % continue_path)
-        metamer = po.synth.Metamer.load(continue_path, model.from_state_dict_reduced)
+        metamer = pop.Metamer.load(continue_path, model.from_state_dict_reduced)
         if op.exists(inprogress_path):
             # run the number of extra iterations we need, not more. if it was
             # complete, then this can be 0 and we do no iterations, but will
@@ -1079,8 +1081,8 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         initial_image = None
         learning_rate = None
     else:
-        metamer = po.synth.Metamer(image, model, loss_function=loss,
-                                   loss_function_kwargs=loss_kwargs)
+        metamer = pop.Metamer(image, model, loss_function=loss,
+                              loss_function_kwargs=loss_kwargs)
     print(f"Using learning rate {learning_rate}, loss_thresh {loss_thresh} (loss_change_iter "
           f"{loss_change_iter}), and max_iter {max_iter}")
     if save_path is not None:
