@@ -88,6 +88,8 @@ you should carefully check that.
 To setup the environment for everything else:
 
 ```
+git submodule sync
+git submodule update --init --recursive
 conda env create -f environment.yml
 ```
 
