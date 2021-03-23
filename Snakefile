@@ -1116,15 +1116,15 @@ rule mcmc:
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
                 'task-split_comp-{comp}_data.csv'),
     output:
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+        op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                 'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
                 'd-{num_draws}_w-{num_warmup}_s-{seed}.nc'),
     log:
-        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+        op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                 'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
                 'd-{num_draws}_w-{num_warmup}_s-{seed}.log'),
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+        op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                 'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
                 'd-{num_draws}_w-{num_warmup}_s-{seed}_benchmark.txt'),
     run:
@@ -1154,19 +1154,19 @@ rule mcmc:
 
 rule mcmc_plots:
     input:
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+        op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                 'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
                 'd-{num_draws}_w-{num_warmup}_s-{seed}.nc'),
     output:
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+        op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                 'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
                 'd-{num_draws}_w-{num_warmup}_s-{seed}_{plot_type}.png'),
     log:
-        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+        op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                 'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
                 'd-{num_draws}_w-{num_warmup}_s-{seed}_{plot_type}.log'),
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+        op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                 'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
                 'd-{num_draws}_w-{num_warmup}_s-{seed}_{plot_type}_benchmark.txt'),
     run:
