@@ -28,7 +28,8 @@ wildcard_constraints:
     size="[0-9,]+",
     bits="[0-9]+",
     img_preproc="full|degamma|gamma-corrected|gamma-corrected_full|range-[,.0-9]+|gamma-corrected_range-[,.0-9]+",
-    preproc_image_name="|".join([im+'_?[a-z]*' for im in config['IMAGE_NAME']['ref_image']])+"|einstein",
+    # einstein for testing setup, fountain for comparing with Freeman and Simoncelli, 2011 metamers
+    preproc_image_name="|".join([im+'_?[a-z]*' for im in config['IMAGE_NAME']['ref_image']])+"|einstein|fountain",
     preproc="|_degamma|degamma",
     gpu="0|1",
     sess_num="|".join([f'{i:02d}' for i in config['PSYCHOPHYSICS']['SESSIONS']]),
@@ -1563,3 +1564,22 @@ rule compute_distances:
         df['distance_model'] = wildcards.model_name
         df['distance_scaling'] = float(wildcards.scaling)
         df.to_csv(output[0], index=False)
+
+
+rule freeman_windows:
+    output:
+        op.join(config['DATA_DIR'], 'freeman_windows', 'scaling-{scaling}', 'plotwindows.mat'),
+        op.join(config['DATA_DIR'], 'freeman_windows', 'scaling-{scaling}', 'masks.mat'),
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'freeman_windows', 'scaling-{scaling}', 'windows.log'),
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'freeman_windows', 'scaling-{scaling}', 'windows_benchmark.txt'),
+    params:
+        met_path = config['FREEMAN_METAMER_PATH'],
+        matlabPyrTools_path = config['MATLABPYRTOOLS_PATH'],
+        output_dir = lambda wildcards, output: op.dirname(output[0]),
+    shell:
+        "cd matlab; "
+        "matlab -nodesktop -nodisplay -r \"addpath(genpath('{params.met_path}')); "
+        "addpath(genpath('{params.matlabPyrTools_path}')); "
+        "freeman_windows({wildcards.scaling}, '{params.output_dir}'); quit;\""
