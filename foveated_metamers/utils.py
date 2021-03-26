@@ -576,7 +576,10 @@ if __name__ == '__main__':
     with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
         defaults = yaml.safe_load(f)
     template_path = defaults['METAMER_TEMPLATE_PATH']
-    possible_args = re.findall('{([A-Za-z_]+?)}', template_path)
+    # this grabs the keys from the template path, including the optional format
+    # strings (e.g., ':.03f', ':s'), but dropping those format strings to just
+    # grab the possible args
+    possible_args = [i[0] for i in re.findall('{([A-Za-z_]+?)(:[A-Za-z\d\.]+)?}', template_path)]
     parser.add_argument('--print', '-p', action='store_true',
                         help="Print out the paths. Note either this or --save_path must be set")
     parser.add_argument('--save_path', '-s', default='',
