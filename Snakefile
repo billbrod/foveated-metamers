@@ -38,7 +38,7 @@ wildcard_constraints:
     save_all='|_saveall',
     gammacorrected='|_gamma-corrected'
 ruleorder:
-    collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image
+    collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check
 
 LINEAR_IMAGES = config['IMAGE_NAME']['ref_image']
 MODELS = [config[i]['model_name'] for i in ['RGC', 'V1']]
@@ -1568,12 +1568,12 @@ rule compute_distances:
 
 rule freeman_windows:
     output:
-        op.join(config['DATA_DIR'], 'freeman_windows', 'scaling-{scaling}', 'plotwindows.mat'),
-        op.join(config['DATA_DIR'], 'freeman_windows', 'scaling-{scaling}', 'masks.mat'),
+        op.join(config['DATA_DIR'], 'freeman_check', 'windows', 'scaling-{scaling}', 'plotwindows.mat'),
+        op.join(config['DATA_DIR'], 'freeman_check', 'windows', 'scaling-{scaling}', 'masks.mat'),
     log:
-        op.join(config['DATA_DIR'], 'logs', 'freeman_windows', 'scaling-{scaling}', 'windows.log'),
+        op.join(config['DATA_DIR'], 'logs', 'freeman_check', 'windows', 'scaling-{scaling}', 'windows.log'),
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'freeman_windows', 'scaling-{scaling}', 'windows_benchmark.txt'),
+        op.join(config['DATA_DIR'], 'logs', 'freeman_check', 'windows', 'scaling-{scaling}', 'windows_benchmark.txt'),
     params:
         met_path = config['FREEMAN_METAMER_PATH'],
         matlabPyrTools_path = config['MATLABPYRTOOLS_PATH'],
@@ -1583,3 +1583,69 @@ rule freeman_windows:
         "matlab -nodesktop -nodisplay -r \"addpath(genpath('{params.met_path}')); "
         "addpath(genpath('{params.matlabPyrTools_path}')); "
         "freeman_windows({wildcards.scaling}, '{params.output_dir}'); quit;\""
+
+
+rule download_freeman_check_input:
+    output:
+        os.path.join(DATA_DIR, 'freeman_check', 'metamers', 'metamer1.png'),
+        os.path.join(DATA_DIR, 'freeman_check', 'metamers', 'metamer2.png'),
+        os.path.join(DATA_DIR, 'ref_images', 'fountain_size-512,512.png'),
+    log:
+        os.path.join(DATA_DIR, 'logs', 'freeman_check', 'download_input.log')
+    benchmark:
+        os.path.join(DATA_DIR, 'logs', 'freeman_check', 'download_input_benchmark.txt')
+    params:
+        met_dir_name = lambda wildcards, output: op.dirname(output[0]),
+        ref_dir_name = lambda wildcards, output: op.dirname(output[-1]),
+    shell:
+        "curl -O -J -L https://osf.io/e2zn8/download; "
+        "tar xf freeman_check_inputs.tar.gz; "
+        "mv freeman_check_inputs/metamer1.png {params.met_dir_name}/; "
+        "mv freeman_check_inputs/metamer2.png {params.met_dir_name}/; "
+        "mv freeman_check_inputs/fountain_size-512,512.png {params.ref_dir_name}/; "
+        "rm freeman_check_inputs.tar.gz; rmdir freeman_check_inputs;"
+
+
+rule download_freeman_check:
+    input:
+        os.path.join(DATA_DIR, 'freeman_check', 'metamers', 'metamer1.png'),
+        os.path.join(DATA_DIR, 'freeman_check', 'metamers', 'metamer2.png'),
+        os.path.join(DATA_DIR, 'ref_images', 'fountain_size-512,512.png'),
+        op.join(config['DATA_DIR'], 'freeman_check', 'windows', 'scaling-0.5', 'plotwindows.mat'),
+        op.join(config['DATA_DIR'], 'freeman_check', 'windows', 'scaling-0.25', 'plotwindows.mat'),
+    output:
+        # unclear from paper what exact scaling was used.
+        utils.generate_metamer_paths(model_name='V1_norm_s4_gaussian',
+                                     image_name='fountain_size-512,512',
+                                     scaling=[.3, .4, .5],
+                                     max_ecc=13,
+                                     gpu=1,
+                                     seed=0),
+    log:
+        os.path.join(DATA_DIR, 'logs', 'freeman_check', 'download.log')
+    benchmark:
+        os.path.join(DATA_DIR, 'logs', 'freeman_check', 'download_benchmark.txt')
+    params:
+        dir_name = op.join(DATA_DIR, 'metamers'),
+    shell:
+        "curl -O -J -L https://osf.io/wa2zu/download; "
+        "tar xf freeman_check.tar.gz; "
+        "rm freeman_check.tar.gz; "
+        "cp -R V1_norm_s4_gaussian {params.dir_name}/; "
+        "rm -r V1_norm_s4_gaussian;"
+
+
+rule freeman_check:
+    input:
+        os.path.join(DATA_DIR, 'freeman_check', 'metamers', 'metamer1.png'),
+        os.path.join(DATA_DIR, 'freeman_check', 'metamers', 'metamer2.png'),
+        os.path.join(DATA_DIR, 'ref_images', 'fountain_size-512,512.png'),
+        op.join(config['DATA_DIR'], 'freeman_check', 'windows', 'scaling-0.5', 'plotwindows.mat'),
+        op.join(config['DATA_DIR'], 'freeman_check', 'windows', 'scaling-0.25', 'plotwindows.mat'),
+        # unclear from paper what exact scaling was used.
+        utils.generate_metamer_paths(model_name='V1_norm_s4_gaussian',
+                                     image_name='fountain_size-512,512',
+                                     scaling=[.3, .4, .5],
+                                     max_ecc=13,
+                                     gpu=1,
+                                     seed=0),
