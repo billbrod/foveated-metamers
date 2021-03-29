@@ -84,6 +84,7 @@ jobs:
           conda env create -f environment.yml
           source activate metamers
           pip install --upgrade git+https://github.com/LabForComputationalVision/plenoptic.git@master
+          pip install jupyter
       - name: modify config.yml
         run: |
           sed -i 's|DATA_DIR:.*|DATA_DIR: "data/metamers"|g' config.yml
