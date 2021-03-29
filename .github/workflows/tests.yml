@@ -85,6 +85,7 @@ jobs:
           source activate metamers
           pip install --upgrade git+https://github.com/LabForComputationalVision/plenoptic.git@master
           pip install jupyter
+          pip install pytest nbmake
       - name: modify config.yml
         run: |
           sed -i 's|DATA_DIR:.*|DATA_DIR: "data/metamers"|g' config.yml
@@ -95,7 +96,7 @@ jobs:
         run : |
           source activate metamers
           snakemake -prk download_freeman_check
-      - uses: treebeardtech/treebeard@master
-        with:
-          use-docker: false
-          notebooks: 'notebooks/Freeman_Check.ipynb'
+      - name: run nbmake
+        run: |
+          source activate metamers
+          pytest --nbmake notebooks/Freeman_Check.ipynb
