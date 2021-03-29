@@ -66,3 +66,30 @@ jobs:
           source activate metamers
           cp extra_packages/data/einstein.pgm data/metamers/ref_images/einstein_size-256,256.png
           snakemake -j 5 -prk data/metamers/test_setup/RGC_norm_gaussian_gpu-0/einstein data/metamers/test_setup/V1_norm_s6_gaussian_gpu-0/einstein
+
+  run_Freeman_check_notebook:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup conda
+        uses: s-weigand/setup-conda@v1.0.5
+        with:
+          update-conda: true
+          python-version: 3.7
+          conda-channels: anaconda, conda-forge, bioconda
+      - name: Create environment
+        run: |
+          conda env create -f environment.yml
+          source activate metamers
+          pip install --upgrade git+https://github.com/LabForComputationalVision/plenoptic.git@master
+      - name: modify config.yml
+        run: |
+          sed -i 's|DATA_DIR:.*|DATA_DIR: "data/metamers"|g' config.yml
+      - name: Download data
+        run : |
+          source activate metamers
+          snakemake -prk download_freeman_check
+      - uses: treebeardtech/treebeard@master
+        with:
+          use-docker: false
+          notebooks: 'examples/${{ matrix.notebook }}.ipynb'
