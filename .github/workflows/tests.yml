@@ -84,8 +84,7 @@ jobs:
           conda env create -f environment.yml
           source activate metamers
           pip install --upgrade git+https://github.com/LabForComputationalVision/plenoptic.git@master
-          pip install jupyter
-          pip install pytest nbmake
+          pip install jupyter nbconvert
       - name: modify config.yml
         run: |
           sed -i 's|DATA_DIR:.*|DATA_DIR: "data/metamers"|g' config.yml
@@ -96,7 +95,8 @@ jobs:
         run : |
           source activate metamers
           snakemake -prk download_freeman_check
-      - name: run nbmake
+      - name: run nbconvert
         run: |
           source activate metamers
-          pytest --nbmake notebooks/Freeman_Check.ipynb
+          jupyter kernelspec list
+          jupyter nbconvert --ExecutePreprocessor.kernel_name=python3 --to notebook --execute notebooks/Freeman_Check.ipynb
