@@ -87,6 +87,7 @@ jobs:
       - name: modify config.yml
         run: |
           sed -i 's|DATA_DIR:.*|DATA_DIR: "data/metamers"|g' config.yml
+          mkdir -p data/metamers
       - name: Download data
         run : |
           source activate metamers
