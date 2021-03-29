@@ -1587,8 +1587,8 @@ rule freeman_windows:
 
 rule download_freeman_check_input:
     output:
-        os.path.join(DATA_DIR, 'freeman_check', 'metamers', 'metamer1.png'),
-        os.path.join(DATA_DIR, 'freeman_check', 'metamers', 'metamer2.png'),
+        os.path.join(DATA_DIR, 'freeman_check', 'Freeman2011_metamers', 'metamer1.png'),
+        os.path.join(DATA_DIR, 'freeman_check', 'Freeman2011_metamers', 'metamer2.png'),
         os.path.join(DATA_DIR, 'ref_images', 'fountain_size-512,512.png'),
     log:
         os.path.join(DATA_DIR, 'logs', 'freeman_check', 'download_input.log')
@@ -1608,11 +1608,9 @@ rule download_freeman_check_input:
 
 rule download_freeman_check:
     input:
-        os.path.join(DATA_DIR, 'freeman_check', 'metamers', 'metamer1.png'),
-        os.path.join(DATA_DIR, 'freeman_check', 'metamers', 'metamer2.png'),
+        os.path.join(DATA_DIR, 'freeman_check', 'Freeman2011_metamers', 'metamer1.png'),
+        os.path.join(DATA_DIR, 'freeman_check', 'Freeman2011_metamers', 'metamer2.png'),
         os.path.join(DATA_DIR, 'ref_images', 'fountain_size-512,512.png'),
-        op.join(config['DATA_DIR'], 'freeman_check', 'windows', 'scaling-0.5', 'plotwindows.mat'),
-        op.join(config['DATA_DIR'], 'freeman_check', 'windows', 'scaling-0.25', 'plotwindows.mat'),
     output:
         # unclear from paper what exact scaling was used.
         utils.generate_metamer_paths(model_name='V1_norm_s4_gaussian',
@@ -1621,24 +1619,29 @@ rule download_freeman_check:
                                      max_ecc=13,
                                      gpu=1,
                                      seed=0),
+        op.join(config['DATA_DIR'], 'freeman_check', 'windows', 'scaling-0.5', 'plotwindows.mat'),
+        op.join(config['DATA_DIR'], 'freeman_check', 'windows', 'scaling-0.25', 'plotwindows.mat'),
     log:
         os.path.join(DATA_DIR, 'logs', 'freeman_check', 'download.log')
     benchmark:
         os.path.join(DATA_DIR, 'logs', 'freeman_check', 'download_benchmark.txt')
     params:
-        dir_name = op.join(DATA_DIR, 'metamers'),
+        met_dir_name = op.join(DATA_DIR, 'metamers'),
+        windows_dir_name = op.join(DATA_DIR, 'freeman_check', 'windows'),
     shell:
         "curl -O -J -L https://osf.io/wa2zu/download; "
         "tar xf freeman_check.tar.gz; "
         "rm freeman_check.tar.gz; "
-        "cp -R V1_norm_s4_gaussian {params.dir_name}/; "
-        "rm -r V1_norm_s4_gaussian;"
+        "cp -R V1_norm_s4_gaussian {params.met_dir_name}/; "
+        "cp -R windows/* {params.windows_dir_name}/; "
+        "rm -r V1_norm_s4_gaussian; "
+        "rm -r windows; "
 
 
 rule freeman_check:
     input:
-        os.path.join(DATA_DIR, 'freeman_check', 'metamers', 'metamer1.png'),
-        os.path.join(DATA_DIR, 'freeman_check', 'metamers', 'metamer2.png'),
+        os.path.join(DATA_DIR, 'freeman_check', 'Freeman2011_metamers', 'metamer1.png'),
+        os.path.join(DATA_DIR, 'freeman_check', 'Freeman2011_metamers', 'metamer2.png'),
         os.path.join(DATA_DIR, 'ref_images', 'fountain_size-512,512.png'),
         op.join(config['DATA_DIR'], 'freeman_check', 'windows', 'scaling-0.5', 'plotwindows.mat'),
         op.join(config['DATA_DIR'], 'freeman_check', 'windows', 'scaling-0.25', 'plotwindows.mat'),
