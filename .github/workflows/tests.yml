@@ -97,4 +97,4 @@ jobs:
       - uses: treebeardtech/treebeard@master
         with:
           use-docker: false
-          notebooks: 'examples/${{ matrix.notebook }}.ipynb'
+          notebooks: 'notebooks/Freeman_Check.ipynb'
