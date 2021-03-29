@@ -238,6 +238,13 @@ Google Sheets, a text editor, LibreOffice Calc, or loaded in to pandas
       the synthesis code here is a modified version of the one in plenoptic. If
       you wish to use synthesis for your own work *use the plenoptic version*,
       which is regularly tested and supported.
+  - `notebooks/`: jupyter notebooks for investigating this project in more
+    detail.
+    - `Freeman_Check.ipynb`: notebook checking that our windows are the same
+      size as those from Freeman and Simoncelli, 2011 (and thus that the models'
+      scaling parameter has the same meaning); see
+      [below](#check-against-freeman-and-simoncelli-2011-windows) for more
+      details.
 
 # Usage
 
@@ -300,9 +307,6 @@ cd /home/billbrod/Desktop/metamers
 wget -O- https://osf.io/td3ea/download | tar xvz -C .
 ```
 
-NOTE: the OSF project is currently private and so the above will
-fail. need to remember to make it public for that to work
-
 You should now have three directories here: `raw_images`, `ref_images` and
 `norm_stats`. `raw_images` should contain four `.NEF` (Nikon's raw format)
 images: `azulejos`, `flower`, `tiles`, and `market`. `norm_stats` should contain
@@ -323,6 +327,68 @@ up correctly and you should have gpus available.
 
 The output will end up in `~/Desktop/metamers/test_setup` and you can
 delete this folder after you've finished.
+
+## Check against Freeman and Simoncelli, 2011 windows
+
+This project uses a modification of the pooling windows first described in
+Freeman and Simoncelli, 2011. We include some code to check our reimplementation
+of the windows and the extension to use Gaussians instead of raised-cosine
+falloffs. Basically, we want to make sure that our windows are the same size --
+identical reimplementation is not important, but we want to make sure that the
+models' scaling parameter has the same interpretation; it should be the ratio
+between the eccentricity and the radial diameter of the windows at half-max
+amplitude. To do so, we include a notebook `notebooks/Freeman_Check.ipynb`, as
+well as some snakemake rules.
+
+We check two things: that our windows' scaling parameter has the same meaning as
+that in the original paper, and that our V1 metamers look approximately the
+same. You can view this by looking at the `Freeman_Check` notebook and its
+cached outputs directly. If you wish to run the notebook or investigate the
+objects in more detail, you can run either the `freeman_check` or
+`download_freeman_check` snakemake rules (`freeman_check` will run the analyses
+and so requires matlab and a GPU, while `download_freeman_check` will just
+download the outputs of this from the [OSF](https://osf.io/67tbe/)):
+
+``` sh
+conda activate metamers
+snakemake -prk download_freeman_check
+# OR
+snakemake -prk freeman_check
+```
+
+Once you've done that, you can start up the jupyter notebook. There are two main
+ways of getting jupyter working so you can view the included notebook:
+
+1. Install jupyter in this `metamers` environment: 
+
+``` sh
+conda activate metamers
+conda install -c conda-forge jupyterlab
+```
+
+   This is easy but, if you have multiple conda environments and want to use
+   Jupyter notebooks in each of them, it will take up a lot of space.
+   
+2. Use [nb_conda_kernels](https://github.com/Anaconda-Platform/nb_conda_kernels):
+
+``` sh
+# activate your 'base' environment, the default one created by miniconda
+conda activate 
+# install jupyter lab and nb_conda_kernels in your base environment
+conda install -c conda-forge jupyterlab
+conda install nb_conda_kernels
+# install ipykernel in the calibration environment
+conda install -n metamers ipykernel
+```
+
+   This is a bit more complicated, but means you only have one installation of
+   jupyter lab on your machine.
+   
+In either case, to open the notebooks, navigate to the `notebooks/` directory on
+your terminal and activate the environment you install jupyter into (`metamers`
+for 1, `base` for 2), then run `jupyter` and open up the notebook. If you
+followed the second method, you should be prompted to select your kernel the
+first time you open a notebook: select the one named "metamers".
 
 ## Generate metamers
 
