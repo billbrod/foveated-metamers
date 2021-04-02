@@ -498,7 +498,13 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
         defaults = yaml.safe_load(f)
     default_img_size = _find_img_size(defaults['DEFAULT_METAMERS']['image_name'][0])
     pix_to_deg = float(defaults['DEFAULT_METAMERS']['max_ecc']) / default_img_size.max()
-    images = kwargs.pop('image_name', defaults['DEFAULT_METAMERS'].pop('image_name'))
+    if comp == 'met' and any([m.startswith('RGC') for m in model_name]):
+        imgs = ['llama', 'highway_symmetric', 'rocks', 'boats', 'gnarled']
+        warnings.warn("With RGC model and comp=met, we use a reduced set of default images!")
+        default_ims = generate_image_names(imgs)
+    else:
+        default_ims = defaults['DEFAULT_METAMERS'].pop('image_name')
+    images = kwargs.pop('image_name', default_ims)
     if not isinstance(images, list):
         images = [images]
     args = {}
@@ -566,7 +572,7 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description=("Generate metamer paths in a programmatic way, for passing to snakemake. "
-                     "With the exception of model_name, --print, --save_path, --increment and "
+                     "With the exception of model_name, --increment and "
                      "--extra_iter all other arguments are the various configurable options from the "
                      "metamer template path, which control synthesis behavior. All arguments "
                      "can take multiple values, in which case we'll generate all possible "
@@ -580,11 +586,6 @@ if __name__ == '__main__':
     # strings (e.g., ':.03f', ':s'), but dropping those format strings to just
     # grab the possible args
     possible_args = [i[0] for i in re.findall('{([A-Za-z_]+?)(:[A-Za-z\d\.]+)?}', template_path)]
-    parser.add_argument('--print', '-p', action='store_true',
-                        help="Print out the paths. Note either this or --save_path must be set")
-    parser.add_argument('--save_path', '-s', default='',
-                        help=("Path to a .txt file to save the paths at. If not set, will not "
-                              "save. Note either this or --print must be set"))
     parser.add_argument('--increment', '-i', action='store_true',
                         help=("Whether we should return the last found attempt or increment it "
                               "by one. If passed, --extra_iter must also be set"))
@@ -619,12 +620,15 @@ if __name__ == '__main__':
                                   "constructed from them will be appended to those passed. If "
                                   "these are set and image_name is unset, will just use these"))
     args = vars(parser.parse_args())
-    print_output = args.pop('print')
-    save_path = args.pop('save_path')
     increment = args.pop('increment')
     extra_iter = args.pop('extra_iter')
     gamma_corrected = args.pop('gamma_corrected')
     image_kwargs = {k: args.pop(k) for k in ['ref_image', 'size', 'preproc']}
+    if args['comp'] == 'met' and any([m.startswith('RGC') for m in args['model_name']]):
+        if image_kwargs['ref_image'] is None and args['image_name'] is None:
+            imgs = ['llama', 'highway_symmetric', 'rocks', 'boats', 'gnarled']
+            warnings.warn("With RGC model and comp=met, we use a reduced set of default images!")
+            image_kwargs['ref_image'] = imgs
     images = generate_image_names(**image_kwargs)
     new_args = {}
     for k, v in args.items():
@@ -647,18 +651,10 @@ if __name__ == '__main__':
         new_args['image_name'] = images
     elif 'image_name' in new_args.keys() and images and not all([v is None for v in image_kwargs.values()]):
         raise Exception("Must set either image_name or its components (ref_image, size, preproc)!")
-    if not save_path and not print_output:
-        raise Exception("Either --save or --print must be true!")
-    if save_path and not save_path.endswith('.txt'):
-        raise Exception("--save must point towards a .txt file")
     paths = generate_metamer_paths(increment=increment, extra_iter=extra_iter,
                                    gamma_corrected=gamma_corrected,
                                    **new_args)
     # need to do a bit of string manipulation to get this in the right
     # format
     paths = ' '.join(paths)
-    if print_output:
-        print(paths)
-    if save_path:
-        with open(save_path, 'w') as f:
-            f.write(paths)
+    print(paths)
