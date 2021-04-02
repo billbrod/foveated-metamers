@@ -65,6 +65,7 @@ if len(os.listdir(TEXTURE_DIR)) <= 800 and 'textures-subset-for-testing' not in 
 BEHAVIORAL_DATA_DATES = {
     'V1_norm_s6_gaussian': {
         'sub-00': {'sess-00': '2021-Mar-23', 'sess-01': '2021-Mar-24', 'sess-02': '2021-Mar-24'},
+        'sub-01': {'sess-00': '2021-Mar-30', 'sess-01': '2021-Mar-30', 'sess-02': '2021-Apr-01'},
         }
 }
 
