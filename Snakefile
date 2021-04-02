@@ -987,6 +987,34 @@ rule generate_experiment_idx:
                 np.save(output[0], idx)
 
 
+# for training, we want an array of correct responses so we can give feedback.
+rule training_correct_responses:
+    input:
+        op.join(config["DATA_DIR"], 'stimuli', 'training_{model_name}', 'stimuli_description_comp-{comp}.csv'),
+        op.join(config["DATA_DIR"], 'stimuli', 'training_{model_name}', 'task-split_comp-{comp}', 'sub-training',
+                'sub-training_task-split_comp-{comp}_idx_sess-00_run-00.npy'),
+    output:
+        op.join(config["DATA_DIR"], 'stimuli', 'training_{model_name}', 'task-split_comp-{comp}', 'sub-training',
+                'sub-training_task-split_comp-{comp}_sess-00_run-00_correct-responses.npy'),
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', 'training_{model_name}', 'task-split_comp-{comp}', 'sub-training',
+                'sub-training_task-split_comp-{comp}_sess-00_run-00_correct-responses.log'),
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'stimuli', 'training_{model_name}', 'task-split_comp-{comp}', 'sub-training',
+                'sub-training_task-split_comp-{comp}_sess-00_run-00_correct-responses_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import numpy as np
+        import pandas as pd
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                df = pd.read_csv(input[0])
+                idx = np.load(input[1])
+                expt_df = fov.analysis.create_experiment_df_split(df, idx)
+                np.save(output[0], expt_df.correct_response.values)
+
+
 rule generate_all_idx:
     input:
         [op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'task-split_comp-{comp}', '{subject}',
