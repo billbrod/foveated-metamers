@@ -238,8 +238,12 @@ def _setup_run(stimuli_path, idx_path, fix_deg_size=.25, screen_size_deg=73.45,
               (total_trials, break_time))
 
     fix_pix_size = fix_deg_size * (monitor_kwargs['size'][0] / screen_size_deg)
-    fixation = visual.GratingStim(win, size=fix_pix_size, sf=0, color='red',
-                                  mask='circle')
+    # two fixation dots: one red and one green. Only show green one during
+    # training to show response was correct, else show red.
+    fixation = {'default': visual.GratingStim(win, size=fix_pix_size, sf=0, color='red',
+                                              mask='circle'),
+                'correct': visual.GratingStim(win, size=fix_pix_size, sf=0, color='green',
+                                              mask='circle')}
 
     timer = clock.StaticPeriod(screenHz=60)
     expt_clock = clock.Clock()
@@ -263,7 +267,9 @@ def _explain_task(win, expt_clock, comparison, fixation, text_height=50,
                      " The first image can be either natural or synthesized, so pay attention!")
     if train_flag:
         train_text = "For this training run, there will only be two natural images and "
-        feedback_text = ("Because this is training run, we will show you your performance "
+        feedback_text = ("Because this is training run, you will receive feedback "
+                         "after each trial (fixation dot will turn green if you "
+                         "were correct) and we will show you your performance "
                          "at the end of the run. You should get 100% on ")
         if train_flag == 'noise':
             train_text += 'two noise patches.\n\n'
@@ -295,7 +301,7 @@ def _explain_task(win, expt_clock, comparison, fixation, text_height=50,
     explain_text = visual.TextStim(win, text, height=text_height, wrapWidth=2000)
 
     explain_text.draw()
-    fixation.draw()
+    fixation['default'].draw()
     win.flip()
     all_keys = event.waitKeys(keyList=['return', 'space', ], timeStamped=expt_clock)
     clear_events(win)
@@ -402,6 +408,11 @@ def run_split(stimuli_path, idx_path, save_path, comparison,
     (stimuli, idx, expt_params, monitor_kwargs, win, break_time,
      fixation, timer, expt_clock, screen) = setup_args
 
+    if train_flag:
+        correct_responses = np.load(idx_path.replace('idx_', '').replace('.npy', '_correct-responses.npy'))
+    else:
+        correct_responses = np.zeros_like(idx)
+
     bar_pix_size = int(bar_deg_size * (monitor_kwargs['size'][0] / screen_size_deg))
     bar_size = [bar_pix_size, expt_params['stimuli_size'][1]]
     center_mask = visual.GratingStim(win, size=bar_size, sf=0,
@@ -447,7 +458,7 @@ def run_split(stimuli_path, idx_path, save_path, comparison,
             left_img.draw()
             right_img.draw()
             center_mask.draw()
-            fixation.draw()
+            fixation['default'].draw()
             win.flip()
             timings.append(("stimulus_%d-%d" % (i+start_from_stim, j), "on", expt_clock.getTime()))
             # convert to sec
@@ -455,7 +466,7 @@ def run_split(stimuli_path, idx_path, save_path, comparison,
             if j == 1:
                 query_text.draw()
             else:
-                fixation.draw()
+                fixation['default'].draw()
             win.flip()
             timings.append(("stimulus_%d-%d" % (i+start_from_stim, j), "off",
                             expt_clock.getTime()))
@@ -503,9 +514,14 @@ def run_split(stimuli_path, idx_path, save_path, comparison,
                 countdown(win, text_height)
         else:
             paused_keys = []
+        print(keys_pressed, correct_responses)
         if not check_for_keys(all_keys+paused_keys):
             timings.append(('post-stimulus_%d' % (i+start_from_stim), 'on', expt_clock.getTime()))
-            fixation.draw()
+            # keys are stored as strs
+            if keys_pressed[-1][0] == str(correct_responses[i]):
+                fixation['correct'].draw()
+            else:
+                fixation['default'].draw()
             win.flip()
             core.wait(off_msec_length[1] / 1000)
         save(save_path, stimuli_path, idx_path, keys_pressed, timings, expt_params, idx,
