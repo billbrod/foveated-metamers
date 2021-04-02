@@ -64,12 +64,16 @@ if len(os.listdir(TEXTURE_DIR)) <= 800 and 'textures-subset-for-testing' not in 
 
 BEHAVIORAL_DATA_DATES = {
     'V1_norm_s6_gaussian': {
-        'sub-00': {'sess-00': '2021-Mar-23', 'sess-01': '2021-Mar-24', 'sess-02': '2021-Mar-24'},
-        'sub-01': {'sess-00': '2021-Mar-30', 'sess-01': '2021-Mar-30', 'sess-02': '2021-Apr-01'},
-        'sub-03': {'sess-00': '2021-Apr-02',},
+        'ref': {
+            'sub-00': {'sess-00': '2021-Mar-23', 'sess-01': '2021-Mar-24', 'sess-02': '2021-Mar-24'},
+            'sub-01': {'sess-00': '2021-Mar-30', 'sess-01': '2021-Mar-30', 'sess-02': '2021-Apr-01'},
+            'sub-03': {'sess-00': '2021-Apr-02',},
+        },
     },
     'RGC_norm_gaussian': {
-        'sub-00': {'sess-00': '2021-Apr-02',},
+        'ref': {
+            'sub-00': {'sess-00': '2021-Apr-02',},
+        }
     }
 }
 
@@ -1071,8 +1075,8 @@ rule combine_all_behavior:
         lambda wildcards: [op.join(config["DATA_DIR"], 'behavioral', '{{model_name}}', 'task-split_comp-{{comp}}', '{subject}',
                                    '{date}_{subject}_task-split_comp-{{comp}}_{sess}_run-{i:02d}_expt.csv').format(
                                        i=i, sess=ses, date=date, subject=subj)
-                           for i in range(5) for subj in BEHAVIORAL_DATA_DATES[wildcards.model_name]
-                           for ses, date in BEHAVIORAL_DATA_DATES[wildcards.model_name][subj].items()],
+                           for i in range(5) for subj in BEHAVIORAL_DATA_DATES[wildcards.model_name][wildcards.comp]
+                           for ses, date in BEHAVIORAL_DATA_DATES[wildcards.model_name][wildcards.comp][subj].items()],
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description_comp-{comp}.csv'),
     output:
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
