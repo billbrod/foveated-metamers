@@ -514,7 +514,6 @@ def run_split(stimuli_path, idx_path, save_path, comparison,
                 countdown(win, text_height)
         else:
             paused_keys = []
-        print(keys_pressed, correct_responses)
         if not check_for_keys(all_keys+paused_keys):
             timings.append(('post-stimulus_%d' % (i+start_from_stim), 'on', expt_clock.getTime()))
             # keys are stored as strs
