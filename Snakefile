@@ -1023,11 +1023,19 @@ rule training_correct_responses:
                 np.save(output[0], expt_df.correct_response.values)
 
 
+def get_all_idx(wildcards):
+    if wildcards.model_name == 'RGC_norm_gaussian' and wildcards.comp == 'met':
+        sessions = [0]
+    else:
+        sessions = config['PSYCHOPHYSICS']['SESSIONS']
+    return [op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'task-split_comp-{comp}', '{subject}',
+                    '{subject}_task-split_comp-{comp}_idx_sess-%02d_run-%02d.npy') % (s, r)
+            for s in sessions for r in config['PSYCHOPHYSICS']['RUNS']]
+
+
 rule generate_all_idx:
     input:
-        [op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                 '{subject}_task-split_comp-{comp}_idx_sess-%02d_run-%02d.npy') % (s, r)
-         for s in config['PSYCHOPHYSICS']['SESSIONS'] for r in config['PSYCHOPHYSICS']['RUNS']]
+        get_all_idx,
     output:
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'task-split_comp-{comp}', '{subject}',
                 '{subject}_task-split_comp-{comp}_idx_tmp.txt')
