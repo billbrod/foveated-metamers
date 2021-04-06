@@ -1085,10 +1085,6 @@ rule combine_all_behavior:
                 'task-split_comp-{comp}_performance.svg'),
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
                 'task-split_comp-{comp}_run_lengths.svg'),
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_loss_comparison.svg'),
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_loss_comparison_subjects.svg'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
                 'task-split_comp-{comp}_plots.log'),
@@ -1108,10 +1104,37 @@ rule combine_all_behavior:
                 g.fig.savefig(output[1], bbox_inches='tight')
                 g = fov.figures.run_length_plot(expt_df, hue='subject_name', comparison=wildcards.comp)
                 g.fig.savefig(output[2], bbox_inches='tight')
+
+
+# only make this plot for the ref comparison, see the comments of the function for why
+rule plot_loss_performance_comparison:
+    input:
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-ref_data.csv'),
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description_comp-{comp}.csv'),
+    output:
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-ref_loss_comparison.svg'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-ref_loss_comparison_subjects.svg'),
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-ref_loss_comparison.log'),
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-ref_loss_comparison_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import pandas as pd
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                stim_df = pd.read_csv(input[-1])
+                expt_df = pd.read_csv(input[0])
                 g = fov.figures.compare_loss_and_performance_plot(expt_df, stim_df)
-                g.fig.savefig(output[3], bbox_inches='tight')
+                g.fig.savefig(output[0], bbox_inches='tight')
                 g = fov.figures.compare_loss_and_performance_plot(expt_df, stim_df, col_wrap=None, row='subject_name')
-                g.fig.savefig(output[4], bbox_inches='tight')
+                g.fig.savefig(output[1], bbox_inches='tight')
 
 
 rule simulate_dataset:

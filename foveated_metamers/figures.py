@@ -770,8 +770,10 @@ def compare_loss_and_performance_plot(expt_df, stim_df, col='scaling',
     """
     if expt_df.unique_seed.hasnans:
         raise Exception("There's a NaN in expt_df.unique_seed! This means that "
-                        "this expt_df comes from a metamer_vs_metamer run and "
-                        "we don't know how to handle that yet!")
+                        "this expt_df comes from a metamer_vs_metamer run. That "
+                        "means there are multiple synthesized images per trial "
+                        "and so this plot comparing performance and loss for a"
+                        " single synthesized image doesn't make sense!")
     # need to get proportion_correct, not the raw responses, for this plot.
     # adding session_number here doesn't change results except to make sure
     # that the session_number column is preserved in the output (each session

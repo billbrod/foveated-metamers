@@ -237,7 +237,11 @@ def create_experiment_df_split(df, presentation_idx, dep_variables=['scaling']):
 
     def find_seed(x):
         x = x.tolist()
-        x.remove('reference')
+        try:
+            x.remove('reference')
+        except ValueError:
+            # then there was no reference
+            pass
         # only makes sense ot do this if there's only one seed (i.e., in
         # metamer vs reference). in metamer vs metamer, return None for now
         if len(x) == 1:
