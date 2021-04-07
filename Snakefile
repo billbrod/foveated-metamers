@@ -76,7 +76,7 @@ BEHAVIORAL_DATA_DATES = {
     },
     'RGC_norm_gaussian': {
         'ref': {
-            'sub-00': {'sess-00': '2021-Apr-02',},
+            'sub-00': {'sess-00': '2021-Apr-02', 'sess-01': '2021-Apr-06', 'sess-02': '2021-Apr-06'},
         }
     }
 }
