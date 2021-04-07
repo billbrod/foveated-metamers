@@ -3,6 +3,8 @@
 import imageio
 import torch
 import re
+import yaml
+import pandas as pd
 import numpy as np
 import pyrtools as pt
 import plenoptic as po
@@ -645,7 +647,7 @@ def simulate_num_trials(params, row='critical_scaling_true', col='variable'):
 
 
 def performance_plot(expt_df, col='image_name', row=None, hue=None, col_wrap=5,
-                     ci=95, comparison='ref'):
+                     ci=95, comparison='ref', **kwargs):
     """Plot performance as function of scaling.
 
     With default arguments, this is meant to show the results for all sessions
@@ -670,6 +672,8 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, col_wrap=5,
     comparison : {'ref', 'met'}, optional
         Whether this comparison is between metamers and reference images
         ('ref') or two metamers ('met').
+    kwargs :
+        passed to plotting.lineplot_like_pointplot
 
     Returns
     -------
@@ -677,9 +681,21 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, col_wrap=5,
         FacetGrid containing the figure.
 
     """
+    with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
+        all_imgs = yaml.safe_load(f)['DEFAULT_METAMERS']['image_name']
+    # while still gathering data, will not have all images in the
+    # expt_df. Adding these blank lines gives us blank subplots in
+    # the performance plot, so that each image is in the same place
+    extra_ims = [i for i in all_imgs if i not in expt_df.image_name.unique()]
+    expt_df = expt_df.copy().append(pd.DataFrame({'image_name': extra_ims}), True)
+    assert expt_df.image_name.nunique() == 20, "Something went wrong, don't have all images!"
+    # strip out the parts of the image name that are consistent across images
+    expt_df.image_name = expt_df.image_name.apply(lambda x: x.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', ''))
+
     g = plotting.lineplot_like_pointplot(expt_df, 'scaling',
                                          'hit_or_miss_numeric', ci=ci, col=col,
-                                         row=row, hue=hue, col_wrap=col_wrap)
+                                         row=row, hue=hue, col_wrap=col_wrap,
+                                         **kwargs)
 
     g.map_dataframe(plotting.map_flat_line, x='scaling', y=.5, colors='k')
     g.set_ylabels(f'Proportion correct (with {ci}% CI)')
@@ -687,6 +703,19 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, col_wrap=5,
     g.set(ylim=(.3, 1.05))
     g = plotting.title_experiment_summary_plots(g, expt_df, 'Performance',
                                                 comparison)
+    g.set_titles('{col_name}')
+    for ax in g.axes.flatten():
+        ax.yaxis.set_major_locator(mpl.ticker.FixedLocator([.5, 1]))
+        ax.yaxis.set_minor_locator(mpl.ticker.FixedLocator([.4, .6, .7, .8, .9]))
+    # these specific grabbing of axes works because we know we have 20 axes.
+    # regardless of col_wrap, first axis will always have a ylabel and last one
+    # will always have an xlabel
+    ylabel = g.axes[0].get_ylabel()
+    xlabel = g.axes[-1].get_xlabel()
+    g.set(xlabel='', ylabel='')
+    g.fig.subplots_adjust(hspace=.2, wspace=.1, top=1)
+    g.axes[5].set_ylabel(ylabel, y=0, ha='center')
+    g.axes[-3].set_xlabel(xlabel)
     return g
 
 

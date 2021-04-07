@@ -1572,6 +1572,33 @@ rule all_pixelwise_diff_figure:
                     fig.savefig(output[0], bbox_inches='tight')
 
 
+rule performance_figure:
+    input:
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-ref_data.csv'),
+    output:
+        op.join(config['DATA_DIR'], 'figures', '{context}', '{model_name}',
+                'task-split_comp-{comp}_performance.svg')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
+                'task-split_comp-{comp}_performance.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
+                'task-split_comp-{comp}_performance_benchmark.txt')
+    run:
+        import foveated_metamers as fov
+        import pandas as pd
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                expt_df = pd.read_csv(input[0])
+                style, fig_width = fov.style.plotting_style(wildcards.context)
+                plt.style.use(style)
+                g = fov.figures.performance_plot(expt_df, hue='subject_name', comparison=wildcards.comp,
+                                                 height=fig_width/6)
+                g.fig.savefig(output[0], bbox_inches='tight')
+
+
 rule synthesis_video:
     input:
         METAMER_TEMPLATE_PATH.replace('_metamer.png', '.pt'),

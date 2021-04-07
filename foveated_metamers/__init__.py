@@ -9,3 +9,4 @@ from . import simulate
 from . import plotting
 from . import statistics
 from . import mcmc
+from . import style
