@@ -707,15 +707,16 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, col_wrap=5,
     for ax in g.axes.flatten():
         ax.yaxis.set_major_locator(mpl.ticker.FixedLocator([.5, 1]))
         ax.yaxis.set_minor_locator(mpl.ticker.FixedLocator([.4, .6, .7, .8, .9]))
-    # these specific grabbing of axes works because we know we have 20 axes.
-    # regardless of col_wrap, first axis will always have a ylabel and last one
-    # will always have an xlabel
-    ylabel = g.axes[0].get_ylabel()
-    xlabel = g.axes[-1].get_xlabel()
-    g.set(xlabel='', ylabel='')
-    g.fig.subplots_adjust(hspace=.2, wspace=.1, top=1)
-    g.axes[5].set_ylabel(ylabel, y=0, ha='center')
-    g.axes[-3].set_xlabel(xlabel)
+    if col_wrap is not None:
+        # these specific grabbing of axes works because we know we have 20 axes.
+        # regardless of col_wrap, first axis will always have a ylabel and last one
+        # will always have an xlabel
+        ylabel = g.axes[0].get_ylabel()
+        xlabel = g.axes[-1].get_xlabel()
+        g.set(xlabel='', ylabel='')
+        g.fig.subplots_adjust(hspace=.2, wspace=.1, top=1)
+        g.axes[5].set_ylabel(ylabel, y=0, ha='center')
+        g.axes[-3].set_xlabel(xlabel)
     return g
 
 
