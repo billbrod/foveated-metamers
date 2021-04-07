@@ -1600,6 +1600,32 @@ rule performance_figure:
                 g.fig.savefig(output[0], bbox_inches='tight')
 
 
+rule ref_image_figure:
+    input:
+        op.join(config["DATA_DIR"], 'stimuli', MODELS[1], 'stimuli_comp-ref.npy'),
+        op.join(config["DATA_DIR"], 'stimuli', MODELS[1], 'stimuli_description_comp-ref.csv'),
+    output:
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'ref_images.png')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'ref_images.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'ref_images_benchmark.txt')
+    run:
+        import foveated_metamers as fov
+        import pandas as pd
+        import numpy as np
+        import matplotlib.pyplot as plt
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                stim = np.load(input[0])
+                stim_df = pd.read_csv(input[1])
+                style, fig_width = fov.style.plotting_style(wildcards.context)
+                plt.style.use(style)
+                fig = fov.figures.ref_image_summary(stim, stim_df)
+                fig.savefig(output[0], bbox_inches='tight')
+
+
 rule synthesis_video:
     input:
         METAMER_TEMPLATE_PATH.replace('_metamer.png', '.pt'),

@@ -1084,3 +1084,39 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
                 ax.set_xticklabels(labels, rotation=rotate_xticklabels,
                                    ha='right')
     return g
+
+
+def ref_image_summary(stim, stim_df, zoom=.125):
+    """Display grid of reference images used for metamer synthesis.
+
+    We gamma-correct the reference images before display and title each with
+    the simple name (e.g., "llama", "troop")
+
+    Parameters
+    ----------
+    stim : np.ndarray
+        The array of metamers we want to check, should correspond to stim_df
+    stim_df : pd.DataFrame
+        The metamer information dataframe, as created by
+        stimuli.create_metamer_df
+    zoom : float or int, optional
+        How to zoom the images. Must result in an integer number of pixels
+
+    Returns
+    -------
+    fig : plt.Figure
+        Figure containing the images.
+
+    """
+    ref_ims = stim_df.fillna('None').query("model=='None'").image_name
+    ref_ims = ref_ims.apply(lambda x: x.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', ''))
+    ref_ims = ref_ims.sort_values()
+    refs = stim[ref_ims.index]
+
+    ax_size = np.array([2048, 2600]) * zoom
+    fig = pt.tools.display.make_figure(4, 5, ax_size, vert_pct=.9)
+    for ax, im, t in zip(fig.axes, refs, ref_ims.values):
+        # gamma-correct the image
+        ax.imshow((im/255)**(1/2.2), vmin=0, vmax=1, cmap='gray')
+        ax.set_title(t)
+    return fig
