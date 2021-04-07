@@ -67,16 +67,17 @@ BEHAVIORAL_DATA_DATES = {
         'ref': {
             'sub-00': {'sess-00': '2021-Mar-23', 'sess-01': '2021-Mar-24', 'sess-02': '2021-Mar-24'},
             'sub-01': {'sess-00': '2021-Mar-30', 'sess-01': '2021-Mar-30', 'sess-02': '2021-Apr-01'},
-            'sub-03': {'sess-00': '2021-Apr-02',},
-            'sub-04': {'sess-00': '2021-Apr-05', 'sess-01': '2021-Apr-06',},
+            'sub-03': {'sess-00': '2021-Apr-02', 'sess-01': '2021-Apr-07', },
+            'sub-04': {'sess-00': '2021-Apr-05', 'sess-01': '2021-Apr-06', },
         },
         'met': {
-            'sub-00': {'sess-00': '2021-Apr-05',},
+            'sub-00': {'sess-00': '2021-Apr-05', 'sess-01': '2021-Apr-07',},
         },
     },
     'RGC_norm_gaussian': {
         'ref': {
             'sub-00': {'sess-00': '2021-Apr-02', 'sess-01': '2021-Apr-06', 'sess-02': '2021-Apr-06'},
+            'sub-02': {'sess-00': '2021-Apr-07',},
         }
     }
 }
