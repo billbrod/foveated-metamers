@@ -1112,10 +1112,10 @@ rule combine_all_behavior:
                 stim_df = pd.read_csv(input[-1])
                 expt_df = pd.concat([pd.read_csv(i) for i in input[:-1]])
                 expt_df.to_csv(output[0], index=False)
-                g = fov.figures.performance_plot(expt_df, hue='subject_name', comparison=wildcards.comp)
+                g = fov.figures.performance_plot(expt_df, hue='subject_name', comparison=wildcards.comp,
+                                                 height=2.5)
                 g.fig.savefig(output[1], bbox_inches='tight')
-                g = fov.figures.run_length_plot(expt_df, hue='subject_name', comparison=wildcards.comp,
-                                                height=2.5)
+                g = fov.figures.run_length_plot(expt_df, hue='subject_name', comparison=wildcards.comp)
                 g.fig.savefig(output[2], bbox_inches='tight')
 
 
@@ -1590,6 +1590,7 @@ rule performance_figure:
         import foveated_metamers as fov
         import pandas as pd
         import contextlib
+        import matplotlib.pyplot as plt
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 expt_df = pd.read_csv(input[0])
