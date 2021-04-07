@@ -1114,26 +1114,27 @@ rule combine_all_behavior:
                 expt_df.to_csv(output[0], index=False)
                 g = fov.figures.performance_plot(expt_df, hue='subject_name', comparison=wildcards.comp)
                 g.fig.savefig(output[1], bbox_inches='tight')
-                g = fov.figures.run_length_plot(expt_df, hue='subject_name', comparison=wildcards.comp)
+                g = fov.figures.run_length_plot(expt_df, hue='subject_name', comparison=wildcards.comp,
+                                                height=2.5)
                 g.fig.savefig(output[2], bbox_inches='tight')
 
 
 # only make this plot for the ref comparison, see the comments of the function for why
 rule plot_loss_performance_comparison:
     input:
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-ref',
                 'task-split_comp-ref_data.csv'),
-        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description_comp-{comp}.csv'),
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description_comp-ref.csv'),
     output:
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-ref',
                 'task-split_comp-ref_loss_comparison.svg'),
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-ref',
                 'task-split_comp-ref_loss_comparison_subjects.svg'),
     log:
-        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-ref',
                 'task-split_comp-ref_loss_comparison.log'),
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-ref',
                 'task-split_comp-ref_loss_comparison_benchmark.txt'),
     run:
         import foveated_metamers as fov
