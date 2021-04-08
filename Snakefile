@@ -434,6 +434,9 @@ def get_mem_estimate(wildcards, partition=None):
                     # from) to 2048,2600 (which has 1.36x fewer pixels)
                     window_size = 1.17430726 / (1.36*float(wildcards.scaling))
                     mem = int(5 * window_size)
+                    # running out of memory for larger scaling values, so let's
+                    # never request less than 32 GB
+                    mem = max(mem, 32)
             if 'cosine' in wildcards.model_name:
                 if 'V1' in wildcards.model_name:
                     # most it will need is 32 GB
