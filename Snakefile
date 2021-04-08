@@ -27,7 +27,7 @@ wildcard_constraints:
     period="[0-9]+",
     size="[0-9,]+",
     bits="[0-9]+",
-    img_preproc="full|degamma|gamma-corrected|gamma-corrected_full|range-[,.0-9]+|gamma-corrected_range-[,.0-9]+",
+    img_preproc="full|degamma|gamma-corrected|gamma-corrected_full|range-[,.0-9]+|gamma-corrected_range-[,.0-9]+|downsample-[0-9.]+_range-[,.0-9]+",
     # einstein for testing setup, fountain for comparing with Freeman and Simoncelli, 2011 metamers
     preproc_image_name="|".join([im+'_?[a-z]*' for im in config['IMAGE_NAME']['ref_image']])+"|einstein|fountain",
     preproc="|_degamma|degamma",
@@ -236,6 +236,7 @@ rule preproc_image:
         import imageio
         import contextlib
         import numpy as np
+        from skimage import transform
         import foveated_metamers as fov
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
@@ -268,6 +269,9 @@ rule preproc_image:
                 if 'gamma-corrected' in wildcards.img_preproc:
                     print("Raising image to 1/2.2, to gamma correct it")
                     im = im ** (1/2.2)
+                if 'downsample' in wildcards.img_preproc:
+                    downscale = float(re.findall('downsample-([.0-9]+)_', wildcards.img_preproc)[0])
+                    im = transform.pyramid_reduce(im, downscale)
                 # always save it as 16 bit
                 print("Saving as 16 bit")
                 im = fov.utils.convert_im_to_int(im, np.uint16)
