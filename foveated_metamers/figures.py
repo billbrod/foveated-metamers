@@ -681,7 +681,8 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, col_wrap=5,
         FacetGrid containing the figure.
 
     """
-    kwargs.setdefault('palette', plotting.get_palette(hue, expt_df[hue].unique()))
+    if hue is not None:
+        kwargs.setdefault('palette', plotting.get_palette(hue, expt_df[hue].unique()))
     with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
         all_imgs = yaml.safe_load(f)['DEFAULT_METAMERS']['image_name']
     # while still gathering data, will not have all images in the
@@ -705,9 +706,25 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, col_wrap=5,
     g = plotting.title_experiment_summary_plots(g, expt_df, 'Performance',
                                                 comparison)
     g.set_titles('{col_name}')
+    # it's difficult to come up with good tick values. this finds a somewhat
+    # reasonable number of ticks in reasonable locations, reducing the number
+    # if the axis is small or the font is large
+    xmin = np.round(expt_df.scaling.min() - .004, 2)
+    xmax = np.round(expt_df.scaling.max(), 2)
+    nticks = 12
+    if kwargs.get('height', 10) < 6:
+        nticks /= 2
+    if mpl.rcParams['font.size'] > 15:
+        nticks /= 2
+        # don't want to overlap the labels on adjacent columns
+        if col is not None:
+            xmax -= (xmax-xmin)/10
+    xtick_spacing = np.round((xmax - xmin) / (nticks-1), 2)
+    xticks = [xmin+i*xtick_spacing for i in range(int(nticks+1))]
     for ax in g.axes.flatten():
         ax.yaxis.set_major_locator(mpl.ticker.FixedLocator([.5, 1]))
         ax.yaxis.set_minor_locator(mpl.ticker.FixedLocator([.4, .6, .7, .8, .9]))
+        ax.xaxis.set_major_locator(mpl.ticker.FixedLocator(xticks))
     if col_wrap is not None:
         # these specific grabbing of axes works because we know we have 20 axes.
         # regardless of col_wrap, first axis will always have a ylabel and last one

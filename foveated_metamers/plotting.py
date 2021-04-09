@@ -471,6 +471,9 @@ def title_experiment_summary_plots(g, expt_df, summary_text, comparison='ref',
         sess_str = 'all sessions'
     else:
         sess_str = f'session {int(expt_df.session_number.unique()[0]):02d}'
+    # we can have nans because of how we add blank rows to make sure each image
+    # is represented
+    model_name = 'and '.join([m.split('_')[0] for m in expt_df.model.dropna().unique()])
     comp_str = {'ref': 'reference images', 'met': 'other metamers'}[comparison]
     # got this from https://stackoverflow.com/a/36369238/4659293
     n_rows = g.fig.axes[0].get_subplotspec().get_gridspec().get_geometry()[0]
@@ -482,7 +485,7 @@ def title_experiment_summary_plots(g, expt_df, summary_text, comparison='ref',
     if n_rows > 3:
         end_newlines += '\n'
     g.fig.suptitle(f"{summary_text} for {subj_str}, {sess_str}."
-                   f" Comparing metamers and {comp_str}. {post_text}{end_newlines}",
+                   f" Comparing {model_name} metamers and {comp_str}. {post_text}{end_newlines}",
                    va='bottom')
     return g
 
@@ -537,18 +540,13 @@ def lineplot_like_pointplot(data, x, y, col=None, row=None, hue=None, ci=95,
     # sqrt(2) (by changing the 2 to a 4 in the sqrt below), which looks
     # necessary
     ms = np.sqrt(np.pi * np.square(lw) * 4)
-    try:
-        markers = data[hue].nunique()*['o']
-    except KeyError:
-        # in this case, hue=None
-        markers = ['o']
     if ax is None:
         if col is not None:
             col_order = kwargs.pop('col_order', sorted(data[col].unique()))
         else:
             col_order = None
         g = sns.relplot(x=x, y=y, data=data, kind='line', style=hue, col=col,
-                        row=row, hue=hue, markers=markers, dashes=False,
+                        row=row, hue=hue, marker='o', dashes=False,
                         err_style='bars', ci=ci, col_order=col_order,
                         col_wrap=col_wrap, linewidth=lw, markersize=ms,
                         err_kws={'linewidth': lw}, **kwargs)
@@ -556,7 +554,7 @@ def lineplot_like_pointplot(data, x, y, col=None, row=None, hue=None, ci=95,
         if isinstance(ax, str) and ax == 'map':
             ax = plt.gca()
         ax = sns.lineplot(x=x, y=y, data=data, style=hue, hue=hue,
-                          markers=markers, dashes=False, err_style='bars',
+                          marker='o', dashes=False, err_style='bars',
                           ci=ci, linewidth=lw, markersize=ms,
                           err_kws={'linewidth': lw}, **kwargs)
         g = ax

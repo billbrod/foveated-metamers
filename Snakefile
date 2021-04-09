@@ -36,7 +36,8 @@ wildcard_constraints:
     run_num="|".join([f'{i:02d}' for i in config['PSYCHOPHYSICS']['RUNS']]),
     comp='met|ref',
     save_all='|_saveall',
-    gammacorrected='|_gamma-corrected'
+    gammacorrected='|_gamma-corrected',
+    plot_focus='|_focus-subject|_focus-image',
 ruleorder:
     collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check
 
@@ -1587,16 +1588,16 @@ rule all_pixelwise_diff_figure:
 rule performance_figure:
     input:
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-ref_data.csv'),
+                'task-split_comp-{comp}_data.csv'),
     output:
         op.join(config['DATA_DIR'], 'figures', '{context}', '{model_name}',
-                'task-split_comp-{comp}_performance.svg')
+                'task-split_comp-{comp}_performance{plot_focus}.svg')
     log:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
-                'task-split_comp-{comp}_performance.log')
+                'task-split_comp-{comp}_performance{plot_focus}.log')
     benchmark:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
-                'task-split_comp-{comp}_performance_benchmark.txt')
+                'task-split_comp-{comp}_performance{plot_focus}_benchmark.txt')
     run:
         import foveated_metamers as fov
         import pandas as pd
@@ -1607,8 +1608,18 @@ rule performance_figure:
                 expt_df = pd.read_csv(input[0])
                 style, fig_width = fov.style.plotting_style(wildcards.context)
                 plt.style.use(style)
-                g = fov.figures.performance_plot(expt_df, hue='subject_name', comparison=wildcards.comp,
-                                                 height=fig_width/6)
+                col = 'image_name'
+                col_wrap = 5
+                hue = 'subject_name'
+                height = fig_width / 6
+                if wildcards.plot_focus == '_focus-image':
+                    hue = None
+                elif wildcards.plot_focus == '_focus-subject':
+                    col = None
+                    col_wrap = None
+                    height = fig_width / 2
+                g = fov.figures.performance_plot(expt_df, hue=hue, comparison=wildcards.comp,
+                                                 height=height, col=col, col_wrap=col_wrap)
                 g.fig.savefig(output[0], bbox_inches='tight')
 
 
