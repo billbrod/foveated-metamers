@@ -681,6 +681,7 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, col_wrap=5,
         FacetGrid containing the figure.
 
     """
+    kwargs.setdefault('palette', plotting.get_palette(hue, expt_df[hue].unique()))
     with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
         all_imgs = yaml.safe_load(f)['DEFAULT_METAMERS']['image_name']
     # while still gathering data, will not have all images in the

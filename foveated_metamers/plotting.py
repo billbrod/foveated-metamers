@@ -5,6 +5,49 @@ import warnings
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import os.path as op
+import yaml
+
+
+def get_palette(col, col_unique=None, as_dict=True):
+    """Get palette for column.
+
+    Parameters
+    ----------
+    col : {'subject_name', str}
+        The column to return the palette for. If we don't have a particular
+        palette picked out, the palette will contain the strings 'C0', 'C1',
+        etc, which use the default palette.
+    col_unique : list or None, optional
+        The list of unique values in col, in order to determine how many
+        elements in the palette. If None, we use seaborn's default
+    as_dict : bool, optional
+        Whether to return the palette as a dictionary or not.
+
+    Returns
+    -------
+    pal : dict, list, or seaborn ColorPalette.
+        palette to pass to plotting function
+
+    """
+    with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
+        psychophys_vars = yaml.safe_load(f)['PSYCHOPHYSICS']
+    if col_unique is None:
+        col_nunique = None
+    else:
+        col_nunique = len(col_unique)
+    if col == 'subject_name':
+        all_vals = psychophys_vars['SUBJECTS']
+        pal = sns.color_palette('deep', len(all_vals))
+    else:
+        if col_nunique is None:
+            col_nunique = 10
+        else:
+            all_vals = col_unique
+        pal = [f'C{i}' for i in range(col_nunique)]
+    if as_dict:
+        pal = dict(zip(sorted(all_vals), pal))
+    return pal
 
 
 def _jitter_data(data, jitter):
@@ -427,7 +470,7 @@ def title_experiment_summary_plots(g, expt_df, summary_text, comparison='ref',
     if 'session_number' not in expt_df.columns or expt_df.session_number.nunique() > 1:
         sess_str = 'all sessions'
     else:
-        sess_str = f'session {expt_df.session_number.unique()[0]:02d}'
+        sess_str = f'session {int(expt_df.session_number.unique()[0]):02d}'
     comp_str = {'ref': 'reference images', 'met': 'other metamers'}[comparison]
     # got this from https://stackoverflow.com/a/36369238/4659293
     n_rows = g.fig.axes[0].get_subplotspec().get_gridspec().get_geometry()[0]
