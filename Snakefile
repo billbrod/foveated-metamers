@@ -1646,7 +1646,7 @@ rule ref_image_figure:
                 style, fig_width = fov.style.plotting_style(wildcards.context)
                 plt.style.use(style)
                 fig = fov.figures.ref_image_summary(stim, stim_df)
-                fig.savefig(output[0], bbox_inches='tight')
+                fig.savefig(output[0], bbox_inches='tight', pad_inches=0)
 
 
 rule synthesis_video:
