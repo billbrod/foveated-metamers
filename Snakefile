@@ -1617,7 +1617,7 @@ rule performance_figure:
                 elif wildcards.plot_focus == '_focus-subject':
                     col = None
                     col_wrap = None
-                    height = fig_width / 2
+                    height = fig_width / 3
                 g = fov.figures.performance_plot(expt_df, hue=hue, comparison=wildcards.comp,
                                                  height=height, col=col, col_wrap=col_wrap)
                 g.fig.savefig(output[0], bbox_inches='tight')
