@@ -106,11 +106,11 @@ def response_model(scaling, model='V1', observed_responses=None):
     - log_a0_global_mean, log_s0_global_mean: independent for each trial_type,
       this is the high-level mean for the gain and critical scaling.
 
-    - log_a0_subject_sd, log_s0_subject_sd: independent for each trial type,
+    - a0_subject_sd, s0_subject_sd: independent for each trial type,
       this is the noise for the subject-level effects for the gain and critical
       scaling.
 
-    - log_a0_image_sd, log_s0_image_sd: independent for each trial type,
+    - a0_image_sd, s0_image_sd: independent for each trial type,
       this is the noise for the image-level effects for the gain and critical
       scaling.
 
@@ -136,7 +136,7 @@ def response_model(scaling, model='V1', observed_responses=None):
       Normal(-4, 1) for RGC (expected value ~.018 of exponentiated version,
       from Dacey, 1992)
 
-    - log_a0_subject_sd, log_s0_subject_sd, log_a0_image_sd, log_s0_image_sd:
+    - a0_subject_sd, s0_subject_sd, a0_image_sd, s0_image_sd:
       HalfCauchy(.1)
 
     - log_a0_image: Normal(0, a0_image_sd)
@@ -207,10 +207,10 @@ def response_model(scaling, model='V1', observed_responses=None):
             # expected value of .018 for exponentiated version, from Dacey, 1992
             s0_global_mean = numpyro.sample('log_s0_global_mean', dist.Normal(-4, 1))
         # something vague and positive
-        s0_subject_sd = numpyro.sample('log_s0_subject_sd', dist.HalfCauchy(.1))
-        a0_subject_sd = numpyro.sample('log_a0_subject_sd', dist.HalfCauchy(.1))
-        s0_image_sd = numpyro.sample('log_s0_image_sd', dist.HalfCauchy(.1))
-        a0_image_sd = numpyro.sample('log_a0_image_sd', dist.HalfCauchy(.1))
+        s0_subject_sd = numpyro.sample('s0_subject_sd', dist.HalfCauchy(.1))
+        a0_subject_sd = numpyro.sample('a0_subject_sd', dist.HalfCauchy(.1))
+        s0_image_sd = numpyro.sample('s0_image_sd', dist.HalfCauchy(.1))
+        a0_image_sd = numpyro.sample('a0_image_sd', dist.HalfCauchy(.1))
         with image_name_plate:
             s0_image = numpyro.sample('log_s0_image', dist.Normal(0, s0_image_sd))
             a0_image = numpyro.sample('log_a0_image', dist.Normal(0, a0_image_sd))
