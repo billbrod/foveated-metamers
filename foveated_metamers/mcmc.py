@@ -433,7 +433,8 @@ def _arrange_vars(dataset):
 
 
 def run_inference(dataset, model='V1', step_size=.1, num_draws=1000,
-                  num_chains=1, num_warmup=500, seed=0, **nuts_kwargs):
+                  num_chains=1, num_warmup=500, seed=0, target_accept_prob=.8,
+                  max_tree_depth=10, **nuts_kwargs):
     """Run MCMC inference for our response_model, conditioned on data.
 
     Uses NUTS sampler.
@@ -475,6 +476,9 @@ def run_inference(dataset, model='V1', step_size=.1, num_draws=1000,
     """
     scaling, observed_responses = _arrange_vars(dataset)
     mcmc_kernel = numpyro.infer.NUTS(response_model, step_size=step_size,
+                                     init_strategy=numpyro.infer.init_to_sample,
+                                     target_accept_prob=target_accept_prob,
+                                     max_tree_depth=max_tree_depth,
                                      **nuts_kwargs)
     # for now, progress bar doesn't show for multiple chains:
     # https://github.com/pyro-ppl/numpyro/issues/309

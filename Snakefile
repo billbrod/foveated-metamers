@@ -1203,16 +1203,16 @@ rule mcmc:
                 'task-split_comp-{comp}_data.csv'),
     output:
         op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
-                'd-{num_draws}_w-{num_warmup}_s-{seed}.nc'),
+                'task-split_comp-{comp}_mcmc_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}_'
+                'c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}.nc'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
-                'd-{num_draws}_w-{num_warmup}_s-{seed}.log'),
+                'task-split_comp-{comp}_mcmc_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}_'
+                'c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}.log'),
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
-                'd-{num_draws}_w-{num_warmup}_s-{seed}_benchmark.txt'),
+                'task-split_comp-{comp}_mcmc_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}_'
+                'c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_benchmark.txt'),
     run:
         import contextlib
         import foveated_metamers as fov
@@ -1231,7 +1231,9 @@ rule mcmc:
                                               int(wildcards.num_draws),
                                               int(wildcards.num_chains),
                                               int(wildcards.num_warmup),
-                                              int(wildcards.seed))
+                                              int(wildcards.seed),
+                                              float(wildcards.accept_prob),
+                                              int(wildcards.tree_depth))
                 # want to have a different seed for constructing the inference
                 # data object than we did for inference itself
                 inf_data = fov.mcmc.assemble_inf_data(mcmc, dataset, int(wildcards.seed)+1)
@@ -1241,20 +1243,20 @@ rule mcmc:
 rule mcmc_plots:
     input:
         op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
-                'd-{num_draws}_w-{num_warmup}_s-{seed}.nc'),
+                'task-split_comp-{comp}_mcmc_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
+                '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}.nc'),
     output:
         op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
-                'd-{num_draws}_w-{num_warmup}_s-{seed}_{plot_type}.png'),
+                'task-split_comp-{comp}_mcmc_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
+                '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_{plot_type}.png'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
-                'd-{num_draws}_w-{num_warmup}_s-{seed}_{plot_type}.log'),
+                'task-split_comp-{comp}_mcmc_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}_'
+                'c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_{plot_type}.log'),
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_step-{step_size}_c-{num_chains}_'
-                'd-{num_draws}_w-{num_warmup}_s-{seed}_{plot_type}_benchmark.txt'),
+                'task-split_comp-{comp}_mcmc_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
+                '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_{plot_type}_benchmark.txt'),
     run:
         import foveated_metamers as fov
         import arviz as az
