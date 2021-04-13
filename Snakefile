@@ -1125,7 +1125,7 @@ rule combine_all_behavior:
                 expt_df = pd.concat([pd.read_csv(i) for i in input[:-1]])
                 expt_df.to_csv(output[0], index=False)
                 g = fov.figures.performance_plot(expt_df, hue='subject_name', comparison=wildcards.comp,
-                                                 height=2.5)
+                                                 height=2.5, curve_fit=True)
                 g.fig.savefig(output[1], bbox_inches='tight')
                 g = fov.figures.run_length_plot(expt_df, hue='subject_name', comparison=wildcards.comp)
                 g.fig.savefig(output[2], bbox_inches='tight')
@@ -1623,7 +1623,8 @@ rule performance_figure:
                     col_wrap = None
                     height = fig_width / 3
                 g = fov.figures.performance_plot(expt_df, hue=hue, comparison=wildcards.comp,
-                                                 height=height, col=col, col_wrap=col_wrap)
+                                                 height=height, col=col, col_wrap=col_wrap,
+                                                 curve_fit=True)
                 g.fig.savefig(output[0], bbox_inches='tight')
 
 

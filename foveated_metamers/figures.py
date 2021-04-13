@@ -647,7 +647,7 @@ def simulate_num_trials(params, row='critical_scaling_true', col='variable'):
 
 
 def performance_plot(expt_df, col='image_name', row=None, hue=None, col_wrap=5,
-                     ci=95, comparison='ref', **kwargs):
+                     ci=95, comparison='ref', curve_fit=False, **kwargs):
     """Plot performance as function of scaling.
 
     With default arguments, this is meant to show the results for all sessions
@@ -672,6 +672,10 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, col_wrap=5,
     comparison : {'ref', 'met'}, optional
         Whether this comparison is between metamers and reference images
         ('ref') or two metamers ('met').
+    curve_fit : bool, optional
+        If True, we'll fit the psychophysical curve (as given in
+        mcmc.proportion_correct_curve) to the mean of each faceted subset of
+        data and plot that. If False, we'll instead join the points.
     kwargs :
         passed to plotting.lineplot_like_pointplot
 
@@ -685,6 +689,8 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, col_wrap=5,
         kwargs.setdefault('palette', plotting.get_palette(hue, expt_df[hue].unique()))
     else:
         kwargs.setdefault('color', 'k')
+    if curve_fit:
+        kwargs['linestyle'] = ''
     with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
         config = yaml.safe_load(f)
     all_imgs = config['DEFAULT_METAMERS']['image_name']
@@ -708,6 +714,10 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, col_wrap=5,
                                          'hit_or_miss_numeric', ci=ci, col=col,
                                          row=row, hue=hue, col_wrap=col_wrap,
                                          **kwargs)
+    if curve_fit:
+        g.map_dataframe(plotting.fit_psychophysical_curve, 'scaling',
+                        'hit_or_miss_numeric', pal=kwargs.get('palette', {}),
+                        color=kwargs.get('color', 'k'))
 
     g.map_dataframe(plotting.map_flat_line, x='scaling', y=.5, colors='k')
     g.set_ylabels(f'Proportion correct (with {ci}% CI)')

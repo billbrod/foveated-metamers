@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import os.path as op
 import yaml
+from . import mcmc
+import scipy
 
 
 def get_palette(col, col_unique=None, as_dict=True):
@@ -494,6 +496,59 @@ def title_experiment_summary_plots(g, expt_df, summary_text, comparison='ref',
     return g
 
 
+def fit_psychophysical_curve(x, y, hue=None, pal={}, data=None, **kwargs):
+    """Fit psychophysical curve to mean data, intended for visualization only.
+
+    For use with seaborn's FacetGrid.map_dataframe
+
+    Parameters
+    ----------
+    x, y, hue : str
+        columns from data to map along the x, y, hue dimensions
+    pal : dict, optional
+        dictionary mapping between hue variables and colors. if non-empty, will
+        override color set in kwargs
+    data : pd.DataFrame or None, optional
+        the data to plot
+    kwargs :
+        passed along to plt.plot.
+
+    """
+    # copying from how seaborn.pointplot handles this, because they look nicer
+    lw = mpl.rcParams["lines.linewidth"] * 1.8
+    kwargs.setdefault('linewidth', lw)
+    default_color = kwargs.pop('color')
+    if hue is not None:
+        data = data.groupby(hue)
+    elif 'hue' in data.columns and not data.hue.isnull().all():
+        data = data.groupby('hue')
+    else:
+        data = [(None, data)]
+    for n, d in data:
+        color = pal.get(n, default_color)
+        try:
+            d = d.groupby(x)[y].mean()
+        except KeyError:
+            # it looks like the above works with catplot / related functions
+            # (i.e., when seaborn thought the data was categorical), but not
+            # when it's relplot / related functions (i.e., when seaborn thought
+            # data was numeric). in that case, the columns have been renamed to
+            # 'x', 'y', etc.
+            d = d.groupby('x').y.mean()
+        try:
+            popt, _ = scipy.optimize.curve_fit(mcmc.proportion_correct_curve, d.index.values,
+                                               d.values, [5, d.index.min()],
+                                               # both params must be non-negative
+                                               bounds=([0, 0], [np.inf, np.inf]))
+        except ValueError:
+            # this happens when this gets called on an empty facet, in which
+            # case we just want to exit out
+            continue
+        yvals = mcmc.proportion_correct_curve(d.index.values, *popt)
+        ax = kwargs.pop('ax', plt.gca())
+        ax.plot(d.index.values, yvals, color=color, **kwargs)
+
+
 def lineplot_like_pointplot(data, x, y, col=None, row=None, hue=None, ci=95,
                             col_wrap=None, ax=None, **kwargs):
     """Make a lineplot that looks like pointplot
@@ -549,17 +604,16 @@ def lineplot_like_pointplot(data, x, y, col=None, row=None, hue=None, ci=95,
             col_order = kwargs.pop('col_order', sorted(data[col].unique()))
         else:
             col_order = None
-        g = sns.relplot(x=x, y=y, data=data, kind='line', style=hue, col=col,
-                        row=row, hue=hue, marker='o', dashes=False,
-                        err_style='bars', ci=ci, col_order=col_order,
-                        col_wrap=col_wrap, linewidth=lw, markersize=ms,
-                        err_kws={'linewidth': lw}, **kwargs)
+        g = sns.relplot(x=x, y=y, data=data, kind='line', col=col, row=row,
+                        hue=hue, marker='o', dashes=False, err_style='bars',
+                        ci=ci, col_order=col_order, col_wrap=col_wrap,
+                        linewidth=lw, markersize=ms, err_kws={'linewidth': lw},
+                        **kwargs)
     else:
         if isinstance(ax, str) and ax == 'map':
             ax = plt.gca()
-        ax = sns.lineplot(x=x, y=y, data=data, style=hue, hue=hue,
-                          marker='o', dashes=False, err_style='bars',
-                          ci=ci, linewidth=lw, markersize=ms,
-                          err_kws={'linewidth': lw}, **kwargs)
+        ax = sns.lineplot(x=x, y=y, data=data, hue=hue, marker='o',
+                          dashes=False, err_style='bars', ci=ci, linewidth=lw,
+                          markersize=ms, err_kws={'linewidth': lw}, **kwargs)
         g = ax
     return g

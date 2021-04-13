@@ -45,7 +45,7 @@ def calculate_discriminability(scaling, proportionality_factor, critical_scaling
     """
     vals = proportionality_factor * (1 - (critical_scaling**2 / scaling**2))
     # this has to be non-negative
-    return vals.clip(a_min=0)
+    return vals.clip(0)
 
 
 def proportion_correct_curve(scaling, proportionality_factor, critical_scaling):
