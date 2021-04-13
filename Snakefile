@@ -1257,6 +1257,8 @@ rule mcmc_plots:
         op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                 'task-split_comp-{comp}_mcmc_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
                 '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_{plot_type}_benchmark.txt'),
+    resources:
+        mem = lambda wildcards: {'post-pred-check': 15, 'distribs': 50}.get(wildcards.plot_type, 5)
     run:
         import foveated_metamers as fov
         import arviz as az

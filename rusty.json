@@ -60,5 +60,9 @@
         "partition": "ccn",
         "mem" : "",
         "time": "6:00:00"
+    },
+    "mcmc_plots":
+    {
+        "mem": "{resources.mem}GB"
     }
 }
