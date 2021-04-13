@@ -686,7 +686,15 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, col_wrap=5,
     else:
         kwargs.setdefault('color', 'k')
     with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
-        all_imgs = yaml.safe_load(f)['DEFAULT_METAMERS']['image_name']
+        config = yaml.safe_load(f)
+    all_imgs = config['DEFAULT_METAMERS']['image_name']
+    img_sets = config['PSYCHOPHYSICS']['IMAGE_SETS']
+    img_order = (sorted(img_sets['all']) + sorted(img_sets['A']) +
+                 sorted(img_sets['B']))
+    img_order = [i.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', '')
+                 for i in img_order]
+    if col == 'image_name':
+        kwargs.setdefault('col_order', img_order)
     # while still gathering data, will not have all images in the
     # expt_df. Adding these blank lines gives us blank subplots in
     # the performance plot, so that each image is in the same place
@@ -1131,7 +1139,13 @@ def ref_image_summary(stim, stim_df, zoom=.125):
     """
     ref_ims = stim_df.fillna('None').query("model=='None'").image_name
     ref_ims = ref_ims.apply(lambda x: x.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', ''))
-    ref_ims = ref_ims.sort_values()
+    with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
+        img_sets = yaml.safe_load(f)['PSYCHOPHYSICS']['IMAGE_SETS']
+    img_order = (sorted(img_sets['all']) + sorted(img_sets['A']) +
+                 sorted(img_sets['B']))
+    img_order = [i.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', '')
+                 for i in img_order]
+    ref_ims = ref_ims.sort_values(key=lambda x: [img_order.index(i) for i in x])
     refs = stim[ref_ims.index]
 
     ax_size = np.array([2048, 2600]) * zoom
