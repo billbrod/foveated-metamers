@@ -925,10 +925,10 @@ def parameter_distributions(inf_data, col='variable', hue='distribution',
     clip : pair of numbers or list of such, optional
         Values to clip the evaluation of KDE along. See sns.kdeplot docstring
         for more details. Prior ends up including way larger values than
+        posterior, so we clip to get a reasonable view
     query_str : str or None, optional
         If not None, the string to query dataframe with to limit the plotted
         data (e.g., "distribution == 'posterior'").
-        posterior, so we clip to get a reasonable view
     kwargs :
         passed to sns.displot
 
@@ -939,6 +939,15 @@ def parameter_distributions(inf_data, col='variable', hue='distribution',
 
     """
     df = mcmc.inf_data_to_df(inf_data, 'parameters', query_str=query_str)
+    # when you have this many samples from the prior, sometimes you get weird
+    # samples, way too large. since we're sampling some of the parameters in
+    # log-space, this can lead to infinite values. to avoid this, we drop any
+    # draws that have any parameter greater than 1e30 (max float32 is ~3.4e38)
+    if (df.value > 1e30).any():
+        gb = df[df.value > 1e30].groupby(['chain', 'draw', 'distribution'])
+        to_drop = [n for n, _ in gb]
+        df = df.set_index(['chain', 'draw', 'distribution'])
+        df = df.drop(to_drop).reset_index()
     g = sns.displot(df, hue=hue, x='value', col=col, kind='kde', clip=clip,
                     facet_kws=dict(sharex='col', sharey=False),
                     **kwargs)
