@@ -16,7 +16,7 @@ def get_palette(col, col_unique=None, as_dict=True):
 
     Parameters
     ----------
-    col : {'subject_name', str}
+    col : {'subject_name', 'model', str}
         The column to return the palette for. If we don't have a particular
         palette picked out, the palette will contain the strings 'C0', 'C1',
         etc, which use the default palette.
@@ -33,7 +33,8 @@ def get_palette(col, col_unique=None, as_dict=True):
 
     """
     with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
-        psychophys_vars = yaml.safe_load(f)['PSYCHOPHYSICS']
+        config = yaml.safe_load(f)
+    psychophys_vars = config['PSYCHOPHYSICS']
     if col_unique is None:
         col_nunique = None
     else:
@@ -41,6 +42,11 @@ def get_palette(col, col_unique=None, as_dict=True):
     if col == 'subject_name':
         all_vals = psychophys_vars['SUBJECTS']
         pal = sns.color_palette('deep', len(all_vals))
+    elif col == 'model':
+        all_vals = [config['RGC']['model_name'], config['V1']['model_name']]
+        assert len(all_vals) == 2, "Currently only support 2 model values"
+        pal = sns.color_palette('BrBG', 3)
+        pal = [pal[0], pal[-1]]
     else:
         if col_nunique is None:
             col_nunique = 10
@@ -50,6 +56,133 @@ def get_palette(col, col_unique=None, as_dict=True):
     if as_dict:
         pal = dict(zip(sorted(all_vals), pal))
     return pal
+
+
+def get_style(col, col_unique=None, as_dict=True):
+    """Get style for column.
+
+    Parameters
+    ----------
+    col : {'trial_type'}
+        The column to return the palette for. If we don't have a particular
+        style picked out, we raise an exception.
+    col_unique : list or None, optional
+        The list of unique values in col, in order to determine how many
+        elements in the palette. If None, we use seaborn's default
+    as_dict : bool, optional
+        Whether to return the palette as a dictionary or not.
+
+    Returns
+    -------
+    style_dict : dict
+        dict to unpack for plotting functions
+
+    """
+    if col == 'trial_type':
+        all_vals = ['metamer_vs_metamer', 'metamer_vs_reference']
+        if any([c for c in col_unique if c not in all_vals]):
+            raise Exception("Got unsupported value for "
+                            f"col='trial_type', {col_unique}")
+        dashes_dict = dict(zip(all_vals, [(2, 2), '']))
+        # this (setting marker in marker_adjust and also below in the marker
+        # dict) is a hack to allow us to determine which markers correspond to
+        # which style level, which we can't do otherwise (they have no label)
+        marker_adjust = {'metamer_vs_metamer':
+                         {'fc': 'w', 'ec': 'original_fc', 'ew': 'lw',
+                          's': 'total_unchanged', 'marker': 'o'},
+                         'metamer_vs_reference': {}}
+        markers = dict(zip(all_vals, ['v', 'o']))
+    else:
+        raise Exception(f"Currently only support col='trial_type' but got {col}")
+    return {'dashes_dict': dashes_dict, 'marker_adjust': marker_adjust,
+            'markers': markers}
+
+
+def myLogFormat(y, pos):
+    """formatter that only shows the required number of decimal points
+
+    this is for use with log-scaled axes, and so assumes that everything greater than 1 is an
+    integer and so has no decimal points
+
+    to use (or equivalently, with `axis.xaxis`):
+    ```
+    from matplotlib import ticker
+    axis.yaxis.set_major_formatter(ticker.FuncFormatter(myLogFormat))
+    ```
+
+    modified from https://stackoverflow.com/a/33213196/4659293
+    """
+    # Find the number of decimal places required
+    if y < 1:
+        # because the string representation of a float always starts "0."
+        decimalplaces = len(str(y)) - 2
+    else:
+        decimalplaces = 0
+    # Insert that number into a format string
+    formatstring = '{{:.{:1d}f}}'.format(decimalplaces)
+    # Return the formatted tick label
+    return formatstring.format(y)
+
+
+def _marker_adjust(axes, marker_adjust, label_map):
+    """Helper function to adjust markers after the fact. Pretty hacky.
+
+    Parameters
+    ----------
+    axes : list
+        List of axes containing the markers to adjust
+    marker_adjust : dict
+        Dictionary with keys identifying the style level and values describing
+        how to adjust the markers. Can contain the following keys: fc, ec, ew,
+        s, marker (to adjust those properties). If a property is None or not
+        included, won't adjust. In addition to the standard values those
+        properties can take, can also take the following: - ec: 'original_fc'
+        (take the original marker facecolor) - ew: 'lw' (take the linewidth) -
+        s: 'total_unchanged' (adjust marker size so that, after changing the
+        edge width, the overall size will not change)
+    label_map : dict
+        seaborn unfortunately doesn't label these markers, so we need to know
+        how to match the marker to the style level. this maps the style level
+        to the marker used when originally creating the plot, allowing us to
+        identify the style level.
+
+    Returns
+    -------
+    artists : dict
+        dictionary between the style levels and marker properties, for creating
+        a legend.
+
+    """
+    def _adjust_one_marker(line, fc=None, ec=None, ew=None, s=None, marker=None):
+        original_fc = line.get_mfc()
+        lw = line.get_lw()
+        original_ms = line.get_ms() + line.get_mew()
+        if ec == 'original_fc':
+            ec = original_fc
+        if ew == 'lw':
+            ew = lw
+        if s == 'total_unchanged':
+            s = original_ms - ew
+        if fc is not None:
+            line.set_mfc(fc)
+        if ec is not None:
+            line.set_mec(ec)
+        if ew is not None:
+            line.set_mew(ew)
+        if s is not None:
+            line.set_ms(s)
+        if marker is not None:
+            line.set_marker(marker)
+        return {'marker': line.get_marker(), 'mec': line.get_mec(),
+                'mfc': line.get_mfc(), 'ms': line.get_ms(), 'mew': line.get_mew()}
+
+    artists = {}
+    for ax in axes:
+        for line in ax.lines:
+            if line.get_marker() and line.get_marker() != 'None':
+                label = label_map[line.get_marker()]
+                artists[label] = _adjust_one_marker(line, **marker_adjust[label])
+    return artists
 
 
 def _jitter_data(data, jitter):
@@ -475,8 +608,9 @@ def title_experiment_summary_plots(g, expt_df, summary_text, comparison='ref',
         sess_str = f'session {int(expt_df.session_number.unique()[0]):02d}'
     # we can have nans because of how we add blank rows to make sure each image
     # is represented
-    model_name = 'and '.join([m.split('_')[0] for m in expt_df.model.dropna().unique()])
-    comp_str = {'ref': 'reference images', 'met': 'other metamers'}[comparison]
+    model_name = ' and '.join([m.split('_')[0] for m in expt_df.model.dropna().unique()])
+    comp_str = {'ref': 'reference images', 'met': 'other metamers',
+                'both': 'both reference and natural images'}[comparison]
     # got this from https://stackoverflow.com/a/36369238/4659293
     n_rows = g.fig.axes[0].get_subplotspec().get_gridspec().get_geometry()[0]
     n_cols = g.fig.axes[0].get_subplotspec().get_gridspec().get_geometry()[1]
@@ -496,20 +630,27 @@ def title_experiment_summary_plots(g, expt_df, summary_text, comparison='ref',
     return g
 
 
-def fit_psychophysical_curve(x, y, hue=None, pal={}, data=None, **kwargs):
+def fit_psychophysical_curve(x, y, hue=None, style=None, pal={}, dashes_dict={},
+                             data=None, to_chance=False, **kwargs):
     """Fit psychophysical curve to mean data, intended for visualization only.
 
     For use with seaborn's FacetGrid.map_dataframe
 
     Parameters
     ----------
-    x, y, hue : str
+    x, y, hue, style : str
         columns from data to map along the x, y, hue dimensions
     pal : dict, optional
-        dictionary mapping between hue variables and colors. if non-empty, will
+        dictionary mapping between hue levels and colors. if non-empty, will
         override color set in kwargs
+    dashes_dict : dict, optional
+        like pal, dictionary mapping between style levels and args to pass as
+        `dashes` to ax.plot.
     data : pd.DataFrame or None, optional
         the data to plot
+    to_chance : bool, optional
+        if True, we extend the plotted x-values until y-values reach chance. If
+        False, we just plot the included xvals.
     kwargs :
         passed along to plt.plot.
 
@@ -526,27 +667,40 @@ def fit_psychophysical_curve(x, y, hue=None, pal={}, data=None, **kwargs):
         data = [(None, data)]
     for n, d in data:
         color = pal.get(n, default_color)
-        try:
-            d = d.groupby(x)[y].mean()
-        except KeyError:
-            # it looks like the above works with catplot / related functions
-            # (i.e., when seaborn thought the data was categorical), but not
-            # when it's relplot / related functions (i.e., when seaborn thought
-            # data was numeric). in that case, the columns have been renamed to
-            # 'x', 'y', etc.
-            d = d.groupby('x').y.mean()
-        try:
-            popt, _ = scipy.optimize.curve_fit(mcmc.proportion_correct_curve, d.index.values,
-                                               d.values, [5, d.index.min()],
-                                               # both params must be non-negative
-                                               bounds=([0, 0], [np.inf, np.inf]))
-        except ValueError:
-            # this happens when this gets called on an empty facet, in which
-            # case we just want to exit out
-            continue
-        yvals = mcmc.proportion_correct_curve(d.index.values, *popt)
-        ax = kwargs.pop('ax', plt.gca())
-        ax.plot(d.index.values, yvals, color=color, **kwargs)
+        if style is not None:
+            d = d.groupby(style)
+        elif 'style' in d.columns and not d['style'].isnull().all():
+            d = d.groupby('style')
+        else:
+            d = [(None, d)]
+        for m, g in d:
+            dashes = dashes_dict.get(m, '')
+            try:
+                g = g.groupby(x)[y].mean()
+            except KeyError:
+                # it looks like the above works with catplot / related functions
+                # (i.e., when seaborn thought the data was categorical), but not
+                # when it's relplot / related functions (i.e., when seaborn thought
+                # data was numeric). in that case, the columns have been renamed to
+                # 'x', 'y', etc.
+                g = g.groupby('x').y.mean()
+            try:
+                popt, _ = scipy.optimize.curve_fit(mcmc.proportion_correct_curve, g.index.values,
+                                                   g.values, [5, g.index.min()],
+                                                   # both params must be non-negative
+                                                   bounds=([0, 0], [np.inf, np.inf]))
+            except ValueError:
+                # this happens when this gets called on an empty facet, in which
+                # case we just want to exit out
+                continue
+            xvals = g.index.values
+            yvals = mcmc.proportion_correct_curve(xvals, *popt)
+            if to_chance:
+                while yvals.min() > .5:
+                    xvals = np.concatenate(([xvals.min()-xvals.min()/10], xvals))
+                    yvals = mcmc.proportion_correct_curve(xvals, *popt)
+            ax = kwargs.pop('ax', plt.gca())
+            ax.plot(xvals, yvals, dashes=dashes, color=color, **kwargs)
 
 
 def lineplot_like_pointplot(data, x, y, col=None, row=None, hue=None, ci=95,
@@ -590,6 +744,7 @@ def lineplot_like_pointplot(data, x, y, col=None, row=None, hue=None, ci=95,
         In relplot mode, a FacetGrid; in lineplot mode, an axis
 
     """
+    kwargs.setdefault('dashes', False)
     # copying from how seaborn.pointplot handles this, because they look nicer
     lw = mpl.rcParams["lines.linewidth"] * 1.8
     # annoyingly, scatter and plot interpret size / markersize differently: for
@@ -605,7 +760,7 @@ def lineplot_like_pointplot(data, x, y, col=None, row=None, hue=None, ci=95,
         else:
             col_order = None
         g = sns.relplot(x=x, y=y, data=data, kind='line', col=col, row=row,
-                        hue=hue, marker='o', dashes=False, err_style='bars',
+                        hue=hue, marker='o', err_style='bars',
                         ci=ci, col_order=col_order, col_wrap=col_wrap,
                         linewidth=lw, markersize=ms, err_kws={'linewidth': lw},
                         **kwargs)
@@ -613,7 +768,7 @@ def lineplot_like_pointplot(data, x, y, col=None, row=None, hue=None, ci=95,
         if isinstance(ax, str) and ax == 'map':
             ax = plt.gca()
         ax = sns.lineplot(x=x, y=y, data=data, hue=hue, marker='o',
-                          dashes=False, err_style='bars', ci=ci, linewidth=lw,
-                          markersize=ms, err_kws={'linewidth': lw}, **kwargs)
+                          err_style='bars', ci=ci, linewidth=lw, markersize=ms,
+                          err_kws={'linewidth': lw}, **kwargs)
         g = ax
     return g

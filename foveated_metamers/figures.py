@@ -646,8 +646,9 @@ def simulate_num_trials(params, row='critical_scaling_true', col='variable'):
     return g
 
 
-def performance_plot(expt_df, col='image_name', row=None, hue=None, col_wrap=5,
-                     ci=95, comparison='ref', curve_fit=False, **kwargs):
+def performance_plot(expt_df, col='image_name', row=None, hue=None, style=None,
+                     col_wrap=5, ci=95, comparison='ref', curve_fit=False,
+                     logscale_xaxis=False, **kwargs):
     """Plot performance as function of scaling.
 
     With default arguments, this is meant to show the results for all sessions
@@ -672,10 +673,14 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, col_wrap=5,
     comparison : {'ref', 'met'}, optional
         Whether this comparison is between metamers and reference images
         ('ref') or two metamers ('met').
-    curve_fit : bool, optional
+    curve_fit : {True, False, 'to_chance'}, optional
         If True, we'll fit the psychophysical curve (as given in
         mcmc.proportion_correct_curve) to the mean of each faceted subset of
-        data and plot that. If False, we'll instead join the points.
+        data and plot that. If False, we'll instead join the points. If
+        'to_chance', then we plot the psychophysical curve (as in True), and
+        extend the x-values until performance hits chance.
+    logscale_xaxis : bool, optional
+        If True, we logscale the x-axis. Else, it's a linear scale.
     kwargs :
         passed to plotting.lineplot_like_pointplot
 
@@ -691,6 +696,18 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, col_wrap=5,
         kwargs.setdefault('color', 'k')
     if curve_fit:
         kwargs['linestyle'] = ''
+        kwargs.setdefault('dashes', False)
+    dashes_dict = {}
+    marker_adjust = {}
+    if style is not None:
+        style_dict = plotting.get_style(style, expt_df[style].unique())
+        dashes_dict = style_dict.pop('dashes_dict', {})
+        marker_adjust = style_dict.pop('marker_adjust', {})
+        kwargs.setdefault('dashes', dashes_dict)
+        kwargs.update(style_dict)
+    # raise an error if col_wrap is non-None when col is None
+    if col is None:
+        col_wrap = None
     with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
         config = yaml.safe_load(f)
     all_imgs = config['DEFAULT_METAMERS']['image_name']
@@ -713,12 +730,20 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, col_wrap=5,
     g = plotting.lineplot_like_pointplot(expt_df, 'scaling',
                                          'hit_or_miss_numeric', ci=ci, col=col,
                                          row=row, hue=hue, col_wrap=col_wrap,
-                                         **kwargs)
+                                         style=style, legend=False, **kwargs)
+    if marker_adjust:
+        labels = {v: k for k, v in kwargs.get('markers', {}).items()}
+        final_markers = plotting._marker_adjust(g.axes.flatten(),
+                                                marker_adjust, labels)
+    else:
+        final_markers = {}
+
     if curve_fit:
+        to_chance = True if curve_fit == 'to_chance' else False
         g.map_dataframe(plotting.fit_psychophysical_curve, 'scaling',
                         'hit_or_miss_numeric', pal=kwargs.get('palette', {}),
-                        color=kwargs.get('color', 'k'))
-
+                        color=kwargs.get('color', 'k'), dashes_dict=dashes_dict,
+                        to_chance=to_chance)
     g.map_dataframe(plotting.map_flat_line, x='scaling', y=.5, colors='k')
     g.set_ylabels(f'Proportion correct (with {ci}% CI)')
     g.set_xlabels('Scaling')
@@ -739,8 +764,15 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, col_wrap=5,
         # don't want to overlap the labels on adjacent columns
         if col is not None:
             xmax -= (xmax-xmin)/10
-    xtick_spacing = np.round((xmax - xmin) / (nticks-1), 2)
-    xticks = [xmin+i*xtick_spacing for i in range(int(nticks+1))]
+    if logscale_xaxis:
+        for ax in g.axes.flatten():
+            ax.set_xscale('log', base=2)
+            ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(lambda y, pos: f"{y:.03f}"))
+        xtick_spacing = np.round((np.log2(xmax) - np.log2(xmin)) / (nticks-1), 2)
+        xticks = [2**(np.log2(xmin)+i*xtick_spacing) for i in range(int(nticks+1))]
+    else:
+        xtick_spacing = np.round((xmax - xmin) / (nticks-1), 2)
+        xticks = [xmin+i*xtick_spacing for i in range(int(nticks+1))]
     for ax in g.axes.flatten():
         ax.yaxis.set_major_locator(mpl.ticker.FixedLocator([.5, 1]))
         ax.yaxis.set_minor_locator(mpl.ticker.FixedLocator([.4, .6, .7, .8, .9]))
@@ -755,6 +787,34 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, col_wrap=5,
         g.fig.subplots_adjust(hspace=.2, wspace=.1, top=1)
         g.axes[5].set_ylabel(ylabel, y=0, ha='center')
         g.axes[-3].set_xlabel(xlabel)
+
+    # create the legend
+    artists = {}
+    ax = g.axes.flatten()[0]
+    lw = mpl.rcParams["lines.linewidth"] * 1.8
+    if hue is not None:
+        palette = kwargs.get('palette')
+        artists[hue] = ax.scatter([], [], s=0)
+        for hue_val in expt_df[hue].unique():
+            if isinstance(hue_val, float) and np.isnan(hue_val):
+                continue
+            artists[hue_val] = ax.plot([], [], color=palette[hue_val],
+                                       lw=lw)[0]
+    if style is not None:
+        # lw = mpl.rcParams["lines.linewidth"]
+        artists[style] = ax.scatter([], [], s=0)
+        for style_val in expt_df[style].unique():
+            if isinstance(style_val, float) and np.isnan(style_val):
+                continue
+            markers = {k: v for k, v in final_markers[style_val].items()}
+            markers['mec'] = 'k'
+            markers['mfc'] = 'k' if markers['mfc'] != 'w' else 'w'
+            markers['mew'] = lw
+            artists[style_val] = ax.plot([], [], color='k', lw=lw,
+                                         dashes=dashes_dict[style_val],
+                                         **markers)[0]
+    if artists:
+        g.add_legend(artists)
     return g
 
 

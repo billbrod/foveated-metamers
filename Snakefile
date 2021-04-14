@@ -1125,7 +1125,7 @@ rule combine_all_behavior:
                 expt_df = pd.concat([pd.read_csv(i) for i in input[:-1]])
                 expt_df.to_csv(output[0], index=False)
                 g = fov.figures.performance_plot(expt_df, hue='subject_name', comparison=wildcards.comp,
-                                                 height=2.5, curve_fit=True)
+                                                 height=2.5, curve_fit=True, style='trial_type')
                 g.fig.savefig(output[1], bbox_inches='tight')
                 g = fov.figures.run_length_plot(expt_df, hue='subject_name', comparison=wildcards.comp)
                 g.fig.savefig(output[2], bbox_inches='tight')
@@ -1613,18 +1613,18 @@ rule performance_figure:
                 style, fig_width = fov.style.plotting_style(wildcards.context)
                 plt.style.use(style)
                 col = 'image_name'
-                col_wrap = 5
                 hue = 'subject_name'
                 height = fig_width / 6
                 if wildcards.plot_focus == '_focus-image':
                     hue = None
                 elif wildcards.plot_focus == '_focus-subject':
                     col = None
-                    col_wrap = None
                     height = fig_width / 3
-                g = fov.figures.performance_plot(expt_df, hue=hue, comparison=wildcards.comp,
-                                                 height=height, col=col, col_wrap=col_wrap,
-                                                 curve_fit=True)
+                g = fov.figures.performance_plot(expt_df, hue=hue,
+                                                 comparison=wildcards.comp,
+                                                 height=height, col=col,
+                                                 curve_fit=True,
+                                                 style='trial_type')
                 g.fig.savefig(output[0], bbox_inches='tight')
 
 
