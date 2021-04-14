@@ -1628,6 +1628,38 @@ rule performance_figure:
                 g.fig.savefig(output[0], bbox_inches='tight')
 
 
+rule performance_comparison_figure:
+    input:
+        [op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                 'task-split_comp-{comp}_data.csv').format(comp=c, model_name=m)
+         for c in ['met', 'ref'] for m in MODELS],
+    output:
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'performance_{subject}.svg')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'performance_{subject}.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'performance_{subject}_benchmark.txt')
+    run:
+        import foveated_metamers as fov
+        import pandas as pd
+        import contextlib
+        import matplotlib.pyplot as plt
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                df = pd.concat([pd.read_csv(f).query(f"subject_name=='{wildcards.subject}'")
+                                for f in input])
+                style, fig_width = fov.style.plotting_style(wildcards.context)
+                plt.style.use(style)
+                g = fov.figures.performance_plot(df, col=None,
+                                                 curve_fit='to_chance',
+                                                 hue='model',
+                                                 height=fig_width/2,
+                                                 style='trial_type', aspect=2,
+                                                 logscale_xaxis=True,
+                                                 comparison='both')
+                g.fig.savefig(output[0], bbox_inches='tight')
+
+
 rule ref_image_figure:
     input:
         op.join(config["DATA_DIR"], 'stimuli', MODELS[1], 'stimuli_comp-ref.npy'),
