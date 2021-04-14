@@ -1657,7 +1657,7 @@ rule performance_comparison_figure:
                 g = fov.figures.performance_plot(df, col=None,
                                                  curve_fit='to_chance',
                                                  hue='model',
-                                                 height=fig_width/2,
+                                                 height=fig_width/3,
                                                  style='trial_type', aspect=2,
                                                  logscale_xaxis=True,
                                                  comparison='both')
