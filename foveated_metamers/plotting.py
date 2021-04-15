@@ -44,6 +44,10 @@ def get_palette(col, col_unique=None, as_dict=True):
         pal = sns.color_palette('deep', len(all_vals))
     elif col == 'model':
         all_vals = [config['RGC']['model_name'], config['V1']['model_name']]
+        if sorted(col_unique) != sorted(all_vals):
+            all_vals = ['Retina', 'V1']
+            if sorted(col_unique) != sorted(all_vals):
+                raise Exception(f"Don't know what to do with models {col_unique}")
         assert len(all_vals) == 2, "Currently only support 2 model values"
         pal = sns.color_palette('BrBG', 3)
         pal = [pal[0], pal[-1]]

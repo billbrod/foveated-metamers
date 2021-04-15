@@ -1624,6 +1624,8 @@ rule performance_figure:
                 elif wildcards.plot_focus == '_focus-subject':
                     col = None
                     height = fig_width / 3
+                expt_df.model = expt_df.model.map(lambda x: {'RGC': 'Retina'}.get(x.split('_')[0],
+                                                                                  x.split('_')[0]))
                 g = fov.figures.performance_plot(expt_df, hue=hue,
                                                  comparison=wildcards.comp,
                                                  height=height, col=col,
@@ -1652,6 +1654,8 @@ rule performance_comparison_figure:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 df = pd.concat([pd.read_csv(f).query(f"subject_name=='{wildcards.subject}'")
                                 for f in input])
+                df.model = df.model.map(lambda x: {'RGC': 'Retina'}.get(x.split('_')[0],
+                                                                        x.split('_')[0]))
                 style, fig_width = fov.style.plotting_style(wildcards.context)
                 plt.style.use(style)
                 g = fov.figures.performance_plot(df, col=None,
