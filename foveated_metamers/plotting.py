@@ -289,8 +289,8 @@ def _map_dataframe_prep(data, x, y, estimator, x_jitter, x_dodge, x_order,
     """
     if ci == 'hdi':
         plot_data = data.set_index(x).query("hdi==50")[y]
-        ci_vals = list(data.hdi.unique())
-        ci_vals.remove(50)
+        # remove np.nan and 50
+        ci_vals = [v for v in data.hdi.unique() if not np.isnan(v) and v !=50]
         assert len(ci_vals) == 2, "should only have median and two endpoints for HDI!"
         plot_cis = [data.set_index(x).query("hdi==@val")[y] for val in ci_vals]
     else:

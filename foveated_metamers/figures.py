@@ -934,27 +934,26 @@ def compare_loss_and_performance_plot(expt_df, stim_df, col='scaling',
     return g
 
 
-def posterior_predictive_check(inf_data, jitter_scaling=True,
-                               facetgrid_kwargs={}, query_str=None):
+def posterior_predictive_check(inf_data, height=5, facetgrid_kwargs={},
+                               query_str=None, hdi=.95):
     """Plot posterior predictive check.
 
     In order to make sure that our MCMC gave us a reasonable fit, we plot the
-    posterior predictive responses and probability correct against the observed
+    posterior predictive probability correct curve against the observed
     responses.
 
     Parameters
     ----------
     inf_data : arviz.InferenceData
         arviz InferenceData object (xarray-like) created by `run_inference`.
-    jitter_scaling : bool or float, optional
-        If not False, we jitter scaling values (so they don't get plotted on
-        top of each other). If True, we jitter by 5e-3, else, the amount to
-        jitter by. Will need to rework this for log axis.
     facetgrid_kwargs : dict, optional
         additional kwargs to pass to sns.FacetGrid. Cannot contain 'hue'.
     query_str : str or None, optional
         If not None, the string to query dataframe with to limit the plotted
         data (e.g., "distribution == 'posterior'").
+    hdi : float, optional
+        The width of the HDI to draw (in range (0, 1]). See docstring of
+        fov.mcmc.inf_data_to_df for more details.
 
     Returns
     -------
@@ -962,16 +961,21 @@ def posterior_predictive_check(inf_data, jitter_scaling=True,
         FacetGrid containing the figure.
 
     """
-    if 'hue' in facetgrid_kwargs:
-        raise Exception("Can't set hue!")
-    df = mcmc.inf_data_to_df(inf_data, 'predictive', jitter_scaling, query_str)
+    df = mcmc.inf_data_to_df(inf_data, 'predictive', query_str, hdi=hdi)
     df = df.query('distribution!="prior_predictive"')
-    g = sns.FacetGrid(df, height=5, **facetgrid_kwargs)
+    # remove the responses from posterior predictive, we just want the
+    # probability correct curve
+    df = df.set_index('distribution')
+    df.loc['posterior_predictive', 'responses'] = np.nan
+    df = df.reset_index()
+    g = sns.FacetGrid(df, height=height, **facetgrid_kwargs)
     g.map_dataframe(plotting.lineplot_like_pointplot, x='scaling',
-                    y='responses', ax='map', hue='distribution', linestyle='')
-    g.map_dataframe(sns.lineplot, x='scaling', y='probability_correct',
-                    hue='distribution',
-                    linewidth=mpl.rcParams['lines.linewidth']*1.8)
+                    y='responses', ax='map', linestyle='')
+    g.map_dataframe(plotting.scatter_ci_dist, x='scaling',
+                    y='probability_correct', like_pointplot=True,
+                    ci='hdi', join=True, ci_mode='fill',
+                    draw_ctr_pts=False)
+
     g.add_legend()
     g.set(xlabel='scaling', ylabel='Proportion correct',)
     g.fig.suptitle('Posterior predictive check', va='bottom')

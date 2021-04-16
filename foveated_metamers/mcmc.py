@@ -592,8 +592,7 @@ def assemble_inf_data(mcmc, dataset, seed=1):
     return inf_data
 
 
-def inf_data_to_df(inf_data, kind='predictive', jitter_scaling=False,
-                   query_str=None, hdi=False):
+def inf_data_to_df(inf_data, kind='predictive', query_str=None, hdi=False):
     """Convert inf_data to a dataframe, for plotting.
 
     We exponentiate the log_s0, log_a0, log_s0_global_mean, and
@@ -610,10 +609,6 @@ def inf_data_to_df(inf_data, kind='predictive', jitter_scaling=False,
         exponentiated them in order to get the critical scaling and
         proportionality factor values for each separate image, subject, and
         trial type).
-    jitter_scaling : bool or float, optional
-        If not False, we jitter scaling values (so they don't get plotted on
-        top of each other). If True, we jitter by 5e-3, else, the amount to
-        jitter by. Will need to rework this for log axis.
     query_str : str or None, optional
         If not None, the string to query dataframe with to limit the plotted
         data (e.g., "distribution == 'posterior'").
@@ -643,15 +638,26 @@ def inf_data_to_df(inf_data, kind='predictive', jitter_scaling=False,
     .. [2] Kruschke, J. K. (2015). Doing Bayesian Data Analysis. : Elsevier.
 
     """
+    def _compute_hdi(tmp, hdi):
+        hdi_xr = az.hdi(tmp, hdi)
+        hdi_xr['hdi'] = 100 * np.array([.5-hdi/2, .5+hdi/2])
+        tmp = tmp.assign_coords({'hdi': 50})
+        tmp = tmp.median(['chain', 'draw']).expand_dims('hdi')
+        if isinstance(tmp, xarray.DataArray):
+            hdi_xr = hdi_xr.x
+        return xarray.concat([hdi_xr, tmp], 'hdi')
+
     if hdi is True:
         hdi = .95
     if kind == 'predictive':
-        if hdi:
-            raise Exception("Can't compute HDI for predictive df!")
         dists = ['observed_data', 'posterior_predictive', 'prior_predictive']
         df = []
         for d in dists:
-            tmp = inf_data[d].to_dataframe().reset_index()
+            tmp = inf_data[d]
+            # doesn't make sense to compute the HDI for observed data.
+            if hdi and d != 'observed_data':
+                tmp = _compute_hdi(tmp, hdi)
+            tmp = tmp.to_dataframe().reset_index()
             tmp['distribution'] = d
             df.append(tmp)
         df = pd.concat(df).reset_index(drop=True)
@@ -661,11 +667,7 @@ def inf_data_to_df(inf_data, kind='predictive', jitter_scaling=False,
         for d in dists:
             tmp = inf_data[d]
             if hdi:
-                hdi_xr = az.hdi(tmp, hdi)
-                hdi_xr['hdi'] = 100 * np.array([.5-hdi/2, .5+hdi/2])
-                tmp = tmp.assign_coords({'hdi': 50})
-                tmp = tmp.median(['chain', 'draw']).expand_dims('hdi')
-                tmp = xarray.concat([hdi_xr, tmp], 'hdi')
+                tmp = _compute_hdi(tmp, hdi)
             tmp = tmp.to_dataframe()
             for c in tmp.columns:
                 if c.startswith('log') and 'sd' not in c:
@@ -686,23 +688,12 @@ def inf_data_to_df(inf_data, kind='predictive', jitter_scaling=False,
                 tmp = np.exp(inf_data[d][f'log_{p}_global_mean'] + inf_data[d][f'log_{p}_image'] +
                              inf_data[d][f'log_{p}_subject'])
                 if hdi:
-                    hdi_xr = az.hdi(tmp, hdi)
-                    hdi_xr['hdi'] = 100 * np.array([.5-hdi/2, .5+hdi/2])
-                    tmp = tmp.assign_coords({'hdi': 50})
-                    tmp = tmp.median(['chain', 'draw']).expand_dims('hdi')
-                    tmp = xarray.concat([hdi_xr.x, tmp], 'hdi')
+                    tmp = _compute_hdi(tmp, hdi)
                 tmp = tmp.to_dataframe('value').reset_index()
                 tmp['distribution'] = d
                 tmp['parameter'] = p
                 df.append(tmp)
         df = pd.concat(df).reset_index(drop=True)
-    if jitter_scaling:
-        if jitter_scaling is True:
-            jitter_scaling = 5e-3
-        df = df.set_index('distribution')
-        for i, v in enumerate(df.index.unique()):
-            df.loc[v, 'scaling'] += i*jitter_scaling
-        df = df.reset_index()
     if query_str is not None:
         df = df.query(query_str)
     if 'image_name' in df.columns:
