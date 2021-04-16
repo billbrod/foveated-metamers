@@ -6,10 +6,14 @@ import itertools
 import warnings
 import numpy as np
 import pyrtools as pt
+import plenoptic as po
 import pandas as pd
 import os.path as op
 from skimage import util, color
 from .utils import convert_im_to_float, convert_im_to_int
+import sys
+sys.path.append(op.join(op.dirname(op.realpath(__file__)), '..', 'extra_packages', 'pooling-windows'))
+from pooling import pooling
 
 
 def create_image(image_type, image_size, save_path=None, period=4):
@@ -401,3 +405,59 @@ def generate_indices_split(df, seed, comparison='met_v_ref', n_repeats=None):
     # first axis
     trials = np.moveaxis(trials, 2, 0)
     return trials
+
+
+def create_eccentricity_masks(img_size=(2048, 2600), max_ecc=26.8):
+    """Create log-eccentricity masks to apply to stimuli.
+
+    In order to investigate the accuracy of our linear approximation of
+    scaling, we want to test whether participants can do the task with the same
+    accuracy using only information from specific eccentricity bands. This
+    creates the masks to use for that.
+
+    We create three eccentricity masks. They're raised-cosine log-eccentricity
+    masks, so that the most peripheral one is the largest.
+
+    Parameters
+    ----------
+    img_size : tuple, optional
+        Size of the masks to create, in pixels.
+    max_ecc : float, optional
+        Maximum eccentricity of the image (i.e., the radius), in degrees.
+
+    Returns
+    -------
+    masks : np.ndarray
+        float32 array of size (3, *img_size) containing the masks, with values
+        running from 0 to 1.
+    masks_df : pd.DataFrame
+        dataframe containing information about the size of the masks.
+
+    """
+    masks = pooling.log_eccentricity_windows(img_size, 4, max_ecc=max_ecc,
+                                             window_type='cosine')
+    # drop the first one, because it's too close to the fovea to matter
+    masks = po.to_numpy(masks[1:])
+    spacing = pooling.calc_eccentricity_window_spacing(max_ecc=max_ecc,
+                                                       n_windows=4)
+    # this function is designed to calculate both radial and angular widths,
+    # but we only need the radial, so we put a filler value in for angular
+    # spacing...
+    widths = pooling.calc_window_widths_actual(1, spacing, max_ecc=max_ecc,
+                                               window_type='cosine')
+    # ... and then drop those angular widths (as well as the first window)
+    widths = [w[1:] for w in widths[:2]]
+    ctr_ecc = pooling.calc_windows_eccentricity('central', 4, spacing)[1:]
+    min_ecc = pooling.calc_windows_eccentricity('min', 4, spacing)[1:]
+    max_ecc = pooling.calc_windows_eccentricity('max', 4, spacing)[1:]
+    mask_df = pd.DataFrame({'top_width': widths[0], 'full_width': widths[1],
+                            'central_eccentricity': ctr_ecc,
+                            'max_eccentricity': max_ecc,
+                            'min_eccentricity': min_ecc,
+                            'window_n': np.arange(3), 'unit': 'degrees'})
+    # this double-checks our calculations. if it's wrong
+    posthoc_width = mask_df.max_eccentricity - mask_df.min_eccentricity
+    if not np.allclose(posthoc_width, mask_df.full_width):
+        raise Exception("Calculations messed up, got different widths! This "
+                        "is most likely due to an off-by-one error")
+    return masks, mask_df

@@ -944,6 +944,34 @@ rule collect_metamers:
                 fov.stimuli.create_metamer_df(input, output[1])
 
 
+rule create_masks:
+    input:
+        op.join(config["DATA_DIR"], 'stimuli', MODELS[0], 'stimuli_comp-ref.npy'),
+        op.join(config["DATA_DIR"], 'stimuli', MODELS[0], 'stimuli_description_comp-ref.csv'),
+    output:
+        op.join(config['DATA_DIR'], 'stimuli', 'log-ecc-masks.npy'),
+        op.join(config['DATA_DIR'], 'stimuli', 'log-ecc-masks_info.csv'),
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'stimuli', 'log-ecc-masks.log'),
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'stimuli', 'log-ecc-masks_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import numpy as np
+        import pandas as pd
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                stim = np.load(input[0])
+                stim_df = pd.read_csv(input[1])
+                max_ecc = stim_df.max_ecc.dropna().unique()
+                assert len(max_ecc) == 1, "Found multiple max_ecc!"
+                masks, mask_df = fov.stimuli.create_eccentricity_masks(stim.shape[-2:],
+                                                                       max_ecc[0])
+                np.save(output[0], masks)
+                mask_df.to_csv(output[1])
+
+
 def get_experiment_seed(wildcards):
     # the number from subject will be a number from 1 to 30, which we multiply
     # by 10 in order to get the tens/hundreds place, and the run number
