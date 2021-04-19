@@ -626,7 +626,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description=("Run a psychophysical experiment to investigate metamers! Specify the location of the "
                      "stimuli, the session number, image set, and the subject name, and we'll handle the "
-                     "rest. Structure of experiment depends on comparison."),
+                     "rest."),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("stimuli_path", help="Path to your unshuffled stimuli.")
     parser.add_argument("subj_name", help="Name of the subject")
@@ -644,10 +644,9 @@ if __name__ == '__main__':
                         help="Size of longest screen side (in degrees)")
     parser.add_argument('--no_break', '-n', action='store_true',
                         help=("If passed, we do not take a break at the half-way point"))
-    parser.add_argument("--comparison", '-c', default='ref',
-                        help=("{ref, met}. Whether this run is comparing metamers against "
-                              "reference images or other metamers."))
     args = vars(parser.parse_args())
+    comparison = re.findall('stimuli_comp-(\w+).npy', args['stimuli_path'])[0]
+    print(comparison)
     runs = args.pop('run_num')
     if runs is None:
         if 'training' not in args['subj_name']:
@@ -665,5 +664,6 @@ if __name__ == '__main__':
         train_flag = False
     print(f"Running {len(runs)} runs.\n")
     for run in runs:
-        expt(run_num=run, take_break=take_break, train_flag=train_flag, **args)
+        expt(run_num=run, take_break=take_break, train_flag=train_flag, comparison=comparison,
+             **args)
         print()
