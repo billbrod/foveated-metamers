@@ -208,7 +208,7 @@ def _create_bar_mask(bar_height, bar_width=200, fringe_proportion=.5):
 
 
 def _setup_run(stimuli_path, idx_path, fix_deg_size=.25, screen_size_deg=73.45,
-               take_break=True, timings=[], start_from_stim=0,
+               take_break=True, timings=[], start_from_stim=0, ecc_mask=False,
                **monitor_kwargs):
     """Setup the run.
 
@@ -333,7 +333,7 @@ def run_split(stimuli_path, idx_path, save_path, comparison,
               on_msec_length=200, off_msec_length=(500, 500), fix_deg_size=.25,
               screen_size_deg=73.45, take_break=True, keys_pressed=[],
               timings=[], start_from_stim=0, text_height=50, bar_deg_size=2,
-              train_flag=False, **monitor_kwargs):
+              train_flag=False, ecc_mask=False, **monitor_kwargs):
     r"""Run one run of the split task.
 
     stimuli_path specifies the path of the unshuffled experiment stimuli, while
@@ -397,6 +397,11 @@ def run_split(stimuli_path, idx_path, save_path, comparison,
     train_flag : bool
         Whether this is a training run or not. If so, the instruction text has
         some extra words and we show the percent correct at the end.
+    ecc_mask : {False, np.ndarray}
+        If not False, must be a 2d array with same size as the stimuli we load
+        in. Will then multiply this array by the stimuli, in order to mask out
+        all but a single eccentricity band. If False, then won't modify
+        stimuli.
     monitor_kwargs :
         passed to visual.Window
 
@@ -419,6 +424,16 @@ def run_split(stimuli_path, idx_path, save_path, comparison,
                                      color=monitor_kwargs['color'],
                                      mask=_create_bar_mask(*bar_size[::-1]),
                                      colorSpace=monitor_kwargs['colorSpace'])
+    if ecc_mask is not False:
+        # for psychopy masks, 1 mean fully opaque and -1 means fully
+        # transparent. the ecc_mask we saved goes from 0 to 1, where 1 is the
+        # region we want to show and 0 is the region to fully mask out, so we
+        # have to convert between those two conventions
+        ecc_mask = (1-ecc_mask) * 2 - 1
+        ecc_mask = visual.GratingStim(win, size=ecc_mask.shape[::-1], sf=0,
+                                      color=monitor_kwargs['color'],
+                                      mask=ecc_mask,
+                                      colorSpace=monitor_kwargs['colorSpace'])
 
     stim_size = [expt_params['stimuli_size'][0]/2, expt_params['stimuli_size'][1]]
     left_stimuli = stimuli[0]
@@ -458,6 +473,8 @@ def run_split(stimuli_path, idx_path, save_path, comparison,
             left_img.draw()
             right_img.draw()
             center_mask.draw()
+            if ecc_mask is not False:
+                ecc_mask.draw()
             fixation['default'].draw()
             win.flip()
             timings.append(("stimulus_%d-%d" % (i+start_from_stim, j), "on", expt_clock.getTime()))
@@ -538,7 +555,7 @@ def run_split(stimuli_path, idx_path, save_path, comparison,
 def expt(stimuli_path, subj_name, sess_num, run_num, comparison,
          output_dir="data/raw_behavioral", screen_size_pix=[3840, 2160],
          screen_size_deg=73.45, take_break=True, text_height=50, screen=[0],
-         train_flag=False, **kwargs):
+         train_flag=False, ecc_mask=False, **kwargs):
     """run a full experiment
 
     this just sets up the various paths, calls ``run``, and then saves
@@ -555,6 +572,8 @@ def expt(stimuli_path, subj_name, sess_num, run_num, comparison,
     kwargs_str = ""
     for k, v in kwargs.items():
         kwargs_str += "_{}-{}".format(k, v)
+    if ecc_mask:
+        kwargs_str += f"_eccmask-{ecc_mask}"
     save_path = op.join(output_dir, "%s_%s_task-split_comp-%s_sess-{sess:02d}_run-{run:02d}%s.hdf5" %
                         (datetime.datetime.now().strftime("%Y-%b-%d"), subj_name, comparison, kwargs_str))
     idx_path = op.join(op.dirname(stimuli_path), f'task-split_comp-{comparison}', subj_name,
@@ -594,11 +613,17 @@ def expt(stimuli_path, subj_name, sess_num, run_num, comparison,
     print("Will use the following index:")
     print("\t%s" % idx_path)
     print("Will save at the following location:\n\t%s" % save_path)
+    if ecc_mask:
+        ecc_mask_path = op.join(op.dirname(op.dirname(stimuli_path)), 'log-ecc-masks.npy')
+        print(f"Will only present image in eccentricity band {ecc_mask}")
+        ecc_mask = np.load(ecc_mask_path)[int(ecc_mask)]
+    else:
+        print("Will show whole image")
     keys, timings, expt_params, idx, win = run_split(
         stimuli_path, idx_path, save_path, comparison,
         size=screen_size_pix, take_break=take_break,
         screen_size_deg=screen_size_deg, start_from_stim=start_from_stim,
-        keys_pressed=keys, timings=timings,
+        keys_pressed=keys, timings=timings, ecc_mask=ecc_mask,
         text_height=text_height, screen=screen, train_flag=train_flag,
         **kwargs)
     save(save_path, stimuli_path, idx_path, keys, timings, expt_params, idx, **kwargs)
@@ -644,9 +669,15 @@ if __name__ == '__main__':
                         help="Size of longest screen side (in degrees)")
     parser.add_argument('--no_break', '-n', action='store_true',
                         help=("If passed, we do not take a break at the half-way point"))
+    parser.add_argument('--ecc_mask', default=False, choices=[False, '0', '1', '2'],
+                        help=("If not False, the index for the eccentricity mask to use "
+                              "(increasing index corresponds to higher eccentricity); "
+                              "we use a log-Gaussian raised-cosine mask to mask out all "
+                              "but a single band of eccentricity, in order to determine"
+                              " if some eccentricity is more informative than others. If"
+                              " False, then we present the whole image"))
     args = vars(parser.parse_args())
     comparison = re.findall('stimuli_comp-(\w+).npy', args['stimuli_path'])[0]
-    print(comparison)
     runs = args.pop('run_num')
     if runs is None:
         if 'training' not in args['subj_name']:

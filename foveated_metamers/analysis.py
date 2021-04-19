@@ -263,6 +263,8 @@ def create_experiment_df_split(df, presentation_idx, dep_variables=['scaling']):
             # then it's a string, reference
             return x
     expt_df['first_image'] = expt_df.image_left_1.map(ref_or_not)
+    expt_df['min_ecc'] = stim_df.min_ecc.dropna().unique()[0]
+    expt_df['max_ecc'] = stim_df.max_ecc.dropna().unique()[0]
     return expt_df
 
 

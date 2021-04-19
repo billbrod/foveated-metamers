@@ -38,6 +38,7 @@ wildcard_constraints:
     save_all='|_saveall',
     gammacorrected='|_gamma-corrected',
     plot_focus='|_focus-subject|_focus-image',
+    ecc_mask="|_eccmask-[0-9]+",
 ruleorder:
     collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check
 
@@ -970,7 +971,7 @@ rule create_masks:
                 masks, mask_df = fov.stimuli.create_eccentricity_masks(stim.shape[-2:],
                                                                        max_ecc[0])
                 np.save(output[0], masks)
-                mask_df.to_csv(output[1])
+                mask_df.to_csv(output[1], index=False)
 
 
 def get_experiment_seed(wildcards):
@@ -1094,18 +1095,19 @@ rule create_experiment_df:
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'task-split_comp-{comp}', '{subject}',
                 '{subject}_task-split_comp-{comp}_idx_sess-{sess_num}_run-{run_num}.npy'),
         op.join(config["DATA_DIR"], 'raw_behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run-{run_num}.hdf5'),
+                '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run-{run_num}{ecc_mask}.hdf5'),
+        op.join(config["DATA_DIR"], 'stimuli', 'log-ecc-mask_info.csv'),
     output:
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run-{run_num}_expt.csv'),
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
-                '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run-{run_num}_trials.svg'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}{ecc_mask}', '{subject}',
+                '{date}_{subject}_task-split_comp-{comp}{ecc_mask}_sess-{sess_num}_run-{run_num}_expt.csv'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}{ecc_mask}', '{subject}',
+                '{date}_{subject}_task-split_comp-{comp}{ecc_mask}_sess-{sess_num}_run-{run_num}_trials.svg'),
     log:
-        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                '{subject}', '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run-{run_num}_expt.log'),
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}{ecc_mask}',
+                '{subject}', '{date}_{subject}_task-split_comp-{comp}{ecc_mask}_sess-{sess_num}_run-{run_num}_expt.log'),
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                '{subject}', '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run-{run_num}_expt_benchmark.txt'),
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}{ecc_mask}',
+                '{subject}', '{date}_{subject}_task-split_comp-{comp}{ecc_mask}_sess-{sess_num}_run-{run_num}_expt_benchmark.txt'),
     run:
         import foveated_metamers as fov
         import numpy as np
@@ -1124,30 +1126,43 @@ rule create_experiment_df:
                 df = fov.analysis.create_experiment_df_split(stim_df, idx)
                 df = fov.analysis.add_response_info(df, trials, wildcards.subject,
                                                     wildcards.sess_num, wildcards.run_num)
+                if wildcards.ecc_mask:
+                    mask_idx = int(wildcards.ecc_mask.split('-')[1])
+                    ecc_mask_df = pd.read_csv(input[3]).set_index('window_n')
+                    ecc_mask_df = ecc_mask_df.loc[mask_idx]
+                    df['min_ecc'] = ecc_mask_df.min_eccentricity
+                    # the outer-most mask in ecc_mask_df will have
+                    # max_eccentricity larger than the actual image (which is
+                    # equivalent to saying that the mask hasn't "turnd off" by
+                    # the edge of the image). for ease, we don't change max_ecc
+                    # in that case.
+                    if ecc_mask_df.max_eccentricity < df.max_ecc.unique()[0]:
+                        df['max_ecc'] = ecc_mask_df.max_eccentricity
                 df.to_csv(output[0], index=False)
 
 
 rule combine_all_behavior:
     input:
-        lambda wildcards: [op.join(config["DATA_DIR"], 'behavioral', '{{model_name}}', 'task-split_comp-{{comp}}', '{subject}',
-                                   '{date}_{subject}_task-split_comp-{{comp}}_{sess}_run-{i:02d}_expt.csv').format(
+        lambda wildcards: [op.join(config["DATA_DIR"], 'behavioral', '{{model_name}}', 'task-split_comp-{{comp}}{{ecc_mask}}', '{subject}',
+                                   '{date}_{subject}_task-split_comp-{{comp}}{{ecc_mask}}_{sess}_run-{i:02d}_expt.csv').format(
                                        i=i, sess=ses, date=date, subject=subj)
-                           for i in range(5) for subj in BEHAVIORAL_DATA_DATES[wildcards.model_name][wildcards.comp]
-                           for ses, date in BEHAVIORAL_DATA_DATES[wildcards.model_name][wildcards.comp][subj].items()],
+                           for i in range(5)
+                           for subj, subj_dict in BEHAVIORAL_DATA_DATES[wildcards.model_name][wildcards.comp+wildcards.ecc_mask].items()
+                           for ses, date in subj_dict.items()],
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description_comp-{comp}.csv'),
     output:
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_data.csv'),
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_performance.svg'),
-        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_run_lengths.svg'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}{ecc_mask}',
+                'task-split_comp-{comp}{ecc_mask}_data.csv'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}{ecc_mask}',
+                'task-split_comp-{comp}{ecc_mask}_performance.svg'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}{ecc_mask}',
+                'task-split_comp-{comp}{ecc_mask}_run_lengths.svg'),
     log:
-        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_plots.log'),
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}{ecc_mask}',
+                'task-split_comp-{comp}{ecc_mask}_plots.log'),
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_plots_benchmark.txt'),
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}{ecc_mask}',
+                'task-split_comp-{comp}{ecc_mask}_plots_benchmark.txt'),
     run:
         import foveated_metamers as fov
         import pandas as pd
