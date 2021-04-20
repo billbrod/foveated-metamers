@@ -647,8 +647,8 @@ def simulate_num_trials(params, row='critical_scaling_true', col='variable'):
 
 
 def performance_plot(expt_df, col='image_name', row=None, hue=None, style=None,
-                     col_wrap=5, ci=95, comparison='ref', curve_fit=False,
-                     logscale_xaxis=False, **kwargs):
+                     col_wrap=5, ci=95, curve_fit=False, logscale_xaxis=False,
+                     **kwargs):
     """Plot performance as function of scaling.
 
     With default arguments, this is meant to show the results for all sessions
@@ -662,17 +662,15 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, style=None,
         one subject, as created by a combination of
         `analysis.create_experiment_df` and `analysis.add_response_info`, then
         concatenating them across runs (and maybe sessions / subjects).
-    col, row, hue : str or None, optional
-        The variables in expt_df to facet along the columns, rows, and hues,
-        respectively.
+    col, row, hue, style : str or None, optional
+        The variables in expt_df to facet along the columns, rows, hues, and
+        styles, respectively.
     col_wrap : int or None, optional
         If row is None, how many columns to have before wrapping to the next
-        row. If this is not None and row is not None, will raise an Exception
+        row. If this is not None and row is not None, will raise an Exception.
+        Ignored if col=None.
     ci : int, optional
         What confidence interval to draw on the performance.
-    comparison : {'ref', 'met'}, optional
-        Whether this comparison is between metamers and reference images
-        ('ref') or two metamers ('met').
     curve_fit : {True, False, 'to_chance'}, optional
         If True, we'll fit the psychophysical curve (as given in
         mcmc.proportion_correct_curve) to the mean of each faceted subset of
@@ -690,6 +688,7 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, style=None,
         FacetGrid containing the figure.
 
     """
+    # set defaults based on hue and style args
     if hue is not None:
         kwargs.setdefault('palette', plotting.get_palette(hue, expt_df[hue].unique()))
     else:
@@ -705,28 +704,14 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, style=None,
         marker_adjust = style_dict.pop('marker_adjust', {})
         kwargs.setdefault('dashes', dashes_dict)
         kwargs.update(style_dict)
-    # raise an error if col_wrap is non-None when col is None
+    # seaborn raises an error if col_wrap is non-None when col is None, so
+    # prevent that possibility
     if col is None:
         col_wrap = None
-    with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
-        config = yaml.safe_load(f)
-    all_imgs = config['DEFAULT_METAMERS']['image_name']
-    img_sets = config['PSYCHOPHYSICS']['IMAGE_SETS']
-    img_order = (sorted(img_sets['all']) + sorted(img_sets['A']) +
-                 sorted(img_sets['B']))
-    img_order = [i.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', '')
-                 for i in img_order]
+    # remap the image names to be better for plotting
+    expt_df, img_order = plotting._remap_image_names(expt_df)
     if col == 'image_name':
         kwargs.setdefault('col_order', img_order)
-    # while still gathering data, will not have all images in the
-    # expt_df. Adding these blank lines gives us blank subplots in
-    # the performance plot, so that each image is in the same place
-    extra_ims = [i for i in all_imgs if i not in expt_df.image_name.unique()]
-    expt_df = expt_df.copy().append(pd.DataFrame({'image_name': extra_ims}), True)
-    assert expt_df.image_name.nunique() == 20, "Something went wrong, don't have all images!"
-    # strip out the parts of the image name that are consistent across images
-    expt_df.image_name = expt_df.image_name.apply(lambda x: x.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', ''))
-
     g = plotting.lineplot_like_pointplot(expt_df, 'scaling',
                                          'hit_or_miss_numeric', ci=ci, col=col,
                                          row=row, hue=hue, col_wrap=col_wrap,
@@ -745,76 +730,18 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, style=None,
                         color=kwargs.get('color', 'k'), dashes_dict=dashes_dict,
                         to_chance=to_chance)
     g.map_dataframe(plotting.map_flat_line, x='scaling', y=.5, colors='k')
-    g.set_ylabels(f'Proportion correct (with {ci}% CI)')
-    g.set_xlabels('Scaling')
-    g.set(ylim=(.3, 1.05))
-    g = plotting.title_experiment_summary_plots(g, expt_df, 'Performance',
-                                                comparison)
-    g.set_titles('{col_name}')
-    # it's difficult to come up with good tick values. this finds a somewhat
-    # reasonable number of ticks in reasonable locations, reducing the number
-    # if the axis is small or the font is large
-    xmin = np.round(expt_df.scaling.min() - .004, 2)
-    xmax = np.round(expt_df.scaling.max(), 2)
-    nticks = 12
-    if kwargs.get('height', 10) < 6:
-        nticks /= 2
-    if mpl.rcParams['font.size'] > 15:
-        nticks /= 2
-        # don't want to overlap the labels on adjacent columns
-        if col is not None:
-            xmax -= (xmax-xmin)/10
-    if logscale_xaxis:
-        for ax in g.axes.flatten():
-            ax.set_xscale('log', base=2)
-            ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(lambda y, pos: f"{y:.03f}"))
-        xtick_spacing = np.round((np.log2(xmax) - np.log2(xmin)) / (nticks-1), 2)
-        xticks = [2**(np.log2(xmin)+i*xtick_spacing) for i in range(int(nticks+1))]
-    else:
-        xtick_spacing = np.round((xmax - xmin) / (nticks-1), 2)
-        xticks = [xmin+i*xtick_spacing for i in range(int(nticks+1))]
-    for ax in g.axes.flatten():
-        ax.yaxis.set_major_locator(mpl.ticker.FixedLocator([.5, 1]))
-        ax.yaxis.set_minor_locator(mpl.ticker.FixedLocator([.4, .6, .7, .8, .9]))
-        ax.xaxis.set_major_locator(mpl.ticker.FixedLocator(xticks))
-    if col_wrap is not None:
-        # these specific grabbing of axes works because we know we have 20 axes.
-        # regardless of col_wrap, first axis will always have a ylabel and last one
-        # will always have an xlabel
-        ylabel = g.axes[0].get_ylabel()
-        xlabel = g.axes[-1].get_xlabel()
-        g.set(xlabel='', ylabel='')
-        g.fig.subplots_adjust(hspace=.2, wspace=.1, top=1)
-        g.axes[5].set_ylabel(ylabel, y=0, ha='center')
-        g.axes[-3].set_xlabel(xlabel)
 
+    # add some nice labels and titles
+    plotting._label_and_title_psychophysical_curve_plot(g, expt_df,
+                                                        'Performance', ci=ci)
+    # get decent looking tick marks
+    plotting._psychophysical_curve_ticks(expt_df, g.axes.flatten(),
+                                         logscale_xaxis,
+                                         kwargs.get('height', 5),
+                                         col)
     # create the legend
-    artists = {}
-    ax = g.axes.flatten()[0]
-    lw = mpl.rcParams["lines.linewidth"] * 1.8
-    if hue is not None:
-        palette = kwargs.get('palette')
-        artists[hue] = ax.scatter([], [], s=0)
-        for hue_val in expt_df[hue].unique():
-            if isinstance(hue_val, float) and np.isnan(hue_val):
-                continue
-            artists[hue_val] = ax.plot([], [], color=palette[hue_val],
-                                       lw=lw)[0]
-    if style is not None:
-        # lw = mpl.rcParams["lines.linewidth"]
-        artists[style] = ax.scatter([], [], s=0)
-        for style_val in expt_df[style].unique():
-            if isinstance(style_val, float) and np.isnan(style_val):
-                continue
-            markers = {k: v for k, v in final_markers[style_val].items()}
-            markers['mec'] = 'k'
-            markers['mfc'] = 'k' if markers['mfc'] != 'w' else 'w'
-            markers['mew'] = lw
-            artists[style_val] = ax.plot([], [], color='k', lw=lw,
-                                         dashes=dashes_dict[style_val],
-                                         **markers)[0]
-    if artists:
-        g.add_legend(artists)
+    plotting._add_legend(expt_df, g, hue, style, kwargs.get('palette', {}),
+                         final_markers, dashes_dict)
     return g
 
 
@@ -855,8 +782,7 @@ def run_length_plot(expt_df, col=None, row=None, hue=None, col_wrap=None,
                     data=expt_df.drop_duplicates(['subject_name', 'session_number',
                                                   'run_number']))
     g.set_ylabels("Approximate run length (in minutes)")
-    g = plotting.title_experiment_summary_plots(g, expt_df, 'Run length',
-                                                comparison)
+    g = plotting.title_experiment_summary_plots(g, expt_df, 'Run length')
     return g
 
 
@@ -930,12 +856,14 @@ def compare_loss_and_performance_plot(expt_df, stim_df, col='scaling',
           ylabel='Proportion correct')
     g = plotting.title_experiment_summary_plots(g, expt_df,
                                                 'Performance vs. synthesis loss',
-                                                'ref', '\nHopefully no relationship here')
+                                                '\nHopefully no relationship here')
     return g
 
 
-def posterior_predictive_check(inf_data, height=5, facetgrid_kwargs={},
-                               query_str=None, hdi=.95):
+def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
+                               style=None, col_wrap=5, comparison='ref',
+                               logscale_xaxis=False, hdi=.95, query_str=None,
+                               **kwargs):
     """Plot posterior predictive check.
 
     In order to make sure that our MCMC gave us a reasonable fit, we plot the
@@ -946,14 +874,26 @@ def posterior_predictive_check(inf_data, height=5, facetgrid_kwargs={},
     ----------
     inf_data : arviz.InferenceData
         arviz InferenceData object (xarray-like) created by `run_inference`.
-    facetgrid_kwargs : dict, optional
-        additional kwargs to pass to sns.FacetGrid. Cannot contain 'hue'.
-    query_str : str or None, optional
-        If not None, the string to query dataframe with to limit the plotted
-        data (e.g., "distribution == 'posterior'").
+    col, row, hue, style : str or None, optional
+        The dimensions in inf_data to facet along the columns, rows, hues, and
+        styles, respectively.
+    col_wrap : int or None, optional
+        If row is None, how many columns to have before wrapping to the next
+        row. If this is not None and row is not None, will raise an Exception.
+        Ignored if col=None.
+    comparison : {'ref', 'met', 'both'}, optional
+        Whether inf_data contains data on comparisons is between metamers and
+        reference images ('ref'), two metamers ('met'), or both ('both').
+    logscale_xaxis : bool, optional
+        If True, we logscale the x-axis. Else, it's a linear scale.
     hdi : float, optional
         The width of the HDI to draw (in range (0, 1]). See docstring of
         fov.mcmc.inf_data_to_df for more details.
+    query_str : str or None, optional
+        If not None, the string to query dataframe with to limit the plotted
+        data (e.g., "distribution == 'posterior'").
+    kwargs :
+        passed to sns.FacetGrid
 
     Returns
     -------
@@ -968,17 +908,60 @@ def posterior_predictive_check(inf_data, height=5, facetgrid_kwargs={},
     df = df.set_index('distribution')
     df.loc['posterior_predictive', 'responses'] = np.nan
     df = df.reset_index()
-    g = sns.FacetGrid(df, height=height, **facetgrid_kwargs)
+    # set defaults based on hue and style args
+    if hue is not None:
+        kwargs.setdefault('palette', plotting.get_palette(hue, df[hue].unique()))
+    else:
+        kwargs.setdefault('color', 'k')
+    if style is not None:
+        style_dict = plotting.get_style(style, df[style].unique())
+        dashes_dict = style_dict.pop('dashes_dict', {})
+        marker_adjust = style_dict.pop('marker_adjust', {})
+        markers = style_dict.pop('markers', {})
+        kwargs.update(style_dict)
+    else:
+        dashes_dict = {}
+        marker_adjust = {}
+        markers = {}
+    # seaborn raises an error if col_wrap is non-None when col is None, so
+    # prevent that possibility
+    if col is None:
+        col_wrap = None
+    # remap the image names to be better for plotting
+    df, img_order = plotting._remap_image_names(df)
+    if col == 'image_name':
+        kwargs.setdefault('col_order', img_order)
+        df.image_name = df.image_name.apply(lambda x: x.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', ''))
+    g = sns.FacetGrid(df, row=row, col=col, hue=hue, col_wrap=col_wrap,
+                      **kwargs)
     g.map_dataframe(plotting.lineplot_like_pointplot, x='scaling',
-                    y='responses', ax='map', linestyle='')
-    g.map_dataframe(plotting.scatter_ci_dist, x='scaling',
-                    y='probability_correct', like_pointplot=True,
-                    ci='hdi', join=True, ci_mode='fill',
-                    draw_ctr_pts=False)
+                    y='responses', ci=50, style=style, legend=False,
+                    linestyle='', dashes=False, ax='map',
+                    markers=markers)
+    if marker_adjust:
+        labels = {v: k for k, v in markers.items()}
+        final_markers = plotting._marker_adjust(g.axes.flatten(),
+                                                marker_adjust, labels)
+    else:
+        final_markers = {}
 
-    g.add_legend()
-    g.set(xlabel='scaling', ylabel='Proportion correct',)
-    g.fig.suptitle('Posterior predictive check', va='bottom')
+    g.map_dataframe(plotting.scatter_ci_dist, x='scaling',
+                    y='probability_correct', like_pointplot=True, ci='hdi',
+                    join=True, ci_mode='fill', draw_ctr_pts=False, style=style,
+                    dashes_dict=dashes_dict)
+    g.map_dataframe(plotting.map_flat_line, x='scaling', y=.5, colors='k')
+
+    # title and label plot
+    plotting._label_and_title_psychophysical_curve_plot(g, df, 'Posterior Predictive Check',
+                                                        hdi=hdi)
+    # get decent looking tick marks
+    plotting._psychophysical_curve_ticks(df, g.axes.flatten(),
+                                         logscale_xaxis,
+                                         kwargs.get('height', 5),
+                                         col)
+    # create the legend
+    plotting._add_legend(df, g, hue, style, kwargs.get('palette', {}),
+                         final_markers, dashes_dict)
     return g
 
 

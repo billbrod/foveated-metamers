@@ -3,6 +3,7 @@
 import numpy as np
 import warnings
 import seaborn as sns
+import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import os.path as op
@@ -85,17 +86,22 @@ def get_style(col, col_unique=None, as_dict=True):
     if col == 'trial_type':
         all_vals = ['metamer_vs_metamer', 'metamer_vs_reference']
         if any([c for c in col_unique if c not in all_vals]):
-            raise Exception("Got unsupported value for "
-                            f"col='trial_type', {col_unique}")
-        dashes_dict = dict(zip(all_vals, [(2, 2), '']))
+            if all([c.startswith('trial_type_') for c in col_unique]):
+                # this is the only exception we allow, which comes from
+                # simulated data
+                all_vals = col_unique
+            else:
+                raise Exception("Got unsupported value for "
+                                f"col='trial_type', {col_unique}")
+        dashes_dict = dict(zip(all_vals, [(2, 2)]+['']*len(all_vals[1:])))
         # this (setting marker in marker_adjust and also below in the marker
         # dict) is a hack to allow us to determine which markers correspond to
         # which style level, which we can't do otherwise (they have no label)
-        marker_adjust = {'metamer_vs_metamer':
+        marker_adjust = {all_vals[0]:
                          {'fc': 'w', 'ec': 'original_fc', 'ew': 'lw',
-                          's': 'total_unchanged', 'marker': 'o'},
-                         'metamer_vs_reference': {}}
-        markers = dict(zip(all_vals, ['v', 'o']))
+                          's': 'total_unchanged', 'marker': 'o'}}
+        marker_adjust.update({c: {} for c in all_vals[1:]})
+        markers = dict(zip(all_vals, ['v']+['o']*len(all_vals[1:])))
     else:
         raise Exception(f"Currently only support col='trial_type' but got {col}")
     return {'dashes_dict': dashes_dict, 'marker_adjust': marker_adjust,
@@ -187,6 +193,165 @@ def _marker_adjust(axes, marker_adjust, label_map):
                 label = label_map[line.get_marker()]
                 artists[label] = _adjust_one_marker(line, **marker_adjust[label])
     return artists
+
+
+def _remap_image_names(df):
+    """Prepare image names for plotting.
+
+    This function remaps the image names in df to drop the parts that are
+    duplicated across images ('symmetric_' and
+    '_range_-.05,.95_size-2048,2600'), as well as grabbing the correct order
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame containing the behavioral results or psychophysical curve
+        fits to those results.
+
+    Returns
+    -------
+    df : pd.DataFrame
+        DataFrame with image_name column remapped, if appropriate
+    img_order : list
+        List of image names, in the correct order for plotting (e.g., for
+        col_order)
+
+    """
+    with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
+        config = yaml.safe_load(f)
+    all_imgs = config['DEFAULT_METAMERS']['image_name']
+    # for simulated data, our image names will just be 'image-00' (and we'll
+    # have a variable number of them), and so we don't want to do the following
+    if any([i in all_imgs for i in df.image_name.unique()]):
+        img_sets = config['PSYCHOPHYSICS']['IMAGE_SETS']
+        img_order = (sorted(img_sets['all']) + sorted(img_sets['A']) +
+                     sorted(img_sets['B']))
+        img_order = [i.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', '')
+                     for i in img_order]
+        # while still gathering data, will not have all images in the df.
+        # Adding these blank lines gives us blank subplots in the performance
+        # plot, so that each image is in the same place
+        extra_ims = [i for i in all_imgs if i not in df.image_name.unique()]
+        df = df.copy().append(pd.DataFrame({'image_name': extra_ims}), True)
+        assert df.image_name.nunique() == 20, "Something went wrong, don't have all images!"
+        # strip out the parts of the image name that are consistent across
+        # images
+        df.image_name = df.image_name.apply(lambda x: x.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', ''))
+    else:
+        img_order = sorted(df.image_name.unique())
+    return df, img_order
+
+
+def _psychophysical_curve_ticks(df, axes, logscale_xaxis=False, height=5,
+                                col=None):
+    """Set ticks appropriately for psychophysical curve plots.
+
+    This assumes scaling is on the x-axis (named exactly that) and proportion
+    correct is on the y-axis (name unconstrained). This sets major yticks at .5
+    and 1, as well as minor ones at .4, .6, .7, .8, .9. For xticks, we try to
+    determine a reasonable number, based on the size of the axis and the plot,
+    and make sure they're equally-spaced.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame containing the scaling values plotted.
+    axes : list
+        1d list (or array) containing the axes with the plots
+    logscale_xaxis : bool, optional
+        If True, we logscale the x-axis. Else, it's a linear scale.
+    height : float, optional
+        Height of each axis
+    col : str or None, optional
+        What is facetted along the plots columns
+
+    """
+    # it's difficult to come up with good tick values. this finds a somewhat
+    # reasonable number of ticks in reasonable locations, reducing the number
+    # if the axis is small or the font is large
+    xmin = np.round(df.scaling.min() - .004, 2)
+    xmax = np.round(df.scaling.max(), 2)
+    nticks = 12
+    if height < 6:
+        nticks /= 2
+    if mpl.rcParams['font.size'] > 15:
+        nticks /= 2
+        # don't want to overlap the labels on adjacent columns
+        if col is not None:
+            xmax -= (xmax-xmin)/10
+    if logscale_xaxis:
+        for ax in axes:
+            ax.set_xscale('log', base=2)
+            ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(lambda y, pos: f"{y:.03f}"))
+        xtick_spacing = np.round((np.log2(xmax) - np.log2(xmin)) / (nticks-1), 2)
+        xticks = [2**(np.log2(xmin)+i*xtick_spacing) for i in range(int(nticks+1))]
+    else:
+        xtick_spacing = np.round((xmax - xmin) / (nticks-1), 2)
+        xticks = [xmin+i*xtick_spacing for i in range(int(nticks+1))]
+    for ax in axes:
+        ax.yaxis.set_major_locator(mpl.ticker.FixedLocator([.5, 1]))
+        ax.yaxis.set_minor_locator(mpl.ticker.FixedLocator([.4, .6, .7, .8, .9]))
+        ax.xaxis.set_major_locator(mpl.ticker.FixedLocator(xticks))
+
+
+def _add_legend(df, g, hue=None, style=None, palette={}, final_markers={},
+                dashes_dict={}):
+    """Add legend, making use of custom hue and style.
+
+    Since we modify the markers after the fact, we can't rely on seaborn's
+    built-in legend-generator. Instead, we create our own, based on how seaborn
+    does it, showing both hue and style in separable manner.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame containing the plotted data
+    g : sns.FacetGrid
+        FacetGrid containing the plots
+    hue, style : str or None, optional
+        The columns in df that were uesd to facet hue and style, respectively.
+    palette : dict, optional
+        Must be non-empty if hue is not None. Dictionary between levels of hue
+        variable and colors.
+    final_markers : dict, optional
+        Dictionary between levels of style variable and marker options, as
+        returned by plotting._marker_adjust(). Unlike dashes_dict and palette,
+        can be empty even if style is set (in which case we use default values).
+    dashes_dict : dict, optional
+        Must be non-empty if style is not None. Dictionary between levels of
+        style variable and dash options, as passed to sns.relplot() or related
+        functions
+
+    """
+    artists = {}
+    ax = g.axes.flatten()[0]
+    lw = mpl.rcParams["lines.linewidth"] * 1.8
+    if hue is not None:
+        artists[hue] = ax.scatter([], [], s=0)
+        for hue_val in df[hue].unique():
+            if isinstance(hue_val, float) and np.isnan(hue_val):
+                continue
+            artists[hue_val] = ax.plot([], [], color=palette[hue_val],
+                                       lw=lw)[0]
+    if style is not None:
+        artists[style] = ax.scatter([], [], s=0)
+        for style_val in df[style].unique():
+            if isinstance(style_val, float) and np.isnan(style_val):
+                continue
+            markers = {k: v for k, v in final_markers[style_val].items()}
+            markers['mec'] = 'k'
+            markers['mfc'] = 'k' if markers['mfc'] != 'w' else 'w'
+            markers['mew'] = lw
+            artists[style_val] = ax.plot([], [], color='k', lw=lw,
+                                         dashes=dashes_dict[style_val],
+                                         **markers)[0]
+    if artists:
+        # in order for add_legend() to work, _hue_var and hue_names both need
+        # to be None (otherwise, it will default to using them, even when
+        # passing the artists dict)
+        g._hue_var = None
+        g.hue_names = None
+        g.add_legend(artists)
 
 
 def _jitter_data(data, jitter):
@@ -324,7 +489,7 @@ def _map_dataframe_prep(data, x, y, estimator, x_jitter, x_dodge, x_order,
 def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
                     estimator=np.median, draw_ctr_pts=True, ci_mode='lines',
                     ci_alpha=.2, size=5, x_dodge=None, all_labels=None,
-                    like_pointplot=False, **kwargs):
+                    like_pointplot=False, style=None, dashes_dict={}, **kwargs):
     """Plot center points and specified CIs, for use with map_dataframe.
 
     based on seaborn.linearmodels.scatterplot. CIs are taken from a
@@ -388,6 +553,11 @@ def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
         If True, we tweak the aesthetics a bit (right now, just size of points
         and lines) to look more like seaborn's pointplot. Good when there's
         relatively little data. If True, this overrides the size option.
+    style : str or None, optional
+        columns from data to map along the style dimension
+    dashes_dict : dict, optional
+        dictionary mapping between style levels and args to pass as `dashes` to
+        ax.plot.
     kwargs :
         must contain data. Other expected keys:
         - ax: the axis to draw on (otherwise, we grab current axis)
@@ -425,38 +595,46 @@ def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
     data = kwargs.pop('data')
     ax = kwargs.pop('ax', plt.gca())
     x_order = kwargs.pop('x_order', None)
-    x_data, plot_data, plot_cis, x_numeric = _map_dataframe_prep(data, x, y,
-                                                                 estimator,
-                                                                 x_jitter,
-                                                                 x_dodge,
-                                                                 x_order, ci)
-    if draw_ctr_pts:
-        # scatter expects s to be the size in pts**2, whereas we expect
-        # size to be the diameter, so we convert that (following how
-        # it's handled by seaborn's stripplot)
-        dots = ax.scatter(x_data, plot_data.values, s=size**2, **kwargs)
+    if style is not None:
+        data = data.groupby(style)
     else:
-        dots = None
-    if join is True:
-        lines = ax.plot(x_data, plot_data.values, linewidth=lw,
-                        markersize=size, **kwargs)
-    else:
-        lines = None
-    # if we attach label to the CI, then the legend may use the CI
-    # artist, which we don't want
-    kwargs.pop('label', None)
-    if ci_mode == 'lines':
-        for x, (ci_low, ci_high) in zip(x_data, zip(*plot_cis)):
-            cis = ax.plot([x, x], [ci_low, ci_high], linewidth=lw, **kwargs)
-    elif ci_mode == 'fill':
-        cis = ax.fill_between(x_data, plot_cis[0].values, plot_cis[1].values,
-                              alpha=ci_alpha, **kwargs)
-    else:
-        raise Exception(f"Don't know how to handle ci_mode {ci_mode}!")
-    # if we do the following when x is numeric, things get messed up.
-    if (x_jitter is not None or x_dodge is not None) and not x_numeric:
-        ax.set(xticks=range(len(plot_data)),
-               xticklabels=plot_data.index.values)
+        data = [(None, data)]
+    dots, lines, cis = [], [], []
+    for n, d in data:
+        x_data, plot_data, plot_cis, x_numeric = _map_dataframe_prep(d, x, y,
+                                                                     estimator,
+                                                                     x_jitter,
+                                                                     x_dodge,
+                                                                     x_order,
+                                                                     ci)
+        dashes = dashes_dict.get(n, '')
+        if draw_ctr_pts:
+            # scatter expects s to be the size in pts**2, whereas we expect
+            # size to be the diameter, so we convert that (following how
+            # it's handled by seaborn's stripplot)
+            dots.append(ax.scatter(x_data, plot_data.values, s=size**2, **kwargs))
+        else:
+            dots.append(None)
+        if join is True:
+            lines.append(ax.plot(x_data, plot_data.values, linewidth=lw,
+                                 markersize=size, dashes=dashes, **kwargs))
+        else:
+            lines.append(None)
+        # if we attach label to the CI, then the legend may use the CI
+        # artist, which we don't want
+        kwargs.pop('label', None)
+        if ci_mode == 'lines':
+            for x, (ci_low, ci_high) in zip(x_data, zip(*plot_cis)):
+                cis.append(ax.plot([x, x], [ci_low, ci_high], linewidth=lw, **kwargs))
+        elif ci_mode == 'fill':
+            cis.append(ax.fill_between(x_data, plot_cis[0].values, plot_cis[1].values,
+                                       alpha=ci_alpha, **kwargs))
+        else:
+            raise Exception(f"Don't know how to handle ci_mode {ci_mode}!")
+        # if we do the following when x is numeric, things get messed up.
+        if (x_jitter is not None or x_dodge is not None) and not x_numeric:
+            ax.set(xticks=range(len(plot_data)),
+                   xticklabels=plot_data.index.values)
     return dots, lines, cis
 
 
@@ -563,8 +741,7 @@ def get_log_ax_lims(vals, base=10):
     return base**i_min, base**i_max
 
 
-def title_experiment_summary_plots(g, expt_df, summary_text, comparison='ref',
-                                   post_text=''):
+def title_experiment_summary_plots(g, expt_df, summary_text, post_text=''):
     """Handle suptitle for FacetGrids summarizing experiment.
 
     We want to handle the suptitle for these FacetGrids in a standard way:
@@ -589,9 +766,6 @@ def title_experiment_summary_plots(g, expt_df, summary_text, comparison='ref',
     summary_text : str
          String summarizing what's shown in the plot, such as "Performance" or
          "Run length". Will go at beginning of suptitle.
-    comparison : {'ref', 'met'}, optional
-        Whether this comparison is between metamers and reference images
-        ('ref') or two metamers ('met').
     post_text : str, optional
         Text to put at the end of the suptitle, e.g., info on how to interpret
         the plot.
@@ -612,12 +786,20 @@ def title_experiment_summary_plots(g, expt_df, summary_text, comparison='ref',
         sess_str = f'session {int(expt_df.session_number.unique()[0]):02d}'
     # we can have nans because of how we add blank rows to make sure each image
     # is represented
-    model_name = ' and '.join([m.split('_')[0] for m in expt_df.model.dropna().unique()])
+    try:
+        model_name = ' and '.join([m.split('_')[0] for m in expt_df.model.dropna().unique()])
+    except AttributeError:
+        model_name = 'unknown'
+    if expt_df.trial_type.nunique() == 2:
+        comparison = 'both'
+    elif expt_df.trial_type.unique()[0].endswith('metamer'):
+        comparison = 'met'
+    elif expt_df.trial_type.unique()[0].endswith('reference'):
+        comparison = 'ref'
     comp_str = {'ref': 'reference images', 'met': 'other metamers',
                 'both': 'both reference and other metamer images'}[comparison]
     # got this from https://stackoverflow.com/a/36369238/4659293
-    n_rows = g.fig.axes[0].get_subplotspec().get_gridspec().get_geometry()[0]
-    n_cols = g.fig.axes[0].get_subplotspec().get_gridspec().get_geometry()[1]
+    n_rows, n_cols = g.fig.axes[0].get_subplotspec().get_gridspec().get_geometry()
     # we want to add some newlines at end of title, based on number of rows, to
     # make sure there's enough space
     end_newlines = ''
@@ -634,6 +816,58 @@ def title_experiment_summary_plots(g, expt_df, summary_text, comparison='ref',
     return g
 
 
+def _label_and_title_psychophysical_curve_plot(g, df, summary_text, ci=None, hdi=None):
+    """Label and title plot.
+
+    Does some changes to titles and labels to make the plots pretty.
+
+    Parameters
+    ----------
+    g : sns.FacetGrid
+        FacetGrid containing the plot
+    df : pd.DataFrame
+        Dataframe contanining the plotted data
+    summary_text : str
+        String summarizing what's shown in the plot, such as "Performance" or
+        "Run length". Will go at beginning of suptitle.
+    ci : None or int
+        The CI plotted. One of ci or hdi must be None, one must be not-None.
+    hdi : None or float
+        The CI plotted. One of ci or hdi must be None, one must be not-None.
+    
+    """
+    if ci is not None:
+        ci_txt = f"{ci}% CI"
+    elif hdi is not None:
+        ci_txt = f"{hdi*100}% HDI"
+    g.set_ylabels(f'Proportion correct (with {ci_txt})')
+    g.set_xlabels('Scaling')
+    g.set(ylim=(.3, 1.05))
+    title_experiment_summary_plots(g, df, summary_text)
+    g.set_titles('{col_name}')
+    axes = g.axes.flatten()
+    # got this from https://stackoverflow.com/a/36369238/4659293
+    n_rows, n_cols = axes[0].get_subplotspec().get_gridspec().get_geometry()
+    y_idx = n_cols * ((n_rows-1)//2)
+    if n_rows % 2 == 0:
+        yval = 0
+    else:
+        yval = .5
+    x_idx = -((n_cols+1)//2)
+    if n_cols % 2 == 0:
+        xval = 0
+    else:
+        xval = .5
+    # first axis will always have a ylabel and last one will always have an
+    # xlabel
+    ylabel = axes[0].get_ylabel()
+    xlabel = axes[-1].get_xlabel()
+    g.set(xlabel='', ylabel='')
+    g.fig.subplots_adjust(hspace=.2, wspace=.1, top=1)
+    axes[y_idx].set_ylabel(ylabel, y=yval, ha='center')
+    axes[x_idx].set_xlabel(xlabel, x=xval, ha='center')
+
+
 def fit_psychophysical_curve(x, y, hue=None, style=None, pal={}, dashes_dict={},
                              data=None, to_chance=False, **kwargs):
     """Fit psychophysical curve to mean data, intended for visualization only.
@@ -643,7 +877,7 @@ def fit_psychophysical_curve(x, y, hue=None, style=None, pal={}, dashes_dict={},
     Parameters
     ----------
     x, y, hue, style : str
-        columns from data to map along the x, y, hue dimensions
+        columns from data to map along the x, y, hue, style dimensions
     pal : dict, optional
         dictionary mapping between hue levels and colors. if non-empty, will
         override color set in kwargs
