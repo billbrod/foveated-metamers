@@ -10,6 +10,7 @@ import os.path as op
 import yaml
 from . import mcmc
 import scipy
+import copy
 
 
 def get_palette(col, col_unique=None, as_dict=True):
@@ -489,7 +490,8 @@ def _map_dataframe_prep(data, x, y, estimator, x_jitter, x_dodge, x_order,
 def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
                     estimator=np.median, draw_ctr_pts=True, ci_mode='lines',
                     ci_alpha=.2, size=5, x_dodge=None, all_labels=None,
-                    like_pointplot=False, style=None, dashes_dict={}, **kwargs):
+                    like_pointplot=False, style=None, dashes_dict={},
+                    markers={}, **kwargs):
     """Plot center points and specified CIs, for use with map_dataframe.
 
     based on seaborn.linearmodels.scatterplot. CIs are taken from a
@@ -558,6 +560,9 @@ def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
     dashes_dict : dict, optional
         dictionary mapping between style levels and args to pass as `dashes` to
         ax.plot.
+    markers : dict, optional
+        dictionary mapping between style levels and args to pass as `marker` to
+        ax.scatter.
     kwargs :
         must contain data. Other expected keys:
         - ax: the axis to draw on (otherwise, we grab current axis)
@@ -588,7 +593,7 @@ def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
         # diameter. In the following, we can use either; we use the sqrt of the
         # value here so it has same interpretation as the size parameter.
         warnings.warn(f"with like_pointplot, overriding user-specified size {size}")
-        size = np.sqrt(np.pi * np.square(lw) * 2)
+        size = np.sqrt(np.pi * np.square(lw) * 4)
     else:
         # use default
         lw = mpl.rcParams['lines.linewidth']
@@ -608,11 +613,30 @@ def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
                                                                      x_order,
                                                                      ci)
         dashes = dashes_dict.get(n, '')
+        marker = copy.deepcopy(markers.get(n, mpl.rcParams['scatter.marker']))
         if draw_ctr_pts:
-            # scatter expects s to be the size in pts**2, whereas we expect
-            # size to be the diameter, so we convert that (following how
-            # it's handled by seaborn's stripplot)
-            dots.append(ax.scatter(x_data, plot_data.values, s=size**2, **kwargs))
+            if isinstance(marker, dict):
+                # modify the dict (which is the kind that would be passed to
+                # _marker_adjust) so it works with scatter.
+                # for scatter, ew is called lw
+                marker['lw'] = marker.pop('ew', None)
+                if marker['lw'] == 'lw':
+                    marker['lw'] = lw
+                marker.pop('s', None)
+                if marker.get('ec', None) == 'original_fc':
+                    marker['ec'] = kwargs['color']
+                # scatter expects s to be the size in pts**2, whereas we expect
+                # size to be the diameter, so we convert that (following how
+                # it's handled by seaborn's stripplot)
+                dots.append(ax.scatter(x_data, plot_data.values, s=size**2,
+                                       #want this to appear above the CI lines
+                                       zorder=100, **kwargs, **marker))
+            else:
+                # scatter expects s to be the size in pts**2, whereas we expect
+                # size to be the diameter, so we convert that (following how
+                # it's handled by seaborn's stripplot)
+                dots.append(ax.scatter(x_data, plot_data.values, s=size**2,
+                                       marker=marker, **kwargs))
         else:
             dots.append(None)
         if join is True:
@@ -625,7 +649,8 @@ def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
         kwargs.pop('label', None)
         if ci_mode == 'lines':
             for x, (ci_low, ci_high) in zip(x_data, zip(*plot_cis)):
-                cis.append(ax.plot([x, x], [ci_low, ci_high], linewidth=lw, **kwargs))
+                cis.append(ax.plot([x, x], [ci_low, ci_high], linewidth=lw,
+                                   **kwargs))
         elif ci_mode == 'fill':
             cis.append(ax.fill_between(x_data, plot_cis[0].values, plot_cis[1].values,
                                        alpha=ci_alpha, **kwargs))

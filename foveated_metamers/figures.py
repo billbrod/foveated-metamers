@@ -1110,8 +1110,8 @@ def parameter_pairplot(inf_data, vars=None,
 
 def psychophysical_parameters(inf_data, x='image_name', y='value',
                               hue='subject_name', col='parameter',
-                              row='trial_type',
-                              query_str="distribution=='posterior'", height=5,
+                              row='trial_type', style=None,
+                              query_str="distribution=='posterior'", height=2.5,
                               x_dodge=.1, hdi=.95, rotate_xticklabels=False,
                               **kwargs):
     """Show psychophysical curve parameters.
@@ -1125,7 +1125,7 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
     ----------
     inf_data : arviz.InferenceData
         arviz InferenceData object (xarray-like) created by `run_inference`.
-    x, y, hue, col, row : str, optional
+    x, y, hue, col, row, style : str, optional
         variables to plot on axes or facet along. 'value' is the value of the
         parameters, 'parameter' is the identity of the parameter (e.g., 's0',
         'a0'), all other are the coords of inf_data
@@ -1160,15 +1160,50 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
     kwargs.setdefault('sharey', False)
     df = mcmc.inf_data_to_df(inf_data, 'psychophysical curve parameters',
                              query_str=query_str, hdi=hdi)
-
+    # set defaults based on hue and style args
+    if hue is not None:
+        kwargs.setdefault('palette', plotting.get_palette(hue, df[hue].unique()))
+    else:
+        kwargs.setdefault('color', 'k')
+    if style is not None:
+        style_dict = plotting.get_style(style, df[style].unique())
+        marker_adjust = style_dict.pop('marker_adjust', {})
+    else:
+        marker_adjust = {}
+    # remap the image names to be better for plotting
+    df, img_order = plotting._remap_image_names(df)
+    if col == 'image_name':
+        kwargs.setdefault('col_order', img_order)
+        df.image_name = df.image_name.apply(lambda x: x.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', ''))
     g = sns.FacetGrid(hue=hue, col=col, row=row, data=df, height=height,
                       **kwargs)
     g.map_dataframe(plotting.scatter_ci_dist, y=y, x=x, x_dodge=x_dodge,
                     all_labels=list(df[hue].unique()), like_pointplot=True,
-                    ci='hdi')
-    g.add_legend()
+                    ci='hdi', markers=marker_adjust, style=style)
+    final_markers = {}
+    if style is not None:
+        for v in df[style].unique():
+            if style == row or style == col:
+                ax = [ax for ax in g.axes.flatten() if v in ax.get_title()][0]
+            else:
+                raise Exception(f"To properly construct legend, style {style} must also "
+                                "be mapped along col or row!")
+            # then we can assume that every collection on ax corresponds to
+            # what we want.
+            c = ax.collections[0]
+            fc = c.get_facecolor()[0]
+            if all(fc == 1):
+                fc = 'w'
+            marker_dict = {'marker': marker_adjust[v].get('marker', 'o'),
+                           'mew': c.get_lw()[0], 'mfc': fc,
+                           'ms': np.sqrt(c.get_sizes()[0]), 'mec': c.get_edgecolor()[0]}
+            final_markers[v] = marker_dict
+    # create the legend
+    plotting._add_legend(df, g, hue, style, kwargs.get('palette', {}),
+                         final_markers, {k: '' for k in marker_adjust.keys()})
     g.set_xlabels(x)
     g.set_ylabels(y)
+    g.set_titles('{row_name} | {col_var} = {col_name}')
     g.fig.suptitle("Psychophysical curve parameter values\n", va='bottom')
     if rotate_xticklabels:
         if rotate_xticklabels is True:
