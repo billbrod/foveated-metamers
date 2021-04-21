@@ -786,10 +786,7 @@ def title_experiment_summary_plots(g, expt_df, summary_text, post_text=''):
         sess_str = f'session {int(expt_df.session_number.unique()[0]):02d}'
     # we can have nans because of how we add blank rows to make sure each image
     # is represented
-    try:
-        model_name = ' and '.join([m.split('_')[0] for m in expt_df.model.dropna().unique()])
-    except AttributeError:
-        model_name = 'unknown'
+    model_name = ' and '.join([m.split('_')[0] for m in expt_df.model.dropna().unique()])
     if expt_df.trial_type.nunique() == 2:
         comparison = 'both'
     elif expt_df.trial_type.unique()[0].endswith('metamer'):

@@ -150,8 +150,9 @@ def response_model(scaling, model='V1', observed_responses=None):
     Parameters
     ----------
     scaling : jnp.ndarray
-        scaling value(s) to calculate discriminability for. Must be 4d:
-        (scaling, subject_name, image_name, trial_type).
+        scaling value(s) to calculate discriminability for. Must be 5d:
+        (scaling, subject_name, image_name, trial_type, model), though
+        currently we only work with a singleton model dimension.
     model : {'V1', 'RGC'}
         Whether we should use V1 or RGC prior for log_s0_global_mean.
     observed_responses : jnp.ndarray or None
@@ -165,6 +166,13 @@ def response_model(scaling, model='V1', observed_responses=None):
     """
     # because this is a 2AFC task
     chance_correct = .5
+    # first get rid of model dim, since we're not using it here.
+    if scaling.shape[-1] > 1:
+        raise Exception("Currently, response model can only handle 1 model"
+                        " at a time!")
+    scaling = scaling.squeeze(-1)
+    if observed_responses is not None:
+        observed_responses = observed_responses.squeeze(-1)
     # we have to do a weird hacky workaround if we only have one trial_type:
     # for some reason, we can't plate over it (we get a really strange error
     # when calling mcmc.run, which I think is a numpyro bug, though this
@@ -255,7 +263,7 @@ def response_model(scaling, model='V1', observed_responses=None):
 
 def assemble_dataset_from_expt_df(expt_df,
                                   dep_variables=['subject_name', 'image_name',
-                                                 'trial_type']):
+                                                 'trial_type', 'model']):
     """Create Dataset from expt_df.
 
     Creates the xarray Dataset necessary for using MCMC to fit psychophysical
@@ -348,7 +356,7 @@ def simulate_dataset(critical_scaling, proportionality_factor,
     # will be the same amount above / below the mean
     s0_seed, a0_seed, obs_seed = np.random.randint(np.iinfo(np.uint32).max, size=3)
     # get this the right number of dimensions so we can broadcast correctly
-    scaling = jnp.expand_dims(scaling, (-1, -2, -3))
+    scaling = jnp.expand_dims(scaling, (-1, -2, -3, -4))
     a0 = np.log([proportionality_factor])
     s0 = np.log([critical_scaling])
     if trial_types > 1:
@@ -359,9 +367,9 @@ def simulate_dataset(critical_scaling, proportionality_factor,
         s0 = np.concatenate([s0, np.log([critical_scaling*2])])
     if trial_types > 3:
         raise Exception(f"trial_types must be one of {1, 2, 3}, but got {trial_types}!")
-    # convert to jax.numpy
-    a0 = jnp.asarray(a0)
-    s0 = jnp.asarray(s0)
+    # convert to jax.numpy and add a dimension for model
+    a0 = jnp.expand_dims(jnp.asarray(a0), -1)
+    s0 = jnp.expand_dims(jnp.asarray(s0), -1)
     # set up distributions
     a0 = dist.Normal(a0, proportionality_factor_noise)
     s0 = dist.Normal(s0, critical_scaling_noise)
@@ -370,11 +378,13 @@ def simulate_dataset(critical_scaling, proportionality_factor,
     s0 = jnp.exp(s0.sample(PRNGKey(s0_seed), (num_subjects, num_images)))
     prop_corr = proportion_correct_curve(scaling, a0, s0)
     obs = dist.Bernoulli(prop_corr).sample(PRNGKey(obs_seed), (num_trials,))
-    dims = ('trials', 'scaling', 'subject_name', 'image_name', 'trial_type')
+    dims = ('trials', 'scaling', 'subject_name', 'image_name', 'trial_type',
+            'model')
     coords = {'scaling': scaling.squeeze(), 'trials': np.arange(num_trials),
               'subject_name': [f'sub-{s:02d}' for s in range(num_subjects)],
               'image_name': [f'image_{i:02d}' for i in range(num_images)],
-              'trial_type': [f'trial_type_{i:02d}' for i in range(trial_types)]}
+              'trial_type': [f'trial_type_{i:02d}' for i in range(trial_types)],
+              'model': [['V1', 'RGC'][i] for i in np.arange(1)]}
     return xarray.Dataset({'observed_responses': (dims, obs),
                            'true_proportionality_factor': (dims[2:], a0),
                            'true_critical_scaling': (dims[2:], s0)},
@@ -432,8 +442,8 @@ def _arrange_vars(dataset):
     return scaling, observed_responses
 
 
-def run_inference(dataset, model='V1', step_size=.1, num_draws=1000,
-                  num_chains=1, num_warmup=500, seed=0, target_accept_prob=.8,
+def run_inference(dataset, step_size=.1, num_draws=1000, num_chains=1,
+                  num_warmup=500, seed=0, target_accept_prob=.8,
                   max_tree_depth=10, **nuts_kwargs):
     """Run MCMC inference for our response_model, conditioned on data.
 
@@ -450,8 +460,6 @@ def run_inference(dataset, model='V1', step_size=.1, num_draws=1000,
     dataset: xarray.Dataset
         Dataset containing observed_responses data variable and at least the
         coordinates trials and scaling (must be first two).
-    model : {'V1', 'RGC'}
-        Whether we should use V1 or RGC prior for critical_scaling.
     step_size : float, optional
         Size of a single step.
     num_draws : int, optional
@@ -474,6 +482,9 @@ def run_inference(dataset, model='V1', step_size=.1, num_draws=1000,
         The MCMC object that has run inference. Pass to assemble_inf_data.
 
     """
+    if len(dataset.model) > 1:
+        raise Exception("For now, can only handle one model at a time!")
+    model = dataset.model.values[0].split('_')[0]
     scaling, observed_responses = _arrange_vars(dataset)
     mcmc_kernel = numpyro.infer.NUTS(response_model, step_size=step_size,
                                      init_strategy=numpyro.infer.init_to_sample,
@@ -514,9 +525,10 @@ def assemble_inf_data(mcmc, dataset, seed=1):
                         "has one value! We can handle only 1 trial_type, "
                         "but others must have multiple")
     scaling, obs = _arrange_vars(dataset)
+    model = dataset.model.values[0].split('_')[0]
     # different dummy dimensions when there was a single trial_type (which gets
-    # squeezed out in the response model) vs. more than one
-    if scaling.shape[-1] == 1:
+    # squeezed out in the response model) vs. more than one.
+    if scaling.shape[-2] == 1:
         dummy_dims = [[-1, 1, 2], [1, 2], -1]
     else:
         dummy_dims = [[-2, 1], 1, -2]
@@ -526,13 +538,13 @@ def assemble_inf_data(mcmc, dataset, seed=1):
                                               posterior_samples=mcmc.get_samples())
     # need to create each of these separately because they have different
     # coords
-    prior = prior(PRNGKey(seed), scaling, 'V1')
+    prior = prior(PRNGKey(seed), scaling, model)
     # the subject-level variables have a dummy dimension at the same place as
     # the image_name dimension, in order to allow broadcasting. we allow it
     # here, and then drop it later
     prior_dims = _assign_inf_dims(prior, dataset, dummy_dim=dummy_dims[0])
     prior = az.from_numpyro(prior=prior, coords=dataset.coords, dims=prior_dims)
-    posterior_pred = posterior_pred(PRNGKey(seed+1), scaling, 'V1')
+    posterior_pred = posterior_pred(PRNGKey(seed+1), scaling, model)
     post_dims = _assign_inf_dims(posterior_pred, dataset,
                                  dummy_dim=dummy_dims[1])
     posterior_pred = az.from_numpyro(posterior_predictive=posterior_pred,
@@ -543,7 +555,7 @@ def assemble_inf_data(mcmc, dataset, seed=1):
     # responses from the posterior predictive has an extra dummy dimension for
     # some reason. but I think it doesn't happen when there's missing (and thus
     # imputed) data for some reason?
-    if obs.shape[-1] == 1 and post_dims['responses'].count('dummy') > 1:
+    if obs.shape[-2] == 1 and post_dims['responses'].count('dummy') > 1:
         post_dims['responses'].pop(1)
     # the subject-level variables these have a dummy dimension at the same
     # place as the image_name dimension, in order to allow broadcasting. we
@@ -581,7 +593,7 @@ def assemble_inf_data(mcmc, dataset, seed=1):
             inf_data.observed_data['responses'] = dataset.observed_responses
     # this gets weirdly shaped, so just remove it
     del inf_data.log_likelihood
-    if obs.shape[-1] == 1:
+    if obs.shape[-2] == 1:
         # then there was only one trial type and it was squeezed out during
         # fitting -- add it in now.
         inf_data.posterior = inf_data.posterior.expand_dims('trial_type', -1).assign_coords({'trial_type': dataset.trial_type})
@@ -589,6 +601,14 @@ def assemble_inf_data(mcmc, dataset, seed=1):
         inf_data.prior = inf_data.prior.expand_dims('trial_type', -1).assign_coords({'trial_type': dataset.trial_type})
         inf_data.prior_predictive = inf_data.prior_predictive.expand_dims('trial_type', -1).assign_coords({'trial_type': dataset.trial_type})
         inf_data.observed_data = inf_data.observed_data.expand_dims('trial_type', -1).assign_coords({'trial_type': dataset.trial_type})
+    if obs.shape[-1] == 1:
+        # then there was only one model and it was squeezed out during fitting
+        # -- add it in now.
+        inf_data.posterior = inf_data.posterior.expand_dims('model', -1).assign_coords({'model': dataset.model})
+        inf_data.posterior_predictive = inf_data.posterior_predictive.expand_dims('model', -1).assign_coords({'model': dataset.model})
+        inf_data.prior = inf_data.prior.expand_dims('model', -1).assign_coords({'model': dataset.model})
+        inf_data.prior_predictive = inf_data.prior_predictive.expand_dims('model', -1).assign_coords({'model': dataset.model})
+        inf_data.observed_data = inf_data.observed_data.expand_dims('model', -1).assign_coords({'model': dataset.model})
     return inf_data
 
 
