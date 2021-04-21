@@ -804,10 +804,10 @@ def title_experiment_summary_plots(g, expt_df, summary_text, post_text=''):
     # make sure there's enough space
     end_newlines = ''
     break_newlines = ''
-    if n_cols == 1:
+    if n_cols < 3:
         break_newlines += '\n'
     if n_rows > 1:
-        end_newlines += '\n'
+        end_newlines += '\n\n'
     if n_rows > 3:
         end_newlines += '\n'
     g.fig.suptitle(f"{summary_text} for {subj_str}, {sess_str}.{break_newlines}"
