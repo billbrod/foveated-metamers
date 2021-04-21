@@ -1096,7 +1096,7 @@ rule create_experiment_df:
                 '{subject}_task-split_comp-{comp}_idx_sess-{sess_num}_run-{run_num}.npy'),
         op.join(config["DATA_DIR"], 'raw_behavioral', '{model_name}', 'task-split_comp-{comp}', '{subject}',
                 '{date}_{subject}_task-split_comp-{comp}_sess-{sess_num}_run-{run_num}{ecc_mask}.hdf5'),
-        op.join(config["DATA_DIR"], 'stimuli', 'log-ecc-mask_info.csv'),
+        op.join(config["DATA_DIR"], 'stimuli', 'log-ecc-masks_info.csv'),
     output:
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}{ecc_mask}', '{subject}',
                 '{date}_{subject}_task-split_comp-{comp}{ecc_mask}_sess-{sess_num}_run-{run_num}_expt.csv'),
@@ -1172,10 +1172,11 @@ rule combine_all_behavior:
                 stim_df = pd.read_csv(input[-1])
                 expt_df = pd.concat([pd.read_csv(i) for i in input[:-1]])
                 expt_df.to_csv(output[0], index=False)
-                g = fov.figures.performance_plot(expt_df, hue='subject_name', comparison=wildcards.comp,
-                                                 height=2.5, curve_fit=True, style='trial_type')
+                g = fov.figures.performance_plot(expt_df, hue='subject_name',
+                                                 height=2.5, curve_fit=True,
+                                                 style='trial_type')
                 g.fig.savefig(output[1], bbox_inches='tight')
-                g = fov.figures.run_length_plot(expt_df, hue='subject_name', comparison=wildcards.comp)
+                g = fov.figures.run_length_plot(expt_df, hue='subject_name')
                 g.fig.savefig(output[2], bbox_inches='tight')
 
 
@@ -1671,7 +1672,6 @@ rule performance_figure:
                 expt_df.model = expt_df.model.map(lambda x: {'RGC': 'Retina'}.get(x.split('_')[0],
                                                                                   x.split('_')[0]))
                 g = fov.figures.performance_plot(expt_df, hue=hue,
-                                                 comparison=wildcards.comp,
                                                  height=height, col=col,
                                                  curve_fit=True,
                                                  style='trial_type')
@@ -1707,8 +1707,7 @@ rule performance_comparison_figure:
                                                  hue='model',
                                                  height=fig_width/3,
                                                  style='trial_type', aspect=2,
-                                                 logscale_xaxis=True,
-                                                 comparison='both')
+                                                 logscale_xaxis=True)
                 g.fig.savefig(output[0], bbox_inches='tight')
 
 
