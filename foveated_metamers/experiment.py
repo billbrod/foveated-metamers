@@ -416,7 +416,11 @@ def run_split(stimuli_path, idx_path, save_path, comparison,
     if train_flag:
         correct_responses = np.load(idx_path.replace('idx_', '').replace('.npy', '_correct-responses.npy'))
     else:
-        correct_responses = np.zeros_like(idx)
+        # this will be shape (2, n_trials, 2), where the 2s index
+        # left/right and first/second images. we just want one of
+        # these per trial.
+        correct_responses = np.zeros_like(idx)[0, :, 0]
+
 
     bar_pix_size = int(bar_deg_size * (monitor_kwargs['size'][0] / screen_size_deg))
     bar_size = [bar_pix_size, expt_params['stimuli_size'][1]]
