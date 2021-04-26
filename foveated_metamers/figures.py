@@ -952,7 +952,9 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
     g.map_dataframe(plotting.map_flat_line, x='scaling', y=.5, colors='k')
 
     # title and label plot
-    plotting._label_and_title_psychophysical_curve_plot(g, df, 'Posterior Predictive Check',
+    model_type = inf_data.metadata.mcmc_model_type.squeeze().values
+    title = f'Posterior predictive check for {model_type}'
+    plotting._label_and_title_psychophysical_curve_plot(g, df, title,
                                                         hdi=hdi)
     # get decent looking tick marks
     plotting._psychophysical_curve_ticks(df, g.axes.flatten(),
@@ -1008,6 +1010,8 @@ def parameter_distributions(inf_data, col='variable', hue='distribution',
     g = sns.displot(df, hue=hue, x='value', col=col, kind='kde', clip=clip,
                     facet_kws=dict(sharex='col', sharey=False),
                     **kwargs)
+    model_type = inf_data.metadata.mcmc_model_type.squeeze().values
+    g.fig.suptitle(f"Posterior and prior parameter distributions for {model_type}")
     return g
 
 
@@ -1050,13 +1054,14 @@ def mcmc_diagnostics_plot(inf_data):
                         f', mean effective sample size={ess[var].data.mean():.02f}')
     fig = axes[0, 0].figure
     # want monospace so table prints correctly
-    rhat = rhat.to_dataframe().reorder_levels(['trial_type', 'image_name', 'subject_name'])
+    rhat = rhat.to_dataframe().reorder_levels(['model', 'trial_type', 'image_name', 'subject_name'])
     fig.text(1, 1, "rhat\n"+rhat.sort_index().to_markdown(),
              ha='left', va='top', family='monospace')
-    ess = ess.to_dataframe().reorder_levels(['trial_type', 'image_name', 'subject_name'])
+    ess = ess.to_dataframe().reorder_levels(['model', 'trial_type', 'image_name', 'subject_name'])
     fig.text(1, .5, "effective sample size\n"+ess.sort_index().to_markdown(),
              ha='left', va='top', family='monospace')
-    fig.suptitle("Diagnostics plot for MCMC, showing distribution and sampling"
+    model_type = inf_data.metadata.mcmc_model_type.squeeze().values
+    fig.suptitle(f"Diagnostics plot for {model_type} MCMC, showing distribution and sampling"
                  " trace for each parameter", va='baseline')
     return fig
 
@@ -1104,7 +1109,8 @@ def parameter_pairplot(inf_data, vars=None,
         vars = sorted(df.columns, key=key_func)
     g = sns.pairplot(df.reset_index(), vars=vars, corner=True, diag_kind='kde',
                      kind='kde', diag_kws={'cut': 0}, **kwargs)
-    g.fig.suptitle('Joint distributions of model parameters')
+    model_type = inf_data.metadata.mcmc_model_type.squeeze().values
+    g.fig.suptitle(f'Joint distributions of {model_type} model parameters')
     return g
 
 
@@ -1204,7 +1210,8 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
     g.set_xlabels(x)
     g.set_ylabels(y)
     g.set_titles('{row_name} | {col_var} = {col_name}')
-    g.fig.suptitle("Psychophysical curve parameter values\n", va='bottom')
+    model_type = inf_data.metadata.mcmc_model_type.squeeze().values
+    g.fig.suptitle(f"Psychophysical curve parameter values for {model_type} MCMC\n", va='bottom')
     if rotate_xticklabels:
         if rotate_xticklabels is True:
             rotate_xticklabels = 25

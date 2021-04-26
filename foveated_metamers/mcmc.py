@@ -90,8 +90,11 @@ def proportion_correct_curve(scaling, proportionality_factor, critical_scaling):
     return norm_cdf_sqrt_2 * norm_cdf_2 + (1-norm_cdf_sqrt_2) * (1-norm_cdf_2)
 
 
-def response_model(scaling, model='V1', observed_responses=None):
-    r"""Probabilistic model of responses, with lapse rate.
+def partially_pooled_response_model(scaling, model='V1', observed_responses=None):
+    r"""Partially pooled probabilistic model of responses, with lapse rate.
+
+    This is "partially pooled" because of how we handle the image and subject
+    level effects on the two parameters of interest.
 
     - Critical scaling ($s_0$) and proportionality factor / gain ($\alpha_0$)
       are both modeled on a natural log-scale, where they're the sum of
@@ -122,8 +125,14 @@ def response_model(scaling, model='V1', observed_responses=None):
 
     - pi_l: lapse rate, independent for each (trial_type, subject).
 
-    NOTE: no interaction between subject and image effects!
+    Thus, for an individual subject and image:
 
+    - a0 = exp(log_a0_global_mean + log_a0_subject + log_a0_image)
+
+    - s0 = exp(log_s0_global_mean + log_s0_subject + log_s0_image)
+
+    NOTE: no interaction between subject and image effects!
+   
     Priors:
 
     - pi_l: Beta(2, 50)
@@ -230,6 +239,144 @@ def response_model(scaling, model='V1', observed_responses=None):
                 # combine global, subject, and image effects
                 a0 = a0_global_mean + a0_subject + a0_image
                 s0 = s0_global_mean + s0_subject + s0_image
+                # this is the value without the lapse rate
+                prop_corr = proportion_correct_curve(scaling, jnp.exp(a0), jnp.exp(s0))
+                # now with the lapse rate
+                prob_corr = numpyro.deterministic('probability_correct',
+                                                  ((1 - lapse_rate) * prop_corr +
+                                                   lapse_rate * chance_correct))
+                with trials_plate, scaling_plate:
+                    if obs_nans is not None:
+                        # expand this out, for broadcasting purposes
+                        prob_corr_nan = jnp.expand_dims(prob_corr, 0).tile((observed_responses.shape[0],
+                                                                            *([1]*prob_corr.ndim)))
+                        # sample the responses...
+                        imputed_responses = numpyro.sample(
+                            'responses_imputed',
+                            dist.Bernoulli(prob_corr_nan, validate_args=True).mask(False)
+                        )
+                        # ...and insert the imputed responses where there are
+                        # NaNs in the observed data.
+                        observed_responses = jnp.where(obs_nans,
+                                                       imputed_responses,
+                                                       observed_responses)
+                    return numpyro.sample('responses', dist.Bernoulli(prob_corr,
+                                                                      validate_args=True),
+                                          obs=observed_responses)
+    if trial_type_plate is not None:
+        with trial_type_plate:
+            return _sample(scaling, observed_responses, obs_nans)
+    else:
+        return _sample(scaling, observed_responses, obs_nans)
+
+
+def unpooled_response_model(scaling, model='V1', observed_responses=None):
+    r"""Probabilistic model of responses, with lapse rate.
+
+    This is "unpooled" because we model the parameters of interest
+    independently for each psychophysical curve (i.e., each image/subject)
+
+    - Critical scaling ($s_0$) and proportionality factor / gain ($\alpha_0$)
+      are both modeled on a natural log-scale, in a completely unpooled manner,
+      independently for each (trial_type, subject, image).
+
+    - Lapse rate is modeled as a completely unpooled manner, independently for
+      each (trial_type, subject) (shared across images)
+
+    Model Parameters:
+
+    - a0: the proportionality factor / gain, independent for each (trial_type,
+      subject, image)
+
+    - s0: the critical scaling, independent for each (trial_type, subject,
+      image)
+
+    - pi_l: lapse rate, independent for each (trial_type, subject).
+
+    Priors:
+
+    - pi_l: Beta(2, 50)
+
+    - a0: Normal(1.6, 1), this gives expected value of 5 for the exponentiated
+      version.
+
+    - s0: Normal(-1.38, 1) for V1 (expected value ~.25 of exponentiated
+      version, following from Freeman and Simoncelli, 2011); Normal(-4, 1) for
+      RGC (expected value ~.018 of exponentiated version, from Dacey, 1992)
+
+    Parameters
+    ----------
+    scaling : jnp.ndarray
+        scaling value(s) to calculate discriminability for. Must be 5d:
+        (scaling, subject_name, image_name, trial_type, model), though
+        currently we only work with a singleton model dimension.
+    model : {'V1', 'RGC'}
+        Whether we should use V1 or RGC prior for log_s0_global_mean.
+    observed_responses : jnp.ndarray or None
+        observed responses to condition our pulls on. If None, don't condition.
+
+    Returns
+    -------
+    responses : numpyro.sample
+        Samples of responses
+
+    """
+    # because this is a 2AFC task
+    chance_correct = .5
+    # first get rid of model dim, since we're not using it here.
+    if scaling.shape[-1] > 1:
+        raise Exception("Currently, response model can only handle 1 model"
+                        " at a time!")
+    scaling = scaling.squeeze(-1)
+    if observed_responses is not None:
+        observed_responses = observed_responses.squeeze(-1)
+    # we have to do a weird hacky workaround if we only have one trial_type:
+    # for some reason, we can't plate over it (we get a really strange error
+    # when calling mcmc.run, which I think is a numpyro bug, though this
+    # function itself can be called without a problem). So, instead, we squeeze
+    # out trial_types (and add it back in later when we construct the
+    # InferenceData object)
+    dim_offset = 0
+    if scaling.shape[-1] == 1:
+        scaling = scaling.squeeze(-1)
+        if observed_responses is not None:
+            observed_responses = observed_responses.squeeze(-1)
+        dim_offset = 1
+        trial_type_plate = None
+    else:
+        trial_type_plate = numpyro.plate('trial_type', scaling.shape[-1], dim=-1)
+    image_name_plate = numpyro.plate('image_name', scaling.shape[-(2-dim_offset)],
+                                     dim=-(2-dim_offset))
+    subject_name_plate = numpyro.plate('subject_name', scaling.shape[-(3-dim_offset)],
+                                       dim=-(3-dim_offset))
+    scaling_plate = numpyro.plate('scaling', scaling.shape[-(4-dim_offset)],
+                                  dim=-(4-dim_offset))
+    obs_nans = None
+    if observed_responses is not None:
+        # where's the missing data?
+        obs_nans = jnp.isnan(observed_responses)
+        trials_plate = numpyro.plate('trials', observed_responses.shape[0],
+                                     dim=-(5-dim_offset))
+    else:
+        trials_plate = numpyro.plate('trials', 1, dim=-(5-dim_offset))
+
+    # different priors for the two models
+    if model == 'V1':
+        # expected value of .25 for exponentiated version, from Freeman and
+        # Simoncelli, 2011
+        s0_mean = -1.38
+    elif model == 'RGC':
+        # expected value of .018 for exponentiated version, from Dacey, 1992
+        s0_mean = -4
+
+    def _sample(scaling, observed_responses, obs_nans):
+        with subject_name_plate:
+            lapse_rate = numpyro.sample('pi_l', dist.Beta(2, 50))
+            with image_name_plate:
+                # expected value of 5 for exponentiated version, which looks reasonable
+                a0 = numpyro.sample('a0', dist.Normal(1.6, 1))
+                # use the prior mean from above
+                s0 = numpyro.sample('s0', dist.Normal(s0_mean, 1))
                 # this is the value without the lapse rate
                 prop_corr = proportion_correct_curve(scaling, jnp.exp(a0), jnp.exp(s0))
                 # now with the lapse rate
@@ -442,9 +589,9 @@ def _arrange_vars(dataset):
     return scaling, observed_responses
 
 
-def run_inference(dataset, step_size=.1, num_draws=1000, num_chains=1,
-                  num_warmup=500, seed=0, target_accept_prob=.8,
-                  max_tree_depth=10, **nuts_kwargs):
+def run_inference(dataset, mcmc_model_type='partially_pooled', step_size=.1,
+                  num_draws=1000, num_chains=1, num_warmup=500, seed=0,
+                  target_accept_prob=.8, max_tree_depth=10, **nuts_kwargs):
     """Run MCMC inference for our response_model, conditioned on data.
 
     Uses NUTS sampler.
@@ -485,8 +632,15 @@ def run_inference(dataset, step_size=.1, num_draws=1000, num_chains=1,
     if len(dataset.model) > 1:
         raise Exception("For now, can only handle one model at a time!")
     model = dataset.model.values[0].split('_')[0]
+    if mcmc_model_type == 'partially_pooled':
+        response_model = partially_pooled_response_model
+    elif mcmc_model_type == 'unpooled':
+        response_model = unpooled_response_model
+    else:
+        raise Exception(f"Don't know how to handle mcmc_model_type {mcmc_model_type}!")
     scaling, observed_responses = _arrange_vars(dataset)
-    mcmc_kernel = numpyro.infer.NUTS(response_model, step_size=step_size,
+    mcmc_kernel = numpyro.infer.NUTS(response_model,
+                                     step_size=step_size,
                                      init_strategy=numpyro.infer.init_to_sample,
                                      target_accept_prob=target_accept_prob,
                                      max_tree_depth=max_tree_depth,
@@ -500,7 +654,8 @@ def run_inference(dataset, step_size=.1, num_draws=1000, num_chains=1,
     return mcmc
 
 
-def assemble_inf_data(mcmc, dataset, seed=1):
+def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially_pooled',
+                      seed=1):
     """Convert mcmc into properly-formatted inference data object.
 
     Parameters
@@ -524,6 +679,12 @@ def assemble_inf_data(mcmc, dataset, seed=1):
         raise Exception("This will fail if subject_name or image_name only "
                         "has one value! We can handle only 1 trial_type, "
                         "but others must have multiple")
+    if mcmc_model_type == 'partially_pooled':
+        response_model = partially_pooled_response_model
+    elif mcmc_model_type == 'unpooled':
+        response_model = unpooled_response_model
+    else:
+        raise Exception(f"Don't know how to handle mcmc_model_type {mcmc_model_type}!")
     scaling, obs = _arrange_vars(dataset)
     model = dataset.model.values[0].split('_')[0]
     # different dummy dimensions when there was a single trial_type (which gets
@@ -533,7 +694,8 @@ def assemble_inf_data(mcmc, dataset, seed=1):
     else:
         dummy_dims = [[-2, 1], 1, -2]
     n_total_samples = list(mcmc.get_samples().values())[0].shape[0]
-    prior = numpyro.infer.Predictive(response_model, num_samples=n_total_samples)
+    prior = numpyro.infer.Predictive(response_model,
+                                     num_samples=n_total_samples)
     posterior_pred = numpyro.infer.Predictive(response_model,
                                               posterior_samples=mcmc.get_samples())
     # need to create each of these separately because they have different
@@ -609,6 +771,7 @@ def assemble_inf_data(mcmc, dataset, seed=1):
         inf_data.prior = inf_data.prior.expand_dims('model', -1).assign_coords({'model': dataset.model})
         inf_data.prior_predictive = inf_data.prior_predictive.expand_dims('model', -1).assign_coords({'model': dataset.model})
         inf_data.observed_data = inf_data.observed_data.expand_dims('model', -1).assign_coords({'model': dataset.model})
+    inf_data.add_groups({'metadata': {'mcmc_model_type': mcmc_model_type}})
     return inf_data
 
 
@@ -664,7 +827,7 @@ def inf_data_to_df(inf_data, kind='predictive', query_str=None, hdi=False):
         tmp = tmp.assign_coords({'hdi': 50})
         tmp = tmp.median(['chain', 'draw']).expand_dims('hdi')
         if isinstance(tmp, xarray.DataArray):
-            hdi_xr = hdi_xr.x
+            hdi_xr = hdi_xr[tmp.name]
         return xarray.concat([hdi_xr, tmp], 'hdi')
 
     if hdi is True:
@@ -705,8 +868,13 @@ def inf_data_to_df(inf_data, kind='predictive', query_str=None, hdi=False):
         df = []
         for d in dists:
             for p in params:
-                tmp = np.exp(inf_data[d][f'log_{p}_global_mean'] + inf_data[d][f'log_{p}_image'] +
-                             inf_data[d][f'log_{p}_subject'])
+                try:
+                    tmp = np.exp(inf_data[d][f'log_{p}_global_mean'] + inf_data[d][f'log_{p}_image'] +
+                                 inf_data[d][f'log_{p}_subject'])
+                except KeyError:
+                    # then this is the unpooled version, and so we can directly
+                    # grab the parameter
+                    tmp = np.exp(inf_data[d][p])
                 if hdi:
                     tmp = _compute_hdi(tmp, hdi)
                 tmp = tmp.to_dataframe('value').reset_index()

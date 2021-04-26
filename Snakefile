@@ -1254,15 +1254,15 @@ rule mcmc:
                 'task-split_comp-{comp}_data.csv'),
     output:
         op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}_'
+                'task-split_comp-{comp}_mcmc_{mcmc_model}_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}_'
                 'c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}.nc'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}_'
+                'task-split_comp-{comp}_mcmc_{mcmc_model}_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}_'
                 'c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}.log'),
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}_'
+                'task-split_comp-{comp}_mcmc_{mcmc_model}_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}_'
                 'c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_benchmark.txt'),
     run:
         import contextlib
@@ -1273,7 +1273,7 @@ rule mcmc:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 print(f"Running on {jax.lib.xla_bridge.device_count()} cpus!")
                 dataset = fov.mcmc.assemble_dataset_from_expt_df(pd.read_csv(input[0]))
-                mcmc = fov.mcmc.run_inference(dataset,
+                mcmc = fov.mcmc.run_inference(dataset, wildcards.mcmc_model,
                                               float(wildcards.step_size),
                                               int(wildcards.num_draws),
                                               int(wildcards.num_chains),
@@ -1283,26 +1283,28 @@ rule mcmc:
                                               int(wildcards.tree_depth))
                 # want to have a different seed for constructing the inference
                 # data object than we did for inference itself
-                inf_data = fov.mcmc.assemble_inf_data(mcmc, dataset, int(wildcards.seed)+1)
+                inf_data = fov.mcmc.assemble_inf_data(mcmc, dataset,
+                                                      wildcards.mcmc_model,
+                                                      int(wildcards.seed)+1)
                 inf_data.to_netcdf(output[0])
                 
 
 rule mcmc_plots:
     input:
         op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
+                'task-split_comp-{comp}_mcmc_{mcmc_model}_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
                 '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}.nc'),
     output:
         op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
+                'task-split_comp-{comp}_mcmc_{mcmc_model}_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
                 '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_{plot_type}.png'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}_'
+                'task-split_comp-{comp}_mcmc_{mcmc_model}_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}_'
                 'c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_{plot_type}.log'),
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
+                'task-split_comp-{comp}_mcmc_{mcmc_model}_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
                 '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_{plot_type}_benchmark.txt'),
     resources:
         mem = lambda wildcards: {'post-pred-check': 15, 'distribs': 50}.get(wildcards.plot_type, 5)
@@ -1315,25 +1317,21 @@ rule mcmc_plots:
                 inf_data = az.from_netcdf(input[0])
                 if wildcards.plot_type == 'post-pred-check':
                     print("Creating posterior predictive check.")
-                    g = fov.figures.posterior_predictive_check(inf_data,
-                                                               facetgrid_kwargs={'col': 'subject_name',
-                                                                                 'row': 'image_name'})
-                    fig = g.fig
+                    fig = fov.figures.posterior_predictive_check(inf_data,
+                                                                 facetgrid_kwargs={'col': 'subject_name',
+                                                                                   'row': 'image_name'})
                 elif wildcards.plot_type == 'diagnostics':
                     print("Creating MCMC diagnostics plot.")
                     fig = fov.figures.mcmc_diagnostics_plot(inf_data)
                 elif wildcards.plot_type == 'psychophysical-params':
                     print("Creating psychophysical parameters plot.")
-                    g = fov.figures.psychophysical_parameters(inf_data, rotate_xticklabels=True, aspect=1.2)
-                    fig = g.fig
+                    fig = fov.figures.psychophysical_parameters(inf_data, rotate_xticklabels=True, aspect=1.2)
                 elif wildcards.plot_type == 'pairplot':
                     print("Creating parameter pairplot.")
-                    g = fov.figures.parameter_pairplot(inf_data, hue='subject_name')
-                    fig = g.fig
+                    fig = fov.figures.parameter_pairplot(inf_data, hue='subject_name')
                 elif wildcards.plot_type == 'distribs':
                     print("Creating parameter distribution plot.")
-                    g = fov.figures.parameter_distributions(inf_data, row='subject_name')
-                    fig = g.fig
+                    fig = fov.figures.parameter_distributions(inf_data, row='subject_name')
                 fig.savefig(output[0], bbox_inches='tight')
 
 
