@@ -812,14 +812,16 @@ def title_experiment_summary_plots(g, expt_df, summary_text, post_text=''):
     # we can have nans because of how we add blank rows to make sure each image
     # is represented
     model_name = ' and '.join([m.split('_')[0] for m in expt_df.model.dropna().unique()])
-    if expt_df.trial_type.nunique() == 2:
+    if expt_df.trial_type.nunique() == 2 and expt_df.trial_type.unique()[0].startswith('metamer'):
         comparison = 'both'
     elif expt_df.trial_type.unique()[0].endswith('metamer'):
         comparison = 'met'
     elif expt_df.trial_type.unique()[0].endswith('reference'):
         comparison = 'ref'
+    else:
+        comparison = None
     comp_str = {'ref': 'reference images', 'met': 'other metamers',
-                'both': 'both reference and other metamer images'}[comparison]
+                'both': 'both reference and other metamer images'}.get(comparison, "simulated")
     # got this from https://stackoverflow.com/a/36369238/4659293
     n_rows, n_cols = g.fig.axes[0].get_subplotspec().get_gridspec().get_geometry()
     # we want to add some newlines at end of title, based on number of rows, to
