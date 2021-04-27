@@ -103,6 +103,12 @@ def get_style(col, col_unique=None, as_dict=True):
                           's': 'total_unchanged', 'marker': 'o'}}
         marker_adjust.update({c: {} for c in all_vals[1:]})
         markers = dict(zip(all_vals, ['v']+['o']*len(all_vals[1:])))
+    elif col == 'mcmc_model_type':
+        all_vals = ['unpooled', 'partially-pooled']
+        dashes_dict = {}
+        marker_adjust = {c: {'marker': m} for c, m in
+                         zip(all_vals, ['v', 'o'])}
+        markers = {}
     else:
         raise Exception(f"Currently only support col='trial_type' but got {col}")
     return {'dashes_dict': dashes_dict, 'marker_adjust': marker_adjust,
@@ -342,7 +348,7 @@ def _add_legend(df, g=None, fig=None, hue=None, style=None, palette={},
                                        lw=lw)[0]
     if style is not None:
         artists[style] = ax.scatter([], [], s=0)
-        for style_val in df[style].unique():
+        for style_val in sorted(df[style].unique()):
             if isinstance(style_val, float) and np.isnan(style_val):
                 continue
             markers = {k: v for k, v in final_markers[style_val].items()}

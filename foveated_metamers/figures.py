@@ -1120,7 +1120,7 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
                               hue='subject_name', col='parameter',
                               row='trial_type', style=None,
                               query_str="distribution=='posterior'", height=2.5,
-                              x_dodge=.1, hdi=.95, rotate_xticklabels=False,
+                              x_dodge=.15, hdi=.95, rotate_xticklabels=False,
                               **kwargs):
     """Show psychophysical curve parameters.
 
@@ -1198,21 +1198,55 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
                              squeeze=False, gridspec_kw={'hspace': .15}, **kwargs)
     if rotate_xticklabels is True:
         rotate_xticklabels = 25
+    final_markers = {}
+    if hue is not None and style is None:
+        all_labels = list(df[hue].unique())
+        label = 'hue'
+    elif style is not None and hue is None:
+        all_labels = list(df[style].unique())
+        label = 'style'
+    elif style is not None and hue is not None:
+        all_labels = [n for n, _ in df.groupby([style, hue])]
+        label = 'both'
+    else:
+        all_labels = []
+        label = None
     for i, c in enumerate(cols):
         for j, r in enumerate(rows):
             ax = axes[j, i]
             d = df.query(f"{col}=='{c}' & {row}=='{r}'")
             if hue is None:
-                gb = [(None, d)]
+                hue_gb = [(None, d)]
             else:
-                gb = d.groupby(hue)
-            for n, g in gb:
-                dots, _, _ = plotting.scatter_ci_dist(x, y, x_dodge=x_dodge,
-                                                      all_labels=list(df[hue].unique()),
-                                                      like_pointplot=True, ci='hdi',
-                                                      markers=marker_adjust, style=style,
-                                                      color=palette.get(n, 'k'), data=g,
-                                                      label=n, ax=ax)
+                hue_gb = d.groupby(hue)
+            for n, g in hue_gb:
+                if style is None:
+                    style_gb = [(None, g)]
+                else:
+                    style_gb = g.groupby(style)
+                for m, h in style_gb:
+                    if label == 'hue':
+                        lab = n
+                    elif label == 'style':
+                        lab = m
+                    elif label == 'both':
+                        lab = (m, n)
+                    else:
+                        lab = label
+                    dots, _, _ = plotting.scatter_ci_dist(x, y, x_dodge=x_dodge,
+                                                          all_labels=all_labels,
+                                                          like_pointplot=True, ci='hdi',
+                                                          markers=marker_adjust, style=style,
+                                                          color=palette.get(n, 'k'), data=h,
+                                                          label=lab, ax=ax)
+                    fc = dots[0].get_facecolor()[0]
+                    if all(fc == 1):
+                        fc = 'w'
+                    marker_dict = {'marker': marker_adjust[m].get('marker', 'o'),
+                                   'mew': dots[0].get_lw()[0], 'mfc': fc,
+                                   'ms': np.sqrt(dots[0].get_sizes()[0]),
+                                   'mec': dots[0].get_edgecolor()[0]}
+                    final_markers[m] = marker_dict
             ax.spines['top'].set_visible(False)
             ax.spines['right'].set_visible(False)
             if i == 0:
@@ -1226,25 +1260,6 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
                     ax.set_xticklabels(labels, rotation=rotate_xticklabels,
                                        ha='right')
 
-    final_markers = {}
-    if style is not None:
-        for v in df[style].unique():
-            if style == row or style == col:
-                # ax = [ax for ax in g.axes.flatten() if v in ax.get_title()][0]
-                ax = [ax for ax in axes.flatten() if v in ax.get_title()][0]
-            else:
-                raise Exception(f"To properly construct legend, style {style} must also "
-                                "be mapped along col or row!")
-            # then we can assume that every collection on ax corresponds to
-            # what we want.
-            c = ax.collections[0]
-            fc = c.get_facecolor()[0]
-            if all(fc == 1):
-                fc = 'w'
-            marker_dict = {'marker': marker_adjust[v].get('marker', 'o'),
-                           'mew': c.get_lw()[0], 'mfc': fc,
-                           'ms': np.sqrt(c.get_sizes()[0]), 'mec': c.get_edgecolor()[0]}
-            final_markers[v] = marker_dict
     # create the legend
     plotting._add_legend(df, None, fig, hue, style, palette,
                          final_markers, {k: '' for k in marker_adjust.keys()})
