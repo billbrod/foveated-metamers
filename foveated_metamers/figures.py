@@ -953,8 +953,10 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
     g.map_dataframe(plotting.map_flat_line, x='scaling', y=.5, colors='k')
 
     # title and label plot
-    model_type = inf_data.metadata.mcmc_model_type.squeeze().values
-    title = f'Posterior predictive check for {model_type}'
+    model_type = df.mcmc_model_type.unique()
+    if len(model_type) > 1:
+        model_type = ['multiple']
+    title = f'Posterior predictive check for {model_type[0]}'
     plotting._label_and_title_psychophysical_curve_plot(g, df, title,
                                                         hdi=hdi)
     # get decent looking tick marks
@@ -1012,8 +1014,10 @@ def parameter_distributions(inf_data, col='variable', hue='distribution',
     g = sns.displot(df, hue=hue, x='value', col=col, kind='kde', clip=clip,
                     facet_kws=dict(sharex='col', sharey=False),
                     **kwargs)
-    model_type = inf_data.metadata.mcmc_model_type.squeeze().values
-    g.fig.suptitle(f"Posterior and prior parameter distributions for {model_type}")
+    model_type = df.mcmc_model_type.unique()
+    if len(model_type) > 1:
+        model_type = ['multiple']
+    g.fig.suptitle(f"Posterior and prior parameter distributions for {model_type[0]}")
     return g
 
 
@@ -1062,8 +1066,10 @@ def mcmc_diagnostics_plot(inf_data):
     ess = ess.to_dataframe().reorder_levels(['model', 'trial_type', 'image_name', 'subject_name'])
     fig.text(1, .5, "effective sample size\n"+ess.sort_index().to_markdown(),
              ha='left', va='top', family='monospace')
-    model_type = inf_data.metadata.mcmc_model_type.squeeze().values
-    fig.suptitle(f"Diagnostics plot for {model_type} MCMC, showing distribution and sampling"
+    model_type = df.mcmc_model_type.unique()
+    if len(model_type) > 1:
+        model_type = ['multiple']
+    fig.suptitle(f"Diagnostics plot for {model_type[0]} MCMC, showing distribution and sampling"
                  " trace for each parameter", va='baseline')
     return fig
 
@@ -1111,8 +1117,10 @@ def parameter_pairplot(inf_data, vars=None,
         vars = sorted(df.columns, key=key_func)
     g = sns.pairplot(df.reset_index(), vars=vars, corner=True, diag_kind='kde',
                      kind='kde', diag_kws={'cut': 0}, **kwargs)
-    model_type = inf_data.metadata.mcmc_model_type.squeeze().values
-    g.fig.suptitle(f'Joint distributions of {model_type} model parameters')
+    model_type = df.mcmc_model_type.unique()
+    if len(model_type) > 1:
+        model_type = ['multiple']
+    g.fig.suptitle(f'Joint distributions of {model_type[0]} model parameters')
     return g
 
 
@@ -1263,8 +1271,10 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
     # create the legend
     plotting._add_legend(df, None, fig, hue, style, palette,
                          final_markers, {k: '' for k in marker_adjust.keys()})
-    model_type = inf_data.metadata.mcmc_model_type.squeeze().values
-    fig.suptitle(f"Psychophysical curve parameter values for {model_type} MCMC\n", va='bottom')
+    model_type = df.mcmc_model_type.unique()
+    if len(model_type) > 1:
+        model_type = ['multiple']
+    fig.suptitle(f"Psychophysical curve parameter values for {model_type[0]} MCMC", va='bottom')
     return fig
 
 
