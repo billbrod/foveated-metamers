@@ -784,6 +784,14 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
         inf_data.prior_predictive = inf_data.prior_predictive.expand_dims('model', -1).assign_coords({'model': dataset.model})
         inf_data.observed_data = inf_data.observed_data.expand_dims('model', -1).assign_coords({'model': dataset.model})
     inf_data.add_groups({'metadata': {'mcmc_model_type': mcmc_model_type}})
+    if mcmc_model_type == 'unpooled':
+        # in this case, we want to drop all the values where we had no
+        # information -- since the model is unpooled, the parameters we
+        # inferred for those missing data points is just the prior. this is
+        # confusing, and so we just mask them out.
+        nan_mask = inf_data.observed_data.responses.mean(('trials', 'scaling')).notnull()
+        inf_data.posterior = inf_data.posterior.where(nan_mask)
+        inf_data.posterior_predictive = inf_data.posterior_predictive.where(nan_mask)
     return inf_data
 
 
