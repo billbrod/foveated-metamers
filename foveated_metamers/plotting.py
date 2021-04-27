@@ -295,8 +295,8 @@ def _psychophysical_curve_ticks(df, axes, logscale_xaxis=False, height=5,
         ax.xaxis.set_major_locator(mpl.ticker.FixedLocator(xticks))
 
 
-def _add_legend(df, g, hue=None, style=None, palette={}, final_markers={},
-                dashes_dict={}):
+def _add_legend(df, g=None, fig=None, hue=None, style=None, palette={},
+                final_markers={}, dashes_dict={}):
     """Add legend, making use of custom hue and style.
 
     Since we modify the markers after the fact, we can't rely on seaborn's
@@ -308,7 +308,10 @@ def _add_legend(df, g, hue=None, style=None, palette={}, final_markers={},
     df : pd.DataFrame
         DataFrame containing the plotted data
     g : sns.FacetGrid
-        FacetGrid containing the plots
+        FacetGrid containing the plots. One of this or fig must be set (not
+        both.)
+    fig : plt.Figure
+        Figure containing the plots. One of this or g must be set (not both)
     hue, style : str or None, optional
         The columns in df that were uesd to facet hue and style, respectively.
     palette : dict, optional
@@ -325,7 +328,10 @@ def _add_legend(df, g, hue=None, style=None, palette={}, final_markers={},
 
     """
     artists = {}
-    ax = g.axes.flatten()[0]
+    if g is not None:
+        ax = g.axes.flatten()[0]
+    else:
+        ax = fig.axes[0]
     lw = mpl.rcParams["lines.linewidth"] * 1.8
     if hue is not None:
         artists[hue] = ax.scatter([], [], s=0)
@@ -347,12 +353,18 @@ def _add_legend(df, g, hue=None, style=None, palette={}, final_markers={},
                                          dashes=dashes_dict[style_val],
                                          **markers)[0]
     if artists:
-        # in order for add_legend() to work, _hue_var and hue_names both need
-        # to be None (otherwise, it will default to using them, even when
-        # passing the artists dict)
-        g._hue_var = None
-        g.hue_names = None
-        g.add_legend(artists)
+        if g is not None:
+            # in order for add_legend() to work, _hue_var and hue_names both
+            # need to be None (otherwise, it will default to using them, even
+            # when passing the artists dict)
+            g._hue_var = None
+            g.hue_names = None
+            g.add_legend(artists)
+        else:
+            fig.legend(list(artists.values()), list(artists.keys()),
+                       frameon=False, bbox_to_anchor=(.95, .5),
+                       bbox_transform=fig.transFigure, loc='center left',
+                       borderaxespad=0)
 
 
 def _jitter_data(data, jitter):

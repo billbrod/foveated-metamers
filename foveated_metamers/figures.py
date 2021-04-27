@@ -740,8 +740,9 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, style=None,
                                          kwargs.get('height', 5),
                                          col)
     # create the legend
-    plotting._add_legend(expt_df, g, hue, style, kwargs.get('palette', {}),
-                         final_markers, dashes_dict)
+    plotting._add_legend(expt_df, g, None, hue, style,
+                         kwargs.get('palette', {}), final_markers,
+                         dashes_dict)
     return g
 
 
@@ -962,7 +963,8 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
                                          kwargs.get('height', 5),
                                          col)
     # create the legend
-    plotting._add_legend(df, g, hue, style, kwargs.get('palette', {}),
+    plotting._add_legend(df, g, None, hue, style,
+                         kwargs.get('palette', {}),
                          final_markers, dashes_dict)
     return g
 
@@ -1134,7 +1136,8 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
     x, y, hue, col, row, style : str, optional
         variables to plot on axes or facet along. 'value' is the value of the
         parameters, 'parameter' is the identity of the parameter (e.g., 's0',
-        'a0'), all other are the coords of inf_data
+        'a0'), all other are the coords of inf_data. Note that col and row
+        cannot be None.
     query_str : str or None, optional
         If not None, the string to query dataframe with to limit the plotted
         data (e.g., "distribution == 'posterior'").
@@ -1164,13 +1167,16 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
 
     """
     kwargs.setdefault('sharey', False)
-    df = mcmc.inf_data_to_df(inf_data, 'psychophysical curve parameters',
-                             query_str=query_str, hdi=hdi)
+    kwargs.setdefault('sharex', True)
+    if not isinstance(inf_data, pd.DataFrame):
+        df = mcmc.inf_data_to_df(inf_data, 'psychophysical curve parameters',
+                                 query_str=query_str, hdi=hdi)
+    else:
+        df = inf_data
     # set defaults based on hue and style args
     if hue is not None:
-        kwargs.setdefault('palette', plotting.get_palette(hue, df[hue].unique()))
-    else:
-        kwargs.setdefault('color', 'k')
+        palette = kwargs.pop('palette', plotting.get_palette(hue,
+                                                             df[hue].unique()))
     if style is not None:
         style_dict = plotting.get_style(style, df[style].unique())
         marker_adjust = style_dict.pop('marker_adjust', {})
@@ -1181,16 +1187,51 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
     if col == 'image_name':
         kwargs.setdefault('col_order', img_order)
         df.image_name = df.image_name.apply(lambda x: x.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', ''))
-    g = sns.FacetGrid(hue=hue, col=col, row=row, data=df, height=height,
-                      **kwargs)
-    g.map_dataframe(plotting.scatter_ci_dist, y=y, x=x, x_dodge=x_dodge,
-                    all_labels=list(df[hue].unique()), like_pointplot=True,
-                    ci='hdi', markers=marker_adjust, style=style)
+
+    col_order = kwargs.get('col_order', sorted(df[col].unique()))
+    cols = sorted(df[col].unique(), key=lambda x: col_order.index(x))
+    row_order = kwargs.get('row_order', sorted(df[row].unique()))
+    rows = sorted(df[row].unique(), key=lambda x: row_order.index(x))
+    fig, axes = plt.subplots(nrows=len(rows), ncols=len(cols),
+                             figsize=(len(cols)*height,
+                                      kwargs.get('aspect', 1)*len(rows)*height,),
+                             squeeze=False, gridspec_kw={'hspace': .15}, **kwargs)
+    if rotate_xticklabels is True:
+        rotate_xticklabels = 25
+    for i, c in enumerate(cols):
+        for j, r in enumerate(rows):
+            ax = axes[j, i]
+            d = df.query(f"{col}=='{c}' & {row}=='{r}'")
+            if hue is None:
+                gb = [(None, d)]
+            else:
+                gb = d.groupby(hue)
+            for n, g in gb:
+                dots, _, _ = plotting.scatter_ci_dist(x, y, x_dodge=x_dodge,
+                                                      all_labels=list(df[hue].unique()),
+                                                      like_pointplot=True, ci='hdi',
+                                                      markers=marker_adjust, style=style,
+                                                      color=palette.get(n, 'k'), data=g,
+                                                      label=n, ax=ax)
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            if i == 0:
+                ax.set_ylabel(y)
+            if j == len(rows)-1:
+                ax.set_xlabel(x)
+            ax.set_title(f'{r} | {col} = {c}')
+            if rotate_xticklabels:
+                labels = ax.get_xticklabels()
+                if labels:
+                    ax.set_xticklabels(labels, rotation=rotate_xticklabels,
+                                       ha='right')
+
     final_markers = {}
     if style is not None:
         for v in df[style].unique():
             if style == row or style == col:
-                ax = [ax for ax in g.axes.flatten() if v in ax.get_title()][0]
+                # ax = [ax for ax in g.axes.flatten() if v in ax.get_title()][0]
+                ax = [ax for ax in axes.flatten() if v in ax.get_title()][0]
             else:
                 raise Exception(f"To properly construct legend, style {style} must also "
                                 "be mapped along col or row!")
@@ -1205,22 +1246,11 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
                            'ms': np.sqrt(c.get_sizes()[0]), 'mec': c.get_edgecolor()[0]}
             final_markers[v] = marker_dict
     # create the legend
-    plotting._add_legend(df, g, hue, style, kwargs.get('palette', {}),
+    plotting._add_legend(df, None, fig, hue, style, palette,
                          final_markers, {k: '' for k in marker_adjust.keys()})
-    g.set_xlabels(x)
-    g.set_ylabels(y)
-    g.set_titles('{row_name} | {col_var} = {col_name}')
     model_type = inf_data.metadata.mcmc_model_type.squeeze().values
-    g.fig.suptitle(f"Psychophysical curve parameter values for {model_type} MCMC\n", va='bottom')
-    if rotate_xticklabels:
-        if rotate_xticklabels is True:
-            rotate_xticklabels = 25
-        for ax in g.axes.flatten():
-            labels = ax.get_xticklabels()
-            if labels:
-                ax.set_xticklabels(labels, rotation=rotate_xticklabels,
-                                   ha='right')
-    return g
+    fig.suptitle(f"Psychophysical curve parameter values for {model_type} MCMC\n", va='bottom')
+    return fig
 
 
 def ref_image_summary(stim, stim_df, zoom=.125):
