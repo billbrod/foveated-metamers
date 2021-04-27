@@ -531,7 +531,7 @@ def simulate_dataset(critical_scaling, proportionality_factor,
               'subject_name': [f'sub-{s:02d}' for s in range(num_subjects)],
               'image_name': [f'image_{i:02d}' for i in range(num_images)],
               'trial_type': [f'trial_type_{i:02d}' for i in range(trial_types)],
-              'model': [['V1', 'RGC'][i] for i in np.arange(1)]}
+              'model': [['simulated_V1', 'simulated_RGC'][i] for i in np.arange(1)]}
     return xarray.Dataset({'observed_responses': (dims, obs),
                            'true_proportionality_factor': (dims[2:], a0),
                            'true_critical_scaling': (dims[2:], s0)},
@@ -589,7 +589,7 @@ def _arrange_vars(dataset):
     return scaling, observed_responses
 
 
-def run_inference(dataset, mcmc_model_type='partially_pooled', step_size=.1,
+def run_inference(dataset, mcmc_model_type='partially-pooled', step_size=.1,
                   num_draws=1000, num_chains=1, num_warmup=500, seed=0,
                   target_accept_prob=.8, max_tree_depth=10, **nuts_kwargs):
     """Run MCMC inference for our response_model, conditioned on data.
@@ -632,7 +632,10 @@ def run_inference(dataset, mcmc_model_type='partially_pooled', step_size=.1,
     if len(dataset.model) > 1:
         raise Exception("For now, can only handle one model at a time!")
     model = dataset.model.values[0].split('_')[0]
-    if mcmc_model_type == 'partially_pooled':
+    if model == 'simulated':
+        # then it's simulate_{actual_model_name}
+        model = dataset.model.values[0].split('_')[1]
+    if mcmc_model_type == 'partially-pooled':
         response_model = partially_pooled_response_model
     elif mcmc_model_type == 'unpooled':
         response_model = unpooled_response_model
@@ -654,7 +657,7 @@ def run_inference(dataset, mcmc_model_type='partially_pooled', step_size=.1,
     return mcmc
 
 
-def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially_pooled',
+def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
                       seed=1):
     """Convert mcmc into properly-formatted inference data object.
 
@@ -679,7 +682,7 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially_pooled',
         raise Exception("This will fail if subject_name or image_name only "
                         "has one value! We can handle only 1 trial_type, "
                         "but others must have multiple")
-    if mcmc_model_type == 'partially_pooled':
+    if mcmc_model_type == 'partially-pooled':
         response_model = partially_pooled_response_model
     elif mcmc_model_type == 'unpooled':
         response_model = unpooled_response_model
@@ -687,6 +690,9 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially_pooled',
         raise Exception(f"Don't know how to handle mcmc_model_type {mcmc_model_type}!")
     scaling, obs = _arrange_vars(dataset)
     model = dataset.model.values[0].split('_')[0]
+    if model == 'simulated':
+        # then it's simulate_{actual_model_name}
+        model = dataset.model.values[0].split('_')[1]
     # different dummy dimensions when there was a single trial_type (which gets
     # squeezed out in the response model) vs. more than one.
     if scaling.shape[-2] == 1:
@@ -770,7 +776,13 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially_pooled',
         inf_data.posterior_predictive = inf_data.posterior_predictive.expand_dims('model', -1).assign_coords({'model': dataset.model})
         inf_data.prior = inf_data.prior.expand_dims('model', -1).assign_coords({'model': dataset.model})
         inf_data.prior_predictive = inf_data.prior_predictive.expand_dims('model', -1).assign_coords({'model': dataset.model})
-        inf_data.observed_data = inf_data.observed_data.expand_dims('model', -1).assign_coords({'model': dataset.model})
+        try:
+            # if we're creating this directly from a simulated xarray, this
+            # step is necessary. if we're creating this from an xarray that was
+            # created from a dataframe, it's not
+            inf_data.observed_data = inf_data.observed_data.expand_dims('model', -1).assign_coords({'model': dataset.model})
+        except ValueError:
+            pass
     inf_data.add_groups({'metadata': {'mcmc_model_type': mcmc_model_type}})
     return inf_data
 
@@ -887,4 +899,9 @@ def inf_data_to_df(inf_data, kind='predictive', query_str=None, hdi=False):
     if 'image_name' in df.columns:
         # clean up the plots by removing this redundant text
         df.image_name = df.image_name.map(lambda x: x.replace('_range-.05,.95_size-2048,2600', ''))
+    metadata = inf_data.metadata.to_dataframe().reset_index(drop=True)
+    if len(metadata) > 1:
+        raise Exception("Don't know how to handle metadata with multiple values!")
+    metadata = {k: v[0] for k, v in metadata.to_dict().items()}
+    df = df.assign(**metadata)
     return df
