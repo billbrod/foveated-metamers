@@ -660,8 +660,8 @@ def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
         # artist, which we don't want
         kwargs.pop('label', None)
         if ci_mode == 'lines':
-            for x, (ci_low, ci_high) in zip(x_data, zip(*plot_cis)):
-                cis.append(ax.plot([x, x], [ci_low, ci_high], linewidth=lw,
+            for x_, (ci_low, ci_high) in zip(x_data, zip(*plot_cis)):
+                cis.append(ax.plot([x_, x_], [ci_low, ci_high], linewidth=lw,
                                    **kwargs))
         elif ci_mode == 'fill':
             cis.append(ax.fill_between(x_data, plot_cis[0].values, plot_cis[1].values,
