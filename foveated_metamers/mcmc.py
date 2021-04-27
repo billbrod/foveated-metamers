@@ -753,12 +753,18 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
     # then there was missing data, so we imputed the responses
     if np.isnan(dataset.observed_responses).any():
         inf_data.observed_data = inf_data.observed_data.rename({'responses': 'imputed_responses'})
+        # if everything else had model squeezed out of it, want to squeeze
+        # it out here too.
+        try:
+            responses = dataset.observed_responses.squeeze('model')
+        except ValueError:
+            responses = dataset.observed_responses
         # if everything else had trial_type squeezed out of it, want to squeeze
         # it out here too.
         try:
-            inf_data.observed_data['responses'] = dataset.observed_responses.squeeze('trial_type')
+            inf_data.observed_data['responses'] = responses.squeeze('trial_type')
         except ValueError:
-            inf_data.observed_data['responses'] = dataset.observed_responses
+            inf_data.observed_data['responses'] = responses
     # this gets weirdly shaped, so just remove it
     del inf_data.log_likelihood
     if obs.shape[-2] == 1:
@@ -776,13 +782,7 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
         inf_data.posterior_predictive = inf_data.posterior_predictive.expand_dims('model', -1).assign_coords({'model': dataset.model})
         inf_data.prior = inf_data.prior.expand_dims('model', -1).assign_coords({'model': dataset.model})
         inf_data.prior_predictive = inf_data.prior_predictive.expand_dims('model', -1).assign_coords({'model': dataset.model})
-        try:
-            # if we're creating this directly from a simulated xarray, this
-            # step is necessary. if we're creating this from an xarray that was
-            # created from a dataframe, it's not
-            inf_data.observed_data = inf_data.observed_data.expand_dims('model', -1).assign_coords({'model': dataset.model})
-        except ValueError:
-            pass
+        inf_data.observed_data = inf_data.observed_data.expand_dims('model', -1).assign_coords({'model': dataset.model})
     inf_data.add_groups({'metadata': {'mcmc_model_type': mcmc_model_type}})
     return inf_data
 
