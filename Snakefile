@@ -900,10 +900,17 @@ rule collect_training_noise:
 
 
 def get_training_metamers(wildcards):
-    scaling = [config[wildcards.model_name.split('_')[0]]['scaling'][0],
-               config[wildcards.model_name.split('_')[0]]['scaling'][-1]]
+    if wildcards.comp == 'ref':
+        scaling = [config[wildcards.model_name.split('_')[0]]['scaling'][0],
+                   config[wildcards.model_name.split('_')[0]]['scaling'][-1]]
+        seed_n = [0]
+    else:
+        all_scaling = (config[wildcards.model_name.split('_')[0]]['scaling'] +
+                       config[wildcards.model_name.split('_')[0]]['met_v_met_scaling'])
+        scaling = [all_scaling[-8], all_scaling[-1]]
+        seed_n = [0, 1]
     mets = utils.generate_metamer_paths(scaling=scaling, image_name=IMAGES[:2],
-                                        seed_n=[0], **wildcards)
+                                        seed_n=seed_n, **wildcards)
     return [m.replace('metamer.png', 'metamer.npy') for m in mets]
                     
 
@@ -1028,7 +1035,7 @@ rule generate_experiment_idx:
                     idx = idx[r:r+3] + idx[:max(0, r-2)]
                     ref_image_to_include = ref_image_to_include[idx]
                 except ValueError:
-                    # then this is the test subject
+                    # then this is the training subject
                     if int(wildcards.sess_num) > 0 or int(wildcards.run_num):
                         raise Exception("only session 0 and run 0 allowed for sub-training!")
                     if 'training' not in wildcards.model_name:
