@@ -103,6 +103,12 @@ def get_style(col, col_unique=None, as_dict=True):
                           's': 'total_unchanged', 'marker': 'o'}}
         marker_adjust.update({c: {} for c in all_vals[1:]})
         markers = dict(zip(all_vals, ['v']+['o']*len(all_vals[1:])))
+    elif col == 'mcmc_model_type':
+        all_vals = ['unpooled', 'partially-pooled']
+        dashes_dict = {}
+        marker_adjust = {c: {'marker': m} for c, m in
+                         zip(all_vals, ['v', 'o'])}
+        markers = {}
     else:
         raise Exception(f"Currently only support col='trial_type' but got {col}")
     return {'dashes_dict': dashes_dict, 'marker_adjust': marker_adjust,
@@ -295,8 +301,8 @@ def _psychophysical_curve_ticks(df, axes, logscale_xaxis=False, height=5,
         ax.xaxis.set_major_locator(mpl.ticker.FixedLocator(xticks))
 
 
-def _add_legend(df, g, hue=None, style=None, palette={}, final_markers={},
-                dashes_dict={}):
+def _add_legend(df, g=None, fig=None, hue=None, style=None, palette={},
+                final_markers={}, dashes_dict={}):
     """Add legend, making use of custom hue and style.
 
     Since we modify the markers after the fact, we can't rely on seaborn's
@@ -308,7 +314,10 @@ def _add_legend(df, g, hue=None, style=None, palette={}, final_markers={},
     df : pd.DataFrame
         DataFrame containing the plotted data
     g : sns.FacetGrid
-        FacetGrid containing the plots
+        FacetGrid containing the plots. One of this or fig must be set (not
+        both.)
+    fig : plt.Figure
+        Figure containing the plots. One of this or g must be set (not both)
     hue, style : str or None, optional
         The columns in df that were uesd to facet hue and style, respectively.
     palette : dict, optional
@@ -325,7 +334,10 @@ def _add_legend(df, g, hue=None, style=None, palette={}, final_markers={},
 
     """
     artists = {}
-    ax = g.axes.flatten()[0]
+    if g is not None:
+        ax = g.axes.flatten()[0]
+    else:
+        ax = fig.axes[0]
     lw = mpl.rcParams["lines.linewidth"] * 1.8
     if hue is not None:
         artists[hue] = ax.scatter([], [], s=0)
@@ -336,7 +348,7 @@ def _add_legend(df, g, hue=None, style=None, palette={}, final_markers={},
                                        lw=lw)[0]
     if style is not None:
         artists[style] = ax.scatter([], [], s=0)
-        for style_val in df[style].unique():
+        for style_val in sorted(df[style].unique()):
             if isinstance(style_val, float) and np.isnan(style_val):
                 continue
             markers = {k: v for k, v in final_markers[style_val].items()}
@@ -347,12 +359,18 @@ def _add_legend(df, g, hue=None, style=None, palette={}, final_markers={},
                                          dashes=dashes_dict[style_val],
                                          **markers)[0]
     if artists:
-        # in order for add_legend() to work, _hue_var and hue_names both need
-        # to be None (otherwise, it will default to using them, even when
-        # passing the artists dict)
-        g._hue_var = None
-        g.hue_names = None
-        g.add_legend(artists)
+        if g is not None:
+            # in order for add_legend() to work, _hue_var and hue_names both
+            # need to be None (otherwise, it will default to using them, even
+            # when passing the artists dict)
+            g._hue_var = None
+            g.hue_names = None
+            g.add_legend(artists)
+        else:
+            fig.legend(list(artists.values()), list(artists.keys()),
+                       frameon=False, bbox_to_anchor=(.95, .5),
+                       bbox_transform=fig.transFigure, loc='center left',
+                       borderaxespad=0)
 
 
 def _jitter_data(data, jitter):
@@ -648,8 +666,8 @@ def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
         # artist, which we don't want
         kwargs.pop('label', None)
         if ci_mode == 'lines':
-            for x, (ci_low, ci_high) in zip(x_data, zip(*plot_cis)):
-                cis.append(ax.plot([x, x], [ci_low, ci_high], linewidth=lw,
+            for x_, (ci_low, ci_high) in zip(x_data, zip(*plot_cis)):
+                cis.append(ax.plot([x_, x_], [ci_low, ci_high], linewidth=lw,
                                    **kwargs))
         elif ci_mode == 'fill':
             cis.append(ax.fill_between(x_data, plot_cis[0].values, plot_cis[1].values,
@@ -812,14 +830,16 @@ def title_experiment_summary_plots(g, expt_df, summary_text, post_text=''):
     # we can have nans because of how we add blank rows to make sure each image
     # is represented
     model_name = ' and '.join([m.split('_')[0] for m in expt_df.model.dropna().unique()])
-    if expt_df.trial_type.nunique() == 2:
+    if expt_df.trial_type.nunique() == 2 and expt_df.trial_type.unique()[0].startswith('metamer'):
         comparison = 'both'
     elif expt_df.trial_type.unique()[0].endswith('metamer'):
         comparison = 'met'
     elif expt_df.trial_type.unique()[0].endswith('reference'):
         comparison = 'ref'
+    else:
+        comparison = None
     comp_str = {'ref': 'reference images', 'met': 'other metamers',
-                'both': 'both reference and other metamer images'}[comparison]
+                'both': 'both reference and other metamer images'}.get(comparison, "simulated")
     # got this from https://stackoverflow.com/a/36369238/4659293
     n_rows, n_cols = g.fig.axes[0].get_subplotspec().get_gridspec().get_geometry()
     # we want to add some newlines at end of title, based on number of rows, to
