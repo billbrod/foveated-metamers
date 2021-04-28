@@ -1160,7 +1160,6 @@ rule combine_all_behavior:
                            for i in range(5)
                            for subj, subj_dict in BEHAVIORAL_DATA_DATES[wildcards.model_name][wildcards.comp+wildcards.ecc_mask].items()
                            for ses, date in subj_dict.items()],
-        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description_comp-{comp}.csv'),
     output:
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}{ecc_mask}',
                 'task-split_comp-{comp}{ecc_mask}_data.csv'),
@@ -1180,7 +1179,6 @@ rule combine_all_behavior:
         import contextlib
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                stim_df = pd.read_csv(input[-1])
                 expt_df = pd.concat([pd.read_csv(i) for i in input[:-1]])
                 expt_df.to_csv(output[0], index=False)
                 g = fov.figures.performance_plot(expt_df, hue='subject_name',
