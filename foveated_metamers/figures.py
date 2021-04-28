@@ -1186,7 +1186,13 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
         palette = kwargs.pop('palette', plotting.get_palette(hue,
                                                              df[hue].unique()))
     if style is not None:
-        style_dict = plotting.get_style(style, df[style].unique())
+        try:
+            col_unique = df[style].unique()
+            style = style
+        except AttributeError:
+            # then there are multiple values in style
+            col_unique = [df[s].unique().tolist() for s in style]
+        style_dict = plotting.get_style(style, col_unique)
         marker_adjust = style_dict.pop('marker_adjust', {})
     else:
         marker_adjust = {}
@@ -1207,14 +1213,20 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
     if rotate_xticklabels is True:
         rotate_xticklabels = 25
     final_markers = {}
-    if hue is not None and style is None:
+    if hue is not None and (style is None or style == col or style == row):
         all_labels = list(df[hue].unique())
         label = 'hue'
     elif style is not None and hue is None:
         all_labels = list(df[style].unique())
         label = 'style'
     elif style is not None and hue is not None:
-        all_labels = [n for n, _ in df.groupby([style, hue])]
+        try:
+            all_labels = [n for n, _ in df.groupby([style, hue])]
+            gb_style = [style]
+        except ValueError:
+            # then style is a list
+            gb_style = [s for s in style if s!=row and s!=col]
+            all_labels = [n for n, _ in df.groupby([*gb_style, hue])]
         label = 'both'
     else:
         all_labels = []
@@ -1238,10 +1250,16 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
                     elif label == 'style':
                         lab = m
                     elif label == 'both':
-                        lab = (m, n)
+                        if isinstance(style, list) and len(style) > 1:
+                            lab_m = [m_ for m_ in m if
+                                     any([m_ in l for l in all_labels])]
+                            lab = (*lab_m, n)
+                        else:
+                            lab = (m, n)
                     else:
                         lab = label
                     dots, _, _ = plotting.scatter_ci_dist(x, y, x_dodge=x_dodge,
+                                                          estimator=np.mean,
                                                           all_labels=all_labels,
                                                           like_pointplot=True, ci='hdi',
                                                           markers=marker_adjust, style=style,

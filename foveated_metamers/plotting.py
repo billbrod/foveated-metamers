@@ -11,6 +11,8 @@ import yaml
 from . import mcmc
 import scipy
 import copy
+import itertools
+from collections import OrderedDict
 
 
 def get_palette(col, col_unique=None, as_dict=True):
@@ -64,17 +66,19 @@ def get_palette(col, col_unique=None, as_dict=True):
     return pal
 
 
-def get_style(col, col_unique=None, as_dict=True):
-    """Get style for column.
+def get_style(col, col_unique, as_dict=True):
+    """Get style for plotting.
 
     Parameters
     ----------
-    col : {'trial_type'}
+    col : {'trial_type', 'mcmc_model_type', list containing both elements}
         The column to return the palette for. If we don't have a particular
-        style picked out, we raise an exception.
-    col_unique : list or None, optional
-        The list of unique values in col, in order to determine how many
-        elements in the palette. If None, we use seaborn's default
+        style picked out, we raise an exception. If it's a list containing both
+        elements, we will combine the two style mappings.
+    col_unique : list, optional
+        The list of unique values in col, in order to determine elements to
+        map. If col is a list of elements, this must be a list of list in the
+        same order.
     as_dict : bool, optional
         Whether to return the palette as a dictionary or not.
 
@@ -84,35 +88,87 @@ def get_style(col, col_unique=None, as_dict=True):
         dict to unpack for plotting functions
 
     """
-    if col == 'trial_type':
-        all_vals = ['metamer_vs_metamer', 'metamer_vs_reference']
-        if any([c for c in col_unique if c not in all_vals]):
-            if all([c.startswith('trial_type_') for c in col_unique]):
-                # this is the only exception we allow, which comes from
-                # simulated data
-                all_vals = col_unique
+    def _combine_dicts(style_dict, style_key):
+        """Combine dicts for multiple style args."""
+        to_return = {}
+        default_val = {'dashes_dict': '', 'markers': 'o',
+                       'marker_adjust': {}}[style_key]
+        dicts = itertools.product(*[v[style_key].items() for v in style_dict.values()])
+        for item in dicts:
+            # each of these will be a separate key in our final dictionary
+            key = tuple([v[0] for v in item])
+            if len(key) == 1:
+                key = key[0]
+            # ignore the default_val
+            val = [v[1] for v in item if v[1] != default_val]
+            # ... unless that's all there is
+            if len(val) == 0:
+                val = default_val
+            # if there's a single thing that's not the default_val, we use that
+            elif len(val) == 1:
+                val = val[0]
+            # else try and resolve conflicts
             else:
-                raise Exception("Got unsupported value for "
-                                f"col='trial_type', {col_unique}")
-        dashes_dict = dict(zip(all_vals, [(2, 2)]+['']*len(all_vals[1:])))
-        # this (setting marker in marker_adjust and also below in the marker
-        # dict) is a hack to allow us to determine which markers correspond to
-        # which style level, which we can't do otherwise (they have no label)
-        marker_adjust = {all_vals[0]:
-                         {'fc': 'w', 'ec': 'original_fc', 'ew': 'lw',
-                          's': 'total_unchanged', 'marker': 'o'}}
-        marker_adjust.update({c: {} for c in all_vals[1:]})
-        markers = dict(zip(all_vals, ['v']+['o']*len(all_vals[1:])))
-    elif col == 'mcmc_model_type':
-        all_vals = ['unpooled', 'partially-pooled']
-        dashes_dict = {}
-        marker_adjust = {c: {'marker': m} for c, m in
-                         zip(all_vals, ['v', 'o'])}
-        markers = {}
-    else:
-        raise Exception(f"Currently only support col='trial_type' but got {col}")
-    return {'dashes_dict': dashes_dict, 'marker_adjust': marker_adjust,
-            'markers': markers}
+                if style_key != 'marker_adjust':
+                    raise Exception(f"Don't know how to handle more than one value for {style_key}! {val}")
+                marker_dict = {}
+                for v in val:
+                    for k, v_ in v.items():
+                        if k not in marker_dict:
+                            marker_dict[k] = v_
+                        elif k == 'marker':
+                            if marker_dict[k] == 'o':
+                                marker_dict[k] = v_
+                            elif v_ == 'o':
+                                pass
+                            else:
+                                raise Exception(f"Don't know how to handle more than one value for {style_key} "
+                                                f"key {k}! {v_} and {marker_dict[k]}")
+                val = marker_dict
+            to_return[key] = val
+        return to_return
+
+    if isinstance(col, str):
+        col = [col]
+        col_unique = [col_unique]
+    style_dict = OrderedDict()
+    for col_val, uniq in zip(col, col_unique):
+        if col_val == 'trial_type':
+            all_vals = ['metamer_vs_reference', 'metamer_vs_metamer']
+            if any([c for c in uniq if c not in all_vals]):
+                if all([c.startswith('trial_type_') for c in uniq]):
+                    # this is the only exception we allow, which comes from
+                    # simulated data
+                    all_vals = uniq
+                else:
+                    raise Exception("Got unsupported value for "
+                                    f"col='trial_type', {uniq}")
+            dashes_dict = dict(zip(all_vals, [(2, 2)]+['']*len(all_vals[1:])))
+            # this (setting marker in marker_adjust and also below in the marker
+            # dict) is a hack to allow us to determine which markers correspond to
+            # which style level, which we can't do otherwise (they have no label)
+            marker_adjust = {all_vals[1]:
+                             {'fc': 'w', 'ec': 'original_fc', 'ew': 'lw',
+                              's': 'total_unchanged', 'marker': 'o'}}
+            marker_adjust.update({c: {} for c in all_vals[:1]})
+            markers = dict(zip(all_vals, ['v']+['o']*len(all_vals[:1])))
+        elif col_val == 'mcmc_model_type':
+            all_vals = ['unpooled', 'partially-pooled']
+            marker_adjust = {c: {'marker': m} for c, m in
+                             zip(all_vals, ['v', 'o'])}
+            dashes_dict = dict(zip(all_vals, len(all_vals)*['']))
+            markers = dict(zip(all_vals, len(all_vals)*['o']))
+        else:
+            raise Exception(f"Currently only support col='trial_type' or "
+                            "'mcmc_model_type' but got {col_val}")
+        style_dict[col_val] = {'dashes_dict': dashes_dict,
+                               'marker_adjust': marker_adjust,
+                               'markers': markers}
+    overall_dict = {}
+    overall_dict['dashes_dict'] = _combine_dicts(style_dict, 'dashes_dict')
+    overall_dict['markers'] = _combine_dicts(style_dict, 'markers')
+    overall_dict['marker_adjust'] = _combine_dicts(style_dict, 'marker_adjust')
+    return overall_dict
 
 
 def myLogFormat(y, pos):
@@ -347,17 +403,23 @@ def _add_legend(df, g=None, fig=None, hue=None, style=None, palette={},
             artists[hue_val] = ax.plot([], [], color=palette[hue_val],
                                        lw=lw)[0]
     if style is not None:
-        artists[style] = ax.scatter([], [], s=0)
-        for style_val in sorted(df[style].unique()):
-            if isinstance(style_val, float) and np.isnan(style_val):
-                continue
-            markers = {k: v for k, v in final_markers[style_val].items()}
-            markers['mec'] = 'k'
-            markers['mfc'] = 'k' if markers['mfc'] != 'w' else 'w'
-            markers['mew'] = lw
-            artists[style_val] = ax.plot([], [], color='k', lw=lw,
-                                         dashes=dashes_dict[style_val],
-                                         **markers)[0]
+        if isinstance(style, str):
+            style = [style]
+        for sty in style:
+            artists[sty] = ax.scatter([], [], s=0)
+            sty_unique = [s for s in df[sty].unique() if isinstance(s, str) or
+                          not np.isnan(s)]
+            for style_val in sorted(sty_unique):
+                if isinstance(style_val, float) and np.isnan(style_val):
+                    continue
+                style_key = [k for k in final_markers.keys() if style_val in k][0]
+                markers = {k: v for k, v in final_markers[style_key].items()}
+                markers['mec'] = 'k'
+                markers['mfc'] = 'k' if markers['mfc'] != 'w' else 'w'
+                markers['mew'] = lw
+                artists[style_val] = ax.plot([], [], color='k', lw=lw,
+                                             dashes=dashes_dict[style_key],
+                                             **markers)[0]
     if artists:
         if g is not None:
             # in order for add_legend() to work, _hue_var and hue_names both
@@ -472,11 +534,12 @@ def _map_dataframe_prep(data, x, y, estimator, x_jitter, x_dodge, x_order,
 
     """
     if ci == 'hdi':
-        plot_data = data.set_index(x).query("hdi==50")[y]
+        plot_data = data.query("hdi==50").groupby(x)[y].agg(estimator)
         # remove np.nan and 50
         ci_vals = [v for v in data.hdi.unique() if not np.isnan(v) and v !=50]
         assert len(ci_vals) == 2, "should only have median and two endpoints for HDI!"
-        plot_cis = [data.set_index(x).query("hdi==@val")[y] for val in ci_vals]
+        plot_cis = [data.query("hdi==@val").groupby(x)[y].agg(estimator)
+                    for val in ci_vals]
     else:
         plot_data = data.groupby(x)[y].agg(estimator)
         ci_vals = [50 - ci/2, 50 + ci/2]
