@@ -30,19 +30,28 @@ def main(model, subj_name, sess_num, comparison='ref'):
         scaling = [scaling[-8], scaling[-1]]
     ref_images = []
     high_scaling_mets = []
+    high_scaling_mets_2 = []
     low_scaling_mets = []
+    low_scaling_mets_2 = []
     print(im_names)
     for im in im_names:
         ref_images.append(op.join(config["DATA_DIR"], 'ref_images_preproc', f"{im}.png"))
         high_scaling_mets.append(glob(op.join(config['DATA_DIR'], 'metamers', model_name, f"{im}", f'scaling-{scaling[0]}', '*', '*',
                                               'seed-*_init-white_*metamer.png'))[0])
+        high_scaling_mets_2.append(glob(op.join(config['DATA_DIR'], 'metamers', model_name, f"{im}", f'scaling-{scaling[0]}', '*', '*',
+                                              'seed-*_init-white_*metamer.png'))[1])
         low_scaling_mets.append(glob(op.join(config['DATA_DIR'], 'metamers', model_name, f"{im}", f'scaling-{scaling[-1]}', '*', '*',
                                              'seed-*_init-white_*metamer.png'))[0])
+        low_scaling_mets_2.append(glob(op.join(config['DATA_DIR'], 'metamers', model_name, f"{im}", f'scaling-{scaling[-1]}', '*', '*',
+                                             'seed-*_init-white_*metamer.png'))[1])
     # don't show natural images if comparison == met, because they won't see them
     if comparison == 'ref':
         subprocess.Popen(['eog', *ref_images], shell=False)
     subprocess.Popen(['eog', *low_scaling_mets], shell=False)
     subprocess.Popen(['eog', *high_scaling_mets], shell=False)
+    if comparison == 'met':
+        subprocess.Popen(['eog', *low_scaling_mets_2], shell=False)
+        subprocess.Popen(['eog', *high_scaling_mets_2], shell=False)
 
 
 if __name__ == '__main__':
