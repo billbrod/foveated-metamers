@@ -555,6 +555,12 @@ def _assign_inf_dims(samples_dict, dataset, dummy_dim=None):
     dims = {}
     if dummy_dim is not None and not hasattr(dummy_dim, '__iter__'):
         dummy_dim = [dummy_dim]
+    if sum([dataset.dims['scaling'] == v for v in dataset.dims.values()]) > 1:
+        # then we have something that's the same size as scaling and need to do
+        # the complicated check below
+        scaling_check = True
+    else:
+        scaling_check = False
     for k, v in samples_dict.items():
         var_shape = v.shape
         dims[k] = []
@@ -568,7 +574,7 @@ def _assign_inf_dims(samples_dict, dataset, dummy_dim=None):
                 # thing that has the same shape as scaling, then it's not
                 # scaling (parameters won't have scaling, responses or
                 # probability correct will have scaling and the other coords)
-                if d == 'scaling' and sum([len(dataset.coords[d]) == s for s in var_shape]) == 1:
+                if d == 'scaling' and scaling_check and sum([len(dataset.coords[d]) == s for s in var_shape]) == 1:
                     continue
                 dims[k] += [d]
                 i += 1
