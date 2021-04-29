@@ -563,6 +563,13 @@ def _assign_inf_dims(samples_dict, dataset, dummy_dim=None):
             if i >= len(var_shape):
                 break
             if len(dataset.coords[d]) == var_shape[i]:
+                # if scaling is the same shape as one of the other dims, can
+                # sometimes mis-assign. but we know that if there's only one
+                # thing that has the same shape as scaling, then it's not
+                # scaling (parameters won't have scaling, responses or
+                # probability correct will have scaling and the other coords)
+                if d == 'scaling' and sum([len(dataset.coords[d]) == s for s in var_shape]) == 1:
+                    continue
                 dims[k] += [d]
                 i += 1
             elif dummy_dim is not None:
