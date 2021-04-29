@@ -1354,21 +1354,21 @@ rule mcmc_plots:
 
 rule mcmc_compare_plot:
     input:
-        [op.join(config["DATA_DIR"], 'mcmc', '{{model_name}}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_{mcmc_model}_step-{{step_size}}_prob-{{accept_prob}}_depth-{{tree_depth}}'
+        [op.join(config["DATA_DIR"], 'mcmc', '{{model_name}}', 'task-split_comp-{{comp}}',
+                'task-split_comp-{{comp}}_mcmc_{mcmc_model}_step-{{step_size}}_prob-{{accept_prob}}_depth-{{tree_depth}}'
                 '_c-{{num_chains}}_d-{{num_draws}}_w-{{num_warmup}}_s-{{seed}}.nc').format(comp=c, mcmc_model=m)
-         for c in ['ref', 'met'] for m in ['unpooled', 'partially-pooled']]
+         for m in ['unpooled', 'partially-pooled']]
     output:
-        op.join(config["DATA_DIR"], 'mcmc', '{model_name}',
-                'mcmc_compare_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
+        op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_mcmc_compare_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
                 '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_psychophysical-params.png'),
     log:
-        op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}',
-                'mcmc_compare_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
+        op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_mcmc_compare_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
                 '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_psychophysical-params.log'),
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}',
-                'mcmc_compare_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
+        op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_mcmc_compare_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
                 '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_psychophysical-params_benchmark.txt'),
     run:
         import foveated_metamers as fov
