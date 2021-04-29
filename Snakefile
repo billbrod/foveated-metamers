@@ -1324,21 +1324,68 @@ rule mcmc_plots:
                 inf_data = az.from_netcdf(input[0])
                 if wildcards.plot_type == 'post-pred-check':
                     print("Creating posterior predictive check.")
+                    fig = fov.figures.posterior_predictive_check(inf_data, col='subject_name', row='image_name', height=2.5,
+                                                                 style='trial_type')
+                elif wildcards.plot_type == 'performance':
+                    print("Creating performance plot.")
                     fig = fov.figures.posterior_predictive_check(inf_data,
-                                                                 facetgrid_kwargs={'col': 'subject_name',
-                                                                                   'row': 'image_name'})
+                                                                 hue='subject_name',
+                                                                 col='image_name',
+                                                                 height=2.5,
+                                                                 col_wrap=5,
+                                                                 style='trial_type')
                 elif wildcards.plot_type == 'diagnostics':
                     print("Creating MCMC diagnostics plot.")
                     fig = fov.figures.mcmc_diagnostics_plot(inf_data)
                 elif wildcards.plot_type == 'psychophysical-params':
                     print("Creating psychophysical parameters plot.")
-                    fig = fov.figures.psychophysical_parameters(inf_data, rotate_xticklabels=True, aspect=1.2)
+                    fig = fov.figures.psychophysical_parameters(inf_data, rotate_xticklabels=True, aspect=3, height=5,
+                                                                style='trial_type')
                 elif wildcards.plot_type == 'pairplot':
                     print("Creating parameter pairplot.")
                     fig = fov.figures.parameter_pairplot(inf_data, hue='subject_name')
                 elif wildcards.plot_type == 'distribs':
                     print("Creating parameter distribution plot.")
                     fig = fov.figures.parameter_distributions(inf_data, row='subject_name')
+                else:
+                    raise Exception(f"Don't know how to handle plot_type {wildcards.plot_type}!")
+                fig.savefig(output[0], bbox_inches='tight')
+
+
+rule mcmc_compare_plot:
+    input:
+        [op.join(config["DATA_DIR"], 'mcmc', '{{model_name}}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_mcmc_{mcmc_model}_step-{{step_size}}_prob-{{accept_prob}}_depth-{{tree_depth}}'
+                '_c-{{num_chains}}_d-{{num_draws}}_w-{{num_warmup}}_s-{{seed}}.nc').format(comp=c, mcmc_model=m)
+         for c in ['ref', 'met'] for m in ['unpooled', 'partially-pooled']]
+    output:
+        op.join(config["DATA_DIR"], 'mcmc', '{model_name}',
+                'mcmc_compare_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
+                '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_psychophysical-params.png'),
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}',
+                'mcmc_compare_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
+                '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_psychophysical-params.log'),
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}',
+                'mcmc_compare_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
+                '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_psychophysical-params_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import arviz as az
+        import pandas as pd
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                df = []
+                for i in input:
+                    inf = az.from_netcdf(i)
+                    df.append(fov.mcmc.inf_data_to_df(inf, 'psychophysical curve parameters',
+                                                      query_str="distribution=='posterior'", hdi=.95))
+                df = pd.concat(df)
+                fig = fov.figures.psychophysical_parameters(df, style=['mcmc_model_type', 'trial_type'],
+                                                            row='trial_type', height=5, aspect=3,
+                                                            rotate_xticklabels=True)
                 fig.savefig(output[0], bbox_inches='tight')
 
 

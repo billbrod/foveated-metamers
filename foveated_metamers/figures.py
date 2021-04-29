@@ -1066,10 +1066,10 @@ def mcmc_diagnostics_plot(inf_data):
     ess = ess.to_dataframe().reorder_levels(['model', 'trial_type', 'image_name', 'subject_name'])
     fig.text(1, .5, "effective sample size\n"+ess.sort_index().to_markdown(),
              ha='left', va='top', family='monospace')
-    model_type = df.mcmc_model_type.unique()
+    model_type = inf_data.metadata.mcmc_model_type.values
     if len(model_type) > 1:
         model_type = ['multiple']
-    fig.suptitle(f"Diagnostics plot for {model_type[0]} MCMC, showing distribution and sampling"
+    fig.suptitle(f"Diagnostics plot for {model_type[0, 0]} MCMC, showing distribution and sampling"
                  " trace for each parameter", va='baseline')
     return fig
 
@@ -1206,9 +1206,10 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
     cols = sorted(df[col].unique(), key=lambda x: col_order.index(x))
     row_order = kwargs.get('row_order', sorted(df[row].unique()))
     rows = sorted(df[row].unique(), key=lambda x: row_order.index(x))
+    aspect = kwargs.pop('aspect', 1)
     fig, axes = plt.subplots(nrows=len(rows), ncols=len(cols),
-                             figsize=(len(cols)*height,
-                                      kwargs.get('aspect', 1)*len(rows)*height,),
+                             figsize=(aspect*len(cols)*height,
+                                      len(rows)*height,),
                              squeeze=False, gridspec_kw={'hspace': .15}, **kwargs)
     if rotate_xticklabels is True:
         rotate_xticklabels = 25
@@ -1265,14 +1266,15 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
                                                           markers=marker_adjust, style=style,
                                                           color=palette.get(n, 'k'), data=h,
                                                           label=lab, ax=ax)
-                    fc = dots[0].get_facecolor()[0]
-                    if all(fc == 1):
-                        fc = 'w'
-                    marker_dict = {'marker': marker_adjust[m].get('marker', 'o'),
-                                   'mew': dots[0].get_lw()[0], 'mfc': fc,
-                                   'ms': np.sqrt(dots[0].get_sizes()[0]),
-                                   'mec': dots[0].get_edgecolor()[0]}
-                    final_markers[m] = marker_dict
+                    if m is not None:
+                        fc = dots[0].get_facecolor()[0]
+                        if all(fc == 1):
+                            fc = 'w'
+                        marker_dict = {'marker': marker_adjust[m].get('marker', 'o'),
+                                       'mew': dots[0].get_lw()[0], 'mfc': fc,
+                                       'ms': np.sqrt(dots[0].get_sizes()[0]),
+                                       'mec': dots[0].get_edgecolor()[0]}
+                        final_markers[m] = marker_dict
             ax.spines['top'].set_visible(False)
             ax.spines['right'].set_visible(False)
             if i == 0:
