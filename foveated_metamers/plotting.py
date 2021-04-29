@@ -143,7 +143,7 @@ def get_style(col, col_unique, as_dict=True):
                 else:
                     raise Exception("Got unsupported value for "
                                     f"col='trial_type', {uniq}")
-            dashes_dict = dict(zip(all_vals, [(2, 2)]+['']*len(all_vals[1:])))
+            dashes_dict = dict(zip(all_vals, ['', (2, 2)]))
             # this (setting marker in marker_adjust and also below in the marker
             # dict) is a hack to allow us to determine which markers correspond to
             # which style level, which we can't do otherwise (they have no label)
@@ -151,7 +151,7 @@ def get_style(col, col_unique, as_dict=True):
                              {'fc': 'w', 'ec': 'original_fc', 'ew': 'lw',
                               's': 'total_unchanged', 'marker': 'o'}}
             marker_adjust.update({c: {} for c in all_vals[:1]})
-            markers = dict(zip(all_vals, ['v']+['o']*len(all_vals[:1])))
+            markers = dict(zip(all_vals, ['o', 'v']))
         elif col_val == 'mcmc_model_type':
             all_vals = ['unpooled', 'partially-pooled']
             marker_adjust = {c: {'marker': m} for c, m in
