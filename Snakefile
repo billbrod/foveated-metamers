@@ -1356,7 +1356,7 @@ rule mcmc_compare_plot:
     input:
         [op.join(config["DATA_DIR"], 'mcmc', '{{model_name}}', 'task-split_comp-{{comp}}',
                 'task-split_comp-{{comp}}_mcmc_{mcmc_model}_step-{{step_size}}_prob-{{accept_prob}}_depth-{{tree_depth}}'
-                '_c-{{num_chains}}_d-{{num_draws}}_w-{{num_warmup}}_s-{{seed}}.nc').format(comp=c, mcmc_model=m)
+                '_c-{{num_chains}}_d-{{num_draws}}_w-{{num_warmup}}_s-{{seed}}.nc').format(mcmc_model=m)
          for m in ['unpooled', 'partially-pooled']]
     output:
         op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
