@@ -23,7 +23,6 @@ jobs:
         run: |
           conda env create -f environment.yml
           source activate metamers
-          pip install --upgrade git+https://github.com/LabForComputationalVision/plenoptic.git@master
           pip install pytest
       - name: Run tests with pytest
         run: |
@@ -48,7 +47,6 @@ jobs:
         run: |
           conda env create -f environment.yml
           source activate metamers
-          pip install --upgrade git+https://github.com/LabForComputationalVision/plenoptic.git@master
       - name: Setup FFmpeg
         uses: FedericoCarboni/setup-ffmpeg@v1
       - name: Download data
@@ -83,7 +81,6 @@ jobs:
         run: |
           conda env create -f environment.yml
           source activate metamers
-          pip install --upgrade git+https://github.com/LabForComputationalVision/plenoptic.git@master
           pip install jupyter nbconvert
       - name: modify config.yml
         run: |
