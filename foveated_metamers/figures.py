@@ -912,8 +912,9 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
     # set defaults based on hue and style args
     if hue is not None:
         kwargs.setdefault('palette', plotting.get_palette(hue, df[hue].unique()))
+        color = None
     else:
-        kwargs.setdefault('color', 'k')
+        color = kwargs.pop('color', 'k')
     if style is not None:
         style_dict = plotting.get_style(style, df[style].unique())
         dashes_dict = style_dict.pop('dashes_dict', {})
@@ -938,7 +939,7 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
     g.map_dataframe(plotting.lineplot_like_pointplot, x='scaling',
                     y='responses', ci=50, style=style, legend=False,
                     linestyle='', dashes=False, ax='map',
-                    markers=markers)
+                    markers=markers, color=color)
     if marker_adjust:
         labels = {v: k for k, v in markers.items()}
         final_markers = plotting._marker_adjust(g.axes.flatten(),

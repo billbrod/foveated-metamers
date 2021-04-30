@@ -1325,7 +1325,7 @@ rule mcmc_plots:
                 if wildcards.plot_type == 'post-pred-check':
                     print("Creating posterior predictive check.")
                     fig = fov.figures.posterior_predictive_check(inf_data, col='subject_name', row='image_name', height=2.5,
-                                                                 style='trial_type')
+                                                                 style='trial_type', hue='distribution')
                 elif wildcards.plot_type == 'performance':
                     print("Creating performance plot.")
                     fig = fov.figures.posterior_predictive_check(inf_data,
