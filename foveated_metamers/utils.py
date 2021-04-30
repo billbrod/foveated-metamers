@@ -466,14 +466,16 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
     gamma_corrected : bool, optional
         If True, return the path to the gamma-corrected version. If False, the
         non-gamma-corrected
-    comp : {'ref', 'met'}, optional
+    comp : {'ref', 'met', 'met-downsample-2'}, optional
         If 'scaling' is not included in kwargs, this determines which range of
         default scaling values we use. If 'ref' (the defualt), we use those
-        under the model:scaling key in the config file. If 'met', we look for
-        model:met_v_met_scaling key; we use these plus the highest ones from
-        model:scaling so that we end up with the same number of values. If
-        there is no model:met_v_met_scaling key, we return the same values as
-        before.
+        under the model:scaling key in the config file. If 'met' or
+        'met-downsample-2', we look for model:met_v_met_scaling key; we use
+        these plus the highest ones from model:scaling so that we end up with
+        the same number of values. If there is no model:met_v_met_scaling key,
+        we return the same values as before. If 'met-downsample-2', we
+        downsample the reference images by a factor of 2 while leaving
+        everything else the same (so physical pixel pitch is increased).
     seed_n : list, optional
         List specifying which seeds to grab for each (model, image, scaling).
         If seed is in kwargs, this is ignored.
@@ -492,8 +494,8 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
     """
     if not isinstance(model_name, list):
         model_name = [model_name]
-    if comp not in ['ref', 'met']:
-        raise Exception("comp must be one of {'ref', 'met'}!")
+    if comp not in ['ref', 'met', 'met-downsample-2']:
+        raise Exception("comp must be one of {'ref', 'met', 'met-downsample-2'}!")
     with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
         defaults = yaml.safe_load(f)
     default_img_size = _find_img_size(defaults['DEFAULT_METAMERS']['image_name'][0])
@@ -502,6 +504,11 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
         imgs = ['llama', 'highway_symmetric', 'rocks', 'boats', 'gnarled']
         warnings.warn("With RGC model and comp=met, we use a reduced set of default images!")
         default_ims = generate_image_names(imgs)
+    elif comp.startswith('met-downsample'):
+        default_ims = defaults['DEFAULT_METAMERS'].pop('image_name')
+        default_ims = [im.replace('_range', '_' + comp.replace('met-', '') + '_range')
+                       for im in default_ims]
+        warnings.warn(f"With comp={comp}, we downsample the default images!")
     else:
         default_ims = defaults['DEFAULT_METAMERS'].pop('image_name')
     images = kwargs.pop('image_name', default_ims)
@@ -528,7 +535,7 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
             args['DATA_DIR'] = defaults['DATA_DIR']
             if 'scaling' not in kwargs.keys():
                 scaling = defaults[model.split('_')[0]]['scaling']
-                if comp == 'met':
+                if comp.startswith('met'):
                     try:
                         more_scaling = defaults[model.split('_')[0]]['met_v_met_scaling']
                         scaling = scaling[-(len(scaling)-len(more_scaling)):] + more_scaling
@@ -556,7 +563,8 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
                 tmp.update(args)
                 if 'seed_n' in tmp.keys():
                     try:
-                        tmp['seed'] = seeds_dict[(tmp['image_name'], tmp['scaling'])][tmp.pop('seed_n')]
+                        tmp['seed'] = seeds_dict[(tmp['image_name'].replace('_downsample-2', ''),
+                                                  tmp['scaling'])][tmp.pop('seed_n')]
                     except KeyError:
                         raise Exception(f"{tmp['image_name']} and {tmp['scaling']} (for model {model}) "
                                         "not found in the default set of metamers with pre-generated seeds"
@@ -592,8 +600,9 @@ if __name__ == '__main__':
     parser.add_argument('--gamma_corrected', '-g', action='store_true',
                         help=("Whether we should return the gamma-corrected path or not."))
     parser.add_argument('--comp', '-c', default='ref',
-                        help=("{ref, met}, Whether to generate the scaling values for comparing "
-                              "metamers to reference images or to other metamers"))
+                        help=("{ref, met, met-downsample-2}, Whether to generate the scaling values for comparing "
+                              "metamers to reference images, to other metamers, or to other metamers using "
+                              "a downsampled ref image"))
     parser.add_argument('--seed_n', '-n', nargs='+', type=int, default=[0, 1, 2],
                         help=(" List specifying which seeds to grab for each (model, image, "
                               "scaling). If seed is also passed, this is ignored."))
@@ -628,6 +637,14 @@ if __name__ == '__main__':
         if image_kwargs['ref_image'] is None and args['image_name'] is None:
             imgs = ['llama', 'highway_symmetric', 'rocks', 'boats', 'gnarled']
             warnings.warn("With RGC model and comp=met, we use a reduced set of default images!")
+            image_kwargs['ref_image'] = imgs
+    elif args['comp'].startswith('met-downsample'):
+        if image_kwargs['ref_image'] is None and args['image_name'] is None:
+            with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
+                defaults = yaml.safe_load(f)
+            imgs = defaults['IMAGE_NAME'].pop('ref_image')
+            imgs = [im + '_downsample-2' for im in imgs]
+            warnings.warn(f"With comp={args['comp']}, we downsample the default images!")
             image_kwargs['ref_image'] = imgs
     images = generate_image_names(**image_kwargs)
     new_args = {}
