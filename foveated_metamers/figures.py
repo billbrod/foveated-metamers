@@ -704,9 +704,9 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, style=None,
         marker_adjust = style_dict.pop('marker_adjust', {})
         kwargs.setdefault('dashes', dashes_dict)
         kwargs.update(style_dict)
-    # seaborn raises an error if col_wrap is non-None when col is None, so
-    # prevent that possibility
-    if col is None:
+    # seaborn raises an error if col_wrap is non-None when col is None or row
+    # is not None, so prevent that possibility
+    if col is None or row is not None:
         col_wrap = None
     # remap the image names to be better for plotting
     expt_df, img_order = plotting._remap_image_names(expt_df)
@@ -925,9 +925,9 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
         dashes_dict = {}
         marker_adjust = {}
         markers = {}
-    # seaborn raises an error if col_wrap is non-None when col is None, so
-    # prevent that possibility
-    if col is None:
+    # seaborn raises an error if col_wrap is non-None when col is None or if
+    # row is not None, so prevent that possibility
+    if col is None or row is not None:
         col_wrap = None
     # remap the image names to be better for plotting
     df, img_order = plotting._remap_image_names(df)
