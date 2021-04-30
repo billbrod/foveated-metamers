@@ -687,6 +687,10 @@ def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
         data = [(None, data)]
     dots, lines, cis = [], [], []
     for n, d in data:
+        if ci == 'hdi' and np.isnan(d.hdi.unique()).all():
+            # then this is data that doesn't have any HDI, and so we don't want
+            # to plot it with this function
+            continue
         x_data, plot_data, plot_cis, x_numeric = _map_dataframe_prep(d, x, y,
                                                                      estimator,
                                                                      x_jitter,
