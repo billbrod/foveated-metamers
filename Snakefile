@@ -943,7 +943,8 @@ rule collect_metamers:
     input:
         lambda wildcards: [m.replace('metamer.png', 'metamer.npy') for m in
                            utils.generate_metamer_paths(**wildcards)],
-        lambda wildcards: [utils.get_ref_image_full_path(i) for i in IMAGES]
+        lambda wildcards: [utils.get_ref_image_full_path(i, downsample='downsample' in wildcards.comp)
+                           for i in IMAGES]
     output:
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_comp-{comp}.npy'),
         report(op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description_comp-{comp}.csv')),
@@ -1025,7 +1026,8 @@ rule generate_experiment_idx:
                 stim_df = pd.read_csv(input[0])
                 try:
                     ref_image_to_include = fov.stimuli.get_images_for_session(wildcards.subject,
-                                                                              int(wildcards.sess_num))
+                                                                              int(wildcards.sess_num),
+                                                                              'downsample' in wildcards.comp)
                     if 'training' in wildcards.model_name:
                         raise Exception("training models only allowed for sub-training!")
                     # in a session, we show 5 images. each run has 3 of those
@@ -1050,7 +1052,9 @@ rule generate_experiment_idx:
                         ref_image_idx = [0, 1]
                     ref_image_to_include = stim_df.image_name.unique()[ref_image_idx]
                 stim_df = stim_df.query("image_name in @ref_image_to_include")
-                comp = 'met_v_' + wildcards.comp
+                # we might have something after the - (like downsample-2), which
+                # we don't want to include
+                comp = 'met_v_' + wildcards.comp.split('-')[0]
                 idx = fov.stimuli.generate_indices_split(stim_df, params.seed, comp, n_repeats=12)
                 np.save(output[0], idx)
 

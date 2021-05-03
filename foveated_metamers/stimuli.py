@@ -190,7 +190,7 @@ def create_metamer_df(image_paths, save_path=None):
     return df
 
 
-def get_images_for_session(subject_name, session_number):
+def get_images_for_session(subject_name, session_number, downsample=False):
     """Get names of images in specified session for a given subject
 
     This is necessary for two reasons:
@@ -207,6 +207,9 @@ def get_images_for_session(subject_name, session_number):
         str of the form `sub-{:02d}`, identifies the subject.
     session_number : int
         identifies the session
+    downsample : bool or int, optional
+        whether we want the downsampled version of the ref images or not. If
+        True, we downsample by 2. If an int, we downsample by that amount.
 
     Returns
     -------
@@ -224,6 +227,14 @@ def get_images_for_session(subject_name, session_number):
     # grab all images that this subject will see
     all_imgs = (config['PSYCHOPHYSICS']['IMAGE_SETS']['all'] +
                 config['PSYCHOPHYSICS']['IMAGE_SETS'][img_set])
+    if downsample:
+        if downsample is True:
+            downsample = 2
+        if 'range' in all_imgs[0]:
+            all_imgs = [i.replace('_ran', f'_downsample-{downsample}_ran')
+                        for i in all_imgs]
+        else:
+            all_imgs = [i + f'_downsample-{downsample}' for i in all_imgs]
     n_imgs = len(all_imgs)
     # set seed based on subject so that the permuted
     # ref_image_idx will be the same for different sessions and
@@ -386,7 +397,7 @@ def generate_indices_split(df, seed, comparison='met_v_ref', n_repeats=None):
         # rows, but with the reference image second
         trials = np.concatenate([trials, trials[:, [1, 0]]])
         # and now duplicate the first image (so it shows up on both left and
-        # right)
+        # right
         trials = trials[:, [0, 0, 1]]
     # now we duplicate the side that we don't change. this will thus double the
     # number of rows, as each row gets a no-change on the left and on the right
