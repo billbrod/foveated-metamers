@@ -126,7 +126,7 @@ def save(file_path, stimuli_path, idx_path, keys, timings, expt_params, idx, **k
 
 def _set_params(stimuli_path, idx_path, size=[1920, 1080], monitor='CBI-prisma-projector',
                 units='pix', fullscr=True, screen=[0], color=128, colorSpace='rgb255',
-                allowGUI=False, **monitor_kwargs):
+                allowGUI=False, downsampled=False, **monitor_kwargs):
     """set the various experiment parameters
     """
     stimuli = np.load(stimuli_path)
@@ -146,8 +146,9 @@ def _set_params(stimuli_path, idx_path, size=[1920, 1080], monitor='CBI-prisma-p
         expt_params['trial_num'] = stimuli.shape[0]
         expt_params['stimuli_per_trial'] = stimuli.shape[1]
     elif idx.ndim == 3:
-        left_stimuli = stimuli[idx[0], ..., :1300]
-        right_stimuli = stimuli[idx[1], ..., 1300:]
+        stim_width = stimuli.shape[-1] // 2
+        left_stimuli = stimuli[idx[0], ..., :stim_width]
+        right_stimuli = stimuli[idx[1], ..., stim_width:]
         stimuli = np.array([left_stimuli, right_stimuli])
         # the first dimension of stimuli is left/right the second is how many
         # trials we have, and the next one shows the number of stimuli per
@@ -157,6 +158,8 @@ def _set_params(stimuli_path, idx_path, size=[1920, 1080], monitor='CBI-prisma-p
     # array size and stimulus size are backwards of each other, so
     # need to reverse this
     expt_params['stimuli_size'] = expt_params['stimuli_size'][::-1]
+    if downsampled:
+        expt_params['stimuli_size'] = [2*s for s in expt_params['stimuli_size']]
 
     # these are all a variety of kwargs used by monitor
     monitor_kwargs.update({'size': size, 'monitor': monitor, 'units': units, 'fullscr': fullscr,
@@ -209,13 +212,14 @@ def _create_bar_mask(bar_height, bar_width=200, fringe_proportion=.5):
 
 def _setup_run(stimuli_path, idx_path, fix_deg_size=.25, screen_size_deg=73.45,
                take_break=True, timings=[], start_from_stim=0, ecc_mask=False,
-               **monitor_kwargs):
+               downsampled=False, **monitor_kwargs):
     """Setup the run.
 
     Does the thigns that are constant across different tasks.
 
     """
     stimuli, idx, expt_params, monitor_kwargs = _set_params(stimuli_path, idx_path,
+                                                            downsampled=downsampled,
                                                             **monitor_kwargs)
     if idx.ndim == 2:
         stimuli = stimuli[start_from_stim:]
@@ -330,10 +334,12 @@ def _end_run(win, timings, text_height, expt_clock, train_flag=False):
 
 
 def run_split(stimuli_path, idx_path, save_path, comparison,
-              on_msec_length=200, off_msec_length=(500, 500), fix_deg_size=.25,
-              screen_size_deg=73.45, take_break=True, keys_pressed=[],
-              timings=[], start_from_stim=0, text_height=50, bar_deg_size=2,
-              train_flag=False, ecc_mask=False, **monitor_kwargs):
+              on_msec_length=200, off_msec_length=(500, 500),
+              fix_deg_size=.25, screen_size_deg=73.45,
+              take_break=True, keys_pressed=[], timings=[],
+              start_from_stim=0, text_height=50, bar_deg_size=2,
+              train_flag=False, ecc_mask=False, downsampled=False,
+              **monitor_kwargs):
     r"""Run one run of the split task.
 
     stimuli_path specifies the path of the unshuffled experiment stimuli, while
@@ -402,13 +408,18 @@ def run_split(stimuli_path, idx_path, save_path, comparison,
         in. Will then multiply this array by the stimuli, in order to mask out
         all but a single eccentricity band. If False, then won't modify
         stimuli.
+    downsampled : bool
+        If True, stimuli were downsampled by a factor of 2 and so we
+        should display them at twice their resolution. If False, we
+        display at their resolution.
     monitor_kwargs :
         passed to visual.Window
 
     """
     setup_args = _setup_run(stimuli_path, idx_path, fix_deg_size,
                             screen_size_deg, take_break, timings,
-                            start_from_stim, **monitor_kwargs)
+                            start_from_stim, downsampled=downsampled,
+                            **monitor_kwargs)
 
     (stimuli, idx, expt_params, monitor_kwargs, win, break_time,
      fixation, timer, expt_clock, screen) = setup_args
@@ -624,12 +635,12 @@ def expt(stimuli_path, subj_name, sess_num, run_num, comparison,
     else:
         print("Will show whole image")
     keys, timings, expt_params, idx, win = run_split(
-        stimuli_path, idx_path, save_path, comparison,
+        stimuli_path, idx_path, save_path, comparison.split('-')[0],
         size=screen_size_pix, take_break=take_break,
         screen_size_deg=screen_size_deg, start_from_stim=start_from_stim,
         keys_pressed=keys, timings=timings, ecc_mask=ecc_mask,
         text_height=text_height, screen=screen, train_flag=train_flag,
-        **kwargs)
+        downsampled='downsample' in comparison, **kwargs)
     save(save_path, stimuli_path, idx_path, keys, timings, expt_params, idx, **kwargs)
     if train_flag:
         stim_df = pd.read_csv(stimuli_path.replace('stimuli_', 'stimuli_description_').replace('.npy', '.csv'))
@@ -681,7 +692,7 @@ if __name__ == '__main__':
                               " if some eccentricity is more informative than others. If"
                               " False, then we present the whole image"))
     args = vars(parser.parse_args())
-    comparison = re.findall('stimuli_comp-(\w+).npy', args['stimuli_path'])[0]
+    comparison = re.findall('stimuli_comp-([\w-]+).npy', args['stimuli_path'])[0]
     runs = args.pop('run_num')
     if runs is None:
         if 'training' not in args['subj_name']:
