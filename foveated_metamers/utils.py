@@ -242,7 +242,9 @@ def find_attempts(wildcards, increment=False, extra_iter=None, gpu_split=.09):
 
 def get_ref_image_full_path(image_name,
                             preproc_methods=['full', 'gamma-corrected',
-                                             'range', 'degamma']):
+                                             'range', 'degamma',
+                                             'downsample'],
+                            downsample=False):
     """check whether image is in ref_image or ref_image_preproc dir
 
     Parameters
@@ -253,6 +255,9 @@ def get_ref_image_full_path(image_name,
     preproc_methods : list, optional
         list of preproc methods we may have applied. probably shouldn't
         change this
+    downsample : bool or int, optional
+        whether we want the downsampled version of the ref images or not. If
+        True, we downsample by 2. If an int, we downsample by that amount.
 
     Returns
     -------
@@ -266,6 +271,13 @@ def get_ref_image_full_path(image_name,
         DATA_DIR = defaults['DATA_DIR']
     if any([i in image_name for i in preproc_methods]):
         template = template.replace('ref_images', 'ref_images_preproc')
+    if downsample:
+        if downsample is True:
+            downsample = 2
+        if 'range' in image_name:
+            image_name = image_name.replace('_ran', f'_downsample-{downsample}_ran')
+        else:
+            image_name += f'_downsample-{downsample}'
     template = template.format(image_name=image_name, DATA_DIR=DATA_DIR)
     # the next bit will remove all slashes from the string, so we need to
     # figure out whether we want to start with os.sep or not
