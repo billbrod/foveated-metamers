@@ -1823,10 +1823,13 @@ def get_all_synth_images(wildcards):
                   utils.generate_metamer_paths(wildcards.synth_model_name,
                                                image_name=wildcards.image_name,
                                                comp='ref')]
-    synth_imgs += [m.replace('.png', '-16.png') for m in
-                   utils.generate_metamer_paths(wildcards.synth_model_name,
-                                                image_name=wildcards.image_name,
-                                                comp='met')]
+    # this has a reduced set of metamers that we test
+    met_imgs = ['llama', 'highway_symmetric', 'rocks', 'boats', 'gnarled']
+    if not wildcards.synth_model_name.startswith("RGC") or any([wildcards.image_name.startswith(im) for im in met_imgs]):
+        synth_imgs += [m.replace('.png', '-16.png') for m in
+                       utils.generate_metamer_paths(wildcards.synth_model_name,
+                                                    image_name=wildcards.image_name,
+                                                    comp='met')]
     return synth_imgs
 
 
@@ -1867,8 +1870,10 @@ rule compute_distances:
                                                         ref_image, float(wildcards.min_ecc),
                                                         float(wildcards.max_ecc), params.cache_dir,
                                                         norm_dict)[0]
-                synth_scaling = (config[wildcards.synth_model_name.split('_')[0]]['scaling'] +
-                                 config[wildcards.synth_model_name.split('_')[0]]['met_v_met_scaling'])
+                synth_scaling = config[wildcards.synth_model_name.split('_')[0]]['scaling']
+                met_imgs = ['llama', 'highway_symmetric', 'rocks', 'boats', 'gnarled']
+                if not wildcards.synth_model_name.startswith('RGC') or any([wildcards.image_name.startswith(im) for im in met_imgs]):
+                    synth_scaling += config[wildcards.synth_model_name.split('_')[0]]['met_v_met_scaling']
                 df = []
                 for sc in synth_scaling:
                     df.append(fov.distances.model_distance(model, wildcards.synth_model_name,
