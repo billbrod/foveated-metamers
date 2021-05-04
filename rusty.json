@@ -43,6 +43,7 @@
     "compute_distances":
     {
         "mem": "{resources.mem}GB",
+	"time": "02:00:00",
         "partition": "ccn"
     },
     "simulate_optimization":
