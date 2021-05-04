@@ -1818,14 +1818,25 @@ rule synthesis_video:
                 fov.figures.synthesis_video(input[0], wildcards.model_name)
 
 
+def get_all_synth_images(wildcards):
+    synth_imgs = [m.replace('.png', '-16.png') for m in
+                  utils.generate_metamer_paths(wildcards.synth_model_name,
+                                               image_name=wildcards.image_name,
+                                               comp='ref')]
+    synth_imgs += [m.replace('.png', '-16.png') for m in
+                   utils.generate_metamer_paths(wildcards.synth_model_name,
+                                                image_name=wildcards.image_name,
+                                                comp='met')]
+    return synth_imgs
+
+
+
 rule compute_distances:
     input:
         ref_image = lambda wildcards: utils.get_ref_image_full_path(wildcards.image_name),
         windows = get_windows,
         norm_dict = get_norm_dict,
-        synth_images = lambda wildcards: [m.replace('.png', '-16.png') for m in
-                                          utils.generate_metamer_paths(wildcards.synth_model_name,
-                                                                       image_name=wildcards.image_name)],
+        synth_images = get_all_synth_images,
     output:
         op.join(config["DATA_DIR"], 'distances', '{model_name}', 'scaling-{scaling}',
                 'synth-{synth_model_name}', '{image_name}_e0-{min_ecc}_em-{max_ecc}_distances.csv'),
@@ -1844,24 +1855,66 @@ rule compute_distances:
         import plenoptic as po
         import torch
         import pandas as pd
-        ref_image = po.load_images(input.ref_image)
-        if input.norm_dict:
-            norm_dict = torch.load(input.norm_dict)
-        else:
-            norm_dict = None
-        model = fov.create_metamers.setup_model(wildcards.model_name, float(wildcards.scaling),
-                                                ref_image, float(wildcards.min_ecc),
-                                                float(wildcards.max_ecc), params.cache_dir,
-                                                norm_dict)[0]
-        synth_scaling = config[wildcards.synth_model_name.split('_')[0]]['scaling']
-        df = []
-        for sc in synth_scaling:
-            df.append(fov.distances.model_distance(model, wildcards.synth_model_name,
-                                                   wildcards.image_name, sc))
-        df = pd.concat(df).reset_index(drop=True)
-        df['distance_model'] = wildcards.model_name
-        df['distance_scaling'] = float(wildcards.scaling)
-        df.to_csv(output[0], index=False)
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                ref_image = po.load_images(input.ref_image)
+                if input.norm_dict:
+                    norm_dict = torch.load(input.norm_dict)
+                else:
+                    norm_dict = None
+                model = fov.create_metamers.setup_model(wildcards.model_name, float(wildcards.scaling),
+                                                        ref_image, float(wildcards.min_ecc),
+                                                        float(wildcards.max_ecc), params.cache_dir,
+                                                        norm_dict)[0]
+                synth_scaling = (config[wildcards.synth_model_name.split('_')[0]]['scaling'] +
+                                 config[wildcards.synth_model_name.split('_')[0]]['met_v_met_scaling'])
+                df = []
+                for sc in synth_scaling:
+                    df.append(fov.distances.model_distance(model, wildcards.synth_model_name,
+                                                           wildcards.image_name, sc))
+                df = pd.concat(df).reset_index(drop=True)
+                df['distance_model'] = wildcards.model_name
+                df['distance_scaling'] = float(wildcards.scaling)
+                df.to_csv(output[0], index=False)
+
+
+rule distance_plot:
+    input:
+        lambda wildcards: [op.join(config["DATA_DIR"], 'distances', '{{model_name}}',
+                                   'scaling-{{scaling}}', 'synth-{synth_model_name}',
+                                   '{image_name}_e0-{{min_ecc}}_em-{{max_ecc}}_distances.csv').format(synth_model_name=s, image_name=i)
+                          for s in MODELS for i in IMAGES],
+    output:
+        op.join(config["DATA_DIR"], 'distances', '{model_name}', 'scaling-{scaling}',
+                'e0-{min_ecc}_em-{max_ecc}_all_distances.csv'),
+        op.join(config["DATA_DIR"], 'distances', '{model_name}', 'scaling-{scaling}',
+                'e0-{min_ecc}_em-{max_ecc}_all_distances.svg'),
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'distances', '{model_name}', 'scaling-{scaling}',
+                'e0-{min_ecc}_em-{max_ecc}_all_distances.log'),
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'distances', '{model_name}', 'scaling-{scaling}',
+                'e0-{min_ecc}_em-{max_ecc}_all_distances_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import pandas as pd
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                df = pd.concat([pd.read_csv(f) for f in input]).reset_index(drop=True)
+                df.to_csv(output[0], index=False)
+                df['synthesis_model'] = df['synthesis_model'].apply(lambda x: x.split('_')[0])
+                df['distance_model'] = df['distance_model'].apply(lambda x: x.split('_')[0])
+                g = sns.catplot('synthesis_scaling', 'distance', 'ref_image', data=df,
+                                col='trial_type', sharey=True, row='synthesis_model', kind='point',
+                                sharex=False, col_order=['metamer_vs_reference', 'metamer_vs_metamer'],
+                                hue_order=sorted(df.ref_image.unique()))
+                for ijk, d in g.facet_data():
+                    ax = g.facet_axis(*ijk[:2])
+                    ax.set_xticklabels([f'{s:.03f}' for s in d.synthesis_scaling.unique()])
+                g.set(yscale='log')
+                g.savefig(output[1], bbox_inches='tight')
 
 
 rule freeman_windows:
