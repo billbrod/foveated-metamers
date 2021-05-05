@@ -21,7 +21,7 @@ def _find_seed(x):
 
     """
     try:
-        return re.findall('seed-(\d)_', x)[0]
+        return re.findall('seed-(\d+)_', x)[0]
     except IndexError:
         return 'reference'
 
