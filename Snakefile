@@ -78,8 +78,8 @@ BEHAVIORAL_DATA_DATES = {
         'met': {
             'sub-00': {'sess-00': '2021-Apr-05', 'sess-01': '2021-Apr-07', 'sess-02': '2021-Apr-08'},
             'sub-01': {'sess-00': '2021-Apr-28', 'sess-01': '2021-Apr-28', 'sess-02': '2021-Apr-28'},
-            'sub-02': {'sess-00': '2021-May-03'},
-            'sub-03': {'sess-00': '2021-May-03'},
+            'sub-02': {'sess-00': '2021-May-03', 'sess-01': '2021-May-04'},
+            'sub-03': {'sess-00': '2021-May-03', 'sess-01': '2021-May-04'},
             'sub-07': {'sess-00': '2021-Apr-30', 'sess-01': '2021-Apr-30', 'sess-02': '2021-May-03'},
         },
         'met-downsample-2': {
