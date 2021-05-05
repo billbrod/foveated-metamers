@@ -12,7 +12,7 @@ def main(model, subj_name, sess_num, comparison='ref'):
     with open(op.join(op.dirname(op.realpath(__file__)), 'config.yml')) as f:
         config = yaml.safe_load(f)
 
-    im_names = stimuli.get_images_for_session(subj_name, sess_num)
+    im_names = stimuli.get_images_for_session(subj_name, sess_num, 'downsample' in comparison)
     try:
         model_name = config[model]['model_name']
     except KeyError:
@@ -25,7 +25,7 @@ def main(model, subj_name, sess_num, comparison='ref'):
             raise Exception(f"Index path {p} not found!")
     if comparison == 'ref':
         scaling = [config[model]['scaling'][0], config[model]['scaling'][-1]]
-    elif comparison == 'met':
+    elif comparison.startswith('met'):
         scaling = config[model]['scaling'] + config[model]['met_v_met_scaling']
         scaling = [scaling[-8], scaling[-1]]
     ref_images = []
@@ -49,7 +49,7 @@ def main(model, subj_name, sess_num, comparison='ref'):
         subprocess.Popen(['eog', *ref_images], shell=False)
     subprocess.Popen(['eog', *low_scaling_mets], shell=False)
     subprocess.Popen(['eog', *high_scaling_mets], shell=False)
-    if comparison == 'met':
+    if comparison.startswith('met'):
         subprocess.Popen(['eog', *low_scaling_mets_2], shell=False)
         subprocess.Popen(['eog', *high_scaling_mets_2], shell=False)
 
