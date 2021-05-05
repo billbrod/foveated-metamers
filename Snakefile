@@ -72,18 +72,18 @@ BEHAVIORAL_DATA_DATES = {
             'sub-02': {'sess-00': '2021-Apr-14', 'sess-01': '2021-Apr-16', 'sess-02': '2021-Apr-21'},
             'sub-03': {'sess-00': '2021-Apr-02', 'sess-01': '2021-Apr-07', 'sess-02': '2021-Apr-09'},
             'sub-04': {'sess-00': '2021-Apr-05', 'sess-01': '2021-Apr-06', 'sess-02': '2021-Apr-12'},
-            'sub-05': {'sess-00': '2021-Apr-30'},
+            'sub-05': {'sess-00': '2021-Apr-30', 'sess-01': '2021-May-05'},
             'sub-07': {'sess-00': '2021-Apr-23', 'sess-01': '2021-Apr-26', 'sess-02': '2021-Apr-28'},
         },
         'met': {
             'sub-00': {'sess-00': '2021-Apr-05', 'sess-01': '2021-Apr-07', 'sess-02': '2021-Apr-08'},
             'sub-01': {'sess-00': '2021-Apr-28', 'sess-01': '2021-Apr-28', 'sess-02': '2021-Apr-28'},
-            'sub-02': {'sess-00': '2021-May-03', 'sess-01': '2021-May-04'},
+            'sub-02': {'sess-00': '2021-May-03', 'sess-01': '2021-May-04', 'sess-02': '2021-May-05'},
             'sub-03': {'sess-00': '2021-May-03', 'sess-01': '2021-May-04'},
             'sub-07': {'sess-00': '2021-Apr-30', 'sess-01': '2021-Apr-30', 'sess-02': '2021-May-03'},
         },
         'met-downsample-2': {
-            'sub-00': {'sess-00': '2021-May-04'},
+            'sub-00': {'sess-00': '2021-May-04', 'sess-01': '2021-May-05'},
         },
     },
     'RGC_norm_gaussian': {
@@ -94,7 +94,7 @@ BEHAVIORAL_DATA_DATES = {
             'sub-03': {'sess-00': '2021-Apr-27', 'sess-01': '2021-Apr-28', 'sess-02': '2021-Apr-30'},
             'sub-04': {'sess-00': '2021-Apr-21', 'sess-01': '2021-Apr-23', 'sess-02': '2021-Apr-27'},
             'sub-05': {'sess-00': '2021-Apr-14', 'sess-01': '2021-Apr-23', 'sess-02': '2021-Apr-27'},
-            'sub-06': {'sess-00': '2021-Apr-14'},
+            'sub-06': {'sess-00': '2021-Apr-14', 'sess-01': '2021-May-05'},
             'sub-07': {'sess-00': '2021-Apr-14', 'sess-01': '2021-Apr-16', 'sess-02': '2021-Apr-21'},
         },
         'met': {
