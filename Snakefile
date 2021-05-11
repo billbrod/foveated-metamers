@@ -1820,17 +1820,15 @@ rule synthesis_video:
 
 
 def get_all_synth_images(wildcards):
-    synth_imgs = [m.replace('.png', '-16.png') for m in
-                  utils.generate_metamer_paths(wildcards.synth_model_name,
+    synth_imgs = utils.generate_metamer_paths(wildcards.synth_model_name,
                                                image_name=wildcards.image_name,
-                                               comp='ref')]
+                                               comp='ref')
     # this has a reduced set of metamers that we test
     met_imgs = ['llama', 'highway_symmetric', 'rocks', 'boats', 'gnarled']
     if not wildcards.synth_model_name.startswith("RGC") or any([wildcards.image_name.startswith(im) for im in met_imgs]):
-        synth_imgs += [m.replace('.png', '-16.png') for m in
-                       utils.generate_metamer_paths(wildcards.synth_model_name,
+        synth_imgs += utils.generate_metamer_paths(wildcards.synth_model_name,
                                                     image_name=wildcards.image_name,
-                                                    comp='met')]
+                                                    comp='met')
     return synth_imgs
 
 
