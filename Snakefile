@@ -1093,7 +1093,8 @@ rule training_correct_responses:
 
 
 def get_all_idx(wildcards):
-    if wildcards.model_name == 'RGC_norm_gaussian' and wildcards.comp == 'met':
+    if ((wildcards.model_name == 'RGC_norm_gaussian' and wildcards.comp == 'met') or
+        (wildcards.model_name == 'V1_norm_s6_gaussian' and wildcards.comp == 'met-natural')):
         sessions = [0]
     else:
         sessions = config['PSYCHOPHYSICS']['SESSIONS']
