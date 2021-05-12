@@ -602,11 +602,11 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
                 tmp.update(args)
                 if 'seed_n' in tmp.keys():
                     try:
-                        seed_n = tmp.pop('seed_n')
-                        if seed_n == 'index':
-                            seed_n = init_type.index(tmp['init_type'])
+                        tmp_seed_n = tmp.pop('seed_n')
+                        if tmp_seed_n == 'index':
+                            tmp_seed_n = init_type.index(tmp['init_type'])
                         tmp['seed'] = seeds_dict[(tmp['image_name'].replace('_downsample-2', ''),
-                                                  tmp['scaling'])][seed_n]
+                                                  tmp['scaling'])][tmp_seed_n]
                     except KeyError:
                         raise Exception(f"{tmp['image_name']} and {tmp['scaling']} (for model {model}) "
                                         "not found in the default set of metamers with pre-generated seeds"
