@@ -1141,5 +1141,5 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                           loss_function=loss_func,loss_change_iter=loss_change_iter,
                           image_name=op.basename(image_name).replace('.pgm', '').replace('.png', ''))
         save(save_path, metamer, animate_figsize, rep_figsize, img_zoom, save_all)
-    if save_progress:
+    if save_progress and op.exists(inprogress_path):
         os.remove(inprogress_path)
