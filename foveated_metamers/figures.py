@@ -1,6 +1,7 @@
 """code to generate figures for the project
 """
 import imageio
+import itertools
 import torch
 import re
 import yaml
@@ -1339,3 +1340,72 @@ def ref_image_summary(stim, stim_df, zoom=.125):
         ax.imshow((im/255)**(1/2.2), vmin=0, vmax=1, cmap='gray')
         ax.set_title(t)
     return fig
+
+
+def synthesis_distance_plot(distances, x='metamer_vs_reference',
+                            y='metamer_vs_metamer', hue='ref_image',
+                            col='distance_scaling',
+                            row='image_1_init_supertype', **kwargs):
+    """Plot distances between metamers and their reference images.
+
+    With default arguments, scatterplot comparing the metamer_vs_metamer
+    distance to the metamer_vs_reference distance (where distance and synthesis
+    were computed using the same model). We can then see that metamers
+    initialized with uniform noise all end up near each other in synthesis model
+    space (and thus, probably, human perceptual space), clumped up together so
+    that their distance to each other is smaller than the distance to their
+    reference image. We hypothesize that initializing with a natural image helps
+    minimize this problem.
+
+    We average across all distances for a given scaling and reference image,
+    since it's hard to think about how we could align them (e.g., if we have
+    three metamers, we'll have three metamer_vs_metamer distances and three
+    metamer_vs_reference distances, but each metamer_vs_reference distance
+    corresponds to a single metamer, while each metamer_vs_metamer distance
+    corresponds to *two* metamers. this problem gets worse as the number of
+    metamers increases).
+
+    Parameters
+    ----------
+    distances : pd.DataFrame
+        distance dataframe, containing multiple outputs of
+        foveated_metamers.distances.model_distance
+    x, y, hue, col, row : str, optional
+        strs corresponding to columns in distances, to map along the various
+        dimensions.
+    kwargs :
+        passed to sns.relplot
+
+    Returns
+    -------
+    g : sns.FacetGrid
+        FacetGrid containing the plot
+
+    """
+    idx = np.logical_or(distances.image_2_init_supertype == 'reference',
+                        distances.image_2_init_supertype == distances.image_1_init_supertype)
+    distances = distances[idx]
+    idx = np.logical_and(distances.synthesis_model == distances.distance_model,
+                         distances.synthesis_scaling == distances.distance_scaling)
+    distances = distances[idx]
+
+    cols = list(itertools.product(distances.trial_type.unique(),
+                                  distances.image_1_init_supertype.unique()))
+    distances = pd.pivot_table(distances, 'distance',
+                               ['distance_model', 'distance_scaling', 'ref_image'],
+                               ['trial_type', 'image_1_init_supertype'])
+    distances = pd.melt(distances.reset_index(), [('distance_model', ''), ('distance_scaling', ''), ('ref_image', '')], cols)
+    distances = distances.rename(columns={c: c[0] for c in distances.columns if isinstance(c, tuple)})
+    distances = distances.pivot(['image_1_init_supertype','distance_model', 'distance_scaling',  'ref_image'],
+                                'trial_type', 'value').reset_index()
+    g = sns.relplot(x=x, y=y, data=distances, hue=hue, kind='scatter', col=col, row=row, **kwargs)
+    for ax in g.axes.flatten():
+        ax.set(xscale='log', yscale='log')
+        lims = [np.min([ax.get_xlim(), ax.get_ylim()]),
+                np.max([ax.get_xlim(), ax.get_ylim()])]
+        # now plot both limits against eachother
+        ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0)
+        ax.set_aspect('equal')
+        ax.set_xlim(lims)
+        ax.set_ylim(lims)
+    return g
