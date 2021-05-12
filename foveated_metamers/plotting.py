@@ -282,42 +282,40 @@ def _remap_image_names(df):
     """
     with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
         config = yaml.safe_load(f)
-    all_imgs = config['DEFAULT_METAMERS']['image_name']
-    # if we have downsampled images, we want to do something to the normal case
-    if any([i.replace('_downsample-2', '') in all_imgs for i in df.image_name.unique()]):
-        img_sets = config['PSYCHOPHYSICS']['IMAGE_SETS']
-        img_order = (sorted(img_sets['all']) + sorted(img_sets['A']) +
-                     sorted(img_sets['B']))
-        img_order = [i.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', '')
-                     for i in img_order]
-        # while still gathering data, will not have all images in the df.
-        # Adding these blank lines gives us blank subplots in the performance
-        # plot, so that each image is in the same place
-        extra_ims = [i for i in all_imgs if i.replace('_ran', '_downsample-2_ran') not in df.image_name.unique()]
-        df = df.copy().append(pd.DataFrame({'image_name': extra_ims}), True)
-        # strip out the parts of the image name that are consistent across
-        # images
-        df.image_name = df.image_name.apply(lambda x: x.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', '').replace('_downsample-2', ''))
-        assert df.image_name.nunique() == 20, "Something went wrong, don't have all images!"
-    # for simulated data, our image names will just be 'image-00' (and we'll
-    # have a variable number of them), and so we don't want to do the following
-    elif any([i in all_imgs for i in df.image_name.unique()]):
-        img_sets = config['PSYCHOPHYSICS']['IMAGE_SETS']
-        img_order = (sorted(img_sets['all']) + sorted(img_sets['A']) +
-                     sorted(img_sets['B']))
-        img_order = [i.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', '')
-                     for i in img_order]
-        # while still gathering data, will not have all images in the df.
-        # Adding these blank lines gives us blank subplots in the performance
-        # plot, so that each image is in the same place
-        extra_ims = [i for i in all_imgs if i not in df.image_name.unique()]
-        df = df.copy().append(pd.DataFrame({'image_name': extra_ims}), True)
-        assert df.image_name.nunique() == 20, "Something went wrong, don't have all images!"
-        # strip out the parts of the image name that are consistent across
-        # images
-        df.image_name = df.image_name.apply(lambda x: x.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', ''))
-    else:
-        img_order = sorted(df.image_name.unique())
+    # this is the "full" version of the image names (including range and size),
+    # as well as the "trimmed" one (without those two parts). we check each
+    # separately, and can't have images in both sets
+    all_imgs_both = [config['IMAGE_NAME']['ref_image'],
+                     config['DEFAULT_METAMERS']['image_name']]
+    remapped = False
+    for all_imgs in all_imgs_both:
+        # if we have down sampled images, we want to do same thing as the normal case
+        if any([i.replace('_downsample-2', '') in all_imgs for i in df.image_name.unique()]):
+            img_sets = config['PSYCHOPHYSICS']['IMAGE_SETS']
+            img_order = (sorted(img_sets['all']) + sorted(img_sets['A']) +
+                         sorted(img_sets['B']))
+            img_order = [i.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', '')
+                         for i in img_order]
+            # while still gathering data, will not have all images in the df.
+            # Adding these blank lines gives us blank subplots in the performance
+            # plot, so that each image is in the same place
+            extra_ims = [i for i in all_imgs if i.replace('_ran', '_downsample-2_ran') not in df.image_name.unique()]
+            df = df.copy().append(pd.DataFrame({'image_name': extra_ims}), True)
+            # strip out the parts of the image name that are consistent across
+            # images
+            df.image_name = df.image_name.apply(lambda x: x.replace('_symmetric', '').replace('_range-.05,.95_size-2048,2600', '').replace('_downsample-2', ''))
+            assert df.image_name.nunique() == 20, "Something went wrong, don't have all images!"
+            if not remapped:
+                remapped = True
+            else:
+                raise Exception("Can't remap image names twice!")
+        # for simulated data, our image names will just be 'image-00' (and we'll
+        # have a variable number of them), and so we don't want to do the following
+        else:
+            if remapped:
+                continue
+            else:
+                img_order = sorted(df.image_name.unique())
     return df, img_order
 
 

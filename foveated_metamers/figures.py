@@ -935,6 +935,9 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
     if col == 'image_name':
         kwargs.setdefault('col_order', img_order)
         df.image_name = df.image_name.apply(lambda x: x.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', ''))
+    if row == 'image_name':
+        kwargs.setdefault('row_order', img_order)
+        df.image_name = df.image_name.apply(lambda x: x.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', ''))
     g = sns.FacetGrid(df, row=row, col=col, hue=hue, col_wrap=col_wrap,
                       **kwargs)
     g.map_dataframe(plotting.lineplot_like_pointplot, x='scaling',
@@ -961,6 +964,7 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
     title = f'Posterior predictive check for {model_type[0]}'
     plotting._label_and_title_psychophysical_curve_plot(g, df, title,
                                                         hdi=hdi)
+    g.set_titles('{col_name} | {row_name}')
     # get decent looking tick marks
     plotting._psychophysical_curve_ticks(df, g.axes.flatten(),
                                          logscale_xaxis,

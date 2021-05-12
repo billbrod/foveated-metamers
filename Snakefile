@@ -1338,7 +1338,7 @@ rule mcmc_plots:
                 inf_data = az.from_netcdf(input[0])
                 if wildcards.plot_type == 'post-pred-check':
                     print("Creating posterior predictive check.")
-                    fig = fov.figures.posterior_predictive_check(inf_data, col='subject_name', row='image_name', height=2.5,
+                    fig = fov.figures.posterior_predictive_check(inf_data, col='subject_name', row='image_name', height=1.5,
                                                                  style='trial_type', hue='distribution')
                 elif wildcards.plot_type == 'performance':
                     print("Creating performance plot.")
