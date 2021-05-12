@@ -1933,17 +1933,17 @@ rule synthesis_distance_plot:
         lambda wildcards: [op.join(config["DATA_DIR"], 'distances', '{{model_name}}',
                                    'scaling-{scaling}', 'synth-{{model_name}}',
                                    '{image_name}_e0-{{min_ecc}}_em-{{max_ecc}}_distances.csv').format(image_name=i, scaling=s)
-                          for s in {'V1': [.063, .27, 1.5, 'RGC': [.01, .058, 1.5]]}[wildcards.model_name.split('_')[0]]
+                           for s in {'V1': [.063, .27, 1.5], 'RGC': [.01, .058, 1.5]}[wildcards.model_name.split('_')[0]]
                            for i in IMAGES],
     output:
         op.join(config["DATA_DIR"], 'distances', '{model_name}',
                 'e0-{min_ecc}_em-{max_ecc}_synthesis_distances.svg'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'distances', '{model_name}',
-                'e0-{min_ecc}_em-{max_ecc}_all_distances.log'),
+                'e0-{min_ecc}_em-{max_ecc}_synthesis_distances.log'),
     benchmark:
-        op.join(config["DATA_DIR"], 'logs', 'distances', '{model_name}', 'scaling-{scaling}',
-                'e0-{min_ecc}_em-{max_ecc}_all_distances_benchmark.txt'),
+        op.join(config["DATA_DIR"], 'logs', 'distances', '{model_name}',
+                'e0-{min_ecc}_em-{max_ecc}_synthesis_distances_benchmark.txt'),
     run:
         import foveated_metamers as fov
         import pandas as pd
