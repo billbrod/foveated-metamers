@@ -1833,6 +1833,10 @@ def get_all_synth_images(wildcards):
         synth_imgs += utils.generate_metamer_paths(wildcards.synth_model_name,
                                                    image_name=wildcards.image_name,
                                                    comp='met-natural')
+        synth_imgs += utils.generate_metamer_paths(wildcards.synth_model_name,
+                                                   image_name=wildcards.image_name,
+                                                   comp='met-natural',
+                                                   scaling=1.5)
     return synth_imgs
 
 
