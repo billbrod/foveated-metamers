@@ -561,6 +561,15 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
                         scaling = scaling[-(len(scaling)-len(more_scaling)):] + more_scaling
                     except KeyError:
                         pass
+                elif comp.startswith('met') and 'natural' in comp:
+                    # THIS IS TEMPORARY -- we're grabbing the eight smallest
+                    # scaling values that we can run ont he gpu for a
+                    # preliminary attempt at this
+                    try:
+                        more_scaling = defaults[model.split('_')[0]]['met_v_met_scaling'][:2]
+                        scaling = scaling[-(len(scaling)-len(more_scaling)):] + more_scaling
+                    except KeyError:
+                        pass
             else:
                 scaling = kwargs['scaling']
             if 'init' not in kwargs.keys():
