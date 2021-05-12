@@ -100,6 +100,7 @@ def model_distance(model, synth_model_name, ref_image_name, scaling):
     met_natural_imgs = ['llama', 'highway_symmetric', 'rocks', 'boats', 'gnarled']
     met_natural_scaling = config[synth_model_name.split('_')[0]]['scaling'][2:]
     met_natural_scaling += config[synth_model_name.split('_')[0]]['met_v_met_scaling'][:2]
+    met_natural_scaling += [1.5]
     if (synth_model_name.startswith("V1") and
         any([ref_image_name.startswith(im) for im in met_natural_imgs]) and
         scaling in met_natural_scaling):
