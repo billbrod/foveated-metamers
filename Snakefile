@@ -1827,8 +1827,12 @@ def get_all_synth_images(wildcards):
     met_imgs = ['llama', 'highway_symmetric', 'rocks', 'boats', 'gnarled']
     if not wildcards.synth_model_name.startswith("RGC") or any([wildcards.image_name.startswith(im) for im in met_imgs]):
         synth_imgs += utils.generate_metamer_paths(wildcards.synth_model_name,
-                                                    image_name=wildcards.image_name,
-                                                    comp='met')
+                                                   image_name=wildcards.image_name,
+                                                   comp='met')
+    if wildcards.synth_model_name.startswith("V1") and any([wildcards.image_name.startswith(im) for im in met_imgs]):
+        synth_imgs += utils.generate_metamer_paths(wildcards.synth_model_name,
+                                                   image_name=wildcards.image_name,
+                                                   comp='met-natural')
     return synth_imgs
 
 
@@ -1873,6 +1877,8 @@ rule compute_distances:
                 met_imgs = ['llama', 'highway_symmetric', 'rocks', 'boats', 'gnarled']
                 if not wildcards.synth_model_name.startswith('RGC') or any([wildcards.image_name.startswith(im) for im in met_imgs]):
                     synth_scaling += config[wildcards.synth_model_name.split('_')[0]]['met_v_met_scaling']
+                if wildcards.synth_model_name.startswith("V1") and any([wildcards.image_name.startswith(im) for im in met_imgs]):
+                    synth_scaling += config[wildcards.synth_model_name.split('_')[0]]['met_v_met_scaling'][:2]
                 df = []
                 for sc in synth_scaling:
                     df.append(fov.distances.model_distance(model, wildcards.synth_model_name,
@@ -1920,6 +1926,34 @@ rule distance_plot:
                     ax.set_xticklabels([f'{s:.03f}' for s in d.synthesis_scaling.unique()])
                 g.set(yscale='log')
                 g.savefig(output[1], bbox_inches='tight')
+
+
+rule synthesis_distance_plot:
+    input:
+        lambda wildcards: [op.join(config["DATA_DIR"], 'distances', '{{model_name}}',
+                                   'scaling-{scaling}', 'synth-{{model_name}}',
+                                   '{image_name}_e0-{{min_ecc}}_em-{{max_ecc}}_distances.csv').format(image_name=i, scaling=s)
+                          for s in {'V1': [.063, .27, 1.5, 'RGC': [.01, .058, 1.5]]}[wildcards.model_name.split('_')[0]]
+                           for i in IMAGES],
+    output:
+        op.join(config["DATA_DIR"], 'distances', '{model_name}',
+                'e0-{min_ecc}_em-{max_ecc}_synthesis_distances.svg'),
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'distances', '{model_name}',
+                'e0-{min_ecc}_em-{max_ecc}_all_distances.log'),
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'distances', '{model_name}', 'scaling-{scaling}',
+                'e0-{min_ecc}_em-{max_ecc}_all_distances_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import pandas as pd
+        import contextlib
+        import seaborn as sns
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                df = pd.concat([pd.read_csv(f) for f in input]).reset_index(drop=True)
+                g = fov.figures.synthesis_distance_plot(df)
+                g.savefig(output[0], bbox_inches='tight')
 
 
 rule freeman_windows:
