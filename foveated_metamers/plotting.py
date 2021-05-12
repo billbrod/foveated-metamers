@@ -933,6 +933,8 @@ def title_experiment_summary_plots(g, expt_df, summary_text, post_text=''):
         end_newlines += '\n\n'
     if n_rows > 3:
         end_newlines += '\n'
+    if n_rows > 10:
+        end_newlines += '\n\n'
     g.fig.suptitle(f"{summary_text} for {subj_str}, {sess_str}.{break_newlines}"
                    f" Comparing {model_name} metamers to {comp_str}. {post_text}{end_newlines}",
                    va='bottom')
