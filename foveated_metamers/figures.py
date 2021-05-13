@@ -1344,10 +1344,10 @@ def ref_image_summary(stim, stim_df, zoom=.125):
     return fig
 
 
-def synthesis_distance_plot(distances, x='metamer_vs_reference',
-                            y='metamer_vs_metamer', hue='ref_image',
+def synthesis_distance_plot(distances, xy='trial_type', hue='ref_image',
                             col='distance_scaling',
-                            row='image_1_init_supertype', **kwargs):
+                            row='image_1_init_supertype', x=None, y=None,
+                            **kwargs):
     """Plot distances between metamers and their reference images.
 
     With default arguments, scatterplot comparing the metamer_vs_metamer
@@ -1372,9 +1372,18 @@ def synthesis_distance_plot(distances, x='metamer_vs_reference',
     distances : pd.DataFrame
         distance dataframe, containing multiple outputs of
         foveated_metamers.distances.model_distance
-    x, y, hue, col, row : str, optional
+    xy : str, optional
+        str corresponding to one the columns in distances. Must have only two
+        unique values. We will then pivot distances in such a way as to plot
+        the two values against each other, one as x, one as y. If you want to
+        specify which value goes on which axis, set x and y.
+    hue, col, row : str, optional
         strs corresponding to columns in distances, to map along the various
         dimensions.
+    x, y : str or None, optional
+        If strs, values of the ``distances[xy]`` column, specifying which
+        should go on x, which on y. If None,
+        ``sorted(distances[xy].unique)[0]`` goes on x, the other goes on y
     kwargs :
         passed to sns.relplot
 
@@ -1390,16 +1399,30 @@ def synthesis_distance_plot(distances, x='metamer_vs_reference',
     idx = np.logical_and(distances.synthesis_model == distances.distance_model,
                          distances.synthesis_scaling == distances.distance_scaling)
     distances = distances[idx]
+    if distances[xy].nunique() != 2:
+        raise Exception(f"Column {xy} must have two values, but found {distances[xy].unique()} instead!")
+    vals = sorted(distances[xy].unique())
+    if x is None and y is None:
+        x = vals[0]
+        y = vals[1]
+    elif x is not None:
+        vals.remove(x)
+        y = vals[0]
+    elif y is not None:
+        vals.remove(y)
+        x = vals[0]
+    assert x in distances[xy].unique(), f"x must be a value of distances column {xy}, but got {x}!"
+    assert y in distances[xy].unique(), f"y must be a value of distances column {xy}, but got {y}!"
 
-    cols = list(itertools.product(distances.trial_type.unique(),
-                                  distances.image_1_init_supertype.unique()))
+    cols = list(itertools.product(distances[xy].unique(),
+                                  distances[row].unique()))
     distances = pd.pivot_table(distances, 'distance',
-                               ['distance_model', 'distance_scaling', 'ref_image'],
-                               ['trial_type', 'image_1_init_supertype'])
-    distances = pd.melt(distances.reset_index(), [('distance_model', ''), ('distance_scaling', ''), ('ref_image', '')], cols)
+                               ['distance_model', 'ref_image', col],
+                               [xy, row])
+    distances = pd.melt(distances.reset_index(), [('distance_model', ''), ('ref_image', ''), (col, '')], cols)
     distances = distances.rename(columns={c: c[0] for c in distances.columns if isinstance(c, tuple)})
-    distances = distances.pivot(['image_1_init_supertype','distance_model', 'distance_scaling',  'ref_image'],
-                                'trial_type', 'value').reset_index()
+    distances = distances.pivot(['distance_model', 'ref_image', row, col],
+                                xy, 'value').reset_index()
     g = sns.relplot(x=x, y=y, data=distances, hue=hue, kind='scatter', col=col, row=row, **kwargs)
     for ax in g.axes.flatten():
         ax.set(xscale='log', yscale='log')

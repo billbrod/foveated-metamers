@@ -1958,7 +1958,7 @@ rule synthesis_distance_plot:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 df = pd.concat([pd.read_csv(f) for f in input]).reset_index(drop=True)
-                g = fov.figures.synthesis_distance_plot(df)
+                g = fov.figures.synthesis_distance_plot(df, x='metamer_vs_reference')
                 g.savefig(output[0], bbox_inches='tight')
 
 
