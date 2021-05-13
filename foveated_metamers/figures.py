@@ -934,10 +934,8 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
     df, img_order = plotting._remap_image_names(df)
     if col == 'image_name':
         kwargs.setdefault('col_order', img_order)
-        df.image_name = df.image_name.apply(lambda x: x.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', ''))
     if row == 'image_name':
         kwargs.setdefault('row_order', img_order)
-        df.image_name = df.image_name.apply(lambda x: x.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', ''))
     g = sns.FacetGrid(df, row=row, col=col, hue=hue, col_wrap=col_wrap,
                       **kwargs)
     g.map_dataframe(plotting.lineplot_like_pointplot, x='scaling',
