@@ -1059,9 +1059,9 @@ def mcmc_diagnostics_plot(inf_data):
     for ax in axes:
         var = ax[0].get_title()
         ax[0].set_title(ax[0].get_title()+
-                        f', mean r_hat={rhat[var].data.mean():.05f}')
+                        f', nanmean r_hat={np.nanmean(rhat[var].data):.05f}')
         ax[1].set_title(ax[1].get_title()+
-                        f', mean effective sample size={ess[var].data.mean():.02f}')
+                        f', nanmean effective sample size={np.nanmean(ess[var].data):.02f}')
     fig = axes[0, 0].figure
     # want monospace so table prints correctly
     rhat = rhat.to_dataframe().reorder_levels(['model', 'trial_type', 'image_name', 'subject_name'])
