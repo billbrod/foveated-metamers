@@ -351,9 +351,7 @@ def _psychophysical_curve_ticks(df, axes, logscale_xaxis=False, height=5,
     nticks = 12
     if height < 6:
         nticks /= 2
-    if height < 2:
-        nticks /= 2
-    if mpl.rcParams['font.size'] > 15:
+    if mpl.rcParams['font.size'] > 15 or height < 2:
         nticks /= 2
         # don't want to overlap the labels on adjacent columns
         if col is not None:
