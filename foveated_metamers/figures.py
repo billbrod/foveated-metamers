@@ -1202,10 +1202,13 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
         marker_adjust = {}
     # remap the image names to be better for plotting
     df, img_order = plotting._remap_image_names(df)
+    x_order = None
     if col == 'image_name':
         kwargs.setdefault('col_order', img_order)
-        df.image_name = df.image_name.apply(lambda x: x.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', ''))
-
+    elif row == 'image_name':
+        kwargs.setdefault('row_order', img_order)
+    elif x == 'image_name':
+        x_order = img_order
     col_order = kwargs.get('col_order', sorted(df[col].unique()))
     cols = sorted(df[col].unique(), key=lambda x: col_order.index(x))
     row_order = kwargs.get('row_order', sorted(df[row].unique()))
@@ -1269,7 +1272,7 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
                                                           like_pointplot=True, ci='hdi',
                                                           markers=marker_adjust, style=style,
                                                           color=palette.get(n, 'k'), data=h,
-                                                          label=lab, ax=ax)
+                                                          label=lab, ax=ax, x_order=x_order)
                     if m is not None:
                         fc = dots[0].get_facecolor()[0]
                         if all(fc == 1):
