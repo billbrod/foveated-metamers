@@ -1416,8 +1416,9 @@ def synthesis_distance_plot(distances, xy='trial_type', hue='ref_image',
     return g
 
 
-def partially_pooled_metaparameters(inf_data, distribution='posterior', hdi=.95,
-                                    height=5, aspect=1, rotate_xticklabels=True):
+def partially_pooled_metaparameters(inf_data, distribution='posterior',
+                                    hdi=.95, height=5, aspect=1,
+                                    rotate_xticklabels=True):
     """Plot the metaparameters of the partially pooled mcmc model.
 
     The metaparametesr are the lapse rate and those that control the
@@ -1440,7 +1441,7 @@ def partially_pooled_metaparameters(inf_data, distribution='posterior', hdi=.95,
         whether to rotate the x-axis labels or not. if True, we rotate
         by 25 degrees. if an int, we rotate by that many degrees. if
         False, we don't rotate.
-    
+
     Returns
     -------
     fig : plt.Figure
@@ -1448,12 +1449,14 @@ def partially_pooled_metaparameters(inf_data, distribution='posterior', hdi=.95,
 
     """
     if inf_data.metadata.mcmc_model_type[0, 0] != 'partially-pooled':
-        raise Exception("Can only create this plot with partially-pooled mcmc model"
-                        f" but got {inf_data.metadata.mcmc_model_type.values[0, 0]}!")
+        raise Exception("Can only create this plot with partially-pooled mcmc"
+                        " model but got "
+                        f"{inf_data.metadata.mcmc_model_type.values[0, 0]}!")
     inf_data = mcmc._compute_hdi(inf_data[distribution], hdi)
     keys_to_exclude = [f'log_{p}_{t}' for p, t in
                        itertools.product(['a0', 's0'], ['image', 'subject'])]
-    cols = [k for k in inf_data.data_vars.keys() if k not in keys_to_exclude + ['pi_l']]
+    cols = [k for k in inf_data.data_vars.keys() if k
+            not in keys_to_exclude + ['pi_l']]
     inf1 = inf_data[cols].to_dataframe()
     inf1 = inf1.reset_index().melt(inf1.index.names)
     inf2 = inf_data[['pi_l']].to_dataframe()
@@ -1461,13 +1464,14 @@ def partially_pooled_metaparameters(inf_data, distribution='posterior', hdi=.95,
     inf1['var_type'] = 'Metaparameters'
     inf2['var_type'] = 'Lapse rate'
     inf2['variable'] = inf2.subject_name
-    inf2 = inf2.drop(columns=['subject_name'])    
- 
+    inf2 = inf2.drop(columns=['subject_name'])
+
     metaparams = pd.concat([inf1, inf2])
     metaparams['mcmc_model_type'] = 'partially-pooled'
 
-    metaparam_order = np.array(['log_a0_global_mean', 'a0_image_sd', 'a0_subject_sd',
-                                'log_s0_global_mean', 's0_image_sd', 's0_subject_sd'])
+    metaparam_order = np.array(['log_a0_global_mean', 'a0_image_sd',
+                                'a0_subject_sd', 'log_s0_global_mean',
+                                's0_image_sd', 's0_subject_sd'])
     fig = mcmc_parameters(metaparams, x='variable', col='var_type',
                           hue='model', height=height, aspect=aspect,
                           sharex=False, rotate_xticklabels=rotate_xticklabels,
@@ -1480,14 +1484,13 @@ def partially_pooled_metaparameters(inf_data, distribution='posterior', hdi=.95,
     fig._suptitle.set_text(fig._suptitle.get_text().replace("Psychophysical curve parameter values", 'Parameter values 1'))
     return fig
 
-    
+
 def partially_pooled_parameters(inf_data, distribution='posterior', hdi=.95,
-                                height=4, aspect=2.5, rotate_xticklabels=True):
+                                height=4, aspect=2, rotate_xticklabels=True):
     """Plot the subject/image level parameters of partially pooled mcmc model.
 
     These are log_a0/s0_image/subject.
 
-    
     Parameters
     ----------
     inf_data : arviz.InferenceData
@@ -1505,7 +1508,7 @@ def partially_pooled_parameters(inf_data, distribution='posterior', hdi=.95,
         whether to rotate the x-axis labels or not. if True, we rotate
         by 25 degrees. if an int, we rotate by that many degrees. if
         False, we don't rotate.
-    
+
     Returns
     -------
     fig : plt.Figure
@@ -1513,12 +1516,14 @@ def partially_pooled_parameters(inf_data, distribution='posterior', hdi=.95,
 
     """
     if inf_data.metadata.mcmc_model_type[0, 0] != 'partially-pooled':
-        raise Exception("Can only create this plot with partially-pooled mcmc model"
-                        f" but got {inf_data.metadata.mcmc_model_type.values[0, 0]}!")
+        raise Exception("Can only create this plot with partially-pooled mcmc"
+                        " model but got "
+                        f"{inf_data.metadata.mcmc_model_type.values[0, 0]}!")
     _, img_order = plotting._remap_image_names(inf_data.posterior.to_dataframe().reset_index())
     img_order = np.array(img_order)
     inf_data = mcmc._compute_hdi(inf_data[distribution], hdi)
-    keys_to_include = [f'log_{p}_{t}' for p, t in itertools.product(['a0', 's0'], ['image', 'subject'])]
+    keys_to_include = [f'log_{p}_{t}' for p, t in
+                       itertools.product(['a0', 's0'], ['image', 'subject'])]
     inf1 = inf_data[[k for k in keys_to_include if 'image' in k]].to_dataframe()
     inf1 = inf1.reset_index().melt(inf1.index.names)
     inf2 = inf_data[[k for k in keys_to_include if 'subject' in k]].to_dataframe()
@@ -1526,11 +1531,11 @@ def partially_pooled_parameters(inf_data, distribution='posterior', hdi=.95,
 
     inf1['var_type'] = 'image-level'
     inf1['x_var'] = inf1.image_name
-    inf1 = inf1.drop(columns=['image_name'])    
+    inf1 = inf1.drop(columns=['image_name'])
     inf2['var_type'] = 'subject-level'
     inf2['x_var'] = inf2.subject_name
-    inf2 = inf2.drop(columns=['subject_name'])    
-    
+    inf2 = inf2.drop(columns=['subject_name'])
+
     params = pd.concat([inf1, inf2])
     params['mcmc_model_type'] = 'partially-pooled'
     params.variable = params.variable.map(lambda x: '_'.join(x.split('_')[:-1]))
@@ -1541,15 +1546,17 @@ def partially_pooled_parameters(inf_data, distribution='posterior', hdi=.95,
                           row='variable', sharex='col', sharey='row',
                           height=height, aspect=aspect,
                           rotate_xticklabels=rotate_xticklabels,
-                          gridspec_kw={'wspace': .04, 'hspace': .12},
+                          gridspec_kw={'wspace': .04, 'hspace': .12,
+                                       'width_ratios': [2, 1]},
                           title_str="{row_val} | {col_val}",
-                          x_order=np.array([[img_order, img_order], [None, None]]))
+                          x_order=np.array([[img_order, img_order],
+                                            [None, None]]))
     for ax in fig.axes:
-        xlim=ax.get_xlim()
+        xlim = ax.get_xlim()
         ax.axhline(xmin=xlim[0], xmax=xlim[1], linestyle='--', c='k')
         ax.set_xlim(xlim)
     fig._suptitle.set_text(fig._suptitle.get_text().replace("Psychophysical curve parameter values", 'Parameter values 2'))
     fig.axes[-1].set_xlabel('subject_name')
     fig.axes[-2].set_xlabel('image_name')
-    
+
     return fig
