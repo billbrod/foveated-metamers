@@ -808,6 +808,20 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
     return inf_data
 
 
+def _compute_hdi(tmp, hdi):
+    """Compute the HDI of a variable.
+
+    hdi must lie in [0, 1]
+    """
+    hdi_xr = az.hdi(tmp, hdi)
+    hdi_xr['hdi'] = 100 * np.array([.5-hdi/2, .5+hdi/2])
+    tmp = tmp.assign_coords({'hdi': 50})
+    tmp = tmp.median(['chain', 'draw']).expand_dims('hdi')
+    if isinstance(tmp, xarray.DataArray):
+        hdi_xr = hdi_xr[tmp.name]
+    return xarray.concat([hdi_xr, tmp], 'hdi')
+
+
 def inf_data_to_df(inf_data, kind='predictive', query_str=None, hdi=False):
     """Convert inf_data to a dataframe, for plotting.
 
@@ -854,15 +868,6 @@ def inf_data_to_df(inf_data, kind='predictive', query_str=None, hdi=False):
     .. [2] Kruschke, J. K. (2015). Doing Bayesian Data Analysis. : Elsevier.
 
     """
-    def _compute_hdi(tmp, hdi):
-        hdi_xr = az.hdi(tmp, hdi)
-        hdi_xr['hdi'] = 100 * np.array([.5-hdi/2, .5+hdi/2])
-        tmp = tmp.assign_coords({'hdi': 50})
-        tmp = tmp.median(['chain', 'draw']).expand_dims('hdi')
-        if isinstance(tmp, xarray.DataArray):
-            hdi_xr = hdi_xr[tmp.name]
-        return xarray.concat([hdi_xr, tmp], 'hdi')
-
     if hdi is True:
         hdi = .95
     if kind == 'predictive':

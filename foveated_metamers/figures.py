@@ -975,56 +975,6 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
     return g
 
 
-def parameter_distributions(inf_data, col='variable', hue='distribution',
-                            clip=(0, 20), query_str=None, **kwargs):
-    """Check prior and posterior parameter distributions for MCMC.
-
-    Goal of this plot is to show that data mattered, i.e., that posteriors have
-    shifted from priors.
-
-    Parameters
-    ----------
-    inf_data : arviz.InferenceData
-        arviz InferenceData object (xarray-like) created by `run_inference`.
-    col, hue : str, optional
-        variables to facet along. 'variable' gives the parameters from
-        inf_data, other possible values are its coords
-    clip : pair of numbers or list of such, optional
-        Values to clip the evaluation of KDE along. See sns.kdeplot docstring
-        for more details. Prior ends up including way larger values than
-        posterior, so we clip to get a reasonable view
-    query_str : str or None, optional
-        If not None, the string to query dataframe with to limit the plotted
-        data (e.g., "distribution == 'posterior'").
-    kwargs :
-        passed to sns.displot
-
-    Returns
-    -------
-    g : sns.FacetGrid
-        FacetGrid containing the figure.
-
-    """
-    df = mcmc.inf_data_to_df(inf_data, 'parameters', query_str=query_str)
-    # when you have this many samples from the prior, sometimes you get weird
-    # samples, way too large. since we're sampling some of the parameters in
-    # log-space, this can lead to infinite values. to avoid this, we drop any
-    # draws that have any parameter greater than 1e30 (max float32 is ~3.4e38)
-    if (df.value > 1e30).any():
-        gb = df[df.value > 1e30].groupby(['chain', 'draw', 'distribution'])
-        to_drop = [n for n, _ in gb]
-        df = df.set_index(['chain', 'draw', 'distribution'])
-        df = df.drop(to_drop).reset_index()
-    g = sns.displot(df, hue=hue, x='value', col=col, kind='kde', clip=clip,
-                    facet_kws=dict(sharex='col', sharey=False),
-                    **kwargs)
-    model_type = df.mcmc_model_type.unique()
-    if len(model_type) > 1:
-        model_type = ['multiple']
-    g.fig.suptitle(f"Posterior and prior parameter distributions for {model_type[0]}")
-    return g
-
-
 def mcmc_diagnostics_plot(inf_data):
     """Plot MCMC diagnostics.
 
@@ -1128,23 +1078,29 @@ def parameter_pairplot(inf_data, vars=None,
     return g
 
 
-def psychophysical_parameters(inf_data, x='image_name', y='value',
-                              hue='subject_name', col='parameter',
-                              row='trial_type', style=None,
-                              query_str="distribution=='posterior'", height=2.5,
-                              x_dodge=.15, hdi=.95, rotate_xticklabels=False,
-                              **kwargs):
-    """Show psychophysical curve parameters.
+def mcmc_parameters(inf_data, x='image_name', y='value',
+                    hue='subject_name', col='parameter',
+                    row='trial_type', style=None,
+                    query_str="distribution=='posterior'", height=2.5,
+                    x_dodge=.15, hdi=.95, rotate_xticklabels=False,
+                    parameter_type='psychophysical curve parameters',
+                    title_str="{row_val} | {col} = {col_val}",
+                    **kwargs):
+    """Show mcmc parameter, with HDI error bars.
 
-    This plots the psychophysical curve parameters for all full curves we can
-    draw. That is, we combine the effects of our model and show the values for
-    each trial type, image, and subject.
+    By setting ``parameter_type``, multiple plot types can be created:
 
+    - 'psychophysical curve parameters' (default): the psychophysical curve
+      parameters for all full curves we can draw. That is, we combine the
+      effects of our model and show the values for each trial type, image, and
+      subject.
 
     Parameters
     ----------
-    inf_data : arviz.InferenceData
-        arviz InferenceData object (xarray-like) created by `run_inference`.
+    inf_data : arviz.InferenceData or df.
+        arviz InferenceData object (xarray-like) created by `run_inference`. If
+        df, we assume it's already been turned into a dataframe by
+        `mcmc.inf_data_to_df` and use as is.
     x, y, hue, col, row, style : str, optional
         variables to plot on axes or facet along. 'value' is the value of the
         parameters, 'parameter' is the identity of the parameter (e.g., 's0',
@@ -1169,19 +1125,25 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
         whether to rotate the x-axis labels or not. if True, we rotate
         by 25 degrees. if an int, we rotate by that many degrees. if
         False, we don't rotate.
+    parameter_type : {'psychophysical curve parameters'}, optional
+        Type of plot, see above for details
+    title_str : str, optional
+        Format string for axes titles. Can include {row_val}, {col_val}, {row},
+        {col} (for the values and names of those facets, respectively) and
+        plain text.
     kwargs :
         passed to sns.FacetGrid
 
     Returns
     -------
-    g : sns.FacetGrid
-        FacetGrid containing the figure.
+    fig : plt.Figure
+        figure containing the figure.
 
     """
     kwargs.setdefault('sharey', False)
     kwargs.setdefault('sharex', True)
     if not isinstance(inf_data, pd.DataFrame):
-        df = mcmc.inf_data_to_df(inf_data, 'psychophysical curve parameters',
+        df = mcmc.inf_data_to_df(inf_data, parameter_type,
                                  query_str=query_str, hdi=hdi)
     else:
         df = inf_data
@@ -1189,6 +1151,8 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
     if hue is not None:
         palette = kwargs.pop('palette', plotting.get_palette(hue,
                                                              df[hue].unique()))
+    else:
+        palette = {None: kwargs.pop('color', 'C0')}
     if style is not None:
         try:
             col_unique = df[style].unique()
@@ -1201,23 +1165,31 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
     else:
         marker_adjust = {}
     # remap the image names to be better for plotting
-    df, img_order = plotting._remap_image_names(df)
-    x_order = None
+    if 'image_name' in df.columns:
+        df, img_order = plotting._remap_image_names(df)
+    x_order = kwargs.pop('x_order', None)
     if col == 'image_name':
         kwargs.setdefault('col_order', img_order)
     elif row == 'image_name':
         kwargs.setdefault('row_order', img_order)
     elif x == 'image_name':
-        x_order = img_order
-    col_order = kwargs.get('col_order', sorted(df[col].unique()))
+        if x_order is None:
+            x_order = img_order
+    col_order = kwargs.pop('col_order', sorted(df[col].unique()))
     cols = sorted(df[col].unique(), key=lambda x: col_order.index(x))
-    row_order = kwargs.get('row_order', sorted(df[row].unique()))
+    row_order = kwargs.pop('row_order', sorted(df[row].unique()))
     rows = sorted(df[row].unique(), key=lambda x: row_order.index(x))
     aspect = kwargs.pop('aspect', 1)
+    gridspec_kw = kwargs.pop('gridspec_kw', {})
+    if 'hspace' not in gridspec_kw:
+        hspace = .15
+        if rotate_xticklabels and len(rows) > 1:
+            hspace += .1
+        gridspec_kw['hspace'] = hspace
     fig, axes = plt.subplots(nrows=len(rows), ncols=len(cols),
                              figsize=(aspect*len(cols)*height,
                                       len(rows)*height,),
-                             squeeze=False, gridspec_kw={'hspace': .15}, **kwargs)
+                             squeeze=False, gridspec_kw=gridspec_kw, **kwargs)
     if rotate_xticklabels is True:
         rotate_xticklabels = 25
     final_markers = {}
@@ -1237,10 +1209,14 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
             all_labels = [n for n, _ in df.groupby([*gb_style, hue])]
         label = 'both'
     else:
-        all_labels = []
+        all_labels = [None]
         label = None
     for i, c in enumerate(cols):
         for j, r in enumerate(rows):
+            if x_order is not None and isinstance(x_order[0], np.ndarray):
+                x_ord = x_order[i, j]
+            else:
+                x_ord = x_order
             ax = axes[j, i]
             d = df.query(f"{col}=='{c}' & {row}=='{r}'")
             if hue is None:
@@ -1272,7 +1248,7 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
                                                           like_pointplot=True, ci='hdi',
                                                           markers=marker_adjust, style=style,
                                                           color=palette.get(n, 'k'), data=h,
-                                                          label=lab, ax=ax, x_order=x_order)
+                                                          label=lab, ax=ax, x_order=x_ord)
                     if m is not None:
                         fc = dots[0].get_facecolor()[0]
                         if all(fc == 1):
@@ -1285,10 +1261,11 @@ def psychophysical_parameters(inf_data, x='image_name', y='value',
             ax.spines['top'].set_visible(False)
             ax.spines['right'].set_visible(False)
             if i == 0:
-                ax.set_ylabel(y)
+                ax.set_ylabel(y + f" with {hdi*100}% HDI")
             if j == len(rows)-1:
                 ax.set_xlabel(x)
-            ax.set_title(f'{r} | {col} = {c}')
+            ax.set_title(title_str.format(row_val=r, col_val=c, col=col,
+                                          row=row))
             if rotate_xticklabels:
                 labels = ax.get_xticklabels()
                 if labels:
@@ -1437,3 +1414,142 @@ def synthesis_distance_plot(distances, xy='trial_type', hue='ref_image',
         ax.set_xlim(lims)
         ax.set_ylim(lims)
     return g
+
+
+def partially_pooled_metaparameters(inf_data, distribution='posterior', hdi=.95,
+                                    height=5, aspect=1, rotate_xticklabels=True):
+    """Plot the metaparameters of the partially pooled mcmc model.
+
+    The metaparametesr are the lapse rate and those that control the
+    distribution across images/subjects of a0 and s0.
+
+    Parameters
+    ----------
+    inf_data : arviz.InferenceData
+        arviz InferenceData object (xarray-like) created by `run_inference`
+    distribution : str, optional
+        what distribution to grab from inf_data
+    hdi : float, optional
+        The width of the HDI to draw (in range (0, 1]). See docstring of
+        fov.mcmc.inf_data_to_df for more details.
+    height : float, optional
+        Height of the axes
+    aspect : float, optional
+        Aspect of the axes
+    rotate_xticklabels : bool or int, optional
+        whether to rotate the x-axis labels or not. if True, we rotate
+        by 25 degrees. if an int, we rotate by that many degrees. if
+        False, we don't rotate.
+    
+    Returns
+    -------
+    fig : plt.Figure
+        figure containing the figure.
+
+    """
+    if inf_data.metadata.mcmc_model_type[0, 0] != 'partially-pooled':
+        raise Exception("Can only create this plot with partially-pooled mcmc model"
+                        f" but got {inf_data.metadata.mcmc_model_type.values[0, 0]}!")
+    inf_data = mcmc._compute_hdi(inf_data[distribution], hdi)
+    keys_to_exclude = [f'log_{p}_{t}' for p, t in
+                       itertools.product(['a0', 's0'], ['image', 'subject'])]
+    cols = [k for k in inf_data.data_vars.keys() if k not in keys_to_exclude + ['pi_l']]
+    inf1 = inf_data[cols].to_dataframe()
+    inf1 = inf1.reset_index().melt(inf1.index.names)
+    inf2 = inf_data[['pi_l']].to_dataframe()
+    inf2 = inf2.reset_index().melt(inf2.index.names)
+    inf1['var_type'] = 'Metaparameters'
+    inf2['var_type'] = 'Lapse rate'
+    inf2['variable'] = inf2.subject_name
+    inf2 = inf2.drop(columns=['subject_name'])    
+ 
+    metaparams = pd.concat([inf1, inf2])
+    metaparams['mcmc_model_type'] = 'partially-pooled'
+
+    metaparam_order = np.array(['log_a0_global_mean', 'a0_image_sd', 'a0_subject_sd',
+                                'log_s0_global_mean', 's0_image_sd', 's0_subject_sd'])
+    fig = mcmc_parameters(metaparams, x='variable', col='var_type',
+                          hue='model', height=height, aspect=aspect,
+                          sharex=False, rotate_xticklabels=rotate_xticklabels,
+                          col_order=['Metaparameters', 'Lapse rate'],
+                          x_order=np.array([[metaparam_order], [None]]),
+                          title_str='{row_val} | {col_val}',
+                          style='trial_type')
+
+    fig.axes[0].set_xlabel('subject_name')
+    fig._suptitle.set_text(fig._suptitle.get_text().replace("Psychophysical curve parameter values", 'Parameter values 1'))
+    return fig
+
+    
+def partially_pooled_parameters(inf_data, distribution='posterior', hdi=.95,
+                                height=4, aspect=2.5, rotate_xticklabels=True):
+    """Plot the subject/image level parameters of partially pooled mcmc model.
+
+    These are log_a0/s0_image/subject.
+
+    
+    Parameters
+    ----------
+    inf_data : arviz.InferenceData
+        arviz InferenceData object (xarray-like) created by `run_inference`
+    distribution : str, optional
+        what distribution to grab from inf_data
+    hdi : float, optional
+        The width of the HDI to draw (in range (0, 1]). See docstring of
+        fov.mcmc.inf_data_to_df for more details.
+    height : float, optional
+        Height of the axes
+    aspect : float, optional
+        Aspect of the axes
+    rotate_xticklabels : bool or int, optional
+        whether to rotate the x-axis labels or not. if True, we rotate
+        by 25 degrees. if an int, we rotate by that many degrees. if
+        False, we don't rotate.
+    
+    Returns
+    -------
+    fig : plt.Figure
+        figure containing the figure.
+
+    """
+    if inf_data.metadata.mcmc_model_type[0, 0] != 'partially-pooled':
+        raise Exception("Can only create this plot with partially-pooled mcmc model"
+                        f" but got {inf_data.metadata.mcmc_model_type.values[0, 0]}!")
+    _, img_order = plotting._remap_image_names(inf_data.posterior.to_dataframe().reset_index())
+    img_order = np.array(img_order)
+    inf_data = mcmc._compute_hdi(inf_data[distribution], hdi)
+    keys_to_include = [f'log_{p}_{t}' for p, t in itertools.product(['a0', 's0'], ['image', 'subject'])]
+    inf1 = inf_data[[k for k in keys_to_include if 'image' in k]].to_dataframe()
+    inf1 = inf1.reset_index().melt(inf1.index.names)
+    inf2 = inf_data[[k for k in keys_to_include if 'subject' in k]].to_dataframe()
+    inf2 = inf2.reset_index().melt(inf2.index.names)
+
+    inf1['var_type'] = 'image-level'
+    inf1['x_var'] = inf1.image_name
+    inf1 = inf1.drop(columns=['image_name'])    
+    inf2['var_type'] = 'subject-level'
+    inf2['x_var'] = inf2.subject_name
+    inf2 = inf2.drop(columns=['subject_name'])    
+    
+    params = pd.concat([inf1, inf2])
+    params['mcmc_model_type'] = 'partially-pooled'
+    params.variable = params.variable.map(lambda x: '_'.join(x.split('_')[:-1]))
+    params.x_var = params.x_var.map(lambda x: x.split('_')[0])
+
+    fig = mcmc_parameters(params, x='x_var', style='trial_type',
+                          hue='model', col='var_type',
+                          row='variable', sharex='col', sharey='row',
+                          height=height, aspect=aspect,
+                          rotate_xticklabels=rotate_xticklabels,
+                          gridspec_kw={'wspace': .04, 'hspace': .12},
+                          title_str="{row_val} | {col_val}",
+                          x_order=np.array([[img_order, img_order], [None, None]]))
+    for ax in fig.axes:
+        xlim=ax.get_xlim()
+        ax.axhline(xmin=xlim[0], xmax=xlim[1], linestyle='--', c='k')
+        ax.set_xlim(xlim)
+    fig._suptitle.set_text(fig._suptitle.get_text().replace("Psychophysical curve parameter values", 'Parameter values 2'))
+    fig.axes[-1].set_xlabel('subject_name')
+    fig.axes[-2].set_xlabel('image_name')
+    
+    return fig
