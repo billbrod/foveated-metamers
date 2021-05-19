@@ -11,7 +11,8 @@ import multiprocessing
 
 
 configfile:
-    "config.yml"
+    # config is in the same directory as this file
+    op.join(op.dirname(op.realpath(workflow.snakefile)), 'config.yml')
 if not op.isdir(config["DATA_DIR"]):
     raise Exception("Cannot find the dataset at %s" % config["DATA_DIR"])
 if os.system("module list") == 0:
