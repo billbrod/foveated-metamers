@@ -1952,10 +1952,11 @@ rule distance_plot:
                 df.to_csv(output[0], index=False)
                 df['synthesis_model'] = df['synthesis_model'].apply(lambda x: x.split('_')[0])
                 df['distance_model'] = df['distance_model'].apply(lambda x: x.split('_')[0])
+                hue_order = fov.plotting.get_order('image_name')
                 g = sns.catplot('synthesis_scaling', 'distance', 'ref_image', data=df,
                                 col='trial_type', sharey=True, row='synthesis_model', kind='point',
                                 sharex=False, col_order=['metamer_vs_reference', 'metamer_vs_metamer'],
-                                hue_order=sorted(df.ref_image.unique()))
+                                hue_order=hue_order)
                 for ijk, d in g.facet_data():
                     ax = g.facet_axis(*ijk[:2])
                     ax.set_xticklabels([f'{s:.03f}' for s in d.synthesis_scaling.unique()])

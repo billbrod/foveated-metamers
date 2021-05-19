@@ -846,11 +846,11 @@ def compare_loss_and_performance_plot(expt_df, stim_df, col='scaling',
                             right_index=True,).reset_index()
     col_order, hue_order, row_order = None, None, None
     if col is not None:
-        col_order = sorted(expt_df[col].unique())
+        col_order = plotting.get_order(col, expt_df[col].unique())
     if row is not None:
-        row_order = sorted(expt_df[row].unique())
+        row_order = plotting.get_order(row, expt_df[row].unique())
     if hue is not None:
-        hue_order = sorted(expt_df[hue].unique())
+        hue_order = plotting.get_order(hue, expt_df[hue].unique())
     g = sns.relplot(data=expt_df, x='loss', y='proportion_correct',
                     hue=hue, col=col, kind='scatter', col_wrap=col_wrap,
                     height=3, row=row, col_order=col_order,
@@ -1321,6 +1321,8 @@ def synthesis_distance_plot(distances, xy='trial_type', hue='ref_image',
     distances = distances.rename(columns={c: c[0] for c in distances.columns if isinstance(c, tuple)})
     distances = distances.pivot(['distance_model', 'ref_image', row, col],
                                 xy, 'value').reset_index()
+    if hue == 'ref_image':
+        kwargs.setdefault('hue_order', plotting.get_order('image_name'))
     g = sns.relplot(x=x, y=y, data=distances, hue=hue, kind='scatter', col=col, row=row, **kwargs)
     for ax in g.axes.flatten():
         ax.set(xscale='log', yscale='log')
