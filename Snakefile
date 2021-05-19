@@ -1154,6 +1154,8 @@ rule create_experiment_df:
                                                     wildcards.run_num)
                 fig.savefig(output[1], bbox_inches='tight')
                 df = fov.analysis.create_experiment_df_split(stim_df, idx)
+                if len(wildcards.comp.split('-')) > 1:
+                    df['trial_type'] = df.trial_type.apply(lambda x: x+'-'+wildcards.comp.split('-')[1])
                 df = fov.analysis.add_response_info(df, trials, wildcards.subject,
                                                     wildcards.sess_num, wildcards.run_num)
                 if wildcards.ecc_mask:
@@ -1775,7 +1777,8 @@ rule performance_comparison_figure:
     input:
         [op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
                  'task-split_comp-{comp}_data.csv').format(comp=c, model_name=m)
-         for c in ['met', 'ref'] for m in MODELS],
+         for m in MODELS
+         for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'met-downsample-2']}.get(m, ['met', 'ref'])],
     output:
         op.join(config['DATA_DIR'], 'figures', '{context}', 'performance_{subject}.svg')
     log:
