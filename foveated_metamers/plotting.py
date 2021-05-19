@@ -323,9 +323,6 @@ def _remap_image_names(df):
     -------
     df : pd.DataFrame
         DataFrame with image_name column remapped, if appropriate
-    img_order : list
-        List of image names, in the correct order for plotting (e.g., for
-        col_order)
 
     """
     with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
@@ -358,9 +355,7 @@ def _remap_image_names(df):
         else:
             if remapped:
                 continue
-            else:
-                img_order = sorted(df.image_name.unique())
-    return df, img_order
+    return df
 
 
 def _psychophysical_curve_ticks(df, axes, logscale_xaxis=False, height=5,

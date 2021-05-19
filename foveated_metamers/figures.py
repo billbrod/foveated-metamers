@@ -710,8 +710,9 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, style=None,
     if col is None or row is not None:
         col_wrap = None
     # remap the image names to be better for plotting
-    expt_df, img_order = plotting._remap_image_names(expt_df)
+    expt_df = plotting._remap_image_names(expt_df)
     if col == 'image_name':
+        img_order = plotting.get_order('image_name')
         kwargs.setdefault('col_order', img_order)
     g = plotting.lineplot_like_pointplot(expt_df, 'scaling',
                                          'hit_or_miss_numeric', ci=ci, col=col,
@@ -931,7 +932,8 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
     if col is None or row is not None:
         col_wrap = None
     # remap the image names to be better for plotting
-    df, img_order = plotting._remap_image_names(df)
+    df = plotting._remap_image_names(df)
+    img_order = plotting.get_order('image_name')
     if col == 'image_name':
         kwargs.setdefault('col_order', img_order)
     if row == 'image_name':
@@ -1102,7 +1104,7 @@ def psychophysical_curve_parameters(inf_data, x='image_name', y='value',
         variables to plot on axes or facet along. 'value' is the value of the
         parameters, 'parameter' is the identity of the parameter (e.g., 's0',
         'a0'), all other are the coords of inf_data. Note that col and row
-        cannot be None.
+        cannot be None. style can be a list with multiple values.
     query_str : str or None, optional
         If not None, the string to query dataframe with to limit the plotted
         data (e.g., "distribution == 'posterior'").
@@ -1161,7 +1163,7 @@ def psychophysical_curve_parameters(inf_data, x='image_name', y='value',
         marker_adjust = {}
     # remap the image names to be better for plotting
     if 'image_name' in df.columns:
-        df, img_order = plotting._remap_image_names(df)
+        df = plotting._remap_image_names(df)
     x_order = kwargs.pop('x_order', None)
     if x == 'image_name' and x_order is None:
         x_order = plotting.get_order(x)
@@ -1178,7 +1180,7 @@ def psychophysical_curve_parameters(inf_data, x='image_name', y='value',
             d = df.query(f"{col}=='{c}' & {row}=='{r}'")
             xlabel, ylabel = '', ''
             if i == 0:
-                ylabel = f'{y} + with {int(hdi*100)}% HDI'
+                ylabel = f'{y} with {int(hdi*100)}% HDI'
             if j == len(rows)-1:
                 xlabel = x
             title_ = title_str.format(row_val=r, col_val=c, col=col, row=row)
@@ -1591,4 +1593,134 @@ def partially_pooled_parameters(inf_data, hue='model', style='trial_type',
     plotting._add_legend(params, None, fig, hue, style, palette,
                          final_markers, {k: '' for k in marker_adjust.keys()})
     fig.suptitle("Parameter values 2 for partially-pooled MCMC", y=.95)
+    return fig
+
+
+def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
+                                    hue='model', col='level', row='parameter',
+                                    style='trial_type',
+                                    query_str="distribution=='posterior'",
+                                    height=4, aspect=2, x_dodge=.15, hdi=.95,
+                                    rotate_xticklabels=True,
+                                    title_str="{row_val} | {col_val}",
+                                    **kwargs):
+    """Show psychophysical group-level means, with HDI error bars.
+
+    This plots the psychophysical group-level means for all full curves we can
+    draw. That is, we compute the psychophysical curve parameters and then
+    average over the images and subjects (separately), plotting their
+    distributions.
+
+    Parameters
+    ----------
+    inf_data : arviz.InferenceData or df.
+        arviz InferenceData object (xarray-like) created by `run_inference`. If
+        df, we assume it's already been turned into a dataframe by
+        `mcmc.inf_data_to_df` and use as is.
+    x, y, hue, col, row, style : str, optional
+        variables to plot on axes or facet along. 'value' is the value of the
+        parameters, 'parameter' is the identity of the parameter (e.g., 's0',
+        'a0'), 'level' is subject / image, 'dependent_var' is the variables of
+        those levels, all other are the coords of inf_data. Note that col and
+        row cannot be None. style can be a list with multiple values.
+    query_str : str or None, optional
+        If not None, the string to query dataframe with to limit the plotted
+        data (e.g., "distribution == 'posterior'").
+        posterior, so we clip to get a reasonable view
+    height : float, optional
+        Height of the axes.
+    aspect : float, optional
+        Aspect of the axes.
+    x_dodge : float, None, or bool, optional
+        to improve visibility with many points that have the same x-values (or
+        are categorical), we can dodge the data along the x-axis,
+        deterministically shifting it. If a float, x_dodge is the amount we
+        shift each level of hue by; if None, we don't dodge at all; if True, we
+        dodge as if x_dodge=.01
+    hdi : float, optional
+        The width of the HDI to draw (in range (0, 1]). See docstring of
+        fov.mcmc.inf_data_to_df for more details.
+    rotate_xticklabels : bool or int, optional
+        whether to rotate the x-axis labels or not. if True, we rotate
+        by 25 degrees. if an int, we rotate by that many degrees. if
+        False, we don't rotate.
+    title_str : str, optional
+        Format string for axes titles. Can include {row_val}, {col_val}, {row},
+        {col} (for the values and names of those facets, respectively) and
+        plain text.
+    kwargs :
+        passed to plt.subplots
+
+    Returns
+    -------
+    fig : plt.Figure
+        figure containing the figure.
+
+    """
+    kwargs.setdefault('sharey', 'row')
+    kwargs.setdefault('sharex', 'col')
+    if not isinstance(inf_data, pd.DataFrame):
+        df = mcmc.inf_data_to_df(inf_data, 'parameter grouplevel means',
+                                 query_str=query_str, hdi=hdi)
+    else:
+        df = inf_data
+    # set defaults based on hue and style args
+    if hue is not None:
+        palette = kwargs.pop('palette', plotting.get_palette(hue,
+                                                             df[hue].unique()))
+    else:
+        palette = {None: kwargs.pop('color', 'C0')}
+    if style is not None:
+        try:
+            col_unique = df[style].unique()
+            style = style
+        except AttributeError:
+            # then there are multiple values in style
+            col_unique = [df[s].unique().tolist() for s in style]
+        style_dict = plotting.get_style(style, col_unique)
+        marker_adjust = style_dict.pop('marker_adjust', {})
+    else:
+        marker_adjust = {}
+    img_order = plotting.get_order('image_name')
+    x_order = kwargs.pop('x_order', None)
+    fig, axes, cols, rows = plotting._setup_facet_figure(df, col, row,
+                                                         height=height, aspect=aspect,
+                                                         rotate_xticklabels=rotate_xticklabels,
+                                                         gridspec_kw={'wspace': .05, 'hspace': .12,
+                                                                      'width_ratios': [2, 1]},
+                                                         **kwargs)
+    final_markers = {}
+    label, all_labels = plotting._prep_labels(df, hue, style, col, row)
+    for i, c in enumerate(cols):
+        for j, r in enumerate(rows):
+            ax = axes[j, i]
+            if x == 'dependent_var' and x_order is None and 'image' in c:
+                x_ord = img_order
+            else:
+                x_ord = x_order
+            d = df.query(f"{col}=='{c}' & {row}=='{r}'")
+            xlabel, ylabel = '', ''
+            if i == 0:
+                ylabel = f'{y} with {int(hdi*100)}% HDI'
+            if j == len(rows)-1:
+                xlabel = x
+            title_ = title_str.format(row_val=r, col_val=c, col=col, row=row)
+            markers_tmp = plotting._facetted_scatter_ci_dist(d, x, y, hue,
+                                                             style, x_ord,
+                                                             label, all_labels,
+                                                             x_dodge,
+                                                             marker_adjust,
+                                                             palette,
+                                                             rotate_xticklabels,
+                                                             xlabel, ylabel,
+                                                             title_, ax=ax)
+            final_markers.update(markers_tmp)
+
+    # create the legend
+    plotting._add_legend(df, None, fig, hue, style, palette,
+                         final_markers, {k: '' for k in marker_adjust.keys()})
+    model_type = df.mcmc_model_type.unique()
+    if len(model_type) > 1:
+        model_type = ['multiple']
+    fig.suptitle(f"Psychophysical group-level means for {model_type[0]} MCMC", va='bottom')
     return fig
