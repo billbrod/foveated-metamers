@@ -1455,7 +1455,7 @@ def partially_pooled_metaparameters(inf_data, hue='model', style='trial_type',
             ax.set_ylim((0, ax.get_ylim()[1]))
     plotting._add_legend(metaparams, None, fig, hue, style, palette,
                          final_markers, {k: '' for k in marker_adjust.keys()})
-    fig.suptitle("Parameter values 1 for partially-pooled MCMC", va='bottom')
+    fig.suptitle("Parameter values 1 for partially-pooled MCMC\n", y=.95, va='bottom')
     return fig
 
 
@@ -1590,5 +1590,5 @@ def partially_pooled_parameters(inf_data, hue='model', style='trial_type',
     # create the legend
     plotting._add_legend(params, None, fig, hue, style, palette,
                          final_markers, {k: '' for k in marker_adjust.keys()})
-    fig.suptitle("Parameter values 2 for partially-pooled MCMC", va='bottom')
+    fig.suptitle("Parameter values 2 for partially-pooled MCMC", y=.95)
     return fig
