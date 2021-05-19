@@ -1333,7 +1333,7 @@ rule mcmc_plots:
                 'task-split_comp-{comp}_mcmc_{mcmc_model}_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
                 '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_{plot_type}_benchmark.txt'),
     resources:
-        mem = lambda wildcards: {'post-pred-check': 15, 'distribs': 50}.get(wildcards.plot_type, 5)
+        mem = lambda wildcards: {'post-pred-check': 15}.get(wildcards.plot_type, 5)
     run:
         import foveated_metamers as fov
         import arviz as az
@@ -1378,6 +1378,9 @@ rule mcmc_plots:
                     print("Creating metaparameter distribution plot.")
                     fig = fov.figures.partially_pooled_metaparameters(inf_data, height=4, aspect=2.5,
                                                                       rotate_xticklabels=True)
+                elif wildcards.plot_type == 'grouplevel':
+                    print("Creating parameter grouplevel means distribution plot.")
+                    fig = fov.figures.psychophysical_grouplevel_means(inf_data)
                 else:
                     raise Exception(f"Don't know how to handle plot_type {wildcards.plot_type}!")
                 fig.savefig(output[0], bbox_inches='tight')
@@ -1392,15 +1395,15 @@ rule mcmc_compare_plot:
     output:
         op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                 'task-split_comp-{comp}_mcmc_compare_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
-                '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_psychophysical-params.png'),
+                '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_{plot_type}.png'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                 'task-split_comp-{comp}_mcmc_compare_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
-                '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_psychophysical-params.log'),
+                '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_{plot_type}.log'),
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                 'task-split_comp-{comp}_mcmc_compare_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
-                '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_psychophysical-params_benchmark.txt'),
+                '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_{plot_type}_benchmark.txt'),
     run:
         import foveated_metamers as fov
         import arviz as az
@@ -1408,17 +1411,24 @@ rule mcmc_compare_plot:
         import contextlib
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                if wildcards.plot_type == 'psychophysical-params':
+                    df_type = 'psychophysical curve parameters'
+                elif wildcards.plot_type == 'psychophysical-grouplevel':
+                    df_type = 'parameter grouplevel means'
                 df = []
                 for i in input:
                     inf = az.from_netcdf(i)
-                    df.append(fov.mcmc.inf_data_to_df(inf, 'psychophysical curve parameters',
+                    df.append(fov.mcmc.inf_data_to_df(inf, df_type,
                                                       query_str="distribution=='posterior'", hdi=.95))
                 df = pd.concat(df)
-                fig = fov.figures.psychophysical_curve_parameters(df, style=['mcmc_model_type',
-                                                                             'trial_type'],
-                                                                  row='trial_type',
-                                                                  height=5, aspect=3,
-                                                                  rotate_xticklabels=True)
+                if wildcards.plot_type == 'psychophysical-params':
+                    fig = fov.figures.psychophysical_curve_parameters(df, style=['mcmc_model_type',
+                                                                                 'trial_type'],
+                                                                      row='trial_type',
+                                                                      height=5, aspect=3,
+                                                                      rotate_xticklabels=True)
+                elif wildcards.plot_type == 'psychophysical-grouplevel':
+                    fig = fov.figures.psychophysical_grouplevel_means(df, style=['mcmc_model_type', 'trial_type'])
                 fig.savefig(output[0], bbox_inches='tight')
 
 

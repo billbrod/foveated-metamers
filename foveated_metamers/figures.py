@@ -1703,7 +1703,7 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
             if i == 0:
                 ylabel = f'{y} with {int(hdi*100)}% HDI'
             if j == len(rows)-1:
-                xlabel = x
+                xlabel = c
             title_ = title_str.format(row_val=r, col_val=c, col=col, row=row)
             markers_tmp = plotting._facetted_scatter_ci_dist(d, x, y, hue,
                                                              style, x_ord,
@@ -1722,5 +1722,5 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
     model_type = df.mcmc_model_type.unique()
     if len(model_type) > 1:
         model_type = ['multiple']
-    fig.suptitle(f"Psychophysical group-level means for {model_type[0]} MCMC", va='bottom')
+    fig.suptitle(f"Psychophysical group-level means for {model_type[0]} MCMC", y=.95)
     return fig
