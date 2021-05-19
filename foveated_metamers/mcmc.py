@@ -920,6 +920,33 @@ def inf_data_to_df(inf_data, kind='predictive', query_str=None, hdi=False):
                 tmp['parameter'] = p
                 df.append(tmp)
         df = pd.concat(df).reset_index(drop=True)
+    elif kind == 'parameter grouplevel means':
+        dists = ['prior', 'posterior']
+        params = ['a0', 's0']
+        mean_level = ['subject_name', 'image_name']
+        df = []
+        for d in dists:
+            for p in params:
+                for m, other_m in zip(mean_level, mean_level[::-1]):
+                    try:
+                        tmp = np.exp(inf_data[d][f'log_{p}_global_mean'] + inf_data[d][f'log_{p}_image'] +
+                                     inf_data[d][f'log_{p}_subject'])
+                    except KeyError:
+                        # then this is the unpooled version, and so we can directly
+                        # grab the parameter
+                        tmp = np.exp(inf_data[d][p])
+                    tmp = tmp.mean(m)
+                    if hdi:
+                        tmp = _compute_hdi(tmp, hdi)
+                    tmp = tmp.to_dataframe('value').reset_index()
+                    tmp['distribution'] = d
+                    tmp['parameter'] = p
+                    tmp['level'] = other_m
+                    tmp['dependent_var'] = tmp[other_m]
+                    tmp = tmp.drop(columns=[other_m])
+                    df.append(tmp)
+        df = pd.concat(df).reset_index(drop=True)
+        df.dependent_var = df.dependent_var.map(lambda x: x.split('_')[0])
     if query_str is not None:
         df = df.query(query_str)
     if 'image_name' in df.columns:

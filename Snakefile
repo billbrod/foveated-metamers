@@ -1357,11 +1357,11 @@ rule mcmc_plots:
                     fig = fov.figures.mcmc_diagnostics_plot(inf_data)
                 elif wildcards.plot_type == 'psychophysical-params':
                     print("Creating psychophysical parameters plot.")
-                    fig = fov.figures.mcmc_parameters(inf_data,
-                                                      rotate_xticklabels=True,
-                                                      aspect=3,
-                                                      height=5,
-                                                      style='trial_type')
+                    fig = fov.figures.psychophysical_curve_parameters(inf_data,
+                                                                      rotate_xticklabels=True,
+                                                                      aspect=3,
+                                                                      height=5,
+                                                                      style='trial_type')
                 elif wildcards.plot_type == 'pairplot':
                     print("Creating parameter pairplot.")
                     fig = fov.figures.parameter_pairplot(inf_data, hue='subject_name')
@@ -1413,11 +1413,11 @@ rule mcmc_compare_plot:
                     df.append(fov.mcmc.inf_data_to_df(inf, 'psychophysical curve parameters',
                                                       query_str="distribution=='posterior'", hdi=.95))
                 df = pd.concat(df)
-                fig = fov.figures.mcmc_parameters(df, style=['mcmc_model_type',
-                                                             'trial_type'],
-                                                  row='trial_type',
-                                                  height=5, aspect=3,
-                                                  rotate_xticklabels=True)
+                fig = fov.figures.psychophysical_curve_parameters(df, style=['mcmc_model_type',
+                                                                             'trial_type'],
+                                                                  row='trial_type',
+                                                                  height=5, aspect=3,
+                                                                  rotate_xticklabels=True)
                 fig.savefig(output[0], bbox_inches='tight')
 
 

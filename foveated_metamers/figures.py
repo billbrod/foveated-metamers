@@ -1078,22 +1078,19 @@ def parameter_pairplot(inf_data, vars=None,
     return g
 
 
-def mcmc_parameters(inf_data, x='image_name', y='value',
-                    hue='subject_name', col='parameter',
-                    row='trial_type', style=None,
-                    query_str="distribution=='posterior'", height=2.5,
-                    x_dodge=.15, hdi=.95, rotate_xticklabels=False,
-                    parameter_type='psychophysical curve parameters',
-                    title_str="{row_val} | {col} = {col_val}",
-                    **kwargs):
-    """Show mcmc parameter, with HDI error bars.
+def psychophysical_curve_parameters(inf_data, x='image_name', y='value',
+                                    hue='subject_name', col='parameter',
+                                    row='trial_type', style=None,
+                                    query_str="distribution=='posterior'",
+                                    height=2.5, x_dodge=.15, hdi=.95,
+                                    rotate_xticklabels=False,
+                                    title_str="{row_val} | {col} = {col_val}",
+                                    **kwargs):
+    """Show psychophysical curve parameters, with HDI error bars.
 
-    By setting ``parameter_type``, multiple plot types can be created:
-
-    - 'psychophysical curve parameters' (default): the psychophysical curve
-      parameters for all full curves we can draw. That is, we combine the
-      effects of our model and show the values for each trial type, image, and
-      subject.
+    This plots the psychophysical curve parameters for all full curves we can
+    draw. That is, we combine the effects of our model and show the values for
+    each trial type, image, and subject.
 
     Parameters
     ----------
@@ -1125,14 +1122,12 @@ def mcmc_parameters(inf_data, x='image_name', y='value',
         whether to rotate the x-axis labels or not. if True, we rotate
         by 25 degrees. if an int, we rotate by that many degrees. if
         False, we don't rotate.
-    parameter_type : {'psychophysical curve parameters'}, optional
-        Type of plot, see above for details
     title_str : str, optional
         Format string for axes titles. Can include {row_val}, {col_val}, {row},
         {col} (for the values and names of those facets, respectively) and
         plain text.
     kwargs :
-        passed to sns.FacetGrid
+        passed to plt.subplots
 
     Returns
     -------
@@ -1143,7 +1138,7 @@ def mcmc_parameters(inf_data, x='image_name', y='value',
     kwargs.setdefault('sharey', False)
     kwargs.setdefault('sharex', True)
     if not isinstance(inf_data, pd.DataFrame):
-        df = mcmc.inf_data_to_df(inf_data, parameter_type,
+        df = mcmc.inf_data_to_df(inf_data, 'psychophysical curve parameters',
                                  query_str=query_str, hdi=hdi)
     else:
         df = inf_data
@@ -1168,109 +1163,35 @@ def mcmc_parameters(inf_data, x='image_name', y='value',
     if 'image_name' in df.columns:
         df, img_order = plotting._remap_image_names(df)
     x_order = kwargs.pop('x_order', None)
-    if col == 'image_name':
-        kwargs.setdefault('col_order', img_order)
-    elif row == 'image_name':
-        kwargs.setdefault('row_order', img_order)
-    elif x == 'image_name':
-        if x_order is None:
-            x_order = img_order
-    col_order = kwargs.pop('col_order', sorted(df[col].unique()))
-    cols = sorted(df[col].unique(), key=lambda x: col_order.index(x))
-    row_order = kwargs.pop('row_order', sorted(df[row].unique()))
-    rows = sorted(df[row].unique(), key=lambda x: row_order.index(x))
-    aspect = kwargs.pop('aspect', 1)
-    gridspec_kw = kwargs.pop('gridspec_kw', {})
-    if 'hspace' not in gridspec_kw:
-        hspace = .15
-        if rotate_xticklabels and len(rows) > 1:
-            hspace += .1
-        gridspec_kw['hspace'] = hspace
-    fig, axes = plt.subplots(nrows=len(rows), ncols=len(cols),
-                             figsize=(aspect*len(cols)*height,
-                                      len(rows)*height,),
-                             squeeze=False, gridspec_kw=gridspec_kw, **kwargs)
-    if rotate_xticklabels is True:
-        rotate_xticklabels = 25
+    if x == 'image_name' and x_order is None:
+        x_order = plotting.get_order(x)
+    fig, axes, cols, rows = plotting._setup_facet_figure(df, col, row,
+                                                         height=height,
+                                                         rotate_xticklabels=rotate_xticklabels,
+                                                         gridspec_kw={'wspace': .05},
+                                                         **kwargs)
     final_markers = {}
-    if hue is not None and (style is None or style == col or style == row):
-        all_labels = list(df[hue].unique())
-        label = 'hue'
-    elif style is not None and hue is None:
-        all_labels = list(df[style].unique())
-        label = 'style'
-    elif style is not None and hue is not None:
-        try:
-            all_labels = [n for n, _ in df.groupby([style, hue])]
-            gb_style = [style]
-        except ValueError:
-            # then style is a list
-            gb_style = [s for s in style if s!=row and s!=col]
-            all_labels = [n for n, _ in df.groupby([*gb_style, hue])]
-        label = 'both'
-    else:
-        all_labels = [None]
-        label = None
+    label, all_labels = plotting._prep_labels(df, hue, style, col, row)
     for i, c in enumerate(cols):
         for j, r in enumerate(rows):
-            if x_order is not None and isinstance(x_order[0], np.ndarray):
-                x_ord = x_order[i, j]
-            else:
-                x_ord = x_order
             ax = axes[j, i]
             d = df.query(f"{col}=='{c}' & {row}=='{r}'")
-            if hue is None:
-                hue_gb = [(None, d)]
-            else:
-                hue_gb = d.groupby(hue)
-            for n, g in hue_gb:
-                if style is None:
-                    style_gb = [(None, g)]
-                else:
-                    style_gb = g.groupby(style)
-                for m, h in style_gb:
-                    if label == 'hue':
-                        lab = n
-                    elif label == 'style':
-                        lab = m
-                    elif label == 'both':
-                        if isinstance(style, list) and len(style) > 1:
-                            lab_m = [m_ for m_ in m if
-                                     any([m_ in l for l in all_labels])]
-                            lab = (*lab_m, n)
-                        else:
-                            lab = (m, n)
-                    else:
-                        lab = label
-                    dots, _, _ = plotting.scatter_ci_dist(x, y, x_dodge=x_dodge,
-                                                          estimator=np.mean,
-                                                          all_labels=all_labels,
-                                                          like_pointplot=True, ci='hdi',
-                                                          markers=marker_adjust, style=style,
-                                                          color=palette.get(n, 'k'), data=h,
-                                                          label=lab, ax=ax, x_order=x_ord)
-                    if m is not None:
-                        fc = dots[0].get_facecolor()[0]
-                        if all(fc == 1):
-                            fc = 'w'
-                        marker_dict = {'marker': marker_adjust[m].get('marker', 'o'),
-                                       'mew': dots[0].get_lw()[0], 'mfc': fc,
-                                       'ms': np.sqrt(dots[0].get_sizes()[0]),
-                                       'mec': dots[0].get_edgecolor()[0]}
-                        final_markers[m] = marker_dict
-            ax.spines['top'].set_visible(False)
-            ax.spines['right'].set_visible(False)
+            xlabel, ylabel = '', ''
             if i == 0:
-                ax.set_ylabel(y + f" with {hdi*100}% HDI")
+                ylabel = f'{y} + with {int(hdi*100)}% HDI'
             if j == len(rows)-1:
-                ax.set_xlabel(x)
-            ax.set_title(title_str.format(row_val=r, col_val=c, col=col,
-                                          row=row))
-            if rotate_xticklabels:
-                labels = ax.get_xticklabels()
-                if labels:
-                    ax.set_xticklabels(labels, rotation=rotate_xticklabels,
-                                       ha='right')
+                xlabel = x
+            title_ = title_str.format(row_val=r, col_val=c, col=col, row=row)
+            markers_tmp = plotting._facetted_scatter_ci_dist(d, x, y, hue,
+                                                             style, x_order,
+                                                             label, all_labels,
+                                                             x_dodge,
+                                                             marker_adjust,
+                                                             palette,
+                                                             rotate_xticklabels,
+                                                             xlabel, ylabel,
+                                                             title_, ax=ax)
+            final_markers.update(markers_tmp)
 
     # create the legend
     plotting._add_legend(df, None, fig, hue, style, palette,
@@ -1306,12 +1227,7 @@ def ref_image_summary(stim, stim_df, zoom=.125):
     """
     ref_ims = stim_df.fillna('None').query("model=='None'").image_name
     ref_ims = ref_ims.apply(lambda x: x.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', ''))
-    with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
-        img_sets = yaml.safe_load(f)['PSYCHOPHYSICS']['IMAGE_SETS']
-    img_order = (sorted(img_sets['all']) + sorted(img_sets['A']) +
-                 sorted(img_sets['B']))
-    img_order = [i.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', '')
-                 for i in img_order]
+    img_order = plotting.get_order('image_name')
     ref_ims = ref_ims.sort_values(key=lambda x: [img_order.index(i) for i in x])
     refs = stim[ref_ims.index]
 
@@ -1416,9 +1332,11 @@ def synthesis_distance_plot(distances, xy='trial_type', hue='ref_image',
     return g
 
 
-def partially_pooled_metaparameters(inf_data, distribution='posterior',
-                                    hdi=.95, height=5, aspect=1,
-                                    rotate_xticklabels=True):
+def partially_pooled_metaparameters(inf_data, hue='model', style='trial_type',
+                                    distribution='posterior', hdi=.95,
+                                    height=5, aspect=1,
+                                    rotate_xticklabels=False,
+                                    x_dodge=False, **kwargs):
     """Plot the metaparameters of the partially pooled mcmc model.
 
     The metaparametesr are the lapse rate and those that control the
@@ -1428,6 +1346,8 @@ def partially_pooled_metaparameters(inf_data, distribution='posterior',
     ----------
     inf_data : arviz.InferenceData
         arviz InferenceData object (xarray-like) created by `run_inference`
+    hue, style : str, optional
+        variables to facet along.
     distribution : str, optional
         what distribution to grab from inf_data
     hdi : float, optional
@@ -1441,6 +1361,14 @@ def partially_pooled_metaparameters(inf_data, distribution='posterior',
         whether to rotate the x-axis labels or not. if True, we rotate
         by 25 degrees. if an int, we rotate by that many degrees. if
         False, we don't rotate.
+    x_dodge : float, None, or bool, optional
+        to improve visibility with many points that have the same x-values (or
+        are categorical), we can dodge the data along the x-axis,
+        deterministically shifting it. If a float, x_dodge is the amount we
+        shift each level of hue by; if None, we don't dodge at all; if True, we
+        dodge as if x_dodge=.01
+    kwargs :
+        Passed to plt.subplots
 
     Returns
     -------
@@ -1461,32 +1389,80 @@ def partially_pooled_metaparameters(inf_data, distribution='posterior',
     inf1 = inf1.reset_index().melt(inf1.index.names)
     inf2 = inf_data[['pi_l']].to_dataframe()
     inf2 = inf2.reset_index().melt(inf2.index.names)
-    inf1['var_type'] = 'Metaparameters'
+    inf1['var_type'] = inf1.variable.map(lambda x: x.replace('image_', '').replace('subject_', ''))
+    inf1['variable'] = inf1.variable.map(lambda x: x.replace('a0_', '').replace('s0_', ''))
     inf2['var_type'] = 'Lapse rate'
     inf2['variable'] = inf2.subject_name
     inf2 = inf2.drop(columns=['subject_name'])
 
     metaparams = pd.concat([inf1, inf2])
-    metaparams['mcmc_model_type'] = 'partially-pooled'
-
-    metaparam_order = np.array(['log_a0_global_mean', 'a0_image_sd',
-                                'a0_subject_sd', 'log_s0_global_mean',
-                                's0_image_sd', 's0_subject_sd'])
-    fig = mcmc_parameters(metaparams, x='variable', col='var_type',
-                          hue='model', height=height, aspect=aspect,
-                          sharex=False, rotate_xticklabels=rotate_xticklabels,
-                          col_order=['Metaparameters', 'Lapse rate'],
-                          x_order=np.array([[metaparam_order], [None]]),
-                          title_str='{row_val} | {col_val}',
-                          style='trial_type')
-
-    fig.axes[0].set_xlabel('subject_name')
-    fig._suptitle.set_text(fig._suptitle.get_text().replace("Psychophysical curve parameter values", 'Parameter values 1'))
+    metaparam_order = ['log_global_mean', 'image_sd', 'subject_sd']
+    # set defaults based on hue and style args
+    if hue is not None:
+        palette = kwargs.pop('palette', plotting.get_palette(hue,
+                                                             metaparams[hue].unique()))
+    else:
+        palette = {None: kwargs.pop('color', 'C0')}
+    if style is not None:
+        try:
+            col_unique = metaparams[style].unique()
+            style = style
+        except AttributeError:
+            # then there are multiple values in style
+            col_unique = [metaparams[s].unique().tolist() for s in style]
+        style_dict = plotting.get_style(style, col_unique)
+        marker_adjust = style_dict.pop('marker_adjust', {})
+    else:
+        marker_adjust = {}
+    figsize = (aspect*2*height, height)
+    fig = plt.figure(constrained_layout=True, figsize=figsize)
+    axes_dict = fig.subplot_mosaic([['log_a0_global_mean', 'a0_sd', 'Lapse rate'],
+                                    ['log_s0_global_mean', 's0_sd', 'Lapse rate']],
+                                   gridspec_kw={'width_ratios': [.75, 1.25, 2]})
+    final_markers = {}
+    label, all_labels = plotting._prep_labels(metaparams, hue, style,
+                                              'var_type', None)
+    for k, ax in axes_dict.items():
+        if 'a0' in k:
+            ax.sharex(axes_dict[k.replace('a0', 's0')])
+        if k == 'a0_sd':
+            ax.sharey(axes_dict['s0_sd'])
+        data = metaparams.query(f"var_type=='{k}'")
+        title_, xlabel, ylabel = '', '', ''
+        if 'a0' not in k and 's0' not in k:
+            title_ = k
+        if k == 'Lapse rate':
+            xlabel = 'subject_name'
+        markers_tmp = plotting._facetted_scatter_ci_dist(data, 'variable',
+                                                         'value', hue, style,
+                                                         None, label,
+                                                         all_labels, x_dodge,
+                                                         marker_adjust,
+                                                         palette,
+                                                         rotate_xticklabels,
+                                                         xlabel, ylabel,
+                                                         title_, ax=ax)
+        final_markers.update(markers_tmp)
+        if k == 'log_s0_global_mean':
+            ax.set_ylabel(f'value with {int(hdi*100)}% HDI', y=1.2)
+        if 'sd' in k:
+            ax.set_title(k.replace('_sd', ''), x=0, va='bottom')
+            xlim = ax.get_xlim()
+            ax.set_xlim((xlim[0]-.25, xlim[1]+.25))
+        if 'a0' in k:
+            ax.tick_params('x', labelbottom=False)
+        elif 'Lapse' in k:
+            ax.set_ylim((0, ax.get_ylim()[1]))
+    plotting._add_legend(metaparams, None, fig, hue, style, palette,
+                         final_markers, {k: '' for k in marker_adjust.keys()})
+    fig.suptitle("Parameter values 1 for partially-pooled MCMC", va='bottom')
     return fig
 
 
-def partially_pooled_parameters(inf_data, distribution='posterior', hdi=.95,
-                                height=4, aspect=2, rotate_xticklabels=True):
+def partially_pooled_parameters(inf_data, hue='model', style='trial_type',
+                                distribution='posterior', hdi=.95, height=4,
+                                aspect=2, rotate_xticklabels=True,
+                                x_dodge=False, **kwargs):
     """Plot the subject/image level parameters of partially pooled mcmc model.
 
     These are log_a0/s0_image/subject.
@@ -1495,6 +1471,8 @@ def partially_pooled_parameters(inf_data, distribution='posterior', hdi=.95,
     ----------
     inf_data : arviz.InferenceData
         arviz InferenceData object (xarray-like) created by `run_inference`
+    hue, style : str, optional
+        variables to facet along.
     distribution : str, optional
         what distribution to grab from inf_data
     hdi : float, optional
@@ -1508,6 +1486,14 @@ def partially_pooled_parameters(inf_data, distribution='posterior', hdi=.95,
         whether to rotate the x-axis labels or not. if True, we rotate
         by 25 degrees. if an int, we rotate by that many degrees. if
         False, we don't rotate.
+    x_dodge : float, None, or bool, optional
+        to improve visibility with many points that have the same x-values (or
+        are categorical), we can dodge the data along the x-axis,
+        deterministically shifting it. If a float, x_dodge is the amount we
+        shift each level of hue by; if None, we don't dodge at all; if True, we
+        dodge as if x_dodge=.01
+    kwargs :
+        Passed to plt.subplots
 
     Returns
     -------
@@ -1519,8 +1505,7 @@ def partially_pooled_parameters(inf_data, distribution='posterior', hdi=.95,
         raise Exception("Can only create this plot with partially-pooled mcmc"
                         " model but got "
                         f"{inf_data.metadata.mcmc_model_type.values[0, 0]}!")
-    _, img_order = plotting._remap_image_names(inf_data.posterior.to_dataframe().reset_index())
-    img_order = np.array(img_order)
+    img_order = np.array(plotting.get_order('image_name'))
     inf_data = mcmc._compute_hdi(inf_data[distribution], hdi)
     keys_to_include = [f'log_{p}_{t}' for p, t in
                        itertools.product(['a0', 's0'], ['image', 'subject'])]
@@ -1537,26 +1522,73 @@ def partially_pooled_parameters(inf_data, distribution='posterior', hdi=.95,
     inf2 = inf2.drop(columns=['subject_name'])
 
     params = pd.concat([inf1, inf2])
-    params['mcmc_model_type'] = 'partially-pooled'
     params.variable = params.variable.map(lambda x: '_'.join(x.split('_')[:-1]))
     params.x_var = params.x_var.map(lambda x: x.split('_')[0])
 
-    fig = mcmc_parameters(params, x='x_var', style='trial_type',
-                          hue='model', col='var_type',
-                          row='variable', sharex='col', sharey='row',
-                          height=height, aspect=aspect,
-                          rotate_xticklabels=rotate_xticklabels,
-                          gridspec_kw={'wspace': .04, 'hspace': .12,
-                                       'width_ratios': [2, 1]},
-                          title_str="{row_val} | {col_val}",
-                          x_order=np.array([[img_order, img_order],
-                                            [None, None]]))
-    for ax in fig.axes:
-        xlim = ax.get_xlim()
-        ax.axhline(xmin=xlim[0], xmax=xlim[1], linestyle='--', c='k')
-        ax.set_xlim(xlim)
-    fig._suptitle.set_text(fig._suptitle.get_text().replace("Psychophysical curve parameter values", 'Parameter values 2'))
-    fig.axes[-1].set_xlabel('subject_name')
-    fig.axes[-2].set_xlabel('image_name')
+    # set defaults based on hue and style args
+    if hue is not None:
+        palette = kwargs.pop('palette', plotting.get_palette(hue,
+                                                             params[hue].unique()))
+    else:
+        palette = {None: kwargs.pop('color', 'C0')}
+    if style is not None:
+        try:
+            col_unique = params[style].unique()
+            style = style
+        except AttributeError:
+            # then there are multiple values in style
+            col_unique = [params[s].unique().tolist() for s in style]
+        style_dict = plotting.get_style(style, col_unique)
+        marker_adjust = style_dict.pop('marker_adjust', {})
+    else:
+        marker_adjust = {}
+    fig, axes, cols, rows = plotting._setup_facet_figure(params, 'var_type',
+                                                         'variable',
+                                                         height=height,
+                                                         aspect=aspect,
+                                                         rotate_xticklabels=rotate_xticklabels,
+                                                         sharex='col',
+                                                         sharey='row',
+                                                         gridspec_kw={'wspace': .04,
+                                                                      'hspace': .12,
+                                                                      'width_ratios': [2, 1]},
+                                                         **kwargs)
+    final_markers = {}
+    label, all_labels = plotting._prep_labels(params, hue, style, 'var_type', 'variable')
+    for i, c in enumerate(cols):
+        for j, r in enumerate(rows):
+            if c == 'image-level':
+                x_order = img_order
+            else:
+                x_order = None
+            ax = axes[j, i]
+            d = params.query(f"var_type=='{c}' & variable=='{r}'")
+            xlabel, ylabel = '', ''
+            if i == 0:
+                ylabel = f'value with {int(hdi*100)}% HDI'
+            if j == len(rows)-1:
+                if i == 0:
+                    xlabel = 'image_name'
+                elif i == 1:
+                    xlabel = 'subject_name'
+            title_ = f"{r} | {c}"
+            markers_tmp = plotting._facetted_scatter_ci_dist(d, 'x_var',
+                                                             'value', hue,
+                                                             style, x_order,
+                                                             label, all_labels,
+                                                             x_dodge,
+                                                             marker_adjust,
+                                                             palette,
+                                                             rotate_xticklabels,
+                                                             xlabel, ylabel,
+                                                             title_, ax=ax)
+            final_markers.update(markers_tmp)
+            xlim = ax.get_xlim()
+            ax.axhline(xmin=xlim[0], xmax=xlim[1], linestyle='--', c='k')
+            ax.set_xlim(xlim)
 
+    # create the legend
+    plotting._add_legend(params, None, fig, hue, style, palette,
+                         final_markers, {k: '' for k in marker_adjust.keys()})
+    fig.suptitle("Parameter values 2 for partially-pooled MCMC", va='bottom')
     return fig

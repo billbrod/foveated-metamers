@@ -186,6 +186,39 @@ def get_style(col, col_unique, as_dict=True):
     return overall_dict
 
 
+def get_order(col, col_unique=[]):
+    """Get order to plot something in.
+
+    For rows, cols, or x.
+
+    Parameters
+    ----------
+    col : {'image_name', str}
+        The column to return the palette for. If we don't have a particular
+        order picked out, will just sort col_unique.
+    col_unique : list, optional
+        List of unique values in col.
+
+    Returns
+    -------
+    col_order : list
+        List giving plot order.
+
+    """
+    with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
+        config = yaml.safe_load(f)
+    img_sets = config['PSYCHOPHYSICS']['IMAGE_SETS']
+    img_order = (sorted(img_sets['all']) + sorted(img_sets['A']) +
+                 sorted(img_sets['B']))
+    img_order = [i.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', '')
+                 for i in img_order]
+    if col == 'image_name':
+        col_order = img_order
+    else:
+        col_order = sorted(col_unique)
+    return col_order
+
+
 def myLogFormat(y, pos):
     """formatter that only shows the required number of decimal points
 
@@ -303,14 +336,10 @@ def _remap_image_names(df):
     all_imgs_both = [config['IMAGE_NAME']['ref_image'],
                      config['DEFAULT_METAMERS']['image_name']]
     remapped = False
+    img_order = get_order('image_name')
     for all_imgs in all_imgs_both:
         # if we have down sampled images, we want to do same thing as the normal case
         if any([i.replace('_downsample-2', '') in all_imgs for i in df.image_name.unique()]):
-            img_sets = config['PSYCHOPHYSICS']['IMAGE_SETS']
-            img_order = (sorted(img_sets['all']) + sorted(img_sets['A']) +
-                         sorted(img_sets['B']))
-            img_order = [i.replace('symmetric_', '').replace('_range-.05,.95_size-2048,2600', '')
-                         for i in img_order]
             # while still gathering data, will not have all images in the df.
             # Adding these blank lines gives us blank subplots in the performance
             # plot, so that each image is in the same place
@@ -1150,3 +1179,240 @@ def lineplot_like_pointplot(data, x, y, col=None, row=None, hue=None, ci=95,
                           err_kws={'linewidth': lw}, **kwargs)
         g = ax
     return g
+
+
+def _setup_facet_figure(df, col=None, row=None, col_order=None, row_order=None,
+                        aspect=1, height=2.5, gridspec_kw={},
+                        rotate_xticklabels=False, **kwargs):
+    """Setup figure for custom facetting.
+
+    Goal is to have a figure we can plot different facets on, similar to how
+    sns.FacetGrid works but with slightly more control.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Dataframe containing the data we'll plot.
+    col, row : str or None, optional
+        variables to plot on axes or facet along.
+    col_order, row_order : list or None, optional
+        order to plot those variables in. If None, we'll use the default.
+    aspect : float, optional
+        aspect ratio of the subplots
+    height : float, optional
+        height of the subplots
+    gridspec_kw : dict, optional
+        dictionary defining the figure's gridspec.
+    rotate_xticklabels : bool or int, optional
+        whether to rotate the x-axis labels or not.
+    kwargs :
+        passed to plt.subplots
+
+    Returns
+    -------
+    fig : plt.Figure
+        figure to plot on
+    axes : np.ndarray
+        2d array of axes (index into with row, column) from figure
+    cols, rows : list
+        list of values in col, row (respectively) in order to plot them. If col
+        or row is None, the corresponding list will be empty.
+    x_order : list or None
+        order to plot x in
+
+    """
+    if col_order is None:
+        col_order = get_order(col, df[col].unique())
+    if row_order is None:
+        row_order = get_order(row, df[row].unique())
+    if col is not None:
+        cols = sorted(df[col].unique(), key=lambda x: col_order.index(x))
+    else:
+        cols = []
+    if row is not None:
+        rows = sorted(df[row].unique(), key=lambda x: row_order.index(x))
+    else:
+        rows = []
+    if 'hspace' not in gridspec_kw:
+        hspace = .15
+        if rotate_xticklabels and len(rows) > 1:
+            hspace += .1
+        gridspec_kw['hspace'] = hspace
+    fig, axes = plt.subplots(nrows=max(1, len(rows)), ncols=max(1, len(cols)),
+                             figsize=(aspect*len(cols)*height,
+                                      len(rows)*height,), squeeze=False,
+                             gridspec_kw=gridspec_kw, **kwargs)
+    return fig, axes, cols, rows
+
+
+def _prep_labels(df, hue=None, style=None, col=None, row=None):
+    """Prepare labels for custom legend.
+
+    In order to create our custom legend for our custom facetting, need some
+    extra info.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Dataframe containing the data we'll plot.
+    hue, style, col, row : str or None, optional
+        variables to plot on axes or facet along.
+
+    Returns
+    -------
+    label : str or None
+        Whether we'll be using style, hue, both or neither to label data for
+        the legend. Intended to be passed to _facetted_scatter_ci_dist.
+    all_labels : list
+        List of possible labels for the legend. Intended to be passed to
+        _facetted_scatter_ci_dist.
+
+    """
+    if hue is not None and (style is None or style == col or style == row):
+        all_labels = list(df[hue].unique())
+        label = 'hue'
+    elif style is not None and hue is None:
+        all_labels = list(df[style].unique())
+        label = 'style'
+    elif style is not None and hue is not None:
+        try:
+            all_labels = [n for n, _ in df.groupby([style, hue])]
+            gb_style = [style]
+        except ValueError:
+            # then style is a list
+            gb_style = [s for s in style if s != row and s != col]
+            all_labels = [n for n, _ in df.groupby([*gb_style, hue])]
+        label = 'both'
+    else:
+        all_labels = [None]
+        label = None
+    return label, all_labels
+
+
+def _facetted_scatter_ci_dist(data, x, y, hue=None, style=None, x_order=None,
+                              label=None, all_labels=[None], x_dodge=None,
+                              marker_adjust={}, palette={},
+                              rotate_xticklabels=False, xlabel="", ylabel="",
+                              title_str="", color='k', ax=None):
+    """Use scatter_ci_dist, with style and hue, on a specific axis.
+
+    Meant for use with our "custom facetting", this handles much of the
+    boilerplate stuff (properly arranging style and hue, assembling
+    final_markers dict, titling / labeling).
+
+    NOTE: this is intended for use with a *single* axis, but allows multiple
+    hue/ style values.
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        The data to plot.
+    x, y : str
+        Column in data with the info to plot along x and y.
+    hue, style : str or None, optional
+        Column in data with the info to facet along hue or style.
+    x_order : list or None, optional
+        Order to plot the x values in. If None, use natural sort.
+    label : str or None
+        Whether we'll be using style, hue, both or neither to label data for
+        the legend.
+    all_labels : list
+        List of possible labels for the legend.
+    x_dodge : float, None, or bool, optional
+        to improve visibility with many points that have the same x-values (or
+        are categorical), we can dodge the data along the x-axis,
+        deterministically shifting it. If a float, x_dodge is the amount we
+        shift each level of hue by; if None, we don't dodge at all; if True, we
+        dodge as if x_dodge=.01
+    marker_adjust : dict, optional
+        Dictionary with keys identifying the style level and values describing
+        how to adjust the markers. Can contain the following keys: fc, ec, ew,
+        s, marker (to adjust those properties). If a property is None or not
+        included, won't adjust. In addition to the standard values those
+        properties can take, can also take the following: - ec: 'original_fc'
+        (take the original marker facecolor) - ew: 'lw' (take the linewidth) -
+        s: 'total_unchanged' (adjust marker size so that, after changing the
+        edge width, the overall size will not change)
+    palette : dict, optional
+        Dictionary mapping levels of hue to color. If a level is not found in
+        palette, will use `color`.
+    rotate_xticklabels : bool or int, optional
+        whether to rotate the x-axis labels or not. if True, we rotate
+        by 25 degrees. if an int, we rotate by that many degrees. if
+        False, we don't rotate.
+    xlabel, ylabel, title_str : str, optional
+        Labels for the x-axis, y-axis, and axis title, respectively. If empty,
+        will not add.
+    color : str or tuple, optional
+        Any color that can be interpreted by matplotlib. The default color if a
+        hue level is not found in `palette`
+    ax : axis or None
+        The axis to plot on. If None, we grab current axis.
+
+    Returns
+    -------
+    final_markers : dict
+        dict specifying the mapping between style level and plot style. You
+        should aggregate these over multiple calls to this function, then pass
+        to `plotting._add_legend`
+
+    """
+    if ax is None:
+        ax = plt.gca()
+    if hue is None:
+        hue_gb = [(None, data)]
+    else:
+        hue_gb = data.groupby(hue)
+    if rotate_xticklabels is True:
+        rotate_xticklabels = 25
+    final_markers = {}
+    for n, g in hue_gb:
+        if style is None:
+            style_gb = [(None, g)]
+        else:
+            style_gb = g.groupby(style)
+        for m, h in style_gb:
+            if label == 'hue':
+                lab = n
+            elif label == 'style':
+                lab = m
+            elif label == 'both':
+                if isinstance(style, list) and len(style) > 1:
+                    lab_m = [m_ for m_ in m if
+                             any([m_ in l for l in all_labels])]
+                    lab = (*lab_m, n)
+                else:
+                    lab = (m, n)
+            else:
+                lab = label
+            dots, _, _ = scatter_ci_dist(x, y, x_dodge=x_dodge,
+                                         estimator=np.mean,
+                                         all_labels=all_labels,
+                                         like_pointplot=True, ci='hdi',
+                                         markers=marker_adjust,
+                                         style=style, x_order=x_order,
+                                         color=palette.get(n, color), data=h,
+                                         label=lab, ax=ax)
+            if m is not None:
+                fc = dots[0].get_facecolor()[0]
+                if all(fc == 1):
+                    fc = 'w'
+                marker_dict = {'marker': marker_adjust[m].get('marker', 'o'),
+                               'mew': dots[0].get_lw()[0], 'mfc': fc,
+                               'ms': np.sqrt(dots[0].get_sizes()[0]),
+                               'mec': dots[0].get_edgecolor()[0]}
+                final_markers[m] = marker_dict
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    if ylabel:
+        ax.set_ylabel(ylabel)
+    if xlabel:
+        ax.set_xlabel(xlabel)
+    if title_str:
+        ax.set_title(title_str)
+    if rotate_xticklabels:
+        labels = ax.get_xticklabels()
+        if labels:
+            ax.set_xticklabels(labels, rotation=rotate_xticklabels,
+                               ha='right')
+    return final_markers
