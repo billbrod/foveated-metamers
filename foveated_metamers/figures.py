@@ -964,7 +964,12 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
     title = f'Posterior predictive check for {model_type[0]}'
     plotting._label_and_title_psychophysical_curve_plot(g, df, title,
                                                         hdi=hdi)
-    g.set_titles('{col_name} | {row_name}')
+    title_ = []
+    if row is not None:
+        title_.append("{row_name}")
+    if col is not None:
+        title_.append("{col_name}")
+    g.set_titles('|'.join(title_))
     # get decent looking tick marks
     plotting._psychophysical_curve_ticks(df, g.axes.flatten(),
                                          logscale_xaxis,
