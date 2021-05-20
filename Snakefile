@@ -1378,8 +1378,7 @@ rule mcmc_plots:
                     if wildcards.mcmc_model != 'partially-pooled':
                         raise Exception("Only know how to create metaparams plot for partially-pooled mcmc")
                     print("Creating metaparameter distribution plot.")
-                    fig = fov.figures.partially_pooled_metaparameters(inf_data, height=4, aspect=2.5,
-                                                                      rotate_xticklabels=True)
+                    fig = fov.figures.partially_pooled_metaparameters(inf_data, height=5)
                 elif wildcards.plot_type == 'grouplevel':
                     print("Creating parameter grouplevel means distribution plot.")
                     fig = fov.figures.psychophysical_grouplevel_means(inf_data)
