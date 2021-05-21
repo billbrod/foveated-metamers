@@ -1779,11 +1779,11 @@ rule performance_comparison_figure:
          for m in MODELS
          for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'met-downsample-2']}.get(m, ['met', 'ref'])],
     output:
-        op.join(config['DATA_DIR'], 'figures', '{context}', 'performance_{subject}.svg')
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'performance_{focus}.svg')
     log:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'performance_{subject}.log')
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'performance_{focus}.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'performance_{subject}_benchmark.txt')
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'performance_{focus}_benchmark.txt')
     run:
         import foveated_metamers as fov
         import pandas as pd
@@ -1791,8 +1791,11 @@ rule performance_comparison_figure:
         import matplotlib.pyplot as plt
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                df = pd.concat([pd.read_csv(f).query(f"subject_name=='{wildcards.subject}'")
-                                for f in input])
+                if wildcards.focus.startswith('sub'):
+                    query_str = f"subject_name=='{wildcards.focus}'"
+                else:
+                    query_str = f"image_name.str.startswith('{wildcards.focus}')"
+                df = pd.concat([pd.read_csv(f).query(query_str) for f in input])
                 df.model = df.model.map(lambda x: {'RGC': 'Retina'}.get(x.split('_')[0],
                                                                         x.split('_')[0]))
                 style, fig_width = fov.style.plotting_style(wildcards.context)

@@ -943,6 +943,10 @@ def title_experiment_summary_plots(g, expt_df, summary_text, post_text=''):
         subj_str = 'all subjects'
     else:
         subj_str = expt_df.subject_name.unique()[0]
+    if expt_df.dropna().image_name.nunique() > 1:
+        image_str = 'all images'
+    else:
+        image_str = expt_df.image_name.dropna().unique()[0]
     if 'session_number' not in expt_df.columns or expt_df.session_number.nunique() > 1:
         sess_str = 'all sessions'
     else:
@@ -950,7 +954,7 @@ def title_experiment_summary_plots(g, expt_df, summary_text, post_text=''):
     # we can have nans because of how we add blank rows to make sure each image
     # is represented
     model_name = ' and '.join([m.split('_')[0] for m in expt_df.model.dropna().unique()])
-    if expt_df.trial_type.nunique() == 2 and expt_df.trial_type.unique()[0].startswith('metamer'):
+    if expt_df.trial_type.nunique() > 1 and expt_df.trial_type.unique()[0].startswith('metamer'):
         comparison = 'both'
     elif expt_df.trial_type.unique()[0].endswith('metamer'):
         comparison = 'met'
@@ -974,7 +978,7 @@ def title_experiment_summary_plots(g, expt_df, summary_text, post_text=''):
         end_newlines += '\n'
     if n_rows > 10:
         end_newlines += '\n\n'
-    g.fig.suptitle(f"{summary_text} for {subj_str}, {sess_str}.{break_newlines}"
+    g.fig.suptitle(f"{summary_text} for {subj_str}, {sess_str}, {image_str}.{break_newlines}"
                    f" Comparing {model_name} metamers to {comp_str}. {post_text}{end_newlines}",
                    va='bottom')
     return g
