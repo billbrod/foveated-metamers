@@ -478,7 +478,7 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
     gamma_corrected : bool, optional
         If True, return the path to the gamma-corrected version. If False, the
         non-gamma-corrected
-    comp : {'ref', 'met', 'met-downsample-2', 'met-natural'}, optional
+    comp : {'ref', 'met', 'met-downsample-2', 'met-natural', 'ref-natural'}, optional
         If 'scaling' is not included in kwargs, this determines which range of
         default scaling values we use. If 'ref' (the defualt), we use those
         under the model:scaling key in the config file. If 'met' or
@@ -488,10 +488,12 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
         we return the same values as before. If 'met-downsample-2', we
         downsample the reference images by a factor of 2 while leaving
         everything else the same (so physical pixel pitch is increased). If
-        met-natural, we use the same scaling range as ref, but initialize
+        ref-natural, we use the same scaling range as ref, but initialize
         metamers with the ivy, grooming, and tiles reference images (and,
         unless specified, only do one seed per each) instead of 3 white noise
-        seeds.
+        seeds. If met-natural, we initialize with those reference images, but
+        drop the smallest two scaling from the ref comparison and use the
+        smallest two from met_v_met_scaling
     seed_n : list or None, optional
         List specifying which seeds to grab for each (model, image, scaling).
         If seed is in kwargs, this is ignored. If None (default), we use [0, 1,
@@ -511,15 +513,16 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
     """
     if not isinstance(model_name, list):
         model_name = [model_name]
-    if comp not in ['ref', 'met', 'met-downsample-2', 'met-natural']:
-        raise Exception("comp must be one of {'ref', 'met', 'met-downsample-2', 'met-natural'}!")
+    if comp not in ['ref', 'met', 'met-downsample-2', 'met-natural', 'ref-natural']:
+        raise Exception("comp must be one of {'ref', 'met', 'met-downsample-2',"
+                        " 'met-natural', 'ref-natural'}!")
     with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
         defaults = yaml.safe_load(f)
     default_img_size = _find_img_size(defaults['DEFAULT_METAMERS']['image_name'][0])
     pix_to_deg = float(defaults['DEFAULT_METAMERS']['max_ecc']) / default_img_size.max()
-    if (comp == 'met' and any([m.startswith('RGC') for m in model_name])) or comp == 'met-natural':
+    if comp.startswith('met') and any([m.startswith('RGC') for m in model_name]):
         imgs = ['llama', 'highway_symmetric', 'rocks', 'boats', 'gnarled']
-        warnings.warn("With comp=met-natural or RGC model and comp=met, we use a reduced set of default images!")
+        warnings.warn("With RGC model and if comp starts with met, we use a reduced set of 5 default images!")
         default_ims = generate_image_names(imgs)
     elif comp.startswith('met-downsample'):
         default_ims = defaults['DEFAULT_METAMERS'].pop('image_name')
@@ -562,9 +565,6 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
                     except KeyError:
                         pass
                 elif comp.startswith('met') and 'natural' in comp:
-                    # THIS IS TEMPORARY -- we're grabbing the eight smallest
-                    # scaling values that we can run ont he gpu for a
-                    # preliminary attempt at this
                     try:
                         more_scaling = defaults[model.split('_')[0]]['met_v_met_scaling'][:2]
                         scaling = scaling[-(len(scaling)-len(more_scaling)):] + more_scaling
@@ -573,7 +573,7 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
             else:
                 scaling = kwargs['scaling']
             if 'init' not in kwargs.keys():
-                if comp == 'met-natural':
+                if 'natural' in comp:
                     args['init_type'] = init_type
                 else:
                     args['init_type'] = 'white'
@@ -583,7 +583,7 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
                          'scaling': scaling})
             if 'seed' not in args.keys():
                 if seed_n is None:
-                    if comp == 'met-natural':
+                    if 'natural' in comp:
                         seed_n = ['index']
                     else:
                         seed_n = [0, 1, 2]
@@ -642,7 +642,7 @@ if __name__ == '__main__':
     parser.add_argument('--gamma_corrected', '-g', action='store_true',
                         help=("Whether we should return the gamma-corrected path or not."))
     parser.add_argument('--comp', '-c', default='ref',
-                        help=("{ref, met, met-downsample-2, met-natural}, Whether to generate the scaling values for comparing "
+                        help=("{ref, met, met-downsample-2, met-natural, ref-natural}, Whether to generate the scaling values for comparing "
                               "metamers to reference images, to other metamers, or to other metamers using "
                               "a downsampled ref image"))
     parser.add_argument('--seed_n', '-n', nargs='+', type=int, default=None,
@@ -675,11 +675,10 @@ if __name__ == '__main__':
     extra_iter = args.pop('extra_iter')
     gamma_corrected = args.pop('gamma_corrected')
     image_kwargs = {k: args.pop(k) for k in ['ref_image', 'size', 'preproc']}
-    if ((args['comp'] == 'met' and any([m.startswith('RGC') for m in args['model_name']]))
-        or args['comp'] == 'met-natural'):
+    if args['comp'].startswith('met') and any([m.startswith('RGC') for m in args['model_name']]):
         if image_kwargs['ref_image'] is None and args['image_name'] is None:
             imgs = ['llama', 'highway_symmetric', 'rocks', 'boats', 'gnarled']
-            warnings.warn("With comp=met-natural or RGC model and comp=met, we use a reduced set of default images!")
+            warnings.warn("With RGC model and if comp starts with met, we use a reduced set of 5 default images!")
             image_kwargs['ref_image'] = imgs
     elif args['comp'].startswith('met-downsample'):
         if image_kwargs['ref_image'] is None and args['image_name'] is None:
