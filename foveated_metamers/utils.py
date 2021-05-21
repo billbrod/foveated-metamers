@@ -441,6 +441,41 @@ def generate_metamer_seeds_dict(model_name):
     return seeds
 
 
+def generate_natural_init(image_name, scaling):
+    """Generate the natural images to use for initialization in comp=ref-natural and met-natural.
+
+    Pick 3 other natural images to use for initializing this metamer. Seed is
+    based on image_name and scaling.
+
+    Parameters
+    ----------
+    image_name : str
+        name of the (e.g., like those seen in `config.yml:
+        DEFAULT_METAMERS: image_name`).
+    scaling : float
+        Scaling value for this metamer.
+
+    Returns
+    -------
+    natural_init : list
+        Three natural images to use to initialize this metamer.
+
+    """
+    with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
+        config = yaml.safe_load(f)
+    all_imgs = config['DEFAULT_METAMERS']['image_name']
+    # img_seed will be between 0 and 19
+    img_seed = all_imgs.index(image_name)
+    # scaling has at most 3 places after the decimal, so scaling_seed will be
+    # an integer between 100 (since smallest scaling right now .01) and 15000
+    # (since highest is 1.5).
+    scaling_seed = int(scaling*10000)
+    # therefore every combination of img_seed and scaling_seed will be unique
+    np.random.seed(scaling_seed+img_seed)
+    all_imgs.pop(img_seed)
+    return np.random.choice(all_imgs, 3, replace=False).tolist()
+
+
 def generate_metamer_paths(model_name, increment=False, extra_iter=None,
                            gamma_corrected=False, comp='ref',
                            seed_n=None, **kwargs):
@@ -536,9 +571,6 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
         images = [images]
     args = {}
     paths = []
-    init_type = ['ivy_range-.05,.95_size-2048,2600',
-                 'grooming_symmetric_range-.05,.95_size-2048,2600',
-                 'tiles_range-.05,.95_size-2048,2600']
     for im in images:
         for model in model_name:
             args.update(copy.deepcopy(defaults['DEFAULT_METAMERS']))
@@ -574,7 +606,7 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
                 scaling = kwargs['scaling']
             if 'init' not in kwargs.keys():
                 if 'natural' in comp:
-                    args['init_type'] = init_type
+                    args['init_type'] = 'natural'
                 else:
                     args['init_type'] = 'white'
             # by putting this last, we'll over-write the defaults
@@ -584,7 +616,7 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
             if 'seed' not in args.keys():
                 if seed_n is None:
                     if 'natural' in comp:
-                        seed_n = ['index']
+                        seed_n = ['index_0', 'index_1', 'index_2']
                     else:
                         seed_n = [0, 1, 2]
                 args['seed_n'] = seed_n
@@ -600,10 +632,21 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
             for vals in product(*list_args.values()):
                 tmp = dict(zip(list_args.keys(), vals))
                 tmp.update(args)
+                if tmp.get('init_type', '') == 'natural':
+                    init_type = generate_natural_init(tmp['image_name'], tmp['scaling'])
+                    if 'seed_n' not in tmp.keys():
+                        raise Exception("Cannot use comp=met-natural or ref-natural with "
+                                        "seed set! (use seed_n instead)")
+                    try:
+                        init_idx_ = int(tmp['seed_n'].replace('index_', ''))
+                    except AttributeError:
+                        # then it's an int
+                        init_idx_ = tmp['seed_n']
+                    tmp['init_type'] = init_type[init_idx_]
                 if 'seed_n' in tmp.keys():
                     try:
                         tmp_seed_n = tmp.pop('seed_n')
-                        if tmp_seed_n == 'index':
+                        if isinstance(tmp_seed_n, str) and tmp_seed_n.startswith('index'):
                             tmp_seed_n = init_type.index(tmp['init_type'])
                         tmp['seed'] = seeds_dict[(tmp['image_name'].replace('_downsample-2', ''),
                                                   tmp['scaling'])][tmp_seed_n]
