@@ -1759,7 +1759,7 @@ rule performance_figure:
                 hue = 'subject_name'
                 height = fig_width / 6
                 if wildcards.plot_focus == '_focus-image':
-                    hue = None
+                    hue = 'model'
                 elif wildcards.plot_focus == '_focus-subject':
                     col = None
                     height = fig_width / 3
