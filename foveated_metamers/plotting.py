@@ -399,15 +399,25 @@ def _psychophysical_curve_ticks(df, axes, logscale_xaxis=False, height=5,
         for ax in axes:
             ax.set_xscale('log', base=2)
             ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(lambda y, pos: f"{y:.03f}"))
-        xtick_spacing = np.round((np.log2(xmax) - np.log2(xmin)) / (nticks-1), 2)
+        # if we make this an integer, our ticks go up by factors of 2, which
+        # makes them a bit easier to interpret
+        xtick_spacing = np.round((np.log2(xmax) - np.log2(xmin)) / (nticks-1))
         xticks = [2**(np.log2(xmin)+i*xtick_spacing) for i in range(int(nticks+1))]
+        nticks = int(nticks+1)
+        while xticks[-1] < xmax/2:
+            xticks += [2**(np.log2(xmin)+nticks*xtick_spacing)]
+            nticks += 1
+        minor_xticks = [xticks[i]+(xticks[i+1]-xticks[i])/2
+                        for i in range(nticks-1)]
     else:
         xtick_spacing = np.round((xmax - xmin) / (nticks-1), 2)
         xticks = [xmin+i*xtick_spacing for i in range(int(nticks+1))]
+        minor_xticks = []
     for ax in axes:
         ax.yaxis.set_major_locator(mpl.ticker.FixedLocator([.5, 1]))
         ax.yaxis.set_minor_locator(mpl.ticker.FixedLocator([.4, .6, .7, .8, .9]))
         ax.xaxis.set_major_locator(mpl.ticker.FixedLocator(xticks))
+        ax.xaxis.set_minor_locator(mpl.ticker.FixedLocator(minor_xticks))
 
 
 def _add_legend(df, g=None, fig=None, hue=None, style=None, palette={},
