@@ -84,6 +84,7 @@ BEHAVIORAL_DATA_DATES = {
             'sub-03': {'sess-00': '2021-May-03', 'sess-01': '2021-May-04', 'sess-02': '2021-May-12'},
             'sub-04': {'sess-00': '2021-May-11', 'sess-01': '2021-May-12', 'sess-02': '2021-May-18'},
             'sub-05': {'sess-00': '2021-May-12', 'sess-01': '2021-May-17', 'sess-02': '2021-May-18'},
+            'sub-06': {'sess-00': '2021-May-25'},
             'sub-07': {'sess-00': '2021-Apr-30', 'sess-01': '2021-Apr-30', 'sess-02': '2021-May-03'},
         },
         'met-downsample-2': {
@@ -1793,9 +1794,20 @@ rule performance_comparison_figure:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 if wildcards.focus.startswith('sub'):
                     query_str = f"subject_name=='{wildcards.focus}'"
+                elif wildcards.focus.startswith('comp'):
+                    if wildcards.focus == 'comp-base':
+                        query_str = f'trial_type in ["metamer_vs_metamer", "metamer_vs_reference"]'
+                    elif wildcards.focus == 'comp-all':
+                        query_str = ''
+                    else:
+                        raise Exception(f"Don't know how to handle focus {wildcards.focus}")
                 else:
+                    # then assume this is an image
                     query_str = f"image_name.str.startswith('{wildcards.focus}')"
-                df = pd.concat([pd.read_csv(f).query(query_str) for f in input])
+                if query_str:
+                    df = pd.concat([pd.read_csv(f).query(query_str) for f in input])
+                else:
+                    df = pd.concat([pd.read_csv(f) for f in input])
                 df.model = df.model.map(lambda x: {'RGC': 'Retina'}.get(x.split('_')[0],
                                                                         x.split('_')[0]))
                 style, fig_width = fov.style.plotting_style(wildcards.context)
