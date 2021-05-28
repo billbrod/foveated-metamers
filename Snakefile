@@ -1773,6 +1773,37 @@ rule performance_figure:
                 g.fig.savefig(output[0], bbox_inches='tight')
 
 
+rule mcmc_figure:
+    input:
+        op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_mcmc_partially-pooled_step-1_prob-.8_depth-10'
+                '_c-4_d-10000_w-10000_s-0.nc'),
+    output:
+        op.join(config['DATA_DIR'], 'figures', '{context}', '{model_name}',
+                'task-split_comp-{comp}_mcmc_params-grouplevel.svg'),
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
+                'task-split_comp-{comp}_mcmc_params-grouplevel.log'),
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
+                'task-split_comp-{comp}_mcmc_params-grouplevel_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import contextlib
+        import matplotlib.pyplot as plt
+        import arviz as az
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                inf_data = az.from_netcdf(input[0])
+                style, fig_width = fov.style.plotting_style(wildcards.context)
+                plt.style.use(style)
+                fig = fov.figures.psychophysical_grouplevel_means(inf_data, height=fig_width/4)
+                for ax in fig.axes:
+                    ax.set_title(ax.get_title().replace('a0', 'gain').replace('s0', 'critical scaling'))
+                fig.suptitle(fig._suptitle.get_text(), y=1.05)
+                fig.savefig(output[0], bbox_inches='tight')
+
+
 rule performance_comparison_figure:
     input:
         [op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',

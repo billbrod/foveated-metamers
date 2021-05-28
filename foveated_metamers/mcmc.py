@@ -927,7 +927,8 @@ def inf_data_to_df(inf_data, kind='predictive', query_str=None, hdi=False):
         df = []
         for d in dists:
             for p in params:
-                for m, other_m in zip(mean_level, mean_level[::-1]):
+                for m, other_m in zip(mean_level+[('subject_name', 'image_name')],
+                                      mean_level[::-1]+['all']):
                     try:
                         tmp = np.exp(inf_data[d][f'log_{p}_global_mean'] + inf_data[d][f'log_{p}_image'] +
                                      inf_data[d][f'log_{p}_subject'])
@@ -942,8 +943,12 @@ def inf_data_to_df(inf_data, kind='predictive', query_str=None, hdi=False):
                     tmp['distribution'] = d
                     tmp['parameter'] = p
                     tmp['level'] = other_m
-                    tmp['dependent_var'] = tmp[other_m]
-                    tmp = tmp.drop(columns=[other_m])
+                    if other_m == 'all':
+                        dep_var = 'all subjects, all images'
+                    else:
+                        dep_var = tmp[other_m]
+                        tmp = tmp.drop(columns=[other_m])
+                    tmp['dependent_var'] = dep_var
                     df.append(tmp)
         df = pd.concat(df).reset_index(drop=True)
         df.dependent_var = df.dependent_var.map(lambda x: x.split('_')[0])

@@ -1690,6 +1690,8 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
         marker_adjust = {}
     img_order = plotting.get_order('image_name')
     x_order = kwargs.pop('x_order', None)
+    overall_means = df.query("level=='all'")
+    df = df.query("level!='all'")
     fig, axes, cols, rows = plotting._setup_facet_figure(df, col, row,
                                                          height=height, aspect=aspect,
                                                          rotate_xticklabels=rotate_xticklabels,
@@ -1705,13 +1707,20 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
                 x_ord = img_order
             else:
                 x_ord = x_order
-            d = df.query(f"{col}=='{c}' & {row}=='{r}'")
+            query_str = f"{col}=='{c}' & {row}=='{r}'"
+            d = df.query(query_str)
             xlabel, ylabel = '', ''
             if i == 0:
                 ylabel = f'{y} with {int(hdi*100)}% HDI'
             if j == len(rows)-1:
                 xlabel = c
             title_ = title_str.format(row_val=r, col_val=c, col=col, row=row)
+            # if level is row or col, we want to ignore it and take the other part
+            if col == 'level':
+                query_str = query_str.split('&')[1]
+            elif row == 'level':
+                query_str = query_str.split('&')[0]
+            means = overall_means.query(query_str)
             markers_tmp = plotting._facetted_scatter_ci_dist(d, x, y, hue,
                                                              style, x_ord,
                                                              label, all_labels,
@@ -1721,6 +1730,16 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
                                                              rotate_xticklabels,
                                                              xlabel, ylabel,
                                                              title_, ax=ax)
+            xlim = ax.get_xlim()
+            if d[hue].nunique() > 1:
+                color = 'k'
+            else:
+                color = palette[d[hue].unique()[0]]
+            ax.fill_between(xlim, means[y].min(), means[y].max(), color=color,
+                            alpha=.2)
+            ax.axhline(means.query("hdi==50")[y].values,
+                       linestyle='--', color=color)
+            ax.set_xlim(xlim)
             final_markers.update(markers_tmp)
 
     # create the legend
