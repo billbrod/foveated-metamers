@@ -1828,6 +1828,8 @@ rule performance_comparison_figure:
                 elif wildcards.focus.startswith('comp'):
                     if wildcards.focus == 'comp-base':
                         query_str = f'trial_type in ["metamer_vs_metamer", "metamer_vs_reference"]'
+                    elif wildcards.focus == 'comp-ref':
+                        query_str = f'trial_type == "metamer_vs_reference"'
                     elif wildcards.focus == 'comp-all':
                         query_str = ''
                     else:
@@ -1849,6 +1851,7 @@ rule performance_comparison_figure:
                                                  height=fig_width/3,
                                                  style='trial_type', aspect=2,
                                                  logscale_xaxis=True)
+                fov.plotting.add_physiological_scaling_arrows(g.ax)
                 g.fig.savefig(output[0], bbox_inches='tight')
 
 

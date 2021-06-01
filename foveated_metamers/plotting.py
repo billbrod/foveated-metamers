@@ -1425,3 +1425,89 @@ def _facetted_scatter_ci_dist(data, x, y, hue=None, style=None, x_order=None,
             ax.set_xticklabels(labels, rotation=rotate_xticklabels,
                                ha='right')
     return final_markers
+
+
+def _draw_triangle(ax, top_pt, side_length=.1, rotation_angle=0, **kwargs):
+    """Draw equilateral triangle on axis to point something out.
+
+    Will not change axes limits.
+
+    Parameters
+    ----------
+    ax : axis
+        The axis to add the triangle to.
+    top_pt : tuple
+        The (x, y) tuple (in data coordinates) of the "top point" of the
+        triangle. This is the value the triangle will be pointing to.
+    side_length : float, optional
+        The length of the triangle (in axes coordinates)
+    rotation_angle : float, optional
+        The angle (in radians) of the triangles rotation. 0 gives an angle with
+        its top_pt pointing towards the top of the axis and the opposite side
+        parallel to the x-axis.
+    kwargs :
+        Passed to mpl.patches.Polygon
+
+    Returns
+    -------
+    xy : np.ndarray
+        2d array with 3 values giving the x, y values of the three triangle
+        points (in axes coordinates)
+
+    """
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    # this is the ratio between the x length and y length (so >1 means it's
+    # wider than it is tall). we use it to correct for any stretching, because
+    # otherwise, if the axis is wider than it is tall, axis coordinate of .1 in
+    # the x direction is larger than axis coordinate of .1 in the y direction.
+    aspect = np.divide(*ax.bbox.size)
+    if rotation_angle > np.pi*2 or rotation_angle < -np.pi*2:
+        raise Exception("rotation_angle should be in radians between -2pi and"
+                        f" 2pi, but got {rotation_angle}!")
+    # this converts the top pt from data coordinates to axes coordinates. this
+    # makes it easier to be consistent with sizing (e.g., to have all sizes the
+    # same length even when axis is logscaled)
+    x3, y3 = (ax.transScale+ax.transLimits).transform(top_pt)
+    x1 = x3 - side_length/aspect * np.cos(rotation_angle + np.pi/3)
+    y1 = y3 - side_length * np.sin(rotation_angle + np.pi/3)
+    x2 = x1 + side_length/aspect * np.cos(rotation_angle)
+    y2 = y1 + side_length * np.sin(rotation_angle)
+    xy = np.array([(x3, y3), (x1, y1), (x2, y2)])
+    triangle = mpl.patches.Polygon(xy, transform=ax.transAxes, **kwargs)
+    ax.add_patch(triangle)
+    ax.set(xlim=xlim, ylim=ylim)
+    return xy
+
+
+def add_physiological_scaling_arrows(ax, side_length=.05, midget_rgc=True,
+                                     parasol_rgc=True, v1=True, **kwargs):
+    """Draw arrows pointing out physiological scaling values.
+
+    Parameters
+    ----------
+    ax : axis
+        The axis to add the triangle to.
+    side_length : float, optional
+        The length of the triangle (in axes coordinates)
+    midget_rgc, parasol_rgc, v1 : bool, optional
+        Whether to inclue the arrows for midget RGC, parasol RGC, and V1
+        physiological scaling, respectively.
+    kwargs :
+        Passed to mpl.patches.Polygon. Cannot contain color.
+
+    """
+    pal = get_palette('model', ['Retina', 'V1'])
+    vals = {'midget_rgc': ['Retina', .01, 'M'],
+            'parasol_rgc': ['Retina', .03, 'P'],
+            'v1': ['V1', .25, 'V1']}
+    # this is axes coordinates
+    triangle_height = np.sqrt(side_length**2 - (side_length/2)**2)
+    for k, v in vals.items():
+        if not eval(k):
+            continue
+        model, scaling, label = v
+        xy = _draw_triangle(ax, (scaling, .5), side_length, color=pal[model])
+        ax.text(xy[0][0], xy[0][1] - triangle_height - triangle_height/4,
+                label, ha='center', va='top', transform=ax.transAxes)
+    return xy
