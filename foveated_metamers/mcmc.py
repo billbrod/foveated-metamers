@@ -778,8 +778,6 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
             inf_data.observed_data['responses'] = responses.squeeze('trial_type')
         except ValueError:
             inf_data.observed_data['responses'] = responses
-    # this gets weirdly shaped, so just remove it
-    del inf_data.log_likelihood
     if obs.shape[-2] == 1:
         # then there was only one trial type and it was squeezed out during
         # fitting -- add it in now.
