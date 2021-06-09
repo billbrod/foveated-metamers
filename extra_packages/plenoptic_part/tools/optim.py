@@ -100,14 +100,14 @@ def penalize_range(synth_img, allowed_range=(0, 1), **kwargs):
 
 
 def l2_and_penalize_range(synth_rep, ref_rep, synth_img, allowed_range=(0, 1),
-                          lmbda=.1, **kwargs):
+                          beta=.5, **kwargs):
     """Loss the combines L2-norm of the difference and range penalty.
 
     this function returns a weighted average of the L2-norm of the difference
     between ``ref_rep`` and ``synth_rep`` (as calculated by ``l2_norm()``) and
     the range penalty of ``synth_img`` (as calculated by ``penalize_range()``).
 
-    The loss is: ``l2_norm(synth_rep, ref_rep) + lmbda *
+    The loss is: ``beta * l2_norm(ref_rep, synth_rep) + (1-beta) *
     penalize_range(synth_img, allowed_range)``
 
     Parameters
@@ -122,7 +122,7 @@ def l2_and_penalize_range(synth_rep, ref_rep, synth_img, allowed_range=(0, 1),
         the tensor to penalize. the synthesized image.
     allowed_range : tuple, optional
         2-tuple of values giving the (min, max) allowed values
-    lmbda : float, optional
+    beta : float, optional
         parameter that gives the tradeoff between L2-norm of the
         difference and the range penalty, as described above
     kwargs :
@@ -136,51 +136,12 @@ def l2_and_penalize_range(synth_rep, ref_rep, synth_img, allowed_range=(0, 1),
     """
     l2_loss = l2_norm(synth_rep, ref_rep)
     range_penalty = penalize_range(synth_img, allowed_range)
-    return l2_loss + lmbda * range_penalty
+    return beta * l2_loss + (1-beta) * range_penalty
 
 
 def mse_and_penalize_range(synth_rep, ref_rep, synth_img, allowed_range=(0, 1),
-                           lmbda=.1, **kwargs):
-    """Loss the combines MSE of the difference and range penalty.
-
-    this function returns a weighted average of the MSE of the difference
-    between ``ref_rep`` and ``synth_rep`` (as calculated by ``mse()``) and
-    the range penalty of ``synth_img`` (as calculated by ``penalize_range()``).
-
-    The loss is: ``mse(synth_rep, ref_rep) + lmbda * penalize_range(synth_img,
-    allowed_range)``
-
-    Parameters
-    ----------
-    synth_rep : torch.Tensor
-        The first tensor to compare, model representation of the
-        synthesized image
-    ref_rep : torch.Tensor
-        The second tensor to compare, model representation of the
-        reference image. must be same size as ``synth_rep``,
-    synth_img : torch.Tensor
-        the tensor to penalize. the synthesized image.
-    allowed_range : tuple, optional
-        2-tuple of values giving the (min, max) allowed values
-    lmbda : float, optional
-        parameter that gives the tradeoff between MSE of the
-        difference and the range penalty, as described above
-    kwargs :
-        ignored, only present to absorb extra arguments
-
-    Returns
-    -------
-    loss : torch.float
-        the loss
-
-    """
-    mse_loss = mse(synth_rep, ref_rep)
-    range_penalty = penalize_range(synth_img, allowed_range)
-    return mse_loss + lmbda * range_penalty
-
-
-def mse_and_penalize_range(synth_rep, ref_rep, synth_img, allowed_range=(0, 1), beta=.5, **kwargs):
-    """loss that combines MSE of the difference and range penalty
+                           beta=.5, **kwargs):
+    """Loss that combines MSE of the difference and range penalty.
 
     this function returns a weighted average of the MSE of the
     difference between ``ref_rep`` and ``synth_rep`` (as calculated by
