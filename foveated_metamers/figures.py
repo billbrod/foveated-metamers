@@ -941,7 +941,7 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
     g = sns.FacetGrid(df, row=row, col=col, hue=hue, col_wrap=col_wrap,
                       **kwargs)
     g.map_dataframe(plotting.lineplot_like_pointplot, x='scaling',
-                    y='responses', ci=50, style=style, legend=False,
+                    y='responses', ci=None, style=style, legend=False,
                     linestyle='', dashes=False, ax='map',
                     markers=markers, color=color)
     if marker_adjust:
