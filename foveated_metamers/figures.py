@@ -904,7 +904,10 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
         FacetGrid containing the figure.
 
     """
-    df = mcmc.inf_data_to_df(inf_data, 'predictive', query_str, hdi=hdi)
+    if not isinstance(inf_data, pd.DataFrame):
+        df = mcmc.inf_data_to_df(inf_data, 'predictive', query_str, hdi=hdi)
+    else:
+        df = inf_data
     df = df.query('distribution!="prior_predictive"')
     # remove the responses from posterior predictive, we just want the
     # probability correct curve

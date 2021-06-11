@@ -880,6 +880,88 @@ def inf_data_to_df(inf_data, kind='predictive', query_str=None, hdi=False):
             tmp['distribution'] = d
             df.append(tmp)
         df = pd.concat(df).reset_index(drop=True)
+    elif kind == 'predictive grouplevel means':
+        dists = ['posterior']#, 'prior']
+        mean_level = ['subject_name', 'image_name']
+        df = []
+        orig_scaling = inf_data.observed_data.scaling.values
+        orig_scaling = jnp.array(orig_scaling, dtype=jnp.float32)
+        coord_order = ['chain', 'draw', 'subject_name', 'image_name',
+                       'trial_type', 'model']
+        for m, other_m in zip(mean_level+[('subject_name', 'image_name')],
+                              mean_level[::-1]+['all']):
+            for d in dists:
+                coords = {}
+                for k in ['scaling']+coord_order:
+                    try:
+                        coords[k] = inf_data[d].coords[k].values
+                    except KeyError:
+                        coords[k] = inf_data[d+'_predictive'].coords[k].values
+                try:
+                    a0 = np.exp(inf_data[d][f'log_a0_global_mean'] + inf_data[d][f'log_a0_image'] +
+                                inf_data[d][f'log_a0_subject']).transpose(*coord_order)
+                    s0 = np.exp(inf_data[d][f'log_s0_global_mean'] + inf_data[d][f'log_s0_image'] +
+                                inf_data[d][f'log_s0_subject']).transpose(*coord_order)
+                    pi_l = inf_data[d].pi_l
+                except KeyError:
+                    # then this is the unpooled version, and so we can directly
+                    # grab the parameter
+                    a0 = np.exp(inf_data[d]['a0'])
+                    s0 = np.exp(inf_data[d]['s0'])
+                    pi_l = inf_data[d].pi_l.transpose(*coord_order)
+                a0 = a0.mean(m)
+                s0 = s0.mean(m)
+                # add a dummy dim for scaling
+                a0 = np.expand_dims(a0.values, (0))
+                s0 = np.expand_dims(s0.values, (0))
+                # have to handle pi_l in a special manner, but only if doesn't
+                # contain 'image_name' (which happens for the partially-pooled,
+                # but not unpooled model)
+                if m == 'image_name' and 'image_name' not in pi_l.coords:
+                    pi_l = np.expand_dims(pi_l.values, (0))
+                elif 'image_name' in m and 'image_name' not in pi_l.coords:
+                    pi_l = pi_l.mean([m_ for m_ in m if m_!='image_name'])
+                    pi_l = np.expand_dims(pi_l.values, (0))
+                    if pi_l.ndim != a0.ndim:
+                        pi_l = np.expand_dims(pi_l, (-3))
+                else:
+                    pi_l = pi_l.mean(m)
+                    pi_l = np.expand_dims(pi_l.values, (0))
+                    if pi_l.ndim != a0.ndim:
+                        pi_l = np.expand_dims(pi_l, (-3))
+                # make sure scaling is same shape as a0 and s0
+                scaling = jnp.expand_dims(orig_scaling,
+                                          tuple(-(i+1) for i in range(a0.ndim-1)))
+                scaling = scaling.tile((1, *a0.shape[1:]))
+                prop_corr = proportion_correct_curve(scaling, a0, s0)
+                prop_corr = (1-pi_l) * prop_corr + pi_l * .5
+                prop_corr = xarray.DataArray(prop_corr,
+                                             {k: v for k, v in coords.items() if k!=m and k not in m},
+                                             dims=[c for c in coords if c!=m and c not in m])
+                if hdi:
+                    prop_corr = _compute_hdi(prop_corr, hdi)
+                prop_corr = prop_corr.to_dataframe('probability_correct').reset_index()
+                prop_corr['distribution'] = d + '_predictive'
+                prop_corr['level'] = other_m
+                if other_m == 'all':
+                    dep_var = 'all subjects, all images'
+                else:
+                    dep_var = prop_corr[other_m]
+                    prop_corr = prop_corr.drop(columns=[other_m])
+                prop_corr['dependent_var'] = dep_var
+                df.append(prop_corr)
+            tmp = inf_data.observed_data.mean(m).to_dataframe().reset_index()
+            tmp['level'] = other_m
+            if other_m == 'all':
+                dep_var = 'all subjects, all images'
+            else:
+                dep_var = tmp[other_m]
+                tmp = tmp.drop(columns=[other_m])
+            tmp['dependent_var'] = dep_var
+            # we don't compute HDI for observed data
+            tmp['distribution'] = 'observed_data'
+            df.append(tmp)
+        df = pd.concat(df).reset_index(drop=True)
     elif kind == 'parameters':
         dists = ['prior', 'posterior']
         df = []

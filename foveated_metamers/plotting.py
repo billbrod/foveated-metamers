@@ -955,8 +955,10 @@ def title_experiment_summary_plots(g, expt_df, summary_text, post_text=''):
         subj_str = expt_df.subject_name.unique()[0]
     if expt_df.dropna().image_name.nunique() > 1:
         image_str = 'all images'
-    else:
+    elif expt_df.image_name.dropna().nunique() == 1:
         image_str = expt_df.image_name.dropna().unique()[0]
+    else:
+        image_str = ''
     if 'session_number' not in expt_df.columns or expt_df.session_number.nunique() > 1:
         sess_str = 'all sessions'
     else:
