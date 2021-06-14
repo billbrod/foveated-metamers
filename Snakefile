@@ -2109,10 +2109,11 @@ rule download_freeman_check:
         "curl -O -J -L https://osf.io/wa2zu/download; "
         "tar xf freeman_check.tar.gz; "
         "rm freeman_check.tar.gz; "
-        "cp -R V1_norm_s4_gaussian {params.met_dir_name}/; "
-        "cp -R windows/* {params.windows_dir_name}/; "
-        "rm -r V1_norm_s4_gaussian; "
-        "rm -r windows; "
+        "cp -R metamers/V1_norm_s4_gaussian {params.met_dir_name}/; "
+        "cp -R freeman_check/windows/* {params.windows_dir_name}/; "
+        "rm -r metamers/V1_norm_s4_gaussian; "
+        "rmdir metamers; "
+        "rm -r freeman_check; "
 
 
 rule freeman_check:
