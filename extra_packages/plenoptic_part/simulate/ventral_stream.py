@@ -209,14 +209,16 @@ class PooledVentralStream(nn.Module):
         self.normalize_dict = normalize_dict
         self.to_normalize = []
         self.state_dict_reduced['normalize_dict'] = normalize_dict
+        self.state_dict_reduced['moments'] = moments
         self.num_scales = 1
         self._spatial_masks = {}
         test_moments = [i for i in moments]
         # these are the only allowed moments
         for i in [2, 3, 4]:
-            test_moments.remove(i)
+            if i in test_moments:
+                test_moments.remove(i)
         if len(test_moments) > 0:
-            raise Exception(f"Only acceptable valeus for moments are [2, 3, 4], but got other values {test_moments}!``")
+            raise Exception(f"Only acceptable values for moments are [2, 3, 4], but got other values {test_moments}!``")
         self._moments = moments
 
     def _gen_spatial_masks(self, n_angles=4):
@@ -1313,6 +1315,9 @@ class PooledV1(PooledVentralStream):
         windows tile correctly, intersect at the proper point, follow
         scaling, and have proper aspect ratio; not sure we can make that
         happen for other values).
+    moments : list, optional
+        Subset of 2, 3, 4. Which moments (other than the mean) to include in
+        this model's representation.
 
     Attributes
     ----------
@@ -1461,11 +1466,11 @@ class PooledV1(PooledVentralStream):
     """
     def __init__(self, scaling, img_res, num_scales=4, order=3, min_eccentricity=.5,
                  max_eccentricity=15, transition_region_width=.5, normalize_dict={},
-                 cache_dir=None, window_type='cosine', std_dev=None):
+                 cache_dir=None, window_type='cosine', std_dev=None, moments=[]):
         super().__init__(scaling, img_res, min_eccentricity, max_eccentricity, num_scales,
                          transition_region_width=transition_region_width,
                          cache_dir=cache_dir, window_type=window_type, std_dev=std_dev,
-                         normalize_dict=normalize_dict)
+                         normalize_dict=normalize_dict, moments=moments)
         self.state_dict_reduced.update({'order': order, 'model_name': 'V1',
                                         'num_scales': num_scales})
         self.num_scales = num_scales
@@ -1584,6 +1589,13 @@ class PooledV1(PooledVentralStream):
         if 'mean_luminance' in scales:
             self.mean_luminance = self.PoolingWindows(self.cone_responses)
             self.representation['mean_luminance'] = self.mean_luminance
+            moments = self._calculate_moments(self.cone_responses,
+                                              2 in self._moments,
+                                              3 in self._moments,
+                                              4 in self._moments,
+                                              self.representation['mean_luminance'])
+            self.representation.update({f'image_moment_{k}': v for
+                                        k, v in moments.items()})
         return self.representation_to_output()
 
     def _representation_for_plotting(self, batch_idx=0, data=None):
@@ -1774,11 +1786,14 @@ class PooledV1(PooledVentralStream):
 
         """
         n_cols = self.num_scales + 1
-        n_rows = self.order + 1
+        n_rows = max(self.order + 1, len(self._moments) + 1)
         col_multiplier = 2
         col_offset = 1
         fig, gs, data, title_list = self._plot_helper(2*n_rows, 2*n_cols, figsize,
                                                       ax, title, batch_idx, data)
+        # 0-indexed moment N
+        moment_n_dict = {'mean_luminance': 0, 'second': 1,
+                         'third': 2, 'fourth': 3}
         axes = []
         for i, (k, v) in enumerate(data.items()):
             if isinstance(k, tuple):
@@ -1787,17 +1802,16 @@ class PooledV1(PooledVentralStream):
                                         int(col_multiplier*(k[0]+col_offset))])
                 ax = clean_stem_plot(v, ax, t, ylim)
                 axes.append(ax)
-            elif k == 'mean_luminance':
-                t = self._get_title(title_list, -1, "mean pixel intensity")
-                if n_rows != 1:
-                    ax = fig.add_subplot(gs[n_rows-2:n_rows, 2*(n_cols-1):])
-                else:
-                    ax = fig.add_subplot(gs[n_rows-1:n_rows, 2*(n_cols-1):])
+            else:
+                t = self._get_title(title_list, i, k)
+                moment_n = moment_n_dict[k.replace('image_moment_', '')]
+                # last column, and moment_n determines the row
+                ax = fig.add_subplot(gs[2*moment_n:2*(moment_n+1), 2*(n_cols-1):])
                 ax = clean_stem_plot(v, ax, t, ylim)
                 axes.append(ax)
         return fig, axes
 
-    def plot_representation_image(self, figsize=(27, 5), ax=None, title=None, batch_idx=0,
+    def plot_representation_image(self, figsize=(22, 11), ax=None, title=None, batch_idx=0,
                                   data=None, vrange='auto1', zoom=1):
         r"""Plot representation as an image, using the weights from PoolingWindows
 
@@ -1863,8 +1877,9 @@ class PooledV1(PooledVentralStream):
             A list of axes that contain the plots we've created
 
         """
-        n_cols = self.num_scales + 1
-        fig, gs, data, title_list = self._plot_helper(1, n_cols, figsize, ax,
+        n_cols = max(self.num_scales, len(self._moments) + 1)
+        n_rows = 2
+        fig, gs, data, title_list = self._plot_helper(n_rows, n_cols, figsize, ax,
                                                       title, batch_idx, data)
         titles = []
         axes = []
@@ -1880,7 +1895,7 @@ class PooledV1(PooledVentralStream):
             img = torch.zeros_like(data[(i, 0)])
             for j in range(self.order+1):
                 img += data[(i, j)]
-            ax = fig.add_subplot(gs[int(i)])
+            ax = fig.add_subplot(gs[0, int(i)])
             ax = clean_up_axes(ax, False, ['top', 'right', 'bottom', 'left'], ['x', 'y'])
             imgs.append(img)
             axes.append(ax)
@@ -1888,12 +1903,16 @@ class PooledV1(PooledVentralStream):
                 zooms.append(zoom * round(data[(0, 0)].shape[-1] / img.shape[-1]))
             elif isinstance(i, float):
                 zooms.append(zoom * round(data[(0.5, 0)].shape[-1] / img.shape[-1]))
-        ax = fig.add_subplot(gs[-1])
-        ax = clean_up_axes(ax, False, ['top', 'right', 'bottom', 'left'], ['x', 'y'])
-        axes.append(ax)
-        titles.append(self._get_title(title_list, -1, "mean pixel intensity"))
-        imgs.append(data['mean_luminance'])
-        zooms.append(zoom)
+        for i, k in enumerate(['mean_luminance'] + self._moments):
+            k = {2: 'image_moment_second', 3: 'image_moment_third',
+                 4: 'image_moment_fourth'}.get(k, k)
+            ax = fig.add_subplot(gs[1, i])
+            ax = clean_up_axes(ax, False, ['top', 'right', 'bottom', 'left'],
+                               ['x', 'y'])
+            axes.append(ax)
+            titles.append(self._get_title(title_list, len(self.scales)+i-1, k))
+            imgs.append(data[k])
+            zooms.append(zoom)
         vrange, cmap = pt.tools.display.colormap_range(imgs, vrange)
         for ax, img, t, vr, z in zip(axes, imgs, titles, vrange, zooms):
             po.imshow(img, ax=ax, vrange=vr, cmap=cmap, title=t, zoom=z)

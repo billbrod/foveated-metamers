@@ -128,10 +128,14 @@ def find_figsizes(model_name, model, image_shape):
             num_scales = int(re.findall('_s([0-9]+)_', model_name)[0])
         except (IndexError, ValueError):
             num_scales = 4
+        try:
+            num_moments = int(re.findall('_m([0-9]+)_', model_name)[0]) - 1
+        except (IndexError, ValueError):
+            num_moments = 0
         animate_figsize = (40, 11)
-        # we need about 11 per plot (and we have one of those per scale,
-        # plus one for the mean luminance)
-        rep_image_figsize = [11 * (num_scales+1), 30]
+        # we need about 11 per plot, we have two rows, one with the scales and
+        # one with mean luminance and the moments
+        rep_image_figsize = [11 * max(num_scales, num_moments+1), 60]
         # default figsize arguments work for an image that is 512x512 may need
         # to expand. we go backwards through figsize because figsize and image
         # shape are backwards of each other: image.shape's last two indices are
@@ -292,6 +296,11 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
             num_scales = int(re.findall('_s([0-9]+)_', model_name)[0])
         except (IndexError, ValueError):
             num_scales = 4
+        try:
+            moments = int(re.findall('_m([0-9]+)_', model_name)[0])
+            moments = list(range(2, moments+1))
+        except (IndexError, ValueError):
+            moments = []
         model = pop.PooledV1(scaling, image.shape[-2:],
                              min_eccentricity=min_ecc,
                              max_eccentricity=max_ecc,
@@ -300,7 +309,8 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
                              cache_dir=cache_dir,
                              normalize_dict=normalize_dict,
                              num_scales=num_scales,
-                             window_type=window_type)
+                             window_type=window_type,
+                             moments=moments)
     else:
         raise Exception("Don't know how to handle model_name %s" % model_name)
     animate_figsize, rep_image_figsize, img_zoom = find_figsizes(model_name, model,
@@ -349,7 +359,7 @@ def summary_plots(metamer, rep_image_figsize, img_zoom):
     1. 'rep_image': we show, in three separate rows, the representation
     of the reference image, the representation of the metamer, and the
     representation_error at the final iteration, all plotted as images
-    using ``metamer.model.plot_representaiton_image``.
+    using ``metamer.model.plot_representation_image``.
 
     2. 'windowed': on the top row we show the initial image, the
     metamer, and the reference image, and on the bottom row we show
