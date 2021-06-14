@@ -5,7 +5,7 @@ channels:
   - defaults
   - bioconda
 dependencies:
-  - python==3.7
+  - python==3.7.1
   - pip==19.1.1
   - ipykernel==5.1.1
   - scipy==1.6.1
