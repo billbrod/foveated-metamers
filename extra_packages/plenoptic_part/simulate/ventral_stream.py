@@ -86,6 +86,9 @@ class PooledVentralStream(nn.Module):
         there for cached versions of the windows we create, load them if
         they exist and create and cache them if they don't. If None, we
         don't check for or cache the windows.
+    moments : list, optional
+        Subset of 2, 3, 4. Which moments (other than the mean) to include in
+        this model's representation.
 
     Attributes
     ----------
@@ -190,7 +193,7 @@ class PooledVentralStream(nn.Module):
     def __init__(self, scaling, img_res, min_eccentricity=.5,
                  max_eccentricity=15, num_scales=1, transition_region_width=.5,
                  cache_dir=None, window_type='cosine', std_dev=None,
-                 normalize_dict={}):
+                 normalize_dict={}, moments=[]):
         super().__init__()
         self.PoolingWindows = PoolingWindows(scaling, img_res, min_eccentricity, max_eccentricity,
                                              num_scales, cache_dir, window_type,
@@ -208,6 +211,13 @@ class PooledVentralStream(nn.Module):
         self.state_dict_reduced['normalize_dict'] = normalize_dict
         self.num_scales = 1
         self._spatial_masks = {}
+        test_moments = [i for i in moments]
+        # these are the only allowed moments
+        for i in [2, 3, 4]:
+            test_moments.remove(i)
+        if len(test_moments) > 0:
+            raise Exception(f"Only acceptable valeus for moments are [2, 3, 4], but got other values {test_moments}!``")
+        self._moments = moments
 
     def _gen_spatial_masks(self, n_angles=4):
         r"""Generate spatial masks
@@ -242,6 +252,55 @@ class PooledVentralStream(nn.Module):
             for j, val in enumerate(sorted(windows.unique())):
                 masks[(i, f'region_{j}')] = (windows == val).flatten()
         return masks
+
+    def _calculate_moments(self, image, second=True, third=True,
+                           fourth=True, pooled_mean=None):
+        """Calculate un-normalized weighted moments of image.
+
+        That is, we compute $E[X^n] - E[X]^n$ for $n\in\{2, 3, 4\}$ (and note
+        that we use our PoolingWindows instead of the average). In order to
+        make the third and fourth moments the skew and kurtosis, we would need
+        to divide them by variance to some power; we do not do that to avoid
+        those moments blowing up when variance is very small. Also note that we
+        compute the above instead of $E[(X-E[X])^n]$ -- those should be
+        equivalent, but the way we use works better when computing the weighted
+        moments (i.e., using PoolingWindows).
+
+        Note that, when matching the moments (e.g., in metamer synthesis),
+        matching all three un-normalized moments is equivalent to matching the
+        normalized versions (though this isn't the case if you wanted to use
+        this model for e.g., computing perceptual distance).
+
+        Parameters
+        ----------
+        image : torch.Tensor
+            The 4d tensor to compute the weighted moments of.
+        second, third, fourth : bool, optional
+            Whether to compute the second, third, and fourth moments.
+        pooled_mean : None or torch.Tensor, optional
+            If a tensor, the weighted average of image (so we can avoid
+            re-calculating it, and speed this up). If None, we compute it
+            ourselves.
+
+        Returns
+        -------
+        moments : dict
+            Dict of tensors, containing the calculated moments.
+
+        """
+        if pooled_mean is None:
+            pooled_mean = self.PoolingWindows(image)
+        moments = {}
+        if second:
+            moments['second'] = (self.PoolingWindows(image.pow(2)) -
+                                 pooled_mean.pow(2))
+        if third:
+            moments['third'] = (self.PoolingWindows(image.pow(3)) -
+                                pooled_mean.pow(3))
+        if fourth:
+            moments['fourth'] = (self.PoolingWindows(image.pow(4)) -
+                                 pooled_mean.pow(4))
+        return moments
 
     def to(self, *args, do_windows=True, **kwargs):
         r"""Moves and/or casts the parameters and buffers.
@@ -1838,4 +1897,416 @@ class PooledV1(PooledVentralStream):
         vrange, cmap = pt.tools.display.colormap_range(imgs, vrange)
         for ax, img, t, vr, z in zip(axes, imgs, titles, vrange, zooms):
             po.imshow(img, ax=ax, vrange=vr, cmap=cmap, title=t, zoom=z)
+        return fig, axes
+
+
+class PooledMoments(PooledVentralStream):
+    r"""Pool pixel moments.
+
+    This model computes the first N un-normalized moments of the pixel values
+    in pooling windows across an image (where N is between 2 and 4; note this
+    means we always include the mean). This is not a biological model, but a
+    simple null model.
+
+    Note that we will calculate the minimum eccentricity at which the
+    area of the windows at half-max exceeds one pixel (based on
+    ``scaling``, ``img_res`` and ``max_eccentricity``) and, if
+    ``min_eccentricity`` is below that, will throw an Exception.
+
+    We can optionally cache the windows tensor we create, if
+    ``cache_dir`` is not None. In that case, we'll also check to see if
+    appropriate cached windows exist before creating them and load them
+    if they do. The path we'll use is
+    ``{cache_dir}/scaling-{scaling}_size-{img_res}_e0-{min_eccentricity}_
+    em-{max_eccentricity}_t-{transition_region_width}.pt``.
+
+    NOTE: that we're assuming the input to this model contains values
+    proportional to photon counts; thus, it should be a raw image or
+    other linearized / "de-gamma-ed" image (all images meant to be
+    displayed on a standard display will have been gamma-corrected,
+    which involves raising their values to a power, typically 1/2.2).
+
+    Parameters
+    ----------
+    scaling : float
+        Scaling parameter that governs the size of the pooling
+        windows. Other pooling windows parameters
+        (``radial_to_circumferential_ratio``,
+        ``transition_region_width``) cannot be set here. If that ends up
+        being of interest, will change that.
+    img_res : tuple
+        The resolution of our image (should therefore contains
+        integers). Will use this to generate appropriately sized pooling
+        windows.
+    min_eccentricity : float, optional
+        The eccentricity at which the pooling windows start.
+    max_eccentricity : float, optional
+        The eccentricity at which the pooling windows end.
+    transition_region_width : `float`, optional
+        The width of the transition region, parameter :math:`t` in
+        equation 9 from the online methods. 0.5 (the default) is the
+        value used in the paper [1]_.
+    normalize_dict : dict
+        Dict containing the statistics to normalize, as generated by
+        ``po.simul.non_linearities.generate_norm_stats``. If this is an
+        empty dict, we don't normalize the model.
+    cache_dir : str or None, optional
+        The directory to cache the windows tensor in. If set, we'll look
+        there for cached versions of the windows we create, load them if
+        they exist and create and cache them if they don't. If None, we
+        don't check for or cache the windows.
+    window_type : {'cosine', 'gaussian'}
+        Whether to use the raised cosine function from [1]_ or a Gaussian that
+        has approximately the same structure. If cosine,
+        ``transition_region_width`` must be set; if gaussian, then ``std_dev``
+        must be set.
+    std_dev : float or None, optional
+        The standard deviation of the Gaussian window. WARNING -- For
+        now, we only support ``std_dev=1`` (in order to ensure that the
+        windows tile correctly, intersect at the proper point, follow
+        scaling, and have proper aspect ratio; not sure we can make that
+        happen for other values).
+    moments : list, optional
+        Subset of 2, 3, 4. Which moments (other than the mean) to include in
+        this model's representation.
+
+    Attributes
+    ----------
+    scaling : float
+        Scaling parameter that governs the size of the pooling windows.
+    min_eccentricity : float
+        The eccentricity at which the pooling windows start.
+    max_eccentricity : float
+        The eccentricity at which the pooling windows end.
+    transition_region_width : `float`, optional
+        The width of the transition region, parameter :math:`t` in
+        equation 9 from the online methods.
+    windows : torch.Tensor
+        A list of 3d tensors containing the pooling windows in which the
+        pixel intensities are averaged. Each entry in the list
+        corresponds to a different scale and thus is a different size
+        (though they should all have the same number of windows)
+    image : torch.Tensor
+        A 4d containing the image most recently analyzed.
+    cone_responses : torch.Tensor
+        A 4d tensor containing the cone responses to the most recent image
+        analyzed. This is a copy of ``image``, but may be normalized.
+    representation : torch.Tensor
+        A tensor containing the averages of the pixel intensities within
+        each pooling window for ``self.image``. This will be 3d: (batch,
+        channel, windows).
+    state_dict_reduced : dict
+        A dictionary containing those attributes necessary to initialize
+        the model, plus a 'model_name' field which the ``load_reduced``
+        method uses to determine which model constructor to call. This
+        is used for saving/loading the models, since we don't want to
+        keep the (very large) representation and intermediate steps
+        around. To save, use ``self.save_reduced(filename)``, and then
+        load from that same file using the class method
+        ``po.simul.PooledVentralStream.load_reduced(filename)``
+    window_width_degrees : dict
+        Dictionary containing the widths of the windows in
+        degrees. There are four keys: 'radial_top', 'radial_full',
+        'angular_top', and 'angular_full', corresponding to a 2x2 for
+        the widths in the radial and angular directions by the 'top' and
+        'full' widths (top is the width of the flat-top region of each
+        window, where the window's value is 1; full is the width of the
+        entire window). Each value is a list containing the widths for
+        the windows in different eccentricity bands. To visualize these,
+        see the ``plot_window_sizes`` method.
+    window_width_pixels : list
+        List of dictionaries containing the widths of the windows in
+        pixels; each entry in the list corresponds to the widths for a
+        different scale, as in ``windows``. See above for explanation of
+        the dictionaries. To visualize these, see the
+        ``plot_window_sizes`` method.
+    n_polar_windows : int
+        The number of windows we have in the polar angle dimension
+        (within each eccentricity band)
+    n_eccentricity_bands : int
+        The number of eccentricity bands in our model
+    calculated_min_eccentricity_degrees : list
+        List of floats (one for each scale) that contain
+        ``calc_min_eccentricity()[0]``, that is, the minimum
+        eccentricity (in degrees) where the area of the window at
+        half-max exceeds one pixel (based on the scaling, size of the
+        image in pixels and in degrees).
+    calculated_min_eccentricity_pixels : list
+        List of floats (one for each scale) that contain
+        ``calc_min_eccentricity()[1]``, that is, the minimum
+        eccentricity (in pixels) where the area of the window at
+        half-max exceeds one pixel (based on the scaling, size of the
+        image in pixels and in degrees).
+    central_eccentricity_degrees : np.ndarray
+        A 1d array with shape ``(self.n_eccentricity_bands,)``, each
+        value gives the eccentricity of the center of each eccentricity
+        band of windows (in degrees).
+    central_eccentricity_pixels : list
+        List of 1d arrays (one for each scale), each with shape
+        ``(self.n_eccentricity_bands,)``, each value gives the
+        eccentricity of the center of each eccentricity band of windows
+        (in degrees).
+    window_approx_area_degrees : dict
+        Dictionary containing the approximate areas of the windows, in
+        degrees. There are three keys: 'top', 'half', and 'full',
+        corresponding to which width we used to calculate the area (top
+        is the width of the flat-top region of each window, where the
+        window's value is 1; full is the width of the entire window;
+        half is the width at half-max). To get this approximate area, we
+        multiply the radial and angular widths against each other and
+        then by pi/4 to get the area of the regular ellipse that has
+        those widths (our windows are elongated, so this is probably an
+        under-estimate). To visualize these, see the
+        ``plot_window_areas`` method
+    window_approx_area_pixels : list
+        List of dictionaries containing the approximate areasof the
+        windows in pixels; each entry in the list corresponds to the
+        areas for a different scale, as in ``windows``. See above for
+        explanation of the dictionaries. To visualize these, see the
+        ``plot_window_areas`` method.
+    deg_to_pix : list
+        List of floats containing the degree-to-pixel conversion factor
+        at each scale
+    cache_dir : str or None
+        If str, this is the directory where we cached / looked for
+        cached windows tensors
+    cached_paths : list
+        List of strings, one per scale, that we either saved or loaded
+        the cached windows tensors from
+    normalize_dict : dict
+        Dict containing the statistics to normalize, as generated by
+        ``po.simul.non_linearities.generate_norm_stats``. If this is an
+        empty dict, we don't normalize the model.
+    to_normalize : list
+        List of attributes that we want to normalize by whitening
+
+    """
+
+    def __init__(self, scaling, img_res, min_eccentricity=.5,
+                 max_eccentricity=15, transition_region_width=.5,
+                 normalize_dict={}, cache_dir=None, window_type='cosine',
+                 std_dev=None, moments=[2, 3, 4]):
+        super().__init__(scaling, img_res, min_eccentricity, max_eccentricity,
+                         transition_region_width=transition_region_width,
+                         cache_dir=cache_dir, window_type=window_type,
+                         std_dev=std_dev, normalize_dict=normalize_dict,
+                         moments=moments)
+        self.state_dict_reduced.update({'model_name': 'Moments'})
+        self.image = None
+        self.representation = None
+        self.to_normalize += ['cone_responses']
+
+    def forward(self, image):
+        r"""Generate the PooledMoments representation of an image.
+
+        Parameters
+        ----------
+        image : torch.Tensor
+            A tensor containing the image to analyze. We want to operate
+            on this in the pytorch-y way, so we want it to be 4d (batch,
+            channel, height, width). If it has fewer than 4 dimensions,
+            we will unsqueeze it until its 4d
+
+        Returns
+        -------
+        representation : torch.Tensor
+            A 3d tensor containing the averages of the pixel intensities
+            within each pooling window for ``image``, plus the specified
+            un-normalized moments within those windows.
+
+        """
+        while image.ndimension() < 4:
+            image = image.unsqueeze(0)
+        self.image = image.detach().clone()
+        self.cone_responses = image.clone()
+        if self.normalize_dict:
+            self = zscore_stats(self.normalize_dict, self)
+        self.representation = {'mean_luminance': self.PoolingWindows(self.cone_responses)}
+        moments = self._calculate_moments(self.cone_responses, 2 in self._moments,
+                                          3 in self._moments, 4 in self._moments,
+                                          self.representation['mean_luminance'])
+        self.representation.update({f'image_moment_{k}': v for k, v in moments.items()})
+        return self.representation_to_output()
+
+    def _plot_helper(self, n_rows, n_cols, figsize=(10, 10), ax=None,
+                     title=None, batch_idx=0, data=None):
+        r"""helper function for plotting that takes care of a lot of the standard stuff
+
+        Parameters
+        ----------
+        n_rows : int
+            The number of rows in the (sub-)figure we're creating
+        n_cols : int
+            The number oc columns in the (sub-)figure we're creating
+        figsize : tuple, optional
+            The size of the figure to create (ignored if ``ax`` is not
+            None)
+        ax : matplotlib.pyplot.axis or None, optional
+            If not None, the axis to plot this representation on (in
+            which case we ignore ``figsize``). If None, we create our
+            own figure to hold it
+        title : str, list, or None, optional
+            Titles to use. If list or None, this does nothing to it. If
+            a str, we turn it into a list with ``(n_rows*n_cols)``
+            entries, all identical and the same as the user-pecified
+            title
+        batch_idx : int, optional
+            Which index to take from the batch dimension
+        data : torch.Tensor, np.ndarray, dict or None, optional
+            The data to plot. If None, we use
+            ``self.representation``. Else, should look like
+            ``self.representation``, with the exact same structure, or
+            the structure returned by ``self.forward`` (e.g., as
+            returned by ``metamer.representation_error()`` or another
+            instance of this class).
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+            The figure containing our subplots
+        gs : matplotlib.gridspec.GridSpec
+            The GridSpec object to use for creating subplots. You should
+            use it with ``fig`` to add subplots by indexing into it,
+            like so: ``fig.add_subplot(gs[0, 1])``
+        data : np.ndarray
+            The output of self._representation_for_plotting(batch_idx, data)
+        title : list or None
+            If title was None or a list, we did nothing to it. If it was
+            a str, we made sure its length is (n_rows * n_cols)
+
+        """
+        if ax is None:
+            fig = plt.figure(figsize=figsize)
+            gs = mpl.gridspec.GridSpec(n_rows, n_cols, fig)
+        else:
+            warnings.warn("ax is not None, so we're ignoring figsize...")
+            # want to make sure the axis we're taking over is basically invisible.
+            ax = clean_up_axes(ax, False, ['top', 'right', 'bottom', 'left'], ['x', 'y'])
+            gs = ax.get_subplotspec().subgridspec(n_rows, n_cols)
+            fig = ax.figure
+        data = self._representation_for_plotting(batch_idx, data)
+        if isinstance(title, str):
+            # then this is a single str, so we'll make it the same on
+            # every subplot
+            title = (n_rows * n_cols) * [title]
+        return fig, gs, data, title
+
+    def plot_representation(self, figsize=(10, 10), ylim=None, ax=None,
+                            title=None, batch_idx=0, data=None):
+        r"""Plot the representation of the PooledMoments model.
+
+        We plot each included moment as a stem plot on a separate axis. We have
+        a small break in the data to show where we've moved out to the next
+        eccentricity ring.
+
+        Parameters
+        ----------
+        figsize : tuple, optional
+            The size of the figure to create
+        ylim : tuple, False, or None
+            If a tuple, the y-limits to use for this plot. If None, we use
+            the default, slightly adjusted so that the minimum is 0. If
+            False, we do nothing.
+        ax : matplotlib.pyplot.axis or None, optional
+            If not None, the axis to plot this representation on. If
+            None, we create our own 1 subplot figure to hold it
+        title : str or None, optional
+            The title to put above this axis. If you want no title, pass
+            the empty string (``''``). If None, will use the default,
+            'mean pixel intensity'. If it includes a '|' (pipe), then
+            we'll append the default to the other side of the pipe.
+        batch_idx : int, optional
+            Which index to take from the batch dimension
+        data : torch.Tensor, np.ndarray, dict or None, optional
+            The data to plot. If None, we use ``self.representation`` . Else,
+            should look like ``self.representation``, with the exact same
+            structure (e.g., as returned by ``metamer.representation_error()``
+            or another instance of this class).
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+            The figure containing the plot
+        axes : list
+            A list of axes that contain the plots we've created
+
+        """
+        nrows = 2
+        ncols = len(self._moments)//2 + 1
+        fig, gs, data, title_list = self._plot_helper(nrows, ncols,
+                                                      figsize, ax, title,
+                                                      batch_idx, data)
+        axes = []
+        for i, (k, v) in enumerate(data.items()):
+            t = self._get_title(title_list, i, k)
+            ax = fig.add_subplot(gs[i%2, i//2])
+            ax = clean_stem_plot(v, ax, t, ylim)
+            axes.append(ax)
+        return fig, axes
+
+    def plot_representation_image(self, figsize=(11, 11), ax=None, title=None, batch_idx=0,
+                                  data=None, vrange='indep1', zoom=1):
+        r"""Plot representation as an image, using the weights from PoolingWindows.
+
+        The PooledMoments model consists of the first N moments per window. We
+        thus create N plots, each of which has a single value per pooling
+        window; we take that value and multiply it by the pooling window, and
+        then sum across all windows. Thus the value at a single pixel shows a
+        weighted sum of the representation.
+
+        By setting ``data``, you can use this to visualize any vector with the
+        same length as the number of windows. For example, you can view metamer
+        synthesis error by setting ``data=metamer.representation_error()``
+        (then you'd probably want to set ``vrange='auto0'`` in order to change
+        the colormap to a diverging one cenetered at 0).
+
+        Parameters
+        ----------
+        figsize : tuple, optional
+            The size of the figure to create
+        ax : matplotlib.pyplot.axis or None, optional
+            If not None, the axis to plot this representation on. If
+            None, we create our own 1 subplot figure to hold it
+        title : str or None, optional
+            The title to put above this axis. If you want no title, pass
+            the empty string (``''``). If None, will use the default,
+            'mean pixel intensity'. If it includes a '|' (pipe), then
+            we'll append the default to the other side of the pipe.
+        batch_idx : int, optional
+            Which index to take from the batch dimension
+        data : torch.Tensor, np.ndarray, dict or None, optional
+            The data to plot. If None, we use
+            ``self.representation``. Else, should look like
+            ``self.representation``, with the exact same structure
+            (e.g., as returned by ``metamer.representation_error()`` or
+            another instance of this class).
+        vrange : str or tuple, optional
+            The vrange value to pass to pyrtools.imshow
+        zoom : float or int, optional
+            If a float, must be castable to an int or an inverse power
+            of 2. The amount to zoom the images in/out by.
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+            The figure containing the plot
+        ax : matplotlib.pyplot.axis
+            A list of axes that contain the plots we've created
+
+        """
+        nrows = 2
+        ncols = len(self._moments)//2 + 1
+        fig, gs, data, title_list = self._plot_helper(nrows, ncols, figsize, ax, title,
+                                                      batch_idx, data)
+        # project expects a dictionary of 3d tensors
+        data = self.PoolingWindows.project(dict((k, torch.Tensor(v).unsqueeze(0).unsqueeze(0))
+                                                for k, v in data.items()))
+        axes = []
+        for i, (k, v) in enumerate(data.items()):
+            title = self._get_title(title_list, i, k)
+            ax = fig.add_subplot(gs[i % 2, i // 2])
+            ax = clean_up_axes(ax, False, ['top', 'right', 'bottom', 'left'],
+                               ['x', 'y'])
+            po.imshow(v, vrange=vrange, ax=ax, title=title, zoom=zoom)
+            axes.append(ax)
         return fig, axes
