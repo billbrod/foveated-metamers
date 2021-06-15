@@ -102,7 +102,8 @@ class TestPooledVentralStream(object):
             _ = v1.plot_window_areas('pixels', i)
         v1.plot_representation()
         v1.plot_representation_image()
-        fig, axes = plt.subplots(2, 1, figsize=(27, 12))
+        fig, axes = plt.subplots(2, 1, figsize=(22, 18),
+                                 gridspec_kw={'height_ratios': [1, 2]})
         v1.plot_representation(ax=axes[1])
         v1.plot_representation_image(ax=axes[0])
         plt.close('all')
@@ -121,7 +122,8 @@ class TestPooledVentralStream(object):
             _ = v1.plot_window_areas('pixels', i)
         v1.plot_representation()
         v1.plot_representation_image()
-        fig, axes = plt.subplots(2, 1, figsize=(27, 12))
+        fig, axes = plt.subplots(2, 1, figsize=(22, 18),
+                                 gridspec_kw={'height_ratios': [1, 2]})
         v1.plot_representation(ax=axes[1])
         v1.plot_representation_image(ax=axes[0])
         plt.close('all')
@@ -138,7 +140,8 @@ class TestPooledVentralStream(object):
             _ = v1.plot_window_areas('pixels', i)
         v1.plot_representation()
         v1.plot_representation_image()
-        fig, axes = plt.subplots(2, 1, figsize=(27, 12))
+        fig, axes = plt.subplots(2, 1, figsize=(22, 18),
+                                 gridspec_kw={'height_ratios': [1, 2]})
         v1.plot_representation(ax=axes[1])
         v1.plot_representation_image(ax=axes[0])
         plt.close('all')
