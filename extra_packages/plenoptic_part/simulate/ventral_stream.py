@@ -295,9 +295,12 @@ class PooledVentralStream(nn.Module):
         # clamp with min=0 to avoid NaNs. see
         # https://discuss.pytorch.org/t/incorrect-pow-function/62735/3 for why
         # this applies even to the third-root
-        moments['second'] = self.PoolingWindows(image.pow(2)).clamp(min=0).pow(1/2)
-        moments['third'] = self.PoolingWindows(image.pow(3)).clamp(min=0).pow(1/3)
-        moments['fourth'] = self.PoolingWindows(image.pow(4)).clamp(min=0).pow(1/4)
+        if second:
+            moments['second'] = self.PoolingWindows(image.pow(2)).clamp(min=0).pow(1/2)
+        if third:
+            moments['third'] = self.PoolingWindows(image.pow(3)).clamp(min=0).pow(1/3)
+        if fourth:
+            moments['fourth'] = self.PoolingWindows(image.pow(4)).clamp(min=0).pow(1/4)
         return moments
 
     def to(self, *args, do_windows=True, **kwargs):
