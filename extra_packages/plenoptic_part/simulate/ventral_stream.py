@@ -291,11 +291,8 @@ class PooledVentralStream(nn.Module):
             Dict of tensors, containing the calculated moments.
 
         """
-        if (image < 0).any():
-            raise Exception("Can't compute moment of image with negative values!")
         moments = {}
-        # clamp with min=0 to avoid NaNs. Since images are non-negative (see
-        # Exception above), any values below 0 are precision errors. see
+        # clamp with min=0 to avoid NaNs. see
         # https://discuss.pytorch.org/t/incorrect-pow-function/62735/3 for why
         # this applies even to the third-root
         moments['second'] = self.PoolingWindows(image.pow(2)).clamp(min=0).pow(1/2)
