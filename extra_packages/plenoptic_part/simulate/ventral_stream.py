@@ -257,20 +257,21 @@ class PooledVentralStream(nn.Module):
 
     def _calculate_moments(self, image, second=True, third=True,
                            fourth=True, pooled_mean=None):
-        """Calculate un-normalized weighted moments of image.
+        """Calculate weighted moments of image.
 
-        That is, we compute $E[X^n] - E[X]^n$ for $n\in\{2, 3, 4\}$ (and note
-        that we use our PoolingWindows instead of the average). In order to
-        make the third and fourth moments the skew and kurtosis, we would need
-        to divide them by variance to some power; we do not do that to avoid
-        those moments blowing up when variance is very small. Also note that we
-        compute the above instead of $E[(X-E[X])^n]$ -- those should be
-        equivalent, but the way we use works better when computing the weighted
-        moments (i.e., using PoolingWindows).
+        Note that we're computing nth of the first 4 moments, not the central
+        or standardized moments (which are more common; these involve
+        subtracting off the mean and dividing by the variance raised to some
+        power, respectively). We use the plain-old moments to avoid issues with
+        negative values (which we can't take the root of) or blowing up when
+        variance is small.
+
+        We take the root so these values scale appropriately with the values of
+        image.
 
         Note that, when matching the moments (e.g., in metamer synthesis),
-        matching all three un-normalized moments is equivalent to matching the
-        normalized versions (though this isn't the case if you wanted to use
+        matching all of these plain-old moments is equivalent to matching the
+        standardized versions (though this isn't the case if you wanted to use
         this model for e.g., computing perceptual distance).
 
         Parameters
@@ -290,18 +291,16 @@ class PooledVentralStream(nn.Module):
             Dict of tensors, containing the calculated moments.
 
         """
-        if pooled_mean is None:
-            pooled_mean = self.PoolingWindows(image)
+        if (image < 0).any():
+            raise Exception("Can't compute moment of image with negative values!")
         moments = {}
-        if second:
-            moments['second'] = (self.PoolingWindows(image.pow(2)) -
-                                 pooled_mean.pow(2))
-        if third:
-            moments['third'] = (self.PoolingWindows(image.pow(3)) -
-                                pooled_mean.pow(3))
-        if fourth:
-            moments['fourth'] = (self.PoolingWindows(image.pow(4)) -
-                                 pooled_mean.pow(4))
+        # clamp with min=0 to avoid NaNs. Since images are non-negative (see
+        # Exception above), any values below 0 are precision errors. see
+        # https://discuss.pytorch.org/t/incorrect-pow-function/62735/3 for why
+        # this applies even to the third-root
+        moments['second'] = self.PoolingWindows(image.pow(2)).clamp(min=0).pow(1/2)
+        moments['third'] = self.PoolingWindows(image.pow(3)).clamp(min=0).pow(1/3)
+        moments['fourth'] = self.PoolingWindows(image.pow(4)).clamp(min=0).pow(1/4)
         return moments
 
     def to(self, *args, do_windows=True, **kwargs):
@@ -1593,11 +1592,13 @@ class PooledV1(PooledVentralStream):
         if 'mean_luminance' in scales:
             self.mean_luminance = self.PoolingWindows(self.cone_responses)
             self.representation['mean_luminance'] = self.mean_luminance
-            moments = self._calculate_moments(self.cone_responses,
+            # use the original image, not cone_responses, because that might be
+            # normalized and we want the moments to be computed on the
+            # un-normalized image (to avoid possible negative values)
+            moments = self._calculate_moments(image,
                                               2 in self._moments,
                                               3 in self._moments,
-                                              4 in self._moments,
-                                              self.representation['mean_luminance'])
+                                              4 in self._moments)
             self.representation.update({f'image_moment_{k}': v for
                                         k, v in moments.items()})
         return self.representation_to_output()
