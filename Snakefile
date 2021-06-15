@@ -19,7 +19,7 @@ if not op.isdir(config["DATA_DIR"]):
 # properly on NYU Greene (it always returns a non-zero exit
 # code). However, they do have the CLUSTER environmental variable
 # defined, so we can use that
-if os.system("module list") == 0 or os.environ["CLUSTER"]:
+if os.system("module list") == 0 or os.environ.get("CLUSTER", None):
     # then we're on the cluster
     ON_CLUSTER = True
     numpyro.set_host_device_count(multiprocessing.cpu_count())
