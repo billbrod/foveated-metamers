@@ -14,7 +14,6 @@
     {
 	    "gres": "gpu:{resources.gpu}",
 	    "mem": "{resources.mem}GB",
-        "partition": "{params.prince_partition}",
         "time": "{params.time}",
         "cpus_per_task": "{resources.cpus_per_task}"
     },
@@ -22,7 +21,6 @@
     {
         "gres": "gpu:{resources.gpu}",
         "mem": "{resources.mem}GB",
-        "partition": "{params.prince_partition}",
         "time": "{params.time}",
         "cpus_per_task": "{resources.cpus_per_task}"
     },

@@ -15,7 +15,11 @@ configfile:
     op.join(op.dirname(op.realpath(workflow.snakefile)), 'config.yml')
 if not op.isdir(config["DATA_DIR"]):
     raise Exception("Cannot find the dataset at %s" % config["DATA_DIR"])
-if os.system("module list") == 0:
+# for some reason, I can't get os.system('module list') to work
+# properly on NYU Greene (it always returns a non-zero exit
+# code). However, they do have the CLUSTER environmental variable
+# defined, so we can use that
+if os.system("module list") == 0 or os.environ["CLUSTER"]:
     # then we're on the cluster
     ON_CLUSTER = True
     numpyro.set_host_device_count(multiprocessing.cpu_count())
@@ -650,12 +654,7 @@ def get_partition(wildcards, cluster):
         if cluster == 'rusty':
             return 'gpu'
         elif cluster == 'prince':
-            part = 'simoncelli_gpu,v100_sxm2_4,v100_pci_2'
-            if scaling >= .18:
-                part += ',p40_4'
-            if scaling >= .4:
-                part += ',p100_4'
-            return part
+            return None
 
 def get_constraint(wildcards, cluster):
     if int(wildcards.gpu) > 0 and cluster == 'rusty':
@@ -719,7 +718,6 @@ rule create_metamers:
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
         time = lambda wildcards: {'V1': '12:00:00', 'RGC': '7-00:00:00'}[wildcards.model_name.split('_')[0]],
         rusty_partition = lambda wildcards: get_partition(wildcards, 'rusty'),
-        prince_partition = lambda wildcards: get_partition(wildcards, 'prince'),
         rusty_constraint = lambda wildcards: get_constraint(wildcards, 'rusty'),
     run:
         import foveated_metamers as fov
@@ -824,7 +822,7 @@ rule continue_metamers:
                     get_gid = False
                 else:
                     raise Exception("Multiple gpus are not supported!")
-                with fov.utils.get_gpu_id(get_gid) as gpu_id:
+                with fov.utils.get_gpu_id(get_gid, on_cluster=ON_CLUSTER) as gpu_id:
                     # this is the same as the original call in the
                     # create_metamers rule, except we replace max_iter with
                     # extra_iter, set learning_rate to None, and add the
