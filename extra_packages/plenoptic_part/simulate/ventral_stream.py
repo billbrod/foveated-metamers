@@ -259,12 +259,12 @@ class PooledVentralStream(nn.Module):
                            fourth=True, pooled_mean=None):
         """Calculate weighted moments of image.
 
-        Note that we're computing nth of the first 4 moments, not the central
-        or standardized moments (which are more common; these involve
-        subtracting off the mean and dividing by the variance raised to some
-        power, respectively). We use the plain-old moments to avoid issues with
-        negative values (which we can't take the root of) or blowing up when
-        variance is small.
+        Note that we're computing nth root of the first 4 moments, not the
+        central or standardized moments (which are more common and go by the
+        names variance, skew, and kurtosis; these involve subtracting off the
+        mean and dividing by the variance raised to some power, respectively).
+        We use the plain-old moments to avoid issues with negative values
+        (which we can't take the root of) or blowing up when variance is small.
 
         We take the root so these values scale appropriately with the values of
         image.
@@ -272,7 +272,9 @@ class PooledVentralStream(nn.Module):
         Note that, when matching the moments (e.g., in metamer synthesis),
         matching all of these plain-old moments is equivalent to matching the
         standardized versions (though this isn't the case if you wanted to use
-        this model for e.g., computing perceptual distance).
+        this model for e.g., computing perceptual distance). This isn't the
+        case if you don't match all moments up to N: if you only match the
+        fourth moment, that is *not* equivalent to matching the kurtosis.
 
         Parameters
         ----------
