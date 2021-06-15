@@ -545,9 +545,13 @@ class PooledVentralStream(nn.Module):
         # want to remove class if it's here
         state_dict_reduced.pop('class', None)
         if model_name == 'RGC':
+            # RGC doesn't accept moments as argument
+            state_dict_reduced.pop('moments', None)
             return PooledRGC(**state_dict_reduced)
         elif model_name == 'V1':
             return PooledV1(**state_dict_reduced)
+        elif model_name == 'Moments':
+            return PooledMoments(**state_dict_reduced)
         else:
             raise Exception("Don't know how to handle model_name %s!" % model_name)
 
