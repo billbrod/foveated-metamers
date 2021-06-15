@@ -433,7 +433,7 @@ job scheduler, see the small repo [I put
 together](https://github.com/billbrod/snakemake-slurm) for using NYU's or the
 Flatiron Institute's SLURM system). In that case, you'll need to put together a
 `cluster.json` file within this directory to tell snakemake how to request GPUs,
-etc (see `prince.json` and `rusty.json` for the config files I use on NYU's and
+etc (see `greene.json` and `rusty.json` for the config files I use on NYU's and
 Flatiron's, respectively). Something like this should work for a SLURM system
 (the different `key: value` pairs would probably need to be changed on different
 systems, depending on how you request resources; the one that's probably the

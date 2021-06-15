@@ -639,21 +639,21 @@ def get_windows(wildcards):
 def get_partition(wildcards, cluster):
     # if our V1 scaling value is small enough, we need a V100 and must specify
     # it. otherwise, we can use any GPU, because they'll all have enough
-    # memory. The partition name depends on the cluster (prince or rusty), so
+    # memory. The partition name depends on the cluster (greene or rusty), so
     # we have two different params, one for each, and the cluster config grabs
-    # the right one
-    if cluster not in ['prince', 'rusty']:
+    # the right one. For now, greene doesn't require setting partition.
+    if cluster not in ['greene', 'rusty']:
         raise Exception(f"Don't know how to handle cluster {cluster}")
     if int(wildcards.gpu) == 0:
         if cluster == 'rusty':
             return 'ccn'
-        elif cluster == 'prince':
+        elif cluster == 'greene':
             return None
     else:
         scaling = float(wildcards.scaling)
         if cluster == 'rusty':
             return 'gpu'
-        elif cluster == 'prince':
+        elif cluster == 'greene':
             return None
 
 def get_constraint(wildcards, cluster):
@@ -795,7 +795,6 @@ rule continue_metamers:
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
         time = lambda wildcards: {'V1': '12:00:00', 'RGC': '7-00:00:00'}[wildcards.model_name.split('_')[0]],
         rusty_partition = lambda wildcards: get_partition(wildcards, 'rusty'),
-        prince_partition = lambda wildcards: get_partition(wildcards, 'prince'),
         rusty_constraint = lambda wildcards: get_constraint(wildcards, 'rusty'),
     run:
         import foveated_metamers as fov
