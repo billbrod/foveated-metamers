@@ -4,7 +4,10 @@
 import pyrtools as pt
 import numpy as np
 import pandas as pd
+import plenoptic as po
 import scipy
+import xarray
+from collections import OrderedDict
 
 
 def heterogeneity(im, kernel_size=16, kernel_type='gaussian', pyramid_height=4):
@@ -68,3 +71,83 @@ def heterogeneity(im, kernel_size=16, kernel_type='gaussian', pyramid_height=4):
                      name='kernel_size')
     df = df.merge(size, left_on='scale', right_index=True)
     return heterogeneity, df
+
+
+def amplitude_spectra(image):
+    """Compute amplitude spectra of an image.
+
+    We compute the 2d Fourier transform of an image, take its magnitude, and
+    then radially average it. This averages across orientations and also
+    discretizes the frequency.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        The 2d array containing the image
+
+    Returns
+    -------
+    spectra : np.ndarray
+        The 1d array containing the amplitude spectra
+
+    Notes
+    -----
+    See
+    https://scipy-lectures.org/advanced/image_processing/auto_examples/plot_radial_mean.html
+    for how we compute the radial mean. Note the tutorial excludes label=0, but
+    we include it (corresponds to the DC term).
+
+    """
+    frq = scipy.fft.fftshift(scipy.fft.fft2(image))
+    # following
+    # https://scipy-lectures.org/advanced/image_processing/auto_examples/plot_radial_mean.html.
+    # Note the tutorial excludes label=0, but we include it (corresponds to the
+    # DC term).
+    rbin = pt.synthetic_images.polar_radius(frq.shape).astype(np.int)
+    spectra = scipy.ndimage.mean(np.abs(frq), labels=rbin,
+                                 index=np.arange(rbin.max()+1))
+    return spectra
+
+
+def image_set_amplitude_spectra(images, names, metadata=OrderedDict(),
+                                name_dim='image_name'):
+    """Compute amplitude spectra of a set of images.
+
+    All images must be same size.
+
+    Parameters
+    ----------
+    images : list
+        This should be a list of 2d image arrays (all the same size) or of
+        strings giving the paths to such images.
+    names : list
+        List of strings, same length as images, giving the names of the images,
+        which we use to label them in the xarray.Dataset we create.
+    metadata: OrderedDict, optional
+        OrderedDict of extra coordinates to add to data (e.g., the model name).
+        Should be an OrderedDict so we get the proper ordering of dimensions.
+    name_dim : str, optional
+        The name of the coordinates to label with the names list.
+
+    Returns
+    -------
+    spectra : xarray.Dataset
+        Dataset containing the spectra of each image.
+
+    """
+    spectra = []
+    for im in images:
+        if isinstance(im, str):
+            im = po.to_numpy(po.load_images(im)).squeeze()
+        spectra.append(amplitude_spectra(im))
+    for k, v in metadata.items():
+        if isinstance(v, str) or not hasattr(v, '__iter__'):
+            metadata[k] = [v]
+    metadata.update({name_dim: names,
+                     'freq_n': np.arange(len(spectra[-1]))})
+    # add extra dimensions to the front of spectra for metadata.
+    spectra = np.expand_dims(spectra,
+                             tuple(np.arange(len(metadata.keys())-2)))
+    data = xarray.DataArray(spectra, metadata, metadata.keys(),
+                            name='sf_amplitude')
+    return data.to_dataset()

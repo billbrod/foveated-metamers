@@ -1485,6 +1485,56 @@ rule calculate_heterogeneity:
                 df.to_csv(output[0], index=False)
 
 
+rule compute_amplitude_spectra:
+    input:
+        [op.join(config["DATA_DIR"], 'ref_images_preproc', '{img}_range-.05,.95_size-2048,2600.png').format(img=img)
+         for img in LINEAR_IMAGES],
+        lambda wildcards: utils.generate_metamer_paths(**wildcards)],
+    output:
+        op.join(config['DATA_DIR'], 'statistics', 'amplitude_spectra', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_amplitude-spectra.nc')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'statistics', 'amplitude_spectra', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_amplitude-spectra.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'statistics', 'amplitude_spectra', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_amplitude-spectra_benchmark.txt')
+    run:
+        import foveated_metamers as fov
+        from collections import OrderedDict
+        import xarray
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                seeds = set([int(re.findall('seed-(\d+)_', i)[0][-1]) for i in input if 'seed' in i])
+                scalings = set([float(re.findall('scaling-([\d.]+)', i)[0])
+                                for i in input if 'scaling' in i])
+                # grab spectra for reference images
+                ims = [i for i in input if 'scaling' not in i and 'seed' not in i]
+                metadata = OrderedDict(model=wildcards.model_name, trial_type=f'met_v_{wildcards.comp}')
+                ims = sorted(ims, key=lambda x: LINEAR_IMAGES.index([i for i in LINEAR_IMAGES if i in x][0]))
+                assert len(ims) == len(LINEAR_IMAGES), f"Have too many images! Expected {len(LINEAR_IMAGES)}, but got {ims}"
+                ref_image_spectra = fov.statistics.image_set_amplitude_spectra(ims, LINEAR_IMAGES, metadata)
+                ref_image_spectra = ref_image_spectra.rename({'sf_amplitude': 'ref_image_sf_amplitude'})
+                spectra = []
+                for scaling in scalings:
+                    tmp_ims = [i for i in input if len(re.findall(f'scaling-{scaling}', i)) == 1]
+                    tmp_spectra = []
+                    for seed in seeds:
+                        # grab spectra for all images with matching seed_n and scaling.
+                        metadata = OrderedDict(model=wildcards.model_name, trial_type=f'met_v_{wildcards.comp}',
+                                               scaling=scaling, seed_n=seed)
+                        ims = [i for i in tmp_ims if len(re.findall(f'seed-\d*{seed}_', i)) == 1]
+                        ims = sorted(ims, key=lambda x: LINEAR_IMAGES.index([i for i in LINEAR_IMAGES if i in x][0]))
+                        assert len(ims) == len(LINEAR_IMAGES), f"Have too many images! Expected {len(LINEAR_IMAGES)}, but got {ims}"
+                        tmp_spectra.append(fov.statistics.image_set_amplitude_spectra(ims, LINEAR_IMAGES, metadata))
+                    spectra.append(xarray.concat(tmp_spectra, 'seed_n'))
+                spectra = xarray.concat(spectra, 'scaling')
+                spectra = xarray.merge([spectra.rename({'sf_amplitude': 'metamer_sf_amplitude'}),
+                                        ref_image_spectra])
+                spectra.to_netcdf(output[0])
+
+
 rule simulate_optimization:
     output:
         op.join(config['DATA_DIR'], 'simulate', 'optimization', 'a0-{a0}_s0-{s0}_seeds-{n_seeds}_iter-{max_iter}.svg'),
