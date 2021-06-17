@@ -1489,7 +1489,7 @@ rule compute_amplitude_spectra:
     input:
         [op.join(config["DATA_DIR"], 'ref_images_preproc', '{img}_range-.05,.95_size-2048,2600.png').format(img=img)
          for img in LINEAR_IMAGES],
-        lambda wildcards: utils.generate_metamer_paths(**wildcards)],
+        lambda wildcards: utils.generate_metamer_paths(**wildcards),
     output:
         op.join(config['DATA_DIR'], 'statistics', 'amplitude_spectra', '{model_name}', 'task-split_comp-{comp}',
                 'task-split_comp-{comp}_amplitude-spectra.nc')
