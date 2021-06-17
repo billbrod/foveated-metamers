@@ -882,8 +882,7 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
         styles, respectively.
     col_wrap : int or None, optional
         If row is None, how many columns to have before wrapping to the next
-        row. If this is not None and row is not None, will raise an Exception.
-        Ignored if col=None.
+        row. Ignored if col=None.
     comparison : {'ref', 'met', 'both'}, optional
         Whether inf_data contains data on comparisons is between metamers and
         reference images ('ref'), two metamers ('met'), or both ('both').
@@ -1753,3 +1752,106 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
         model_type = ['multiple']
     fig.suptitle(f"Psychophysical group-level means for {model_type[0]} MCMC", y=.95)
     return fig
+
+
+def amplitude_spectra(spectra, hue='scaling', style=None, col='image_name',
+                      row=None, col_wrap=5, kind='line', estimator=None,
+                      height=2.5, aspect=1, **kwargs):
+    """Compare amplitude spectra of natural and synthesized images.
+
+    Parameters
+    ----------
+    spectra : xarray.Dataset
+        Dataset containing the spectra for synthesized metamers and our natural
+        reference images.
+    hue, style, col, row : str or None, optional
+        The dimensions in spectra to facet along the columns, rows, hues, and
+        styles, respectively.
+    col_wrap : int or None, optional
+        If row is None, how many columns to have before wrapping to the next
+        row. Ignored if col=None.
+    kind : {'line', 'scatter'}, optional
+        Type of plot to make.
+    estimator : name of pandas method or callable or None
+        Method for aggregating across multiple observations of the y variable
+        at the same x level. If None, all observations will be drawn
+        (recommended).
+    height : float, optional
+        Height of the axes.
+    aspect : float, optional
+        Aspect of the axes.
+    kwargs :
+        Passed to sns.relplot
+
+    Returns
+    -------
+    g : sns.FacetGrid
+        Facetgrid with the plot.
+
+    """
+    df = spectra.ref_image_sf_amplitude.to_dataframe().reset_index()
+    met_df = spectra.metamer_sf_amplitude.to_dataframe().reset_index()
+    # give the ref image rows dummy values
+    df['scaling'] = 'ref_image'
+    df['seed_n'] = 0
+    df = df.melt(['freq_n', 'image_name', 'model', 'scaling', 'seed_n',
+                  'trial_type'],
+                 var_name='image_type', value_name='sf_amplitude')
+    met_df = met_df.melt(['freq_n', 'image_name', 'model', 'scaling', 'seed_n',
+                          'trial_type'],
+                         var_name='image_type', value_name='sf_amplitude')
+    df = pd.concat([df, met_df])
+    df.image_type = df.image_type.apply(lambda x: x.replace('_sf_amplitude', ''))
+    # seaborn raises an error if col_wrap is non-None when col is None or if
+    # row is not None, so prevent that possibility
+    if col is None or row is not None:
+        col_wrap = None
+    # remap the image names to be better for plotting
+    df = plotting._remap_image_names(df)
+    img_order = plotting.get_order('image_name')
+    if col == 'image_name':
+        kwargs.setdefault('col_order', img_order)
+    if row == 'image_name':
+        kwargs.setdefault('row_order', img_order)
+    if hue is not None:
+        kwargs.setdefault('palette', plotting.get_palette(hue, df[hue].unique()))
+    else:
+        kwargs.setdefault('color', 'k')
+    marker_adjust = {}
+    dashes_dict = {}
+    if style is not None:
+        style_dict = plotting.get_style(style, df[style].unique())
+        dashes_dict = style_dict.pop('dashes_dict', {})
+        marker_adjust = style_dict.pop('marker_adjust', {})
+        kwargs.setdefault('dashes', dashes_dict)
+        kwargs.update(style_dict)
+    # need to fill in the NaNs in a particular way so our plot is created
+    # correctly. freq_n and sf_amplitude are mapped to x and y, so we need to
+    # have positive finite values for the plot ranges to make sense
+    df.freq_n = df.freq_n.fillna(1)
+    df.sf_amplitude = df.sf_amplitude.fillna(df.sf_amplitude.min())
+    # not entirely sure why it's necessary for these to be filled in correctly,
+    # but it is
+    df.seed_n = df.seed_n.fillna(df.seed_n.dropna().unique()[0])
+    if hue is not None:
+        df[hue] = df[hue].fillna(df[hue].dropna().unique()[0])
+    if style is not None:
+        df[style] = df[style].fillna(df[style].dropna().unique()[0])
+    g = sns.relplot(x='freq_n', y='sf_amplitude', hue=hue, units='seed_n',
+                    col=col, row=row, col_wrap=col_wrap, estimator=estimator,
+                    height=height, aspect=aspect, data=df, kind=kind,
+                    legend=False, **kwargs)
+    if marker_adjust:
+        labels = {v: k for k, v in kwargs.get('markers', {}).items()}
+        final_markers = plotting._marker_adjust(g.axes.flatten(),
+                                                marker_adjust, labels)
+    else:
+        final_markers = {}
+    g.set(xscale='log', yscale='log')
+    g.set_ylabels('Amplitude')
+    g.set_xlabels('Spatial frequency (cycles/image)')
+    # create the legend
+    plotting._add_legend(df, g, None, hue, style,
+                         kwargs.get('palette', {}), final_markers,
+                         dashes_dict)
+    return g 

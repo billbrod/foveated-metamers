@@ -59,13 +59,21 @@ def get_palette(col, col_unique=None, as_dict=True):
         assert len(all_vals) == 2, "Currently only support 2 model values"
         pal = sns.color_palette('BrBG', 3)
         pal = [pal[0], pal[-1]]
+    elif col == 'scaling':
+        # unlike others, we don't force this palette to be consistent across
+        # possible values of scaling (and hence we don't have an all_vals)
+        scaling_vals = sorted([c for c in col_unique if c != 'ref_image'])
+        # we want the color to get lighter as scaling gets larger
+        pal = sns.color_palette('Reds_r', len(scaling_vals))
+        pal = dict(zip(scaling_vals, pal))
+        pal['ref_image'] = 'k'
     else:
         if col_nunique is None:
             col_nunique = 10
         else:
             all_vals = col_unique
         pal = [f'C{i}' for i in range(col_nunique)]
-    if as_dict:
+    if as_dict and not isinstance(pal, dict):
         pal = dict(zip(sorted(all_vals), pal))
     return pal
 

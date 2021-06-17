@@ -1535,6 +1535,29 @@ rule compute_amplitude_spectra:
                 spectra.to_netcdf(output[0])
 
 
+rule plot_amplitude_spectra:
+    input:
+        op.join(config['DATA_DIR'], 'statistics', 'amplitude_spectra', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_amplitude-spectra.nc')
+    output:
+        op.join(config['DATA_DIR'], 'statistics', 'amplitude_spectra', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_amplitude-spectra.svg')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'statistics', 'amplitude_spectra', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_amplitude-spectra_plot.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'statistics', 'amplitude_spectra', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_amplitude-spectra_plot_benchmark.txt')
+    run:
+        import foveated_metamers as fov
+        import xarray
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                ds = xarray.load_dataset(input[0])
+                g = fov.figures.amplitude_spectra(ds)
+                g.savefig(output[0], bbox_inches='tight')
+
 rule simulate_optimization:
     output:
         op.join(config['DATA_DIR'], 'simulate', 'optimization', 'a0-{a0}_s0-{s0}_seeds-{n_seeds}_iter-{max_iter}.svg'),
