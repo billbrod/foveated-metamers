@@ -1854,4 +1854,9 @@ def amplitude_spectra(spectra, hue='scaling', style=None, col='image_name',
     plotting._add_legend(df, g, None, hue, style,
                          kwargs.get('palette', {}), final_markers,
                          dashes_dict)
+    # we use spectra because it doesn't include np.nan from dummy rows
+    title_str = (f"Amplitude spectra for {' and '.join(spectra.model.values)}"
+                 f" metamers, {' and '.join(spectra.trial_type.values)}"
+                 " comparisons\n")
+    g.fig.suptitle(title_str, va='bottom')
     return g 
