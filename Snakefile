@@ -1515,7 +1515,8 @@ rule compute_amplitude_spectra:
                 ims = sorted(ims, key=lambda x: LINEAR_IMAGES.index([i for i in LINEAR_IMAGES if i in x][0]))
                 assert len(ims) == len(LINEAR_IMAGES), f"Have too many images! Expected {len(LINEAR_IMAGES)}, but got {ims}"
                 ref_image_spectra = fov.statistics.image_set_amplitude_spectra(ims, LINEAR_IMAGES, metadata)
-                ref_image_spectra = ref_image_spectra.rename({'sf_amplitude': 'ref_image_sf_amplitude'})
+                ref_image_spectra = ref_image_spectra.rename({'sf_amplitude': 'ref_image_sf_amplitude',
+                                                              'orientation_amplitude': 'ref_image_orientation_amplitude'})
                 spectra = []
                 for scaling in scalings:
                     tmp_ims = [i for i in input if len(re.findall(f'scaling-{scaling}', i)) == 1]
@@ -1530,7 +1531,8 @@ rule compute_amplitude_spectra:
                         tmp_spectra.append(fov.statistics.image_set_amplitude_spectra(ims, LINEAR_IMAGES, metadata))
                     spectra.append(xarray.concat(tmp_spectra, 'seed_n'))
                 spectra = xarray.concat(spectra, 'scaling')
-                spectra = xarray.merge([spectra.rename({'sf_amplitude': 'metamer_sf_amplitude'}),
+                spectra = xarray.merge([spectra.rename({'sf_amplitude': 'metamer_sf_amplitude',
+                                                        'orientation_amplitude': 'metamer_orientation_amplitude'}),
                                         ref_image_spectra])
                 spectra.to_netcdf(output[0])
 
@@ -1541,13 +1543,13 @@ rule plot_amplitude_spectra:
                 'task-split_comp-{comp}_amplitude-spectra.nc')
     output:
         op.join(config['DATA_DIR'], 'statistics', 'amplitude_spectra', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_amplitude-spectra.svg')
+                'task-split_comp-{comp}_{amplitude_type}-spectra.svg')
     log:
         op.join(config['DATA_DIR'], 'logs', 'statistics', 'amplitude_spectra', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_amplitude-spectra_plot.log')
+                'task-split_comp-{comp}_{amplitude_type}-spectra_plot.log')
     benchmark:
         op.join(config['DATA_DIR'], 'logs', 'statistics', 'amplitude_spectra', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_amplitude-spectra_plot_benchmark.txt')
+                'task-split_comp-{comp}_{amplitude_type}-spectra_plot_benchmark.txt')
     run:
         import foveated_metamers as fov
         import xarray
@@ -1555,8 +1557,12 @@ rule plot_amplitude_spectra:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 ds = xarray.load_dataset(input[0])
-                g = fov.figures.amplitude_spectra(ds)
+                if wildcards.amplitude_type == 'sf':
+                    g = fov.figures.amplitude_spectra(ds)
+                elif wildcards.amplitude_type == 'orientation':
+                    g = fov.figures.amplitude_orientation(ds)
                 g.savefig(output[0], bbox_inches='tight')
+
 
 rule simulate_optimization:
     output:

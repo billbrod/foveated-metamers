@@ -1521,3 +1521,42 @@ def add_physiological_scaling_arrows(ax, side_length=.05, midget_rgc=True,
         ax.text(xy[0][0], xy[0][1] - triangle_height - triangle_height/4,
                 label, ha='center', va='top', transform=ax.transAxes)
     return xy
+
+
+def _spectra_dataset_to_dataframe(spectra, data='sf'):
+    """Convert spectra xarray dataset to pandas dataframe.
+
+    Parameters
+    ----------
+    spectra : xarray.Dataset
+        Dataset containing the spectra for synthesized metamers and our natural
+        reference images.
+    data : {'sf', 'orientation'}, optional
+        Whether to grab the spatial frequency or orientation info
+
+    Returns
+    -------
+    df : pd.DataFrame
+
+    """
+    if data == 'sf':
+        cols = ['freq_n']
+    elif data == 'orientation':
+        cols = ['orientation_slice', 'samples']
+    else:
+        raise Exception("data must be one of {'sf', 'orientation'} but "
+                        f"got {data}")
+    df = spectra[f'ref_image_{data}_amplitude'].to_dataframe().reset_index()
+    met_df = spectra[f'metamer_{data}_amplitude'].to_dataframe().reset_index()
+    # give the ref image rows dummy values
+    df['scaling'] = 'ref_image'
+    df['seed_n'] = 0
+    df = df.melt(cols + ['image_name', 'model', 'scaling', 'seed_n',
+                         'trial_type'],
+                 var_name='image_type', value_name=f'{data}_amplitude')
+    met_df = met_df.melt(cols + ['image_name', 'model', 'scaling', 'seed_n',
+                                 'trial_type'],
+                         var_name='image_type', value_name=f'{data}_amplitude')
+    df = pd.concat([df, met_df])
+    df.image_type = df.image_type.apply(lambda x: x.replace(f'_{data}_amplitude', ''))
+    return df
