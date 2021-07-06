@@ -15,7 +15,11 @@ configfile:
     op.join(op.dirname(op.realpath(workflow.snakefile)), 'config.yml')
 if not op.isdir(config["DATA_DIR"]):
     raise Exception("Cannot find the dataset at %s" % config["DATA_DIR"])
-if os.system("module list") == 0:
+# for some reason, I can't get os.system('module list') to work
+# properly on NYU Greene (it always returns a non-zero exit
+# code). However, they do have the CLUSTER environmental variable
+# defined, so we can use that
+if os.system("module list") == 0 or os.environ.get("CLUSTER", None):
     # then we're on the cluster
     ON_CLUSTER = True
     numpyro.set_host_device_count(multiprocessing.cpu_count())
@@ -635,27 +639,22 @@ def get_windows(wildcards):
 def get_partition(wildcards, cluster):
     # if our V1 scaling value is small enough, we need a V100 and must specify
     # it. otherwise, we can use any GPU, because they'll all have enough
-    # memory. The partition name depends on the cluster (prince or rusty), so
+    # memory. The partition name depends on the cluster (greene or rusty), so
     # we have two different params, one for each, and the cluster config grabs
-    # the right one
-    if cluster not in ['prince', 'rusty']:
+    # the right one. For now, greene doesn't require setting partition.
+    if cluster not in ['greene', 'rusty']:
         raise Exception(f"Don't know how to handle cluster {cluster}")
     if int(wildcards.gpu) == 0:
         if cluster == 'rusty':
             return 'ccn'
-        elif cluster == 'prince':
+        elif cluster == 'greene':
             return None
     else:
         scaling = float(wildcards.scaling)
         if cluster == 'rusty':
             return 'gpu'
-        elif cluster == 'prince':
-            part = 'simoncelli_gpu,v100_sxm2_4,v100_pci_2'
-            if scaling >= .18:
-                part += ',p40_4'
-            if scaling >= .4:
-                part += ',p100_4'
-            return part
+        elif cluster == 'greene':
+            return None
 
 def get_constraint(wildcards, cluster):
     if int(wildcards.gpu) > 0 and cluster == 'rusty':
@@ -719,7 +718,6 @@ rule create_metamers:
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
         time = lambda wildcards: {'V1': '12:00:00', 'RGC': '7-00:00:00'}[wildcards.model_name.split('_')[0]],
         rusty_partition = lambda wildcards: get_partition(wildcards, 'rusty'),
-        prince_partition = lambda wildcards: get_partition(wildcards, 'prince'),
         rusty_constraint = lambda wildcards: get_constraint(wildcards, 'rusty'),
     run:
         import foveated_metamers as fov
@@ -797,7 +795,6 @@ rule continue_metamers:
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
         time = lambda wildcards: {'V1': '12:00:00', 'RGC': '7-00:00:00'}[wildcards.model_name.split('_')[0]],
         rusty_partition = lambda wildcards: get_partition(wildcards, 'rusty'),
-        prince_partition = lambda wildcards: get_partition(wildcards, 'prince'),
         rusty_constraint = lambda wildcards: get_constraint(wildcards, 'rusty'),
     run:
         import foveated_metamers as fov
@@ -824,7 +821,7 @@ rule continue_metamers:
                     get_gid = False
                 else:
                     raise Exception("Multiple gpus are not supported!")
-                with fov.utils.get_gpu_id(get_gid) as gpu_id:
+                with fov.utils.get_gpu_id(get_gid, on_cluster=ON_CLUSTER) as gpu_id:
                     # this is the same as the original call in the
                     # create_metamers rule, except we replace max_iter with
                     # extra_iter, set learning_rate to None, and add the
@@ -1488,6 +1485,85 @@ rule calculate_heterogeneity:
                 df.to_csv(output[0], index=False)
 
 
+rule compute_amplitude_spectra:
+    input:
+        [op.join(config["DATA_DIR"], 'ref_images_preproc', '{img}_range-.05,.95_size-2048,2600.png').format(img=img)
+         for img in LINEAR_IMAGES],
+        lambda wildcards: utils.generate_metamer_paths(**wildcards),
+    output:
+        op.join(config['DATA_DIR'], 'statistics', 'amplitude_spectra', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_amplitude-spectra.nc')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'statistics', 'amplitude_spectra', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_amplitude-spectra.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'statistics', 'amplitude_spectra', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_amplitude-spectra_benchmark.txt')
+    run:
+        import foveated_metamers as fov
+        from collections import OrderedDict
+        import xarray
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                seeds = set([int(re.findall('seed-(\d+)_', i)[0][-1]) for i in input if 'seed' in i])
+                scalings = set([float(re.findall('scaling-([\d.]+)', i)[0])
+                                for i in input if 'scaling' in i])
+                # grab spectra for reference images
+                ims = [i for i in input if 'scaling' not in i and 'seed' not in i]
+                metadata = OrderedDict(model=wildcards.model_name, trial_type=f'met_v_{wildcards.comp}')
+                ims = sorted(ims, key=lambda x: LINEAR_IMAGES.index([i for i in LINEAR_IMAGES if i in x][0]))
+                assert len(ims) == len(LINEAR_IMAGES), f"Have too many images! Expected {len(LINEAR_IMAGES)}, but got {ims}"
+                ref_image_spectra = fov.statistics.image_set_amplitude_spectra(ims, LINEAR_IMAGES, metadata)
+                ref_image_spectra = ref_image_spectra.rename({'sf_amplitude': 'ref_image_sf_amplitude',
+                                                              'orientation_amplitude': 'ref_image_orientation_amplitude'})
+                spectra = []
+                for scaling in scalings:
+                    tmp_ims = [i for i in input if len(re.findall(f'scaling-{scaling}', i)) == 1]
+                    tmp_spectra = []
+                    for seed in seeds:
+                        # grab spectra for all images with matching seed_n and scaling.
+                        metadata = OrderedDict(model=wildcards.model_name, trial_type=f'met_v_{wildcards.comp}',
+                                               scaling=scaling, seed_n=seed)
+                        ims = [i for i in tmp_ims if len(re.findall(f'seed-\d*{seed}_', i)) == 1]
+                        ims = sorted(ims, key=lambda x: LINEAR_IMAGES.index([i for i in LINEAR_IMAGES if i in x][0]))
+                        assert len(ims) == len(LINEAR_IMAGES), f"Have too many images! Expected {len(LINEAR_IMAGES)}, but got {ims}"
+                        tmp_spectra.append(fov.statistics.image_set_amplitude_spectra(ims, LINEAR_IMAGES, metadata))
+                    spectra.append(xarray.concat(tmp_spectra, 'seed_n'))
+                spectra = xarray.concat(spectra, 'scaling')
+                spectra = xarray.merge([spectra.rename({'sf_amplitude': 'metamer_sf_amplitude',
+                                                        'orientation_amplitude': 'metamer_orientation_amplitude'}),
+                                        ref_image_spectra])
+                spectra.to_netcdf(output[0])
+
+
+rule plot_amplitude_spectra:
+    input:
+        op.join(config['DATA_DIR'], 'statistics', 'amplitude_spectra', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_amplitude-spectra.nc')
+    output:
+        op.join(config['DATA_DIR'], 'statistics', 'amplitude_spectra', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_{amplitude_type}-spectra.svg')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'statistics', 'amplitude_spectra', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_{amplitude_type}-spectra_plot.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'statistics', 'amplitude_spectra', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_{amplitude_type}-spectra_plot_benchmark.txt')
+    run:
+        import foveated_metamers as fov
+        import xarray
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                ds = xarray.load_dataset(input[0])
+                if wildcards.amplitude_type == 'sf':
+                    g = fov.figures.amplitude_spectra(ds)
+                elif wildcards.amplitude_type == 'orientation':
+                    g = fov.figures.amplitude_orientation(ds)
+                g.savefig(output[0], bbox_inches='tight')
+
+
 rule simulate_optimization:
     output:
         op.join(config['DATA_DIR'], 'simulate', 'optimization', 'a0-{a0}_s0-{s0}_seeds-{n_seeds}_iter-{max_iter}.svg'),
@@ -1828,6 +1904,8 @@ rule performance_comparison_figure:
                 elif wildcards.focus.startswith('comp'):
                     if wildcards.focus == 'comp-base':
                         query_str = f'trial_type in ["metamer_vs_metamer", "metamer_vs_reference"]'
+                    elif wildcards.focus == 'comp-ref':
+                        query_str = f'trial_type == "metamer_vs_reference"'
                     elif wildcards.focus == 'comp-all':
                         query_str = ''
                     else:
@@ -1849,6 +1927,7 @@ rule performance_comparison_figure:
                                                  height=fig_width/3,
                                                  style='trial_type', aspect=2,
                                                  logscale_xaxis=True)
+                fov.plotting.add_physiological_scaling_arrows(g.ax)
                 g.fig.savefig(output[0], bbox_inches='tight')
 
 
@@ -2106,10 +2185,11 @@ rule download_freeman_check:
         "curl -O -J -L https://osf.io/wa2zu/download; "
         "tar xf freeman_check.tar.gz; "
         "rm freeman_check.tar.gz; "
-        "cp -R V1_norm_s4_gaussian {params.met_dir_name}/; "
-        "cp -R windows/* {params.windows_dir_name}/; "
-        "rm -r V1_norm_s4_gaussian; "
-        "rm -r windows; "
+        "cp -R metamers/V1_norm_s4_gaussian {params.met_dir_name}/; "
+        "cp -R freeman_check/windows/* {params.windows_dir_name}/; "
+        "rm -r metamers/V1_norm_s4_gaussian; "
+        "rmdir metamers; "
+        "rm -r freeman_check; "
 
 
 rule freeman_check:

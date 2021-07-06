@@ -36,7 +36,8 @@ Need to make sure you have ffmpeg on your path when creating the metamers, so
 make sure it's installed and on your path. I have had a lot of trouble using
 `module` to load the ffmpeg present on NYU prince, and so recommend installing
 [a static build](https://www.johnvansickle.com/ffmpeg/faq/) and using that
-directly.
+directly (note that I have not had this problem with NYU greene or Flatiron
+Institute's rusty, so it appears to be cluster-specific).
 
 For demosaicing the raw images we use as inputs, you'll need to
 install [dcraw](https://www.dechifro.org/dcraw/). If you're on Linux,
@@ -433,7 +434,7 @@ job scheduler, see the small repo [I put
 together](https://github.com/billbrod/snakemake-slurm) for using NYU's or the
 Flatiron Institute's SLURM system). In that case, you'll need to put together a
 `cluster.json` file within this directory to tell snakemake how to request GPUs,
-etc (see `prince.json` and `rusty.json` for the config files I use on NYU's and
+etc (see `greene.json` and `rusty.json` for the config files I use on NYU's and
 Flatiron's, respectively). Something like this should work for a SLURM system
 (the different `key: value` pairs would probably need to be changed on different
 systems, depending on how you request resources; the one that's probably the

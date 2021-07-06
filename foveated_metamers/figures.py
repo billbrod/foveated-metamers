@@ -4,7 +4,7 @@ import imageio
 import itertools
 import torch
 import re
-import yaml
+from fractions import Fraction
 import pandas as pd
 import numpy as np
 import pyrtools as pt
@@ -882,8 +882,7 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
         styles, respectively.
     col_wrap : int or None, optional
         If row is None, how many columns to have before wrapping to the next
-        row. If this is not None and row is not None, will raise an Exception.
-        Ignored if col=None.
+        row. Ignored if col=None.
     comparison : {'ref', 'met', 'both'}, optional
         Whether inf_data contains data on comparisons is between metamers and
         reference images ('ref'), two metamers ('met'), or both ('both').
@@ -904,7 +903,10 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
         FacetGrid containing the figure.
 
     """
-    df = mcmc.inf_data_to_df(inf_data, 'predictive', query_str, hdi=hdi)
+    if not isinstance(inf_data, pd.DataFrame):
+        df = mcmc.inf_data_to_df(inf_data, 'predictive', query_str, hdi=hdi)
+    else:
+        df = inf_data
     df = df.query('distribution!="prior_predictive"')
     # remove the responses from posterior predictive, we just want the
     # probability correct curve
@@ -941,7 +943,7 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
     g = sns.FacetGrid(df, row=row, col=col, hue=hue, col_wrap=col_wrap,
                       **kwargs)
     g.map_dataframe(plotting.lineplot_like_pointplot, x='scaling',
-                    y='responses', ci=50, style=style, legend=False,
+                    y='responses', ci=None, style=style, legend=False,
                     linestyle='', dashes=False, ax='map',
                     markers=markers, color=color)
     if marker_adjust:
@@ -1750,3 +1752,205 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
         model_type = ['multiple']
     fig.suptitle(f"Psychophysical group-level means for {model_type[0]} MCMC", y=.95)
     return fig
+
+
+def amplitude_spectra(spectra, hue='scaling', style=None, col='image_name',
+                      row=None, col_wrap=5, kind='line', estimator=None,
+                      height=2.5, aspect=1, **kwargs):
+    """Compare amplitude spectra of natural and synthesized images.
+    
+    Parameters
+    ----------
+    spectra : xarray.Dataset
+        Dataset containing the spectra for synthesized metamers and our natural
+        reference images.
+    hue, style, col, row : str or None, optional
+        The dimensions in spectra to facet along the columns, rows, hues, and
+        styles, respectively.
+    col_wrap : int or None, optional
+        If row is None, how many columns to have before wrapping to the next
+        row. Ignored if col=None.
+    kind : {'line', 'scatter'}, optional
+        Type of plot to make.
+    estimator : name of pandas method or callable or None
+        Method for aggregating across multiple observations of the y variable
+        at the same x level. If None, all observations will be drawn
+        (recommended).
+    height : float, optional
+        Height of the axes.
+    aspect : float, optional
+        Aspect of the axes.
+    kwargs :
+        Passed to sns.relplot
+
+    Returns
+    -------
+    g : sns.FacetGrid
+        Facetgrid with the plot.
+
+    """
+    df = plotting._spectra_dataset_to_dataframe(spectra, 'sf')
+    # seaborn raises an error if col_wrap is non-None when col is None or if
+    # row is not None, so prevent that possibility
+    if col is None or row is not None:
+        col_wrap = None
+    # remap the image names to be better for plotting
+    df = plotting._remap_image_names(df)
+    img_order = plotting.get_order('image_name')
+    if col == 'image_name':
+        kwargs.setdefault('col_order', img_order)
+    if row == 'image_name':
+        kwargs.setdefault('row_order', img_order)
+    if hue is not None:
+        kwargs.setdefault('palette', plotting.get_palette(hue, df[hue].unique()))
+    else:
+        kwargs.setdefault('color', 'k')
+    marker_adjust = {}
+    dashes_dict = {}
+    if style is not None:
+        style_dict = plotting.get_style(style, df[style].unique())
+        dashes_dict = style_dict.pop('dashes_dict', {})
+        marker_adjust = style_dict.pop('marker_adjust', {})
+        kwargs.setdefault('dashes', dashes_dict)
+        kwargs.update(style_dict)
+    # need to fill in the NaNs in a particular way so our plot is created
+    # correctly. freq_n and sf_amplitude are mapped to x and y, so we need to
+    # have positive finite values for the plot ranges to make sense
+    df.freq_n = df.freq_n.fillna(1)
+    df.sf_amplitude = df.sf_amplitude.fillna(df.sf_amplitude.min())
+    # not entirely sure why it's necessary for these to be filled in correctly,
+    # but it is
+    df.seed_n = df.seed_n.fillna(df.seed_n.dropna().unique()[0])
+    if hue is not None:
+        df[hue] = df[hue].fillna(df[hue].dropna().unique()[0])
+    if style is not None:
+        df[style] = df[style].fillna(df[style].dropna().unique()[0])
+    g = sns.relplot(x='freq_n', y='sf_amplitude', hue=hue, units='seed_n',
+                    col=col, row=row, col_wrap=col_wrap, estimator=estimator,
+                    height=height, aspect=aspect, data=df, kind=kind,
+                    legend=False, **kwargs)
+    if marker_adjust:
+        labels = {v: k for k, v in kwargs.get('markers', {}).items()}
+        final_markers = plotting._marker_adjust(g.axes.flatten(),
+                                                marker_adjust, labels)
+    else:
+        final_markers = {}
+    g.set(xscale='log', yscale='log')
+    g.set_ylabels('Amplitude')
+    g.set_xlabels('Spatial frequency (cycles/image)')
+    # create the legend
+    plotting._add_legend(df, g, None, hue, style,
+                         kwargs.get('palette', {}), final_markers,
+                         dashes_dict)
+    # we use spectra because it doesn't include np.nan from dummy rows
+    title_str = (f"Amplitude spectra for {' and '.join(spectra.model.values)}"
+                 f" metamers, {' and '.join(spectra.trial_type.values)}"
+                 " comparisons\n")
+    g.fig.suptitle(title_str, va='bottom')
+    return g 
+
+
+def amplitude_orientation(spectra, hue='scaling', style=None, col='image_name',
+                          row=None, col_wrap=5, kind='point',
+                          estimator=np.median, height=2.5, aspect=2, **kwargs):
+    """Compare orientation distributions of natural and synthesized images.
+
+    Note this is fairly memory intensive. Setting `n_boot` to a lower number
+    (defaults to 1000) seems to help with this.
+
+    Parameters
+    ----------
+    spectra : xarray.Dataset
+        Dataset containing the spectra for synthesized metamers and our natural
+        reference images.
+    hue, style, col, row : str or None, optional
+        The dimensions in spectra to facet along the columns, rows, hues, and
+        styles, respectively.
+    col_wrap : int or None, optional
+        If row is None, how many columns to have before wrapping to the next
+        row. Ignored if col=None.
+    kind : {'line', 'scatter'}, optional
+        Type of plot to make.
+    estimator : name of pandas method or callable
+        Method for aggregating across multiple observations of the y variable
+        at the same x level. median is recommended because of the outliers in
+        the dataset
+    height : float, optional
+        Height of the axes.
+    aspect : float, optional
+        Aspect of the axes.
+    kwargs :
+        Passed to sns.catplot
+
+    Returns
+    -------
+    g : sns.FacetGrid
+        Facetgrid with the plot.
+
+    """
+    df = plotting._spectra_dataset_to_dataframe(spectra, 'orientation')
+    # seaborn raises an error if col_wrap is non-None when col is None or if
+    # row is not None, so prevent that possibility
+    if col is None or row is not None:
+        col_wrap = None
+    # remap the image names to be better for plotting
+    df = plotting._remap_image_names(df)
+    img_order = plotting.get_order('image_name')
+    if col == 'image_name':
+        kwargs.setdefault('col_order', img_order)
+    if row == 'image_name':
+        kwargs.setdefault('row_order', img_order)
+    if hue is not None:
+        kwargs.setdefault('palette', plotting.get_palette(hue, df[hue].unique()))
+    else:
+        kwargs.setdefault('color', 'k')
+    marker_adjust = {}
+    dashes_dict = {}
+    if style is not None:
+        style_dict = plotting.get_style(style, df[style].unique())
+        dashes_dict = style_dict.pop('dashes_dict', {})
+        marker_adjust = style_dict.pop('marker_adjust', {})
+        kwargs.setdefault('dashes', dashes_dict)
+        kwargs.update(style_dict)
+
+    kwargs.setdefault('join', False)
+    kwargs.setdefault('sharey', True)
+    g = sns.catplot(x='orientation_slice', y='orientation_amplitude', hue=hue,
+                    col=col, row=row, col_wrap=col_wrap, estimator=estimator,
+                    height=height, aspect=aspect, data=df, kind=kind,
+                    legend=False, **kwargs)
+
+    if marker_adjust:
+        labels = {v: k for k, v in kwargs.get('markers', {}).items()}
+        final_markers = plotting._marker_adjust(g.axes.flatten(),
+                                                marker_adjust, labels)
+    else:
+        final_markers = {}
+    g.set_ylabels('Amplitude')
+    g.set_xlabels('Orientation')
+
+    # make some nice xticklabels
+    angles = [a/np.pi for a in sorted(df.orientation_slice.dropna().unique())]
+    ticklabels = []
+    for a in angles:
+        if a % .25 == 0:
+            f = Fraction(int(a*4), 4)
+            if f.denominator == 1:
+                ticklabels.append(str(int(a)))
+            else:
+                ticklabels.append(r"$\frac{%s\pi}{%s}$" %
+                                  (f.numerator, f.denominator))
+        else:
+            ticklabels.append('')
+    g.set_xticklabels(ticklabels)
+    # create the legend
+    plotting._add_legend(df, g, None, hue, style,
+                         kwargs.get('palette', {}), final_markers,
+                         dashes_dict)
+    # we use spectra because it doesn't include np.nan from dummy rows
+    title_str = (f"Orientation energy for {' and '.join(spectra.model.values)}"
+                 f" metamers, {' and '.join(spectra.trial_type.values)}"
+                 " comparisons\n")
+    g.fig.suptitle(title_str, va='bottom')
+    g.fig.subplots_adjust(wpsace=.1)
+    return g

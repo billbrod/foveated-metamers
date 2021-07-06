@@ -5,27 +5,26 @@ channels:
   - defaults
   - bioconda
 dependencies:
-  - python==3.7
+  - python==3.7.1
   - pip==19.1.1
   - ipykernel==5.1.1
-  - scipy==1.2.1
+  - scipy==1.6.1
   - seaborn==0.11
-  - pandas==1.1.0
-  - snakemake-minimal==5.5.3
-  - pyosf==1.0.5
-  - imageio==2.5.0
-  - scikit-image==0.15.0
-  - h5py==2.9.0
+  - pandas==1.2
+  - snakemake-minimal==5.10
+  - imageio==2.9
+  - scikit-image==0.18
+  - h5py==2.10
   - matplotlib==3.3.4
   - pip:
       - pytest==5.0.1
       - torchvision==0.5.0
       - torchcontrib==0.0.2
-      - torch==1.4
-      - pyrtools==0.9.3
+      - torch==1.7
+      - pyrtools==1.0
       - gputil==1.4.0
       - numpyro==0.5.0
-      - arviz==0.11.1
+      - arviz==0.11
       - funsor==0.4.0
       - tabulate==0.8.9
       - git+https://github.com/LabForComputationalVision/plenoptic.git@main

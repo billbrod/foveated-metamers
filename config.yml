@@ -208,7 +208,7 @@ V1:
     - .87
     - 1.14
     - 1.5
-  loss: 'mse_range-0,1_lmbda-0.01'
+  loss: 'mse_range-0,1_beta-0.5'
   optimizer: 'Adam-SWA_s-50_f-5'
   coarse_to_fine: 'together'
   clamp_each_iter: False

@@ -17,7 +17,7 @@ jobs:
         uses: s-weigand/setup-conda@v1.0.5
         with:
           update-conda: true
-          python-version: 3.7
+          python-version: 3.7.1
           conda-channels: anaconda, conda-forge, bioconda
       - name: Create environment
         run: |
@@ -41,7 +41,7 @@ jobs:
         uses: s-weigand/setup-conda@v1.0.5
         with:
           update-conda: true
-          python-version: 3.7
+          python-version: 3.7.1
           conda-channels: anaconda, conda-forge, bioconda
       - name: Create environment
         run: |
@@ -75,7 +75,7 @@ jobs:
         uses: s-weigand/setup-conda@v1.0.5
         with:
           update-conda: true
-          python-version: 3.7
+          python-version: 3.7.1
           conda-channels: anaconda, conda-forge, bioconda
       - name: Create environment
         run: |

@@ -59,13 +59,21 @@ def get_palette(col, col_unique=None, as_dict=True):
         assert len(all_vals) == 2, "Currently only support 2 model values"
         pal = sns.color_palette('BrBG', 3)
         pal = [pal[0], pal[-1]]
+    elif col == 'scaling':
+        # unlike others, we don't force this palette to be consistent across
+        # possible values of scaling (and hence we don't have an all_vals)
+        scaling_vals = sorted([c for c in col_unique if c != 'ref_image'])
+        # we want the color to get lighter as scaling gets larger
+        pal = sns.color_palette('Reds_r', len(scaling_vals))
+        pal = dict(zip(scaling_vals, pal))
+        pal['ref_image'] = 'k'
     else:
         if col_nunique is None:
             col_nunique = 10
         else:
             all_vals = col_unique
         pal = [f'C{i}' for i in range(col_nunique)]
-    if as_dict:
+    if as_dict and not isinstance(pal, dict):
         pal = dict(zip(sorted(all_vals), pal))
     return pal
 
@@ -955,8 +963,10 @@ def title_experiment_summary_plots(g, expt_df, summary_text, post_text=''):
         subj_str = expt_df.subject_name.unique()[0]
     if expt_df.dropna().image_name.nunique() > 1:
         image_str = 'all images'
-    else:
+    elif expt_df.image_name.dropna().nunique() == 1:
         image_str = expt_df.image_name.dropna().unique()[0]
+    else:
+        image_str = ''
     if 'session_number' not in expt_df.columns or expt_df.session_number.nunique() > 1:
         sess_str = 'all sessions'
     else:
@@ -1425,3 +1435,128 @@ def _facetted_scatter_ci_dist(data, x, y, hue=None, style=None, x_order=None,
             ax.set_xticklabels(labels, rotation=rotate_xticklabels,
                                ha='right')
     return final_markers
+
+
+def _draw_triangle(ax, top_pt, side_length=.1, rotation_angle=0, **kwargs):
+    """Draw equilateral triangle on axis to point something out.
+
+    Will not change axes limits.
+
+    Parameters
+    ----------
+    ax : axis
+        The axis to add the triangle to.
+    top_pt : tuple
+        The (x, y) tuple (in data coordinates) of the "top point" of the
+        triangle. This is the value the triangle will be pointing to.
+    side_length : float, optional
+        The length of the triangle (in axes coordinates)
+    rotation_angle : float, optional
+        The angle (in radians) of the triangles rotation. 0 gives an angle with
+        its top_pt pointing towards the top of the axis and the opposite side
+        parallel to the x-axis.
+    kwargs :
+        Passed to mpl.patches.Polygon
+
+    Returns
+    -------
+    xy : np.ndarray
+        2d array with 3 values giving the x, y values of the three triangle
+        points (in axes coordinates)
+
+    """
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    # this is the ratio between the x length and y length (so >1 means it's
+    # wider than it is tall). we use it to correct for any stretching, because
+    # otherwise, if the axis is wider than it is tall, axis coordinate of .1 in
+    # the x direction is larger than axis coordinate of .1 in the y direction.
+    aspect = np.divide(*ax.bbox.size)
+    if rotation_angle > np.pi*2 or rotation_angle < -np.pi*2:
+        raise Exception("rotation_angle should be in radians between -2pi and"
+                        f" 2pi, but got {rotation_angle}!")
+    # this converts the top pt from data coordinates to axes coordinates. this
+    # makes it easier to be consistent with sizing (e.g., to have all sizes the
+    # same length even when axis is logscaled)
+    x3, y3 = (ax.transScale+ax.transLimits).transform(top_pt)
+    x1 = x3 - side_length/aspect * np.cos(rotation_angle + np.pi/3)
+    y1 = y3 - side_length * np.sin(rotation_angle + np.pi/3)
+    x2 = x1 + side_length/aspect * np.cos(rotation_angle)
+    y2 = y1 + side_length * np.sin(rotation_angle)
+    xy = np.array([(x3, y3), (x1, y1), (x2, y2)])
+    triangle = mpl.patches.Polygon(xy, transform=ax.transAxes, **kwargs)
+    ax.add_patch(triangle)
+    ax.set(xlim=xlim, ylim=ylim)
+    return xy
+
+
+def add_physiological_scaling_arrows(ax, side_length=.05, midget_rgc=True,
+                                     parasol_rgc=True, v1=True, **kwargs):
+    """Draw arrows pointing out physiological scaling values.
+
+    Parameters
+    ----------
+    ax : axis
+        The axis to add the triangle to.
+    side_length : float, optional
+        The length of the triangle (in axes coordinates)
+    midget_rgc, parasol_rgc, v1 : bool, optional
+        Whether to inclue the arrows for midget RGC, parasol RGC, and V1
+        physiological scaling, respectively.
+    kwargs :
+        Passed to mpl.patches.Polygon. Cannot contain color.
+
+    """
+    pal = get_palette('model', ['Retina', 'V1'])
+    vals = {'midget_rgc': ['Retina', .01, 'M'],
+            'parasol_rgc': ['Retina', .03, 'P'],
+            'v1': ['V1', .25, 'V1']}
+    # this is axes coordinates
+    triangle_height = np.sqrt(side_length**2 - (side_length/2)**2)
+    for k, v in vals.items():
+        if not eval(k):
+            continue
+        model, scaling, label = v
+        xy = _draw_triangle(ax, (scaling, .5), side_length, color=pal[model])
+        ax.text(xy[0][0], xy[0][1] - triangle_height - triangle_height/4,
+                label, ha='center', va='top', transform=ax.transAxes)
+    return xy
+
+
+def _spectra_dataset_to_dataframe(spectra, data='sf'):
+    """Convert spectra xarray dataset to pandas dataframe.
+
+    Parameters
+    ----------
+    spectra : xarray.Dataset
+        Dataset containing the spectra for synthesized metamers and our natural
+        reference images.
+    data : {'sf', 'orientation'}, optional
+        Whether to grab the spatial frequency or orientation info
+
+    Returns
+    -------
+    df : pd.DataFrame
+
+    """
+    if data == 'sf':
+        cols = ['freq_n']
+    elif data == 'orientation':
+        cols = ['orientation_slice', 'samples']
+    else:
+        raise Exception("data must be one of {'sf', 'orientation'} but "
+                        f"got {data}")
+    df = spectra[f'ref_image_{data}_amplitude'].to_dataframe().reset_index()
+    met_df = spectra[f'metamer_{data}_amplitude'].to_dataframe().reset_index()
+    # give the ref image rows dummy values
+    df['scaling'] = 'ref_image'
+    df['seed_n'] = 0
+    df = df.melt(cols + ['image_name', 'model', 'scaling', 'seed_n',
+                         'trial_type'],
+                 var_name='image_type', value_name=f'{data}_amplitude')
+    met_df = met_df.melt(cols + ['image_name', 'model', 'scaling', 'seed_n',
+                                 'trial_type'],
+                         var_name='image_type', value_name=f'{data}_amplitude')
+    df = pd.concat([df, met_df])
+    df.image_type = df.image_type.apply(lambda x: x.replace(f'_{data}_amplitude', ''))
+    return df

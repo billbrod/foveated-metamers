@@ -128,10 +128,14 @@ def find_figsizes(model_name, model, image_shape):
             num_scales = int(re.findall('_s([0-9]+)_', model_name)[0])
         except (IndexError, ValueError):
             num_scales = 4
+        try:
+            num_moments = int(re.findall('_m([0-9]+)_', model_name)[0]) - 1
+        except (IndexError, ValueError):
+            num_moments = 0
         animate_figsize = (40, 11)
-        # we need about 11 per plot (and we have one of those per scale,
-        # plus one for the mean luminance)
-        rep_image_figsize = [11 * (num_scales+1), 30]
+        # we need about 11 per plot, we have two rows, one with the scales and
+        # one with mean luminance and the moments
+        rep_image_figsize = [11 * max(num_scales, num_moments+1), 60]
         # default figsize arguments work for an image that is 512x512 may need
         # to expand. we go backwards through figsize because figsize and image
         # shape are backwards of each other: image.shape's last two indices are
@@ -292,6 +296,11 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
             num_scales = int(re.findall('_s([0-9]+)_', model_name)[0])
         except (IndexError, ValueError):
             num_scales = 4
+        try:
+            moments = int(re.findall('_m([0-9]+)_', model_name)[0])
+            moments = list(range(2, moments+1))
+        except (IndexError, ValueError):
+            moments = []
         model = pop.PooledV1(scaling, image.shape[-2:],
                              min_eccentricity=min_ecc,
                              max_eccentricity=max_ecc,
@@ -300,7 +309,8 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
                              cache_dir=cache_dir,
                              normalize_dict=normalize_dict,
                              num_scales=num_scales,
-                             window_type=window_type)
+                             window_type=window_type,
+                             moments=moments)
     else:
         raise Exception("Don't know how to handle model_name %s" % model_name)
     animate_figsize, rep_image_figsize, img_zoom = find_figsizes(model_name, model,
@@ -349,7 +359,7 @@ def summary_plots(metamer, rep_image_figsize, img_zoom):
     1. 'rep_image': we show, in three separate rows, the representation
     of the reference image, the representation of the metamer, and the
     representation_error at the final iteration, all plotted as images
-    using ``metamer.model.plot_representaiton_image``.
+    using ``metamer.model.plot_representation_image``.
 
     2. 'windowed': on the top row we show the initial image, the
     metamer, and the reference image, and on the bottom row we show
@@ -956,15 +966,15 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
     clamp_each_iter : bool, optional
         Whether we call the clamper each iteration of the optimization
         or only at the end. True, the default, is recommended
-    loss_func : {'l2', 'l2_range-{a},{b}_lmbda-{c}', 'mse', 'mse_range-{a},{b}_lmbda-{c}'}
+    loss_func : {'l2', 'l2_range-{a},{b}_beta-{c}', 'mse', 'mse_range-{a},{b}_beta-{c}'}
         where a,b,c are all floats. what loss function to use. If 'l2', then we
         use the L2-norm of the difference between the model representations of
-        the synthesized and reference image. if 'l2_range-a,b_lmbda-c', then we
-        use that plus c times a quadratic penalty on all pixels in synthesized
-        image whose values are below a or above b. If 'mse', we use
-        mean-squared error instead, 'mse_range-a,b_lmbda-c' is interpreted the
-        same way as 'l2_range-a,b_lmbda-c', just using MSE instead of the
-        L2-norm
+        the synthesized and reference image. if 'l2_range-a,b_beta-c', then we
+        use c times that loss plus (1-c) times a quadratic penalty on all
+        pixels in synthesized image whose values are below a or above b. If
+        'mse', we use mean-squared error instead, 'mse_range-a,b_beta-c' is
+        interpreted the same way as 'l2_range-a,b_beta-c', just using MSE
+        instead of the L2-norm
     continue_path : str or None, optional
         If None, we synthesize a new metamer. If str, this should be the
         path to a previous synthesis run, which we are resuming. In that
@@ -1026,7 +1036,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
         loss = pop.optim.mse
         loss_kwargs = {}
     else:
-        lf, a, b, c = re.findall('([a-z0-9]+)_range-([.0-9]+),([.0-9]+)_lmbda-([.0-9]+)',
+        lf, a, b, c = re.findall('([a-z0-9]+)_range-([.0-9]+),([.0-9]+)_beta-([.0-9]+)',
                                  loss_func)[0]
         if lf == 'l2':
             loss = pop.optim.l2_and_penalize_range
@@ -1034,7 +1044,7 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
             loss = pop.optim.mse_and_penalize_range
         else:
             raise Exception(f"Don't know how to interpret loss func {loss_func}!")
-        loss_kwargs = {'allowed_range': (float(a), float(b)), 'lmbda': float(c)}
+        loss_kwargs = {'allowed_range': (float(a), float(b)), 'beta': float(c)}
     if '-' in optimizer:
         # we allow two possible addenda to SWA, s-S and f-F, where S is the
         # value for swa-start and F is the value for swa_freq, respectively. if
