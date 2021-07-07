@@ -65,5 +65,16 @@
     "mcmc_plots":
     {
         "mem": "{resources.mem}GB"
+    },
+    "compute_amplitude_spectra":
+    {
+	"partition": "ccn",
+	"mem": ""
+    },
+    "plot_amplitude_spectra":
+    {
+        "time": "24:00:00",
+	"partition": "ccn",
+	"mem": ""
     }
 }
