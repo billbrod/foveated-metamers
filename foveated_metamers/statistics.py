@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import plenoptic as po
 import scipy
+from scipy import fft as sp_fft
 import xarray
 from collections import OrderedDict
 
@@ -100,7 +101,7 @@ def amplitude_spectra(image):
     we include it (corresponds to the DC term).
 
     """
-    frq = scipy.fft.fftshift(scipy.fft.fft2(image))
+    frq = sp_fft.fftshift(sp_fft.fft2(image))
     # following
     # https://scipy-lectures.org/advanced/image_processing/auto_examples/plot_radial_mean.html.
     # Note the tutorial excludes label=0, but we include it (corresponds to the
@@ -158,7 +159,7 @@ def amplitude_orientation(image, n_angle_slices=32, metadata=OrderedDict()):
         Dataset containing the amplitudes in each orientation slice.
 
     """
-    frq = scipy.fft.fftshift(scipy.fft.fft2(image))
+    frq = sp_fft.fftshift(sp_fft.fft2(image))
     theta = pt.synthetic_images.polar_angle(frq.shape, np.pi/n_angle_slices)
     # to get this all positive and between 0 and 2pi
     theta += np.abs(theta.min())

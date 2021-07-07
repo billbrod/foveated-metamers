@@ -1504,8 +1504,15 @@ rule compute_amplitude_spectra:
         from collections import OrderedDict
         import xarray
         import contextlib
+        import os
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                if wildcards.model_name.startswith('RGC') and wildcards.comp.startswith('met'):
+                    met_ref_imgs = ['llama', 'highway_symmetric', 'rocks', 'boats', 'gnarled']
+                else:
+                    met_ref_imgs = LINEAR_IMAGES
+                # make sure this is in the same order as LINEAR_IMAGES, whatever it is
+                met_ref_imgs = sorted(met_ref_imgs, key=lambda x: LINEAR_IMAGES.index(x))
                 seeds = set([int(re.findall('seed-(\d+)_', i)[0][-1]) for i in input if 'seed' in i])
                 scalings = set([float(re.findall('scaling-([\d.]+)', i)[0])
                                 for i in input if 'scaling' in i])
@@ -1519,7 +1526,7 @@ rule compute_amplitude_spectra:
                                                               'orientation_amplitude': 'ref_image_orientation_amplitude'})
                 spectra = []
                 for scaling in scalings:
-                    tmp_ims = [i for i in input if len(re.findall(f'scaling-{scaling}', i)) == 1]
+                    tmp_ims = [i for i in input if len(re.findall(f'scaling-{scaling}{os.sep}', i)) == 1]
                     tmp_spectra = []
                     for seed in seeds:
                         # grab spectra for all images with matching seed_n and scaling.
@@ -1527,8 +1534,8 @@ rule compute_amplitude_spectra:
                                                scaling=scaling, seed_n=seed)
                         ims = [i for i in tmp_ims if len(re.findall(f'seed-\d*{seed}_', i)) == 1]
                         ims = sorted(ims, key=lambda x: LINEAR_IMAGES.index([i for i in LINEAR_IMAGES if i in x][0]))
-                        assert len(ims) == len(LINEAR_IMAGES), f"Have too many images! Expected {len(LINEAR_IMAGES)}, but got {ims}"
-                        tmp_spectra.append(fov.statistics.image_set_amplitude_spectra(ims, LINEAR_IMAGES, metadata))
+                        assert len(ims) == len(met_ref_imgs), f"Have too many images! Expected {len(met_ref_imgs)}, but got {ims}"
+                        tmp_spectra.append(fov.statistics.image_set_amplitude_spectra(ims, met_ref_imgs, metadata))
                     spectra.append(xarray.concat(tmp_spectra, 'seed_n'))
                 spectra = xarray.concat(spectra, 'scaling')
                 spectra = xarray.merge([spectra.rename({'sf_amplitude': 'metamer_sf_amplitude',
