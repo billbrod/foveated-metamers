@@ -5,7 +5,7 @@ import subprocess
 import os.path as op
 import argparse
 from glob import glob
-from foveated_metamers import stimuli
+from foveated_metamers import stimuli, utils
 
 
 def main(model, subj_name, sess_num, comparison='ref'):
@@ -36,16 +36,16 @@ def main(model, subj_name, sess_num, comparison='ref'):
     print(im_names)
     for im in im_names:
         ref_images.append(op.join(config["DATA_DIR"], 'ref_images_preproc', f"{im}.png"))
-        high_scaling_mets.append(glob(op.join(config['DATA_DIR'], 'metamers', model_name, f"{im}", f'scaling-{scaling[0]}', '*', '*',
-                                              'seed-*_init-white_*metamer.png'))[0])
-        high_scaling_mets_2.append(glob(op.join(config['DATA_DIR'], 'metamers', model_name, f"{im}", f'scaling-{scaling[0]}', '*', '*',
-                                              'seed-*_init-white_*metamer.png'))[1])
-        low_scaling_mets.append(glob(op.join(config['DATA_DIR'], 'metamers', model_name, f"{im}", f'scaling-{scaling[-1]}', '*', '*',
-                                             'seed-*_init-white_*metamer.png'))[0])
-        low_scaling_mets_2.append(glob(op.join(config['DATA_DIR'], 'metamers', model_name, f"{im}", f'scaling-{scaling[-1]}', '*', '*',
-                                             'seed-*_init-white_*metamer.png'))[1])
-    # don't show natural images if comparison == met, because they won't see them
-    if comparison == 'ref':
+        # these will each have one image of each scaling, so grab the first and
+        # last for low and high
+        mets = utils.generate_metamer_paths(model_name, image_name=im, seed_n=0, comp=comparison)
+        mets_2 = utils.generate_metamer_paths(model_name, image_name=im, seed_n=1, comp=comparison)
+        high_scaling_mets.append(mets[0])
+        low_scaling_mets.append(mets[-1])
+        high_scaling_mets_2.append(mets_2[0])
+        low_scaling_mets_2.append(mets_2[-1])
+    # don't show natural images if comparison.startswith('met'), because they won't see them
+    if comparison.startswith('ref'):
         subprocess.Popen(['eog', *ref_images], shell=False)
     subprocess.Popen(['eog', *low_scaling_mets], shell=False)
     subprocess.Popen(['eog', *high_scaling_mets], shell=False)
@@ -62,7 +62,7 @@ if __name__ == '__main__':
     parser.add_argument('subj_name', help="Name of the subject", type=str)
     parser.add_argument("sess_num", help="Number of the session", type=int)
     parser.add_argument("--comparison", '-c', default='ref',
-                        help=("{ref, met}. Whether this run is comparing metamers against "
-                              "reference images or other metamers."))
+                        help=("{ref, met, met-downsample-2, ref-natural, met-natural}."
+                              " What comparison to show example images for"))
     args = vars(parser.parse_args())
     main(**args)
