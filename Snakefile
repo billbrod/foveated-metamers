@@ -39,7 +39,7 @@ wildcard_constraints:
     gpu="0|1",
     sess_num="|".join([f'{i:02d}' for i in config['PSYCHOPHYSICS']['SESSIONS']]),
     run_num="|".join([f'{i:02d}' for i in config['PSYCHOPHYSICS']['RUNS']]),
-    comp='met|ref|met-downsample-2|met-natural',
+    comp='met|ref|met-downsample-2|met-natural|ref-natural',
     save_all='|_saveall',
     gammacorrected='|_gamma-corrected',
     plot_focus='|_focus-subject|_focus-image',
@@ -1097,8 +1097,7 @@ rule training_correct_responses:
 
 
 def get_all_idx(wildcards):
-    if ((wildcards.model_name == 'RGC_norm_gaussian' and wildcards.comp == 'met') or
-        (wildcards.model_name == 'V1_norm_s6_gaussian' and wildcards.comp == 'met-natural')):
+    if (wildcards.model_name == 'RGC_norm_gaussian' and wildcards.comp == 'met'):
         sessions = [0]
     else:
         sessions = config['PSYCHOPHYSICS']['SESSIONS']

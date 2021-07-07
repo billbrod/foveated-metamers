@@ -467,8 +467,12 @@ def _add_legend(df, g=None, fig=None, hue=None, style=None, palette={},
         ax = fig.axes[0]
     lw = mpl.rcParams["lines.linewidth"] * 1.8
     if hue is not None:
+        try:
+            sorted_hue = sorted(df[hue].unique())
+        except TypeError:
+            sorted_hue = sorted(df[hue].unique(), key=lambda x: 1e32 if isinstance(x, str) else x)
         artists[hue] = ax.scatter([], [], s=0)
-        for hue_val in df[hue].unique():
+        for hue_val in sorted_hue:
             if isinstance(hue_val, float) and np.isnan(hue_val):
                 continue
             artists[hue_val] = ax.plot([], [], color=palette[hue_val],
