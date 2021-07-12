@@ -1952,5 +1952,5 @@ def amplitude_orientation(spectra, hue='scaling', style=None, col='image_name',
                  f" metamers, {' and '.join(spectra.trial_type.values)}"
                  " comparisons\n")
     g.fig.suptitle(title_str, va='bottom')
-    g.fig.subplots_adjust(wpsace=.1)
+    g.fig.subplots_adjust(wspace=.1)
     return g
