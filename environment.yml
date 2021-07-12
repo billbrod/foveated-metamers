@@ -20,7 +20,7 @@ dependencies:
       - pytest==5.0.1
       - torchvision==0.5.0
       - torchcontrib==0.0.2
-      - torch==1.7
+      - torch==1.8
       - pyrtools==1.0
       - gputil==1.4.0
       - numpyro==0.5.0
