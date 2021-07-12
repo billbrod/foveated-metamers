@@ -1852,7 +1852,8 @@ def amplitude_spectra(spectra, hue='scaling', style=None, col='image_name',
 
 def amplitude_orientation(spectra, hue='scaling', style=None, col='image_name',
                           row=None, col_wrap=5, kind='point',
-                          estimator=np.median, height=2.5, aspect=2, **kwargs):
+                          estimator=np.median, height=2.5, aspect=2,
+                          demean=False, **kwargs):
     """Compare orientation distributions of natural and synthesized images.
 
     Note this is fairly memory intensive. Setting `n_boot` to a lower number
@@ -1879,6 +1880,9 @@ def amplitude_orientation(spectra, hue='scaling', style=None, col='image_name',
         Height of the axes.
     aspect : float, optional
         Aspect of the axes.
+    demean : bool, optional
+        Whether to demean the amplitudes before plotting (mean is computed per
+        model, image_name, scaling, seed_n).
     kwargs :
         Passed to sns.catplot
 
@@ -1888,6 +1892,11 @@ def amplitude_orientation(spectra, hue='scaling', style=None, col='image_name',
         Facetgrid with the plot.
 
     """
+    if demean:
+        # quicker (and easier) to do this demeaning in xarray, rather than
+        # pandas.
+        ori_mean = spectra.mean(['orientation_slice', 'samples'])
+        spectra = spectra - ori_mean
     df = plotting._spectra_dataset_to_dataframe(spectra, 'orientation')
     # seaborn raises an error if col_wrap is non-None when col is None or if
     # row is not None, so prevent that possibility
@@ -1948,7 +1957,8 @@ def amplitude_orientation(spectra, hue='scaling', style=None, col='image_name',
                          kwargs.get('palette', {}), final_markers,
                          dashes_dict)
     # we use spectra because it doesn't include np.nan from dummy rows
-    title_str = (f"Orientation energy for {' and '.join(spectra.model.values)}"
+    title_str = (f"{'Demeaned ' if demean else ''}Orientation energy for"
+                 f" {' and '.join(spectra.model.values)}"
                  f" metamers, {' and '.join(spectra.trial_type.values)}"
                  " comparisons\n")
     g.fig.suptitle(title_str, va='bottom')

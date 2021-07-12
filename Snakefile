@@ -1570,6 +1570,8 @@ rule plot_amplitude_spectra:
                     g = fov.figures.amplitude_spectra(ds)
                 elif wildcards.amplitude_type == 'orientation':
                     g = fov.figures.amplitude_orientation(ds)
+                elif wildcards.amplitude_type == 'orientation-demeaned':
+                    g = fov.figures.amplitude_orientation(ds, demean=True)
                 g.savefig(output[0], bbox_inches='tight')
 
 
