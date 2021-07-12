@@ -1580,10 +1580,11 @@ class PooledV1(PooledVentralStream):
             self.pyr_coeffs.update(self.complex_steerable_pyramid(self.cone_responses,
                                                                   scales))
         if self.pyr_coeffs:
-            # to get the energy, we just square and sum across the real and
-            # imaginary parts (because there are complex tensors yet, this
-            # is the final dimension). the if statement avoids the residuals
-            self.complex_cell_responses = dict((k, torch.pow(v, 2).sum(-1))
+            # to get the energy, we just square and take the absolute value
+            # (since this is a complex tensor, this is equivalent to summing
+            # across the real and imaginary components). the if statement
+            # avoids the residuals
+            self.complex_cell_responses = dict((k, torch.pow(v, 2).abs())
                                                for k, v in self.pyr_coeffs.items()
                                                if not isinstance(k, str))
         if self.normalize_dict:
