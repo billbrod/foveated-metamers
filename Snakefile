@@ -97,6 +97,9 @@ BEHAVIORAL_DATA_DATES = {
         'met-natural': {
             'sub-00': {'sess-00': '2021-May-14'},
         },
+        'ref-natural': {
+            'sub-00': {'sess-00': '2021-Jul-07'},
+        },
     },
     'RGC_norm_gaussian': {
         'ref': {
@@ -1891,7 +1894,7 @@ rule performance_comparison_figure:
         [op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
                  'task-split_comp-{comp}_data.csv').format(comp=c, model_name=m)
          for m in MODELS
-         for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'met-downsample-2']}.get(m, ['met', 'ref'])],
+         for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'met-downsample-2', 'ref-natural']}.get(m, ['met', 'ref'])],
     output:
         op.join(config['DATA_DIR'], 'figures', '{context}', 'performance_{focus}.svg')
     log:
