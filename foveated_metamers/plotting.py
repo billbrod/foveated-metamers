@@ -1123,7 +1123,8 @@ def fit_psychophysical_curve(x, y, hue=None, style=None, pal={}, dashes_dict={},
                 popt, _ = scipy.optimize.curve_fit(mcmc.proportion_correct_curve, g.index.values,
                                                    g.values, [5, g.index.min()],
                                                    # both params must be non-negative
-                                                   bounds=([0, 0], [np.inf, np.inf]))
+                                                   bounds=([0, 0], [np.inf, np.inf]),
+                                                   maxfev=1000)
             except ValueError:
                 # this happens when this gets called on an empty facet, in which
                 # case we just want to exit out

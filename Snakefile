@@ -95,10 +95,10 @@ BEHAVIORAL_DATA_DATES = {
             'sub-00': {'sess-00': '2021-May-04', 'sess-01': '2021-May-05', 'sess-02': '2021-May-06'},
         },
         'met-natural': {
-            'sub-00': {'sess-00': '2021-May-14'},
+            'sub-00': {'sess-00': '2021-Jul-14', 'sess-01': '2021-Jul-14'},
         },
         'ref-natural': {
-            'sub-00': {'sess-00': '2021-Jul-07'},
+            'sub-00': {'sess-00': '2021-Jul-07', 'sess-01': '2021-Jul-13', 'sess-02': '2021-Jul-13'},
         },
     },
     'RGC_norm_gaussian': {
@@ -1910,6 +1910,9 @@ rule performance_comparison_figure:
         import matplotlib.pyplot as plt
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                col = None
+                logscale_xaxis = True
+                curve_fit = 'to_chance'
                 if wildcards.focus.startswith('sub'):
                     query_str = f"subject_name=='{wildcards.focus}'"
                 elif wildcards.focus.startswith('comp'):
@@ -1917,6 +1920,16 @@ rule performance_comparison_figure:
                         query_str = f'trial_type in ["metamer_vs_metamer", "metamer_vs_reference"]'
                     elif wildcards.focus == 'comp-ref':
                         query_str = f'trial_type == "metamer_vs_reference"'
+                    elif wildcards.focus == 'comp-ref-natural':
+                        query_str = (f'trial_type in ["metamer_vs_reference-natural", "metamer_vs_reference"] & '
+                                     'subject_name=="sub-00" & model == "V1_norm_s6_gaussian"')
+                        col = 'image_name'
+                        logscale_xaxis = False
+                    elif wildcards.focus == 'comp-met-natural':
+                        query_str = (f'trial_type in ["metamer_vs_metamer-natural", "metamer_vs_metamer"] & '
+                                     'subject_name=="sub-00" & model == "V1_norm_s6_gaussian"')
+                        col = 'image_name'
+                        curve_fit = True
                     elif wildcards.focus == 'comp-all':
                         query_str = ''
                     else:
@@ -1932,13 +1945,16 @@ rule performance_comparison_figure:
                                                                         x.split('_')[0]))
                 style, fig_width = fov.style.plotting_style(wildcards.context)
                 plt.style.use(style)
-                g = fov.figures.performance_plot(df, col=None,
-                                                 curve_fit='to_chance',
+                height = fig_width / 3 if col is None else fig_width / 6
+                g = fov.figures.performance_plot(df, col=col,
+                                                 curve_fit=curve_fit,
                                                  hue='model',
-                                                 height=fig_width/3,
-                                                 style='trial_type', aspect=2,
-                                                 logscale_xaxis=True)
-                fov.plotting.add_physiological_scaling_arrows(g.ax)
+                                                 height=height,
+                                                 style='trial_type',
+                                                 aspect=2 if col is None else 1,
+                                                 logscale_xaxis=logscale_xaxis)
+                if col is None:
+                    fov.plotting.add_physiological_scaling_arrows(g.ax)
                 g.fig.savefig(output[0], bbox_inches='tight')
 
 
