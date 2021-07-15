@@ -95,7 +95,7 @@ BEHAVIORAL_DATA_DATES = {
             'sub-00': {'sess-00': '2021-May-04', 'sess-01': '2021-May-05', 'sess-02': '2021-May-06'},
         },
         'met-natural': {
-            'sub-00': {'sess-00': '2021-Jul-14', 'sess-01': '2021-Jul-14'},
+            'sub-00': {'sess-00': '2021-Jul-14', 'sess-01': '2021-Jul-14', 'sess-02': '2021-Jul-15'},
         },
         'ref-natural': {
             'sub-00': {'sess-00': '2021-Jul-07', 'sess-01': '2021-Jul-13', 'sess-02': '2021-Jul-13'},
