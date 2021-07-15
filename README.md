@@ -205,6 +205,16 @@ Google Sheets, a text editor, LibreOffice Calc, or loaded in to pandas
   will be useful to correctly weight the average if you want to
   collapse across them).
   
+## Additional data
+
+`data/Dacey1992_RGC.csv` contains data from figure 2B of Dennis M. Dacey and
+Michael R. Petersen (1992), "Dendritic field size and morphology of midget and
+parasol ganglion cells of the human retina", PNAS 89, 9666-9670, extracted using
+[WebPlotDigitizer](https://apps.automeris.io/wpd/) on July 15, 2021. To recreate
+that figure, using the snakemake rule `dacey_figure`. Note that we did not
+separate the data into nasal field and temporal, upper, and lower fields, as the
+paper does.
+
 # Code structure
 
  - `Snakefile`: used by snakemake to determine how to create the files for this

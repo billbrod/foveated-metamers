@@ -2233,3 +2233,32 @@ rule freeman_check:
                                      max_ecc=13,
                                      gpu=1,
                                      seed=0),
+
+rule dacey_figure:
+    input:
+        op.join('data/Dacey1992_RGC.csv'),
+    output:
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'Dacey1992.svg')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'Dacey1992.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'Dacey1992_benchmark.txt')
+    run:
+        import contextlib
+        import pandas as pd
+        import seaborn as sns
+        import foveated_metamers as fov
+        import matplotlib.pyplot as plt
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                df = pd.read_csv(input[0])
+                style, fig_width = fov.style.plotting_style(wildcards.context)
+                plt.style.use(style)
+                g = sns.relplot(data=df, x='eccentricity_deg', y='dendritic_field_diameter_min',
+                                # this aspect is approximately that of the
+                                # figure in the paper
+                                hue='cell_type', aspect=1080/725)
+                g.set(xscale='log', yscale='log', xlim=(.1, 100), ylim=(1, 1000),
+                      xlabel='Eccentricity (degrees)',
+                      ylabel='Dendritic field diameter (min of arc)')
+                g.savefig(output[0])
