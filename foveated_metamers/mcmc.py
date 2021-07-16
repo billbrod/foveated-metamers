@@ -620,6 +620,8 @@ def run_inference(dataset, mcmc_model_type='partially-pooled', step_size=.1,
     dataset: xarray.Dataset
         Dataset containing observed_responses data variable and at least the
         coordinates trials and scaling (must be first two).
+    mcmc_model_type : {'partially-pooled', 'unpooled'}, optional
+        Which MCMC model type to use.
     step_size : float, optional
         Size of a single step.
     num_draws : int, optional
@@ -633,6 +635,10 @@ def run_inference(dataset, mcmc_model_type='partially-pooled', step_size=.1,
         discarded.
     seed : int, optional
         RNG seed.
+    target_accept_prob : float, optional
+        Target acceptance probability for NUTS.
+    max_tree_depth : int, optional
+        Max depth of the tree for NUTS.
     nuts_kwargs :
         Passed to NUTS at initialization
 
@@ -678,6 +684,8 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
     ----------
     mcmc : numpyro.infer.MCMC
         The MCMC object returned by `run_inference`
+    mcmc_model_type : {'partially-pooled', 'unpooled'}, optional
+        Which MCMC model type to use.
     dataset: xarray.Dataset
         Dataset containing observed_responses data variable and at least the
         coordinates trials and scaling (must be first two).
@@ -689,7 +697,7 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
     inf_data : arviz.InferenceData
         arviz InferenceData object (xarray-like) containing the posterior,
         posterior_predictive, prior, prior_predictive, and observed_data.
--
+
     """
     if len(dataset.subject_name) == 1 or len(dataset.image_name) == 1:
         raise Exception("This will fail if subject_name or image_name only "
