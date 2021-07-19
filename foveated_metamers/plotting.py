@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import os.path as op
 import yaml
-from . import mcmc
+from . import mcmc, other_data
 import scipy
 import copy
 import itertools
@@ -1513,9 +1513,56 @@ def _draw_triangle(ax, top_pt, side_length=.1, rotation_angle=0, **kwargs):
     return xy
 
 
+def _draw_rectangle(ax, top_pts, height=.1, **kwargs):
+    """Draw rectangle on axis to show range.
+
+    Will not change axes limits.
+
+    Parameters
+    ----------
+    ax : axis
+        The axis to add the triangle to.
+    top_pts : List
+        List of (x, y) tuples (in data coordinates) of the "top points" of the
+        rectangle.
+    height : float, optional
+        The height of the rectangle (in axes coordinates)
+    kwargs :
+        Passed to mpl.patches.Polygon
+
+    Returns
+    -------
+    xy : np.ndarray
+        2d array with 4 values giving the x, y values of the three triangle
+        points (in axes coordinates)
+
+    """
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    # this converts the top pt from data coordinates to axes coordinates. this
+    # makes it easier to be consistent with sizing (e.g., to have all sizes the
+    # same length even when axis is logscaled)
+    x1, y1 = (ax.transScale+ax.transLimits).transform(top_pts[0])
+    x2, y2 = (ax.transScale+ax.transLimits).transform(top_pts[1])
+    assert y1 == y2, "two points in top_pts should have same y value!"
+    if x2 < x1:
+        x_, y_ = x2, y2
+        x2, y2 = x1, y1
+        x1, y1 = x_, y_
+    rectangle = mpl.patches.Rectangle((x1, y1-height), x2-x1, height,
+                                      transform=ax.transAxes, **kwargs)
+    ax.add_patch(rectangle)
+    ax.set(xlim=xlim, ylim=ylim)
+    xy = np.array([(x1, y1), (x2, y2), (x1, y1-height), (x2, y2-height)])
+    return xy
+
+
 def add_physiological_scaling_arrows(ax, side_length=.05, midget_rgc=True,
                                      parasol_rgc=True, v1=True, **kwargs):
     """Draw arrows pointing out physiological scaling values.
+
+    These are point estimates, just taken from looking at figures, the more
+    accurate version is `add_physiological_scaling_bars`.
 
     Parameters
     ----------
@@ -1524,16 +1571,16 @@ def add_physiological_scaling_arrows(ax, side_length=.05, midget_rgc=True,
     side_length : float, optional
         The length of the triangle (in axes coordinates)
     midget_rgc, parasol_rgc, v1 : bool, optional
-        Whether to inclue the arrows for midget RGC, parasol RGC, and V1
+        Whether to include the arrows for midget RGC, parasol RGC, and V1
         physiological scaling, respectively.
     kwargs :
         Passed to mpl.patches.Polygon. Cannot contain color.
 
     """
     pal = get_palette('model', ['Retina', 'V1'])
-    vals = {'midget_rgc': ['Retina', .01, 'M'],
-            'parasol_rgc': ['Retina', .03, 'P'],
-            'v1': ['V1', .25, 'V1']}
+    vals = {'midget_rgc': ['Retina', .01, 'Midget'],
+            'parasol_rgc': ['Retina', .03, 'Parasol'],
+            'v1': ['V1', .25, 'v1']}
     # this is axes coordinates
     triangle_height = np.sqrt(side_length**2 - (side_length/2)**2)
     for k, v in vals.items():
@@ -1541,9 +1588,72 @@ def add_physiological_scaling_arrows(ax, side_length=.05, midget_rgc=True,
             continue
         model, scaling, label = v
         xy = _draw_triangle(ax, (scaling, .5), side_length, color=pal[model])
-        ax.text(xy[0][0], xy[0][1] - triangle_height - triangle_height/4,
-                label, ha='center', va='top', transform=ax.transAxes)
-    return xy
+        txt = ax.text(xy[0][0], xy[0][1] - triangle_height - triangle_height/4,
+                      label, ha='center', va='top', transform=ax.transAxes)
+        # get_window_extent() is in display units, and transAxes.inverted()
+        # puts it back into axes coordinates, so a negative values mean its
+        # outside the axes.
+        while ax.transAxes.inverted().transform(txt.get_window_extent())[0, 0] < .005:
+            xy[0][0] += .01
+            txt.set_visible(False)
+            txt = ax.text(xy[0][0], xy[0][1] - triangle_height - triangle_height/4,
+                          label, ha='center', va='top', transform=ax.transAxes)
+
+
+def add_physiological_scaling_bars(ax, inf_data, bar_height=.04,
+                                   midget_rgc=True, parasol_rgc=True, v1=True,
+                                   **kwargs):
+    """Draw bars showing range of physiological scaling values.
+
+    We get the range of V1 values from using WebPlotDigitzer on Figure 1G of
+    the Wallis, 2019 paper. For RGC, we fit our own line to data from Dacey
+    1992 paper.
+
+    Parameters
+    ----------
+    ax : axis
+        The axis to add the triangle to.
+    inf_data : arviz.InferenceData
+        arviz InferenceData object (xarray-like) created by
+        `other_data.run_phys_scaling_inference`.
+    bar_height : float, optional
+        The height of the bar to draw (in axes coordinates).
+    midget_rgc, parasol_rgc, v1 : bool, optional
+        Whether to include the bars for midget RGC, parasol RGC, and V1
+        physiological scaling, respectively.
+    kwargs :
+        Passed to mpl.patches.Polygon. Cannot contain color.
+
+    """
+    pal = get_palette('model', ['Retina', 'V1'])
+    pal.update(get_palette('cell_type', ['midget', 'parasol']))
+    pal = {k.lower(): v for k, v in pal.items()}
+    df = other_data.inf_data_to_df(inf_data, 'parameters', hdi=True,
+                                   query_str="distribution=='posterior'")
+    vals = {'v1': [(.125, .265), 'V1']}
+    for n in ['midget', 'parasol']:
+        g = df.query("cell_type==@n")
+        vals[n+'_rgc'] = [(g.query("variable=='diameter_slope'").value.min(),
+                           g.query("variable=='diameter_slope'").value.max()),
+                          n.capitalize()]
+    for k, v in vals.items():
+        if not eval(k):
+            continue
+        top_pts, label = v
+        xy = _draw_rectangle(ax, [(p, .5) for p in top_pts], bar_height,
+                             color=pal[label.lower()])
+        txt = ax.text(xy[0][0] + (xy[1][0] - xy[0][0])/2,
+                      xy[-1][1] - bar_height/4,
+                      label, ha='center', va='top', transform=ax.transAxes)
+        # get_window_extent() is in display units, and transAxes.inverted()
+        # puts it back into axes coordinates, so a negative values mean its
+        # outside the axes.
+        while ax.transAxes.inverted().transform(txt.get_window_extent())[0, 0] < .005:
+            xy[0][0] += .01
+            txt.set_visible(False)
+            txt = ax.text(xy[0][0] + (xy[1][0] - xy[0][0])/2,
+                          xy[-1][1] - bar_height/4,
+                          label, ha='center', va='top', transform=ax.transAxes)
 
 
 def _spectra_dataset_to_dataframe(spectra, data='sf'):

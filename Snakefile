@@ -1898,6 +1898,8 @@ rule performance_comparison_figure:
                  'task-split_comp-{comp}_data.csv').format(comp=c, model_name=m)
          for m in MODELS
          for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'met-downsample-2', 'ref-natural']}.get(m, ['met', 'ref'])],
+        op.join(config['DATA_DIR'], 'dacey_data',
+                'Dacey1992_mcmc_step-.1_prob-.8_depth-10_c-4_d-1000_w-1000_s-10.nc'),
     output:
         op.join(config['DATA_DIR'], 'figures', '{context}', 'performance_{focus}.svg')
     log:
@@ -1909,6 +1911,7 @@ rule performance_comparison_figure:
         import pandas as pd
         import contextlib
         import matplotlib.pyplot as plt
+        import arviz as az
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 col = None
@@ -1939,9 +1942,9 @@ rule performance_comparison_figure:
                     # then assume this is an image
                     query_str = f"image_name.str.startswith('{wildcards.focus}')"
                 if query_str:
-                    df = pd.concat([pd.read_csv(f).query(query_str) for f in input])
+                    df = pd.concat([pd.read_csv(f).query(query_str) for f in input[:-1]])
                 else:
-                    df = pd.concat([pd.read_csv(f) for f in input])
+                    df = pd.concat([pd.read_csv(f) for f in input[:-1]])
                 df.model = df.model.map(lambda x: {'RGC': 'Retina'}.get(x.split('_')[0],
                                                                         x.split('_')[0]))
                 style, fig_width = fov.style.plotting_style(wildcards.context)
@@ -1955,7 +1958,7 @@ rule performance_comparison_figure:
                                                  aspect=2 if col is None else 1,
                                                  logscale_xaxis=logscale_xaxis)
                 if col is None:
-                    fov.plotting.add_physiological_scaling_arrows(g.ax)
+                    fov.plotting.add_physiological_scaling_bars(g.ax, az.from_netcdf(input[-1]))
                 g.fig.savefig(output[0], bbox_inches='tight')
 
 
