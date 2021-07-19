@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import os.path as op
 import arviz as az
-from . import utils, plotting, analysis, mcmc
+from . import utils, plotting, analysis, mcmc, other_data
 import sys
 sys.path.append(op.join(op.dirname(op.realpath(__file__)), '..', 'extra_packages'))
 import plenoptic_part as pop
@@ -1963,4 +1963,68 @@ def amplitude_orientation(spectra, hue='scaling', style=None, col='image_name',
                  " comparisons\n")
     g.fig.suptitle(title_str, va='bottom')
     g.fig.subplots_adjust(wspace=.1)
+    return g
+
+
+def dacey_mcmc_plot(inf_data, df, aspect=1, logscale_axes=True, hdi=.95):
+    """Plot data and predicted lines from Dacey 1992 data and our MCMC fit.
+
+    We use MCMC to fit hinged line (with intercept) to Dacey 1992's dendritic
+    field diameter data. This plots that data with the line with HDI.
+
+    Parameters
+    ----------
+    inf_data : arviz.InferenceData
+        arviz InferenceData object (xarray-like) created by
+        `other_data.run_phys_scaling_inference`.
+    df : pd.DataFrame
+        DataFrame containing the Dacey1992 data, saved at
+        data/Dacey1992_RGC.csv
+    aspect : float, optional
+        Aspect of the axes
+    logscale_axes : bool, optional
+        If True, we logscale both axes. Else, they're linear.
+    hdi : float, optional
+        The width of the HDI to draw (in range (0, 1]). See docstring of
+        fov.mcmc.inf_data_to_df for more details.
+
+    Returns
+    -------
+    g : sns.FacetGrid
+        FacetGrid containing the plot.
+
+    """
+    params = other_data.inf_data_to_df(inf_data, 'parameters', hdi=True,
+                                       query_str="distribution=='posterior'")
+
+    # helper function to get the predicted values
+    def df_hinged_line(df, ecc=np.linspace(0, 80, 100)):
+        df = df.set_index('variable')
+        return other_data.hinged_line(ecc, df.loc['diameter_slope'].value,
+                                      df.loc['diameter_hinge_ecc'].value,
+                                      df.loc['diameter_intercept'].value)
+
+    ecc = np.linspace(0, 80, 100)
+    lines = []
+    for n, g in params.groupby(['distribution', 'cell_type', 'hdi']):
+        data = dict(zip(['distribution', 'cell_type', 'hdi'], n))
+        line = df_hinged_line(g, ecc)
+        data.update({'diameter': line, 'eccentricity': ecc})
+        lines.append(pd.DataFrame(data))
+    lines = pd.concat(lines)
+
+    df['dendritic_field_diameter_deg'] = df.dendritic_field_diameter_min / 60
+
+    pal = plotting.get_palette('cell_type', df.cell_type.unique())
+    g = sns.relplot(data=df, x='eccentricity_deg',
+                    y='dendritic_field_diameter_deg',
+                    hue='cell_type', aspect=aspect, palette=pal)
+    for n, gb in lines.groupby('cell_type'):
+        plotting.scatter_ci_dist(data=gb, x='eccentricity', y='diameter',
+                                 ci='hdi', join=True, ci_mode='fill',
+                                 ax=g.ax, draw_ctr_pts=False, color=pal[n])
+    if logscale_axes:
+        g.set(xscale='log', yscale='log')
+    g.set(xlabel="Eccentrictiy (degrees)",
+          ylabel="Dendritic field diameter (degrees)")
     return g

@@ -20,7 +20,7 @@ def get_palette(col, col_unique=None, as_dict=True):
 
     Parameters
     ----------
-    col : {'subject_name', 'model', str}
+    col : {'subject_name', 'model', 'scaling', 'cell_type', str}
         The column to return the palette for. If we don't have a particular
         palette picked out, the palette will contain the strings 'C0', 'C1',
         etc, which use the default palette.
@@ -67,6 +67,19 @@ def get_palette(col, col_unique=None, as_dict=True):
         pal = sns.color_palette('Reds_r', len(scaling_vals))
         pal = dict(zip(scaling_vals, pal))
         pal['ref_image'] = 'k'
+    elif col == 'cell_type':
+        all_vals = ['parasol', 'midget']
+        if len(col_unique) == 1 and col_unique[0] in all_vals:
+            pass
+        elif sorted(col_unique) != sorted(all_vals):
+            all_vals = ['Retina', 'V1']
+            if len(col_unique) == 1 and col_unique[0] in all_vals:
+                pass
+            elif sorted(col_unique) != sorted(all_vals):
+                raise Exception(f"Don't know what to do with models {col_unique}")
+        assert len(all_vals) == 2, "Currently only support 2 model values"
+        pal = sns.color_palette('BrBG', 3)
+        pal = [(*pal[0], .5), (*pal[0], 1)]
     else:
         if col_nunique is None:
             col_nunique = 10

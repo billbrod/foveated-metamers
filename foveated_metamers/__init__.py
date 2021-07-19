@@ -10,3 +10,4 @@ from . import plotting
 from . import statistics
 from . import mcmc
 from . import style
+from . import other_data

@@ -44,6 +44,7 @@ wildcard_constraints:
     gammacorrected='|_gamma-corrected',
     plot_focus='|_focus-subject|_focus-image',
     ecc_mask="|_eccmask-[0-9]+",
+    logscale="log|linear",
 ruleorder:
     collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check > mcmc_compare_plot > mcmc_plots
 
@@ -2254,11 +2255,84 @@ rule dacey_figure:
                 df = pd.read_csv(input[0])
                 style, fig_width = fov.style.plotting_style(wildcards.context)
                 plt.style.use(style)
+                pal = fov.plotting.get_palette('cell_type', df.cell_type.unique())
                 g = sns.relplot(data=df, x='eccentricity_deg', y='dendritic_field_diameter_min',
                                 # this aspect is approximately that of the
                                 # figure in the paper
-                                hue='cell_type', aspect=1080/725)
+                                hue='cell_type', aspect=1080/725, palette=pal)
                 g.set(xscale='log', yscale='log', xlim=(.1, 100), ylim=(1, 1000),
                       xlabel='Eccentricity (degrees)',
                       ylabel='Dendritic field diameter (min of arc)')
                 g.savefig(output[0])
+
+
+rule dacey_mcmc:
+    input:
+        op.join('data/Dacey1992_RGC.csv'),
+    output:
+        op.join(config['DATA_DIR'], 'dacey_data',
+                'Dacey1992_mcmc_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
+                '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}.nc'),
+        op.join(config['DATA_DIR'], 'dacey_data',
+                'Dacey1992_mcmc_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
+                '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_diagnostics.png'),
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'dacey_data',
+                'Dacey1992_mcmc_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
+                '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}.log'),
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'dacey_data',
+                'Dacey1992_mcmc_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
+                '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_benchmark.txt'),
+    run:
+        import contextlib
+        import pandas as pd
+        import foveated_metamers as fov
+        import arviz as az
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                dataset = fov.other_data.assemble_dacey_dataset(pd.read_csv(input[0]))
+                mcmc = fov.other_data.run_phys_scaling_inference(dataset,
+                                                                 float(wildcards.step_size),
+                                                                 int(wildcards.num_draws),
+                                                                 int(wildcards.num_chains),
+                                                                 int(wildcards.num_warmup),
+                                                                 int(wildcards.seed),
+                                                                 float(wildcards.accept_prob),
+                                                                 int(wildcards.tree_depth))
+                # want to have a different seed for constructing the inference
+                # data object than we did for inference itself
+                inf_data = fov.other_data.assemble_inf_data(mcmc, dataset,
+                                                            int(wildcards.seed)+1)
+                inf_data.to_netcdf(output[0])
+                axes = az.plot_trace(inf_data)
+                axes[0, 0].figure.savefig(output[1])
+
+
+rule dacey_mcmc_plot:
+    input:
+        op.join('data/Dacey1992_RGC.csv'),
+        op.join(config['DATA_DIR'], 'dacey_data',
+                'Dacey1992_mcmc_step-.1_prob-.8_depth-10_c-4_d-1000_w-1000_s-10.nc'),
+    output:
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'Dacey1992_mcmc_{logscale}.{ext}')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'Dacey1992_mcmc_{logscale}_{ext}.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}',
+                'Dacey1992_mcmc_{logscale}_{ext}_benchmark.txt')
+    run:
+        import contextlib
+        import pandas as pd
+        import foveated_metamers as fov
+        import arviz as az
+        import seaborn as sns
+        import matplotlib.pyplot as plt
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                df = pd.read_csv(input[0])
+                inf_data = az.from_netcdf(input[1])
+                style, fig_width = fov.style.plotting_style(wildcards.context)
+                plt.style.use(style)
+                fig = fov.figures.dacey_mcmc_plot(inf_data, df, logscale_axes='log' in wildcards.logscale)
+                fig.savefig(output[0])
