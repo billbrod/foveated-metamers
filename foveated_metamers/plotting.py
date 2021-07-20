@@ -1580,7 +1580,7 @@ def add_physiological_scaling_arrows(ax, side_length=.05, midget_rgc=True,
     pal = get_palette('model', ['Retina', 'V1'])
     vals = {'midget_rgc': ['Retina', .01, 'Midget'],
             'parasol_rgc': ['Retina', .03, 'Parasol'],
-            'v1': ['V1', .25, 'v1']}
+            'v1': ['V1', .25, 'V1']}
     # this is axes coordinates
     triangle_height = np.sqrt(side_length**2 - (side_length/2)**2)
     for k, v in vals.items():
