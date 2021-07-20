@@ -425,6 +425,7 @@ def _psychophysical_curve_ticks(df, axes, logscale_xaxis=False, height=5,
         for ax in axes:
             ax.set_xscale('log', base=2)
             ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(lambda y, pos: f"{y:.03f}"))
+            ax.xaxis.set_minor_formatter(mpl.ticker.NullFormatter())
         # if we make this an integer, our ticks go up by factors of 2, which
         # makes them a bit easier to interpret
         xtick_spacing = np.round((np.log2(xmax) - np.log2(xmin)) / (nticks-1))
