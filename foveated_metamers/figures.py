@@ -957,7 +957,12 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
                     y='probability_correct', like_pointplot=True, ci='hdi',
                     join=True, ci_mode='fill', draw_ctr_pts=False, style=style,
                     dashes_dict=dashes_dict)
-    g.map_dataframe(plotting.map_flat_line, x='scaling', y=.5, colors='k')
+    if col is None and row is None:
+        assert len(g.axes)==1, "If col is None and row is None, there should only be one axis!"
+        plotting.map_flat_line(x='scaling', y=.5, colors='k', ax=g.ax,
+                               data=df, color=None)
+    else:
+        g.map_dataframe(plotting.map_flat_line, x='scaling', y=.5, colors='k')
 
     # title and label plot
     model_type = df.mcmc_model_type.dropna().unique()

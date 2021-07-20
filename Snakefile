@@ -45,6 +45,7 @@ wildcard_constraints:
     plot_focus='|_focus-subject|_focus-image',
     ecc_mask="|_eccmask-[0-9]+",
     logscale="log|linear",
+    mcmc_model="partially-pooled|unpooled",
 ruleorder:
     collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check > mcmc_compare_plot > mcmc_plots
 
@@ -1864,17 +1865,17 @@ rule performance_figure:
 rule mcmc_figure:
     input:
         op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_partially-pooled_step-1_prob-.8_depth-10'
+                'task-split_comp-{comp}_mcmc_{mcmc_model}_step-1_prob-.8_depth-10'
                 '_c-4_d-10000_w-10000_s-0.nc'),
     output:
         op.join(config['DATA_DIR'], 'figures', '{context}', '{model_name}',
-                'task-split_comp-{comp}_mcmc_params-grouplevel.svg'),
+                'task-split_comp-{comp}_mcmc_{mcmc_model}_{plot_type}.{ext}'),
     log:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
-                'task-split_comp-{comp}_mcmc_params-grouplevel.log'),
+                'task-split_comp-{comp}_mcmc_{mcmc_model}_{plot_type}_{ext}.log'),
     benchmark:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
-                'task-split_comp-{comp}_mcmc_params-grouplevel_benchmark.txt'),
+                'task-split_comp-{comp}_mcmc_{mcmc_model}_{plot_type}_{ext}_benchmark.txt'),
     run:
         import foveated_metamers as fov
         import contextlib
@@ -1885,10 +1886,84 @@ rule mcmc_figure:
                 inf_data = az.from_netcdf(input[0])
                 style, fig_width = fov.style.plotting_style(wildcards.context)
                 plt.style.use(style)
-                fig = fov.figures.psychophysical_grouplevel_means(inf_data, height=fig_width/4)
-                for ax in fig.axes:
-                    ax.set_title(ax.get_title().replace('a0', 'gain').replace('s0', 'critical scaling'))
-                fig.suptitle(fig._suptitle.get_text(), y=1.05)
+                if wildcards.plot_type == 'params-grouplevel':
+                    fig = fov.figures.psychophysical_grouplevel_means(inf_data, height=fig_width/4)
+                    for ax in fig.axes:
+                        ax.set_title(ax.get_title().replace('a0', 'gain').replace('s0', 'critical scaling'))
+                    fig.suptitle(fig._suptitle.get_text(), y=1.05)
+                elif 'performance' in wildcards.plot_type:
+                    col = 'image_name'
+                    hue = 'subject_name'
+                    style = 'trial_type'
+                    height = fig_width / 6
+                    if 'focus' in wildcards.plot_type:
+                        inf_data = fov.mcmc.inf_data_to_df(inf_data, 'predictive grouplevel means', hdi=.95)
+                        if 'focus-image' in wildcards.plot_type:
+                            hue = 'model'
+                            inf_data = inf_data.query("level=='image_name'").rename(
+                                columns={'dependent_var': 'image_name'})
+                            inf_data['subject_name'] = 'all subjects'
+                        elif 'focus-subject' in wildcards.plot_type:
+                            col = None
+                            height = fig_width / 3
+                            inf_data = inf_data.query("level=='subject_name'").rename(
+                                columns={'dependent_var': 'subject_name'})
+                            inf_data['image_name'] = 'all images'
+                    fig = fov.figures.posterior_predictive_check(inf_data, col=col, hue=hue, style=style,
+                                                                 height=height)
+                else:
+                    raise Exception(f"Don't know how to handle plot type {wildcards.plot_type}!")
+                fig.savefig(output[0], bbox_inches='tight')
+
+
+rule mcmc_performance_comparison_figure:
+    input:
+        [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
+                 'task-split_comp-{comp}_mcmc_{{mcmc_model}}_step-1_prob-.8_depth-10'
+                 '_c-4_d-10000_w-10000_s-0.nc').format(comp=c, model_name=m)
+         for m in MODELS
+         for c in {'V1_norm_s6_gaussian': ['met', 'ref'], 'RGC_norm_gaussian': ['ref']}[m]],
+        op.join(config['DATA_DIR'], 'dacey_data',
+                'Dacey1992_mcmc_step-.1_prob-.8_depth-10_c-4_d-1000_w-1000_s-10.nc'),
+    output:
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'mcmc_{mcmc_model}_performance_{focus}.{ext}')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}',
+                'mcmc_{mcmc_model}_performance_{focus}_{ext}.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}',
+                'mcmc_{mcmc_model}_performance_{focus}_{ext}_benchmark.txt')
+    run:
+        import foveated_metamers as fov
+        import contextlib
+        import pandas as pd
+        import matplotlib.pyplot as plt
+        import arviz as az
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                style, fig_width = fov.style.plotting_style(wildcards.context)
+                plt.style.use(style)
+                df = []
+                for f in input[:-1]:
+                    df.append(fov.mcmc.inf_data_to_df(az.from_netcdf(f),
+                                                      'predictive grouplevel means', hdi=.95))
+                df = pd.concat(df)
+                if wildcards.focus.startswith('sub'):
+                    df = df.query(f"level=='subject_name' & dependent_var=='{wildcards.focus}'").rename(columns={'dependent_var': 'subject_name'})
+                    df['image_name'] = 'all images'
+                elif wildcards.focus == 'comp-all':
+                    df = df.query("level=='all'")
+                    df['image_name'] = 'all images'
+                    df['subject_name'] = 'all subjects'
+                else:
+                    raise Exception(f"Don't know how to handle focus {wildcards.focus}!")
+                fig = fov.figures.posterior_predictive_check(df, col=None,
+                                                             hue='model',
+                                                             style='trial_type',
+                                                             height=fig_width/3,
+                                                             aspect=2,
+                                                             logscale_xaxis=True)
+                fov.plotting.add_physiological_scaling_bars(fig.ax, az.from_netcdf(input[-1]))
                 fig.savefig(output[0], bbox_inches='tight')
 
 
