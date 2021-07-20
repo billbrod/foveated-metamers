@@ -960,7 +960,7 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
     g.map_dataframe(plotting.map_flat_line, x='scaling', y=.5, colors='k')
 
     # title and label plot
-    model_type = df.mcmc_model_type.unique()
+    model_type = df.mcmc_model_type.dropna().unique()
     if len(model_type) > 1:
         model_type = ['multiple']
     title = f'Posterior predictive check for {model_type[0]}'
