@@ -10,4 +10,5 @@ from . import plotting
 from . import statistics
 from . import mcmc
 from . import style
+from .observer_model import ObserverModel
 from . import other_data
