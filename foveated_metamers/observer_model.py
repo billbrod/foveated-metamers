@@ -833,7 +833,7 @@ class ObserverModel(nn.Module):
         fig, gs, title_list = self._plot_helper(2*n_rows, 2*n_cols, figsize,
                                                 ax, title, batch_idx)
         axes = []
-        for i, d in enumerate(data[batch_idx]):
+        for i, d in enumerate(po.to_numpy(data[batch_idx])):
             scale = i // (self.order+1)
             band = i % (self.order+1)
             if scale < self.num_scales:

@@ -8,10 +8,24 @@ import plenoptic as po
 sys.path.append(op.join(op.dirname(op.realpath(__file__)), '..',
                         'extra_packages'))
 import plenoptic_part as pop
+sys.path.append(op.join(op.dirname(op.realpath(__file__)), '..',))
+import foveated_metamers as fov
 
 DTYPE = torch.float32
 DATA_DIR = op.join(op.dirname(op.realpath(__file__)), '..', 'extra_packages',
                    'data')
+
+
+@pytest.fixture(scope='package')
+def img():
+    return po.load_images(op.join(DATA_DIR, 'nuts.pgm'))[..., :64, :64]
+
+
+# any tests that just use the default num_scale and order args, can use this
+# fixture
+@pytest.fixture(scope='package')
+def obs(img):
+    return fov.ObserverModel(1, img.shape[-2:])
 
 
 class TestPooledVentralStream(object):
@@ -207,3 +221,95 @@ class TestPooledVentralStream(object):
         v1 = pop.PooledV1(.5, im.shape[2:])
         metamer = pop.Metamer(im, v1)
         metamer.synthesize(max_iter=3)
+
+
+class TestObserverModel(object):
+
+    @pytest.mark.parametrize('num_scales', [1, 3, 4])
+    @pytest.mark.parametrize('order', [1, 3])
+    def test_obs_basic(self, num_scales, order, img):
+        obs = fov.ObserverModel(1, img.shape[-2:], num_scales=num_scales,
+                                order=order)
+        rep = obs(img)
+        assert rep.shape[1] == obs.num_scales * (obs.order+1) + 1
+
+    def test_obs_scales(self):
+        img = po.load_images(op.join(DATA_DIR, 'nuts.pgm'))
+        obs = fov.ObserverModel(1, img.shape[-2:])
+        reduced_rep = obs(img, ['mean_luminance', 0])
+        assert reduced_rep.shape[1] == obs.order+1 + 1
+        reduced_rep = obs(img, ['mean_luminance'])
+        assert reduced_rep.shape[1] == 1
+
+    @pytest.mark.parametrize('num_scales', [1, 4])
+    @pytest.mark.parametrize('order', [1, 3])
+    def test_obs_plot_rep(self, num_scales, order, img):
+        obs = fov.ObserverModel(1, img.shape[-2:], num_scales=num_scales,
+                                order=order)
+        rep = obs(img)
+        fig, axes = obs.plot_representation(rep)
+        assert len(axes) == rep.shape[1]
+        fig, axes = obs.plot_representation_image(rep)
+        assert len(axes) == obs.num_scales + 1
+
+    @pytest.mark.parametrize('num_scales', [1, 4])
+    @pytest.mark.parametrize('order', [1, 3])
+    def test_obs_plot_other(self, num_scales, order, img):
+        obs = fov.ObserverModel(1, img.shape[-2:], num_scales=num_scales,
+                                order=order)
+        obs.plot_window_areas()
+        obs.plot_window_widths()
+        obs.plot_windows()
+
+    @pytest.mark.parametrize('num_scales', [1, 4])
+    @pytest.mark.parametrize('order', [1, 3])
+    def test_obs_other(self, num_scales, order, img):
+        obs = fov.ObserverModel(1, img.shape[-2:], num_scales=num_scales,
+                                order=order)
+        rep = obs(img)
+        obs.summarize_representation(rep)
+        obs.summarize_window_sizes()
+
+    def test_obs_save_load(self, tmp_path, img, obs):
+        rep = obs(img)
+        obs.summarize_representation(rep)
+        obs.summarize_window_sizes()
+        obs.save_reduced(op.join(tmp_path, 'test_obs_save_load.pt'))
+        obs_copy = fov.ObserverModel.load_reduced(op.join(tmp_path, 'test_obs_save_load.pt'))
+        for i in range(len(obs.PoolingWindows.angle_windows)):
+            if not obs.PoolingWindows.angle_windows[i].allclose(obs_copy.PoolingWindows.angle_windows[i]):
+                raise Exception("Something went wrong saving and loading, the angle_windows %d are"
+                                " not identical!" % i)
+        for i in range(len(obs.PoolingWindows.ecc_windows)):
+            if not obs.PoolingWindows.ecc_windows[i].allclose(obs_copy.PoolingWindows.ecc_windows[i]):
+                raise Exception("Something went wrong saving and loading, the ecc_windows %d are"
+                                " not identical!" % i)
+
+    def test_obs_update_plot(self, img, obs):
+        rep = obs(img)
+        fig, axes = obs.plot_representation(rep)
+        obs.update_plot(axes, torch.rand_like(rep))
+        for ax, data in zip(axes, rep[0]):
+            plotted_data = torch.tensor([s[1, 1] for s in
+                                         ax.containers[0].stemlines.get_segments()])
+            assert torch.any(data!=plotted_data)
+        obs.update_plot(axes, rep)
+        for ax, data in zip(axes, rep[0]):
+            plotted_data = torch.tensor([s[1, 1] for s in
+                                         ax.containers[0].stemlines.get_segments()])
+            assert torch.all(data==plotted_data)
+
+    def test_obs_to(self, img, obs):
+        # can't test float16, because some operations are unsupported
+        obs.to(torch.float64)
+        rep = obs(img)
+        assert rep.dtype == torch.float64
+        obs.plot_representation(rep)
+        obs.to(torch.float32)
+        rep = obs(img)
+        assert rep.dtype == torch.float32
+        obs.plot_representation(rep)
+
+    def test_obs_metamer(self, img, obs):
+        metamer = pop.Metamer(img, obs)
+        metamer.synthesize(max_iter=3, coarse_to_fine='together')
