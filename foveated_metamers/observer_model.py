@@ -30,40 +30,33 @@ sys.path.append(op.join(op.dirname(op.realpath(__file__)), '..',
 from plenoptic_part.tools.display import clean_up_axes, update_stem, clean_stem_plot
 
 
-class PooledVentralStream(nn.Module):
-    r"""Generic class that sets up scaling windows
+class ObserverModel(nn.Module):
+    r"""Observer model based on an pooled energy model of V1.
 
-    Note that we will calculate the minimum eccentricity at which the
-    area of the windows at half-max exceeds one pixel (based on
-    ``scaling``, ``img_res`` and ``max_eccentricity``) and, if
-    ``min_eccentricity`` is below that, will throw an Exception.
+    This just models V1 as containing complex cells and a representation
+    of the mean luminance. For the complex cells, we take the outputs of
+    the complex steerable pyramid and takes the complex modulus of them
+    (that is, squares, sums, and takes the square root across the real
+    and imaginary parts; this is a phase-invariant measure of the local
+    magnitude). The mean luminance representation is the same as that
+    computed by the PooledRGC model.
 
-    This just generates the pooling windows necessary for these models,
-    given a small number of parameters. One tricky thing we do is
-    generate a set of scaling windows for each scale (appropriately)
-    sized. For example, the V1 model will have 4 scales, so for a 256 x
-    256 image, the coefficients will have shape (256, 256), (128, 128),
-    (64, 64), and (32, 32). Therefore, we need windows of the same size
-    (could also up-sample the coefficient tensors, but since that would
-    need to happen each iteration of the metamer synthesis,
-    pre-generating appropriately sized windows is more efficient).
-
-    We will calculate the minimum eccentricity at which the area of the
-    windows at half-max exceeds one pixel at each scale. For scales
-    beyond the first however, we will not throw an Exception if this
-    value is below ``min_eccentricity``. We instead print a warning to
-    alert the user and use this value as ``min_eccentricity`` when
+    Note that we will calculate the minimum eccentricity at which the area of
+    the windows at half-max exceeds one pixel (based on ``scaling``,
+    ``img_res`` and ``max_eccentricity``). We will not throw an Exception if
+    this value is below ``min_eccentricity``, however. We instead print a
+    warning to alert the user and use this value as ``min_eccentricity`` when
     creating the plots. In order to see what this value was, see
     ``self.calculated_min_eccentricity_degrees``
 
-    We can optionally cache the windows tensor we create, if
-    ``cache_dir`` is not None. In that case, we'll also check to see if
-    appropriate cached windows exist before creating them and load them
-    if they do. The path we'll use is
+    We can optionally cache the windows tensor we create, if ``cache_dir`` is
+    not None. In that case, we'll also check to see if appropriate cached
+    windows exist before creating them and load them if they do. The path we'll
+    use is
     ``{cache_dir}/scaling-{scaling}_size-{img_res}_e0-{min_eccentricity}_
-    em-{max_eccentricity}_w-1_gaussian.pt``. We'll cache
-    each scale separately, changing the img_res (and potentially
-    min_eccentricity) values in that save path appropriately.
+    em-{max_eccentricity}_w-1_gaussian.pt``. We'll cache each scale separately,
+    changing the img_res (and potentially min_eccentricity) values in that save
+    path appropriately.
 
     NOTE: that we're assuming the input to this model contains values
     proportional to photon counts; thus, it should be a raw image or
@@ -79,14 +72,19 @@ class PooledVentralStream(nn.Module):
         The resolution of our image (should therefore contains
         integers). Will use this to generate appropriately sized pooling
         windows.
+    num_scales : int, optional
+        The number of scales (spatial frequency bands) in the steerable
+        pyramid we use to build the V1 representation
+    order : int, optional
+        The Gaussian derivative order used for the steerable
+        filters. Default value is 3.  Note that to achieve steerability
+        the minimum number of orientation is ``order`` + 1, and is used
+        here (that's currently all we support, though could extend
+        fairly simply)
     min_eccentricity : float, optional
         The eccentricity at which the pooling windows start.
     max_eccentricity : float, optional
         The eccentricity at which the pooling windows end.
-    num_scales : int, optional
-        The number of scales to generate masks for. For the RGC model,
-        this should be 1, otherwise should match the number of scales in
-        the steerable pyramid.
     cache_dir : str or None, optional
         The directory to cache the windows tensor in. If set, we'll look
         there for cached versions of the windows we create, load them if
@@ -97,13 +95,19 @@ class PooledVentralStream(nn.Module):
     ----------
     scaling : float
         Scaling parameter that governs the size of the pooling windows.
+    num_scales : int, optional
+        The number of scales (spatial frequency bands) in the steerable
+        pyramid we use to build the V1 representation
+    order : int, optional
+        The Gaussian derivative order used for the steerable
+        filters. Default value is 3.  Note that to achieve steerability
+        the minimum number of orientation is ``order`` + 1, and is used
+        here (that's currently all we support, though could extend
+        fairly simply)
     min_eccentricity : float
         The eccentricity at which the pooling windows start.
     max_eccentricity : float
         The eccentricity at which the pooling windows end.
-    PoolingWindows : plenoptic.simulate.PoolingWindows
-        A pooling windows object which contains the windows we use to
-        pool our model's summary statistics across the image.
     state_dict_reduced : dict
         A dictionary containing those attributes necessary to initialize
         the model, plus a 'model_name' field which the ``load_reduced``
@@ -115,20 +119,20 @@ class PooledVentralStream(nn.Module):
         ``po.simul.PooledVentralStream.load_reduced(filename)``
     window_width_degrees : dict
         Dictionary containing the widths of the windows in
-        degrees. There are six keys, corresponding to a 2x2 for the
-        widths in the radial and angular directions by the 'top',
-        'half', and 'full' widths (top is the width of the flat-top
-        region of each window, where the window's value is 1; full is
-        the width of the entire window; half is the width at
-        half-max). Each value is a list containing the widths for the
-        windows in different eccentricity bands. To visualize these, see
-        the ``plot_window_widths`` method.
+        degrees. There are four keys: 'radial_top', 'radial_full',
+        'angular_top', and 'angular_full', corresponding to a 2x2 for
+        the widths in the radial and angular directions by the 'top' and
+        'full' widths (top is the width of the flat-top region of each
+        window, where the window's value is 1; full is the width of the
+        entire window). Each value is a list containing the widths for
+        the windows in different eccentricity bands. To visualize these,
+        see the ``plot_window_sizes`` method.
     window_width_pixels : list
         List of dictionaries containing the widths of the windows in
         pixels; each entry in the list corresponds to the widths for a
         different scale, as in ``windows``. See above for explanation of
         the dictionaries. To visualize these, see the
-        ``plot_window_widths`` method.
+        ``plot_window_sizes`` method.
     n_polar_windows : int
         The number of windows we have in the polar angle dimension
         (within each eccentricity band)
@@ -179,14 +183,17 @@ class PooledVentralStream(nn.Module):
     cache_dir : str or None
         If str, this is the directory where we cached / looked for
         cached windows tensors
-    cached_paths : list
-        List of strings, one per scale, taht we either saved or loaded
+    cache_paths : list
+        List of strings, one per scale, that we either saved or loaded
         the cached windows tensors from
+    scales : list
+        List of the scales in the model, from fine to coarse. Used for
+        synthesizing in coarse-to-fine order
 
     """
 
-    def __init__(self, scaling, img_res, min_eccentricity=.5,
-                 max_eccentricity=15, num_scales=1, cache_dir=None):
+    def __init__(self, scaling, img_res, num_scales=4, order=3,
+                 min_eccentricity=.5, max_eccentricity=15, cache_dir=None):
         super().__init__()
         self.PoolingWindows = PoolingWindows(scaling, img_res,
                                              min_eccentricity,
@@ -211,8 +218,69 @@ class PooledVentralStream(nn.Module):
         # initialize ObserverModel
         for k in ['transition_region_width', 'window_type', 'std_dev']:
             self.state_dict_reduced.pop(k)
-        self.num_scales = 1
         self._spatial_masks = {}
+        self.state_dict_reduced.update({'order': order,
+                                        'model_name': 'ObserverModel',
+                                        'num_scales': num_scales})
+        self.num_scales = num_scales
+        self.order = order
+        self.complex_steerable_pyramid = po.simul.Steerable_Pyramid_Freq(
+            img_res, self.num_scales, self.order, is_complex=True,
+            downsample=False, tight_frame=True)
+        self.scales = ['mean_luminance'] + list(range(num_scales))[::-1]
+
+    def forward(self, image, scales=[]):
+        r"""Generate the V1 representation of an image.
+
+        Parameters
+        ----------
+        image : torch.Tensor
+            A tensor containing the image to analyze. We want to operate
+            on this in the pytorch-y way, so we want it to be 4d (batch,
+            channel, height, width). If it has fewer than 4 dimensions,
+            we will unsqueeze it until its 4d
+        scales : list, optional
+            Which scales to include in the returned representation. If an empty
+            list (the default), we include all scales. Otherwise, can contain
+            subset of values present in this model's ``scales`` attribute (ints
+            up to self.num_scales-1, the str 'mean_luminance'). Can contain a
+            single value or multiple values. If it's an int or float, we
+            include all orientations from that scale.
+
+        Returns
+        -------
+        representation : torch.Tensor
+            A 3d tensor containing the averages of the
+            'complex cell responses', that is, the squared and summed
+            outputs of the complex steerable pyramid.
+
+        """
+        while image.ndimension() < 4:
+            image = image.unsqueeze(0)
+        if image.shape[1] != 1:
+            raise Exception("Haven't thought about how to handle images with"
+                            " more than 1 channel!")
+        if not scales:
+            scales = self.scales
+        # initialize these with empty tensors so that torch.cat runs
+        # successfully even if they don't get updated.
+        mean_complex_cell_responses = torch.tensor([])
+        mean_luminance = torch.tensor([])
+        if any([i in self.complex_steerable_pyramid.scales for i in scales]):
+            # because self.scales never includes residual_highpass and
+            # residual_lowpass, we never have the residuals in pyr_coeffs.
+            pyr_coeffs = self.complex_steerable_pyramid(image, scales)
+            complex_cell_responses, pyr_info = self.complex_steerable_pyramid.convert_pyr_to_tensor(pyr_coeffs)
+            self._pyr_info = pyr_info
+            # to get the energy, we just square and take the absolute value
+            # (since this is a complex tensor, this is equivalent to summing
+            # across the real and imaginary components). the if statement
+            # avoids the residuals
+            complex_cell_responses = complex_cell_responses.pow(2).abs()
+            mean_complex_cell_responses = self.PoolingWindows(complex_cell_responses)
+        if 'mean_luminance' in scales:
+            mean_luminance = self.PoolingWindows(image)
+        return torch.cat([mean_complex_cell_responses, mean_luminance], dim=1)
 
     def _gen_spatial_masks(self, n_angles=4):
         r"""Generate spatial masks.
@@ -279,18 +347,19 @@ class PooledVentralStream(nn.Module):
                 the floating point parameters and buffers in this module
             tensor (torch.Tensor): Tensor whose dtype and device are the desired
                 dtype and device for all parameters and buffers in this module
+            do_windows (:class: `bool`): whether to also call
+                `self.PoolingWindows.to()` with the specified args and kwargs.
 
-        Returns:
-            Module: self
         """
+        self.complex_steerable_pyramid.to(*args, **kwargs)
         if do_windows:
             self.PoolingWindows.to(*args, **kwargs)
         for k, v in self._spatial_masks.items():
             self._spatial_masks[k] = v.to(*args, **kwargs)
         nn.Module.to(self, *args, **kwargs)
-        return self
 
-    def plot_windows(self, ax=None, contour_levels=None, colors='r', subset=True, **kwargs):
+    def plot_windows(self, ax=None, contour_levels=None, colors='r',
+                     subset=True, **kwargs):
         r"""Plot the pooling windows on an image.
 
         This is just a simple little helper to plot the pooling windows
@@ -648,281 +717,6 @@ class PooledVentralStream(nn.Module):
             sc = update_stem(ax.containers[0], d)
             stem_artists.extend([sc.markerline, sc.stemlines])
         return stem_artists
-
-
-class ObserverModel(PooledVentralStream):
-    r"""Observer model based on an pooled energy model of V1.
-
-    This just models V1 as containing complex cells and a representation
-    of the mean luminance. For the complex cells, we take the outputs of
-    the complex steerable pyramid and takes the complex modulus of them
-    (that is, squares, sums, and takes the square root across the real
-    and imaginary parts; this is a phase-invariant measure of the local
-    magnitude). The mean luminance representation is the same as that
-    computed by the PooledRGC model.
-
-    Note that we will calculate the minimum eccentricity at which the
-    area of the windows at half-max exceeds one pixel (based on
-    ``scaling``, ``img_res`` and ``max_eccentricity``) and, if
-    ``min_eccentricity`` is below that, will throw an Exception.
-
-    We will calculate the minimum eccentricity at which the area of the
-    windows at half-max exceeds one pixel at each scale. For scales
-    beyond the first however, we will not throw an Exception if this
-    value is below ``min_eccentricity``. We instead print a warning to
-    alert the user and use this value as ``min_eccentricity`` when
-    creating the plots. In order to see what this value was, see
-    ``self.calculated_min_eccentricity_degrees``
-
-    We can optionally cache the windows tensor we create, if
-    ``cache_dir`` is not None. In that case, we'll also check to see if
-    appropriate cached windows exist before creating them and load them
-    if they do. The path we'll use is
-    ``{cache_dir}/scaling-{scaling}_size-{img_res}_e0-{min_eccentricity}_
-    em-{max_eccentricity}_w-1_gaussian.pt``. We'll cache
-    each scale separately, changing the img_res (and potentially
-    min_eccentricity) values in that save path appropriately.
-
-    NOTE: that we're assuming the input to this model contains values
-    proportional to photon counts; thus, it should be a raw image or
-    other linearized / "de-gamma-ed" image (all images meant to be
-    displayed on a standard display will have been gamma-corrected,
-    which involves raising their values to a power, typically 1/2.2).
-
-    Parameters
-    ----------
-    scaling : float
-        Scaling parameter that governs the size of the pooling windows.
-    img_res : tuple
-        The resolution of our image (should therefore contains
-        integers). Will use this to generate appropriately sized pooling
-        windows.
-    num_scales : int, optional
-        The number of scales (spatial frequency bands) in the steerable
-        pyramid we use to build the V1 representation
-    order : int, optional
-        The Gaussian derivative order used for the steerable
-        filters. Default value is 3.  Note that to achieve steerability
-        the minimum number of orientation is ``order`` + 1, and is used
-        here (that's currently all we support, though could extend
-        fairly simply)
-    min_eccentricity : float, optional
-        The eccentricity at which the pooling windows start.
-    max_eccentricity : float, optional
-        The eccentricity at which the pooling windows end.
-    cache_dir : str or None, optional
-        The directory to cache the windows tensor in. If set, we'll look
-        there for cached versions of the windows we create, load them if
-        they exist and create and cache them if they don't. If None, we
-        don't check for or cache the windows.
-
-    Attributes
-    ----------
-    scaling : float
-        Scaling parameter that governs the size of the pooling windows.
-    num_scales : int, optional
-        The number of scales (spatial frequency bands) in the steerable
-        pyramid we use to build the V1 representation
-    order : int, optional
-        The Gaussian derivative order used for the steerable
-        filters. Default value is 3.  Note that to achieve steerability
-        the minimum number of orientation is ``order`` + 1, and is used
-        here (that's currently all we support, though could extend
-        fairly simply)
-    min_eccentricity : float
-        The eccentricity at which the pooling windows start.
-    max_eccentricity : float
-        The eccentricity at which the pooling windows end.
-    state_dict_reduced : dict
-        A dictionary containing those attributes necessary to initialize
-        the model, plus a 'model_name' field which the ``load_reduced``
-        method uses to determine which model constructor to call. This
-        is used for saving/loading the models, since we don't want to
-        keep the (very large) representation and intermediate steps
-        around. To save, use ``self.save_reduced(filename)``, and then
-        load from that same file using the class method
-        ``po.simul.PooledVentralStream.load_reduced(filename)``
-    window_width_degrees : dict
-        Dictionary containing the widths of the windows in
-        degrees. There are four keys: 'radial_top', 'radial_full',
-        'angular_top', and 'angular_full', corresponding to a 2x2 for
-        the widths in the radial and angular directions by the 'top' and
-        'full' widths (top is the width of the flat-top region of each
-        window, where the window's value is 1; full is the width of the
-        entire window). Each value is a list containing the widths for
-        the windows in different eccentricity bands. To visualize these,
-        see the ``plot_window_sizes`` method.
-    window_width_pixels : list
-        List of dictionaries containing the widths of the windows in
-        pixels; each entry in the list corresponds to the widths for a
-        different scale, as in ``windows``. See above for explanation of
-        the dictionaries. To visualize these, see the
-        ``plot_window_sizes`` method.
-    n_polar_windows : int
-        The number of windows we have in the polar angle dimension
-        (within each eccentricity band)
-    n_eccentricity_bands : int
-        The number of eccentricity bands in our model
-    calculated_min_eccentricity_degrees : list
-        List of floats (one for each scale) that contain
-        ``calc_min_eccentricity()[0]``, that is, the minimum
-        eccentricity (in degrees) where the area of the window at
-        half-max exceeds one pixel (based on the scaling, size of the
-        image in pixels and in degrees).
-    calculated_min_eccentricity_pixels : list
-        List of floats (one for each scale) that contain
-        ``calc_min_eccentricity()[1]``, that is, the minimum
-        eccentricity (in pixels) where the area of the window at
-        half-max exceeds one pixel (based on the scaling, size of the
-        image in pixels and in degrees).
-    central_eccentricity_degrees : np.ndarray
-        A 1d array with shape ``(self.n_eccentricity_bands,)``, each
-        value gives the eccentricity of the center of each eccentricity
-        band of windows (in degrees).
-    central_eccentricity_pixels : list
-        List of 1d arrays (one for each scale), each with shape
-        ``(self.n_eccentricity_bands,)``, each value gives the
-        eccentricity of the center of each eccentricity band of windows
-        (in degrees).
-    window_approx_area_degrees : dict
-        Dictionary containing the approximate areas of the windows, in
-        degrees. There are three keys: 'top', 'half', and 'full',
-        corresponding to which width we used to calculate the area (top
-        is the width of the flat-top region of each window, where the
-        window's value is 1; full is the width of the entire window;
-        half is the width at half-max). To get this approximate area, we
-        multiply the radial and angular widths against each other and
-        then by pi/4 to get the area of the regular ellipse that has
-        those widths (our windows are elongated, so this is probably an
-        under-estimate). To visualize these, see the
-        ``plot_window_areas`` method
-    window_approx_area_pixels : list
-        List of dictionaries containing the approximate areasof the
-        windows in pixels; each entry in the list corresponds to the
-        areas for a different scale, as in ``windows``. See above for
-        explanation of the dictionaries. To visualize these, see the
-        ``plot_window_areas`` method.
-    deg_to_pix : list
-        List of floats containing the degree-to-pixel conversion factor
-        at each scale
-    cache_dir : str or None
-        If str, this is the directory where we cached / looked for
-        cached windows tensors
-    cached_paths : list
-        List of strings, one per scale, that we either saved or loaded
-        the cached windows tensors from
-    scales : list
-        List of the scales in the model, from fine to coarse. Used for
-        synthesizing in coarse-to-fine order
-
-    """
-
-    def __init__(self, scaling, img_res, num_scales=4, order=3, min_eccentricity=.5,
-                 max_eccentricity=15, cache_dir=None):
-        super().__init__(scaling, img_res, min_eccentricity, max_eccentricity,
-                         num_scales,
-                         cache_dir=cache_dir)
-        self.state_dict_reduced.update({'order': order, 'model_name': 'ObserverModel',
-                                        'num_scales': num_scales})
-        self.num_scales = num_scales
-        self.order = order
-        self.complex_steerable_pyramid = po.simul.Steerable_Pyramid_Freq(img_res, self.num_scales,
-                                                                         self.order, is_complex=True,
-                                                                         downsample=False, tight_frame=True)
-        self.scales = ['mean_luminance'] + list(range(num_scales))[::-1]
-
-    def to(self, *args, do_windows=True, **kwargs):
-        r"""Moves and/or casts the parameters and buffers.
-
-        This can be called as
-
-        .. function:: to(device=None, dtype=None, non_blocking=False)
-
-        .. function:: to(dtype, non_blocking=False)
-
-        .. function:: to(tensor, non_blocking=False)
-
-        Its signature is similar to :meth:`torch.Tensor.to`, but only accepts
-        floating point desired :attr:`dtype` s. In addition, this method will
-        only cast the floating point parameters and buffers to :attr:`dtype`
-        (if given). The integral parameters and buffers will be moved
-        :attr:`device`, if that is given, but with dtypes unchanged. When
-        :attr:`non_blocking` is set, it tries to convert/move asynchronously
-        with respect to the host if possible, e.g., moving CPU Tensors with
-        pinned memory to CUDA devices.
-
-        See below for examples.
-
-        .. note::
-            This method modifies the module in-place.
-
-        Args:
-            device (:class:`torch.device`): the desired device of the parameters
-                and buffers in this module
-            dtype (:class:`torch.dtype`): the desired floating point type of
-                the floating point parameters and buffers in this module
-            tensor (torch.Tensor): Tensor whose dtype and device are the desired
-                dtype and device for all parameters and buffers in this module
-
-        Returns:
-            Module: self
-        """
-        self.complex_steerable_pyramid.to(*args, **kwargs)
-        super(self.__class__, self).to(do_windows=do_windows, *args, **kwargs)
-        return self
-
-    def forward(self, image, scales=[]):
-        r"""Generate the V1 representation of an image.
-
-        Parameters
-        ----------
-        image : torch.Tensor
-            A tensor containing the image to analyze. We want to operate
-            on this in the pytorch-y way, so we want it to be 4d (batch,
-            channel, height, width). If it has fewer than 4 dimensions,
-            we will unsqueeze it until its 4d
-        scales : list, optional
-            Which scales to include in the returned representation. If an empty
-            list (the default), we include all scales. Otherwise, can contain
-            subset of values present in this model's ``scales`` attribute (ints
-            up to self.num_scales-1, the str 'mean_luminance'). Can contain a
-            single value or multiple values. If it's an int or float, we
-            include all orientations from that scale.
-
-        Returns
-        -------
-        representation : torch.Tensor
-            A 3d tensor containing the averages of the
-            'complex cell responses', that is, the squared and summed
-            outputs of the complex steerable pyramid.
-
-        """
-        while image.ndimension() < 4:
-            image = image.unsqueeze(0)
-        if image.shape[1] != 1:
-            raise Exception("Haven't thought about how to handle images with"
-                            " more than 1 channel!")
-        if not scales:
-            scales = self.scales
-        # initialize these with empty tensors so that torch.cat runs
-        # successfully even if they don't get updated.
-        mean_complex_cell_responses = torch.tensor([])
-        mean_luminance = torch.tensor([])
-        if any([i in self.complex_steerable_pyramid.scales for i in scales]):
-            # because self.scales never includes residual_highpass and
-            # residual_lowpass, we never have the residuals in pyr_coeffs.
-            pyr_coeffs = self.complex_steerable_pyramid(image, scales)
-            complex_cell_responses, pyr_info = self.complex_steerable_pyramid.convert_pyr_to_tensor(pyr_coeffs)
-            self._pyr_info = pyr_info
-            # to get the energy, we just square and take the absolute value
-            # (since this is a complex tensor, this is equivalent to summing
-            # across the real and imaginary components). the if statement
-            # avoids the residuals
-            complex_cell_responses = complex_cell_responses.pow(2).abs()
-            mean_complex_cell_responses = self.PoolingWindows(complex_cell_responses)
-        if 'mean_luminance' in scales:
-            mean_luminance = self.PoolingWindows(image)
-        return torch.cat([mean_complex_cell_responses, mean_luminance], dim=1)
 
     def _plot_helper(self, n_rows, n_cols, figsize=(25, 15),
                      ax=None, title=None, batch_idx=0):
