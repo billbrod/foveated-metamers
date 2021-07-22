@@ -615,13 +615,16 @@ def get_windows(wildcards):
         # then there was no wildcards.max/min_ecc, so grab the default values
         min_ecc = config['DEFAULT_METAMERS']['min_ecc']
         max_ecc = config['DEFAULT_METAMERS']['max_ecc']
+    t_width = 1.0
     if 'cosine' in wildcards.model_name:
         window_type = 'cosine'
-        t_width = 1.0
     elif 'gaussian' in wildcards.model_name:
         window_type = 'gaussian'
-        t_width = 1.0
-    if wildcards.model_name.startswith("RGC"):
+    elif wildcards.model_name.startswith('Observer'):
+        window_type = 'gaussian'
+    if wildcards.model_name.startswith("RGC") or wildcards.model_name.startswith('Observer'):
+        # Observer and RGC model both only need a single scale of
+        # PoolingWindows.
         size = ','.join([str(i) for i in im_shape])
         return window_template.format(scaling=wildcards.scaling, size=size,
                                       max_ecc=max_ecc, t_width=t_width,
@@ -721,7 +724,11 @@ rule create_metamers:
     params:
         rusty_mem = lambda wildcards: get_mem_estimate(wildcards, 'rusty'),
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
-        time = lambda wildcards: {'V1': '12:00:00', 'RGC': '7-00:00:00'}[wildcards.model_name.split('_')[0]],
+        # if we can use a GPU, synthesis doesn't take very long. If we can't,
+        # it takes forever (7 days is probably not enough, but it's the most I
+        # can request on the cluster -- will then need to manually ask for more
+        # time).
+        time = lambda wildcards: {1: '12:00:00', 0: '7-00:00:00'}[int(wildcards.gpu)],
         rusty_partition = lambda wildcards: get_partition(wildcards, 'rusty'),
         rusty_constraint = lambda wildcards: get_constraint(wildcards, 'rusty'),
     run:

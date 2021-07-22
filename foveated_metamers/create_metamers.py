@@ -16,6 +16,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
 from skimage import color
+from .observer_model import ObserverModel
 from .utils import convert_im_to_float, convert_im_to_int
 # by default matplotlib uses the TK gui toolkit which can cause problems
 # when I'm trying to render an image into a file, see
@@ -123,7 +124,7 @@ def find_figsizes(model_name, model, image_shape):
         # image_shape's last two indices are (height, width), while
         # figsize is (width, height)
         default_imgsize = np.array((256, (image_shape[-1] / image_shape[-2]) * 256))
-    elif model_name.startswith('V1'):
+    elif model_name.startswith('V1') or model_name.startswith('Observer'):
         try:
             num_scales = int(re.findall('_s([0-9]+)_', model_name)[0])
         except (IndexError, ValueError):
@@ -311,6 +312,17 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
                              num_scales=num_scales,
                              window_type=window_type,
                              moments=moments)
+    elif model_name.startswith('Observer'):
+        try:
+            num_scales = int(re.findall('_s([0-9]+)_', model_name)[0])
+        except (IndexError, ValueError):
+            num_scales = 4
+        model = ObserverModel(scaling, image.shape[-2:],
+                              min_eccentricity=min_ecc,
+                              max_eccentricity=max_ecc,
+                              cache_dir=cache_dir,
+                              num_scales=num_scales,
+                              mode='synthesis')
     else:
         raise Exception("Don't know how to handle model_name %s" % model_name)
     animate_figsize, rep_image_figsize, img_zoom = find_figsizes(model_name, model,
@@ -342,8 +354,15 @@ def add_center_to_image(model, image, reference_image):
         ``image`` with the reference image center added back in
 
     """
-    model(image)
-    rep = model.representation['mean_luminance']
+    rep = model(image)
+    try:
+        rep = model.representation['mean_luminance']
+    # ObserverModel doesn't have a representation attribute, but splits the
+    # different parts of representation across channels -- the last one is the
+    # mean_luminance channel
+    except AttributeError:
+        # we unsqueeze to make sure its 3d for project
+        rep = rep[:, -1].unsqueeze(1)
     dummy_ones = torch.ones_like(rep)
     windows = model.PoolingWindows.project(dummy_ones).squeeze().to(image.device)
     # these aren't exactly zero, so we can't convert it to boolean
@@ -386,7 +405,7 @@ def summary_plots(metamer, rep_image_figsize, img_zoom):
     """
     rep_fig, axes = plt.subplots(3, 1, figsize=rep_image_figsize)
     titles = ['Reference image |', 'Metamer |', 'Error |']
-    if metamer.model.normalize_dict:
+    if hasattr(metamer.model, 'normalize_dict') and metamer.model.normalize_dict:
         # then we've z-scored the statistics and so they can be
         # negative. thus we want to use a symmetric colormap
         vranges = ['indep0', 'indep0', 'indep0']

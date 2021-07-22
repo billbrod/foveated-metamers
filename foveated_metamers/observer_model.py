@@ -90,6 +90,13 @@ class ObserverModel(nn.Module):
         there for cached versions of the windows we create, load them if
         they exist and create and cache them if they don't. If None, we
         don't check for or cache the windows.
+    mode : {'distance', 'synthesis'}, optional
+        Whether to use this model for computing perceptual distance or for
+        synthesizing images. If the latter, the representation will be slightly
+        different so as to make it roughly equivalent to the PooledV1 model (in
+        particular, the steerable pyramid is not tight_frame and mean_luminance
+        is divided by 10*(order+1) so that all portions of the representation
+        are roughly equivalent in magnitude).
 
     Attributes
     ----------
@@ -193,7 +200,8 @@ class ObserverModel(nn.Module):
     """
 
     def __init__(self, scaling, img_res, num_scales=4, order=3,
-                 min_eccentricity=.5, max_eccentricity=15, cache_dir=None):
+                 min_eccentricity=.5, max_eccentricity=15, cache_dir=None,
+                 mode='distance'):
         super().__init__()
         self.PoolingWindows = PoolingWindows(scaling, img_res,
                                              min_eccentricity,
@@ -226,8 +234,11 @@ class ObserverModel(nn.Module):
         self.order = order
         self.complex_steerable_pyramid = po.simul.Steerable_Pyramid_Freq(
             img_res, self.num_scales, self.order, is_complex=True,
-            downsample=False, tight_frame=True)
+            downsample=False, tight_frame=False if mode == 'synthesis' else True)
         self.scales = ['mean_luminance'] + list(range(num_scales))[::-1]
+        if mode not in ['synthesis', 'distance']:
+            raise Exception(f"Don't know how to handle mode {mode}!")
+        self.mode = mode
 
     def forward(self, image, scales=[]):
         r"""Generate the V1 representation of an image.
@@ -280,6 +291,10 @@ class ObserverModel(nn.Module):
             mean_complex_cell_responses = self.PoolingWindows(complex_cell_responses)
         if 'mean_luminance' in scales:
             mean_luminance = self.PoolingWindows(image)
+            # this is necessary for synthesis, to make its magnitude
+            # approximately the same as the pyramid coefficients.
+            if self.mode == 'synthesis':
+                mean_luminance = mean_luminance / (10 * (self.order+1))
         return torch.cat([mean_complex_cell_responses, mean_luminance], dim=1)
 
     def _gen_spatial_masks(self, n_angles=4):
@@ -357,6 +372,7 @@ class ObserverModel(nn.Module):
         for k, v in self._spatial_masks.items():
             self._spatial_masks[k] = v.to(*args, **kwargs)
         nn.Module.to(self, *args, **kwargs)
+        return self
 
     def plot_windows(self, ax=None, contour_levels=None, colors='r',
                      subset=True, **kwargs):
@@ -712,7 +728,7 @@ class ObserverModel(nn.Module):
         """
         stem_artists = []
         axes = [ax for ax in axes if len(ax.containers) == 1]
-        data = data[batch_idx]
+        data = po.to_numpy(data[batch_idx])
         for ax, d in zip(axes, data):
             sc = update_stem(ax.containers[0], d)
             stem_artists.extend([sc.markerline, sc.stemlines])
@@ -926,7 +942,8 @@ class ObserverModel(nn.Module):
         axes.append(ax)
         titles.append(self._get_title(title_list, len(self.scales)-1, 'mean_luminance'))
         imgs.append(data[-1])
-        vrange, cmap = pt.tools.display.colormap_range(imgs, vrange)
+        vrange, cmap = pt.tools.display.colormap_range([po.to_numpy(i) for i in imgs],
+                                                       vrange)
         for ax, img, t, vr in zip(axes, imgs, titles, vrange):
             po.imshow(img.unsqueeze(0).unsqueeze(0), ax=ax, vrange=vr,
                       cmap=cmap, title=t, zoom=zoom)
