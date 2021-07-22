@@ -274,9 +274,13 @@ class ObserverModel(nn.Module):
         if not scales:
             scales = self.scales
         # initialize these with empty tensors so that torch.cat runs
-        # successfully even if they don't get updated.
-        mean_complex_cell_responses = torch.tensor([])
-        mean_luminance = torch.tensor([])
+        # successfully even if they don't get updated. Need to manually set
+        # device and dtype to make sure we don't have any issues combining
+        # them.
+        mean_complex_cell_responses = torch.tensor([], device=image.device,
+                                                   dtype= image.dtype)
+        mean_luminance = torch.tensor([], device=image.device,
+                                      dtype=image.dtype)
         if any([i in self.complex_steerable_pyramid.scales for i in scales]):
             # because self.scales never includes residual_highpass and
             # residual_lowpass, we never have the residuals in pyr_coeffs.
