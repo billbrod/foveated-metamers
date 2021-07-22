@@ -464,7 +464,7 @@ def get_mem_estimate(wildcards, partition=None):
                         mem = 128
                     else:
                         mem = 64
-                if 'RGC' in wildcards.model_name:
+                elif 'RGC' in wildcards.model_name:
                     # this is an approximation of the size of their windows,
                     # and if you have at least 3 times this memory, you're
                     # good. double-check this value -- the 1.36 is for
@@ -475,16 +475,22 @@ def get_mem_estimate(wildcards, partition=None):
                     # running out of memory for larger scaling values, so let's
                     # never request less than 32 GB
                     mem = max(mem, 32)
-            if 'cosine' in wildcards.model_name:
+            elif 'cosine' in wildcards.model_name:
                 if 'V1' in wildcards.model_name:
                     # most it will need is 32 GB
                     mem = 32
-                if 'RGC' in wildcards.model_name:
+                elif 'RGC' in wildcards.model_name:
                     # this is an approximation of the size of their windows,
                     # and if you have at least 3 times this memory, you're
                     # good
                     window_size = 0.49238059 / float(wildcards.scaling)
                     mem = int(5 * window_size)
+            else:
+                # then this is the ObserverModel and should use same memory
+                # estimates as RGC
+                window_size = 1.17430726 / (1.36*float(wildcards.scaling))
+                mem = int(5 * window_size)
+                mem = max(mem, 32)
         else:
             # don't have a good estimate for these
             mem = 16
