@@ -486,11 +486,14 @@ def get_mem_estimate(wildcards, partition=None):
                     window_size = 0.49238059 / float(wildcards.scaling)
                     mem = int(5 * window_size)
             else:
-                # then this is the ObserverModel and should use same memory
-                # estimates as RGC
-                window_size = 1.17430726 / (1.36*float(wildcards.scaling))
-                mem = int(5 * window_size)
-                mem = max(mem, 32)
+                # then this is the ObserverModel and we'll use V1's estimates.
+                # It shouldn't need as much memory as V1 (because V1 has
+                # multiple scales of windows, while ObserverModel only has
+                # one), but memory is cheap, so may as well be safe.
+                if float(wildcards.scaling) < .1:
+                    mem = 128
+                else:
+                    mem = 64
         else:
             # don't have a good estimate for these
             mem = 16
