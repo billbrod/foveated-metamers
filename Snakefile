@@ -485,15 +485,6 @@ def get_mem_estimate(wildcards, partition=None):
                     # good
                     window_size = 0.49238059 / float(wildcards.scaling)
                     mem = int(5 * window_size)
-            else:
-                # then this is the ObserverModel and we'll use V1's estimates.
-                # It shouldn't need as much memory as V1 (because V1 has
-                # multiple scales of windows, while ObserverModel only has
-                # one), but memory is cheap, so may as well be safe.
-                if float(wildcards.scaling) < .1:
-                    mem = 128
-                else:
-                    mem = 64
         else:
             # don't have a good estimate for these
             mem = 16
@@ -629,11 +620,8 @@ def get_windows(wildcards):
         window_type = 'cosine'
     elif 'gaussian' in wildcards.model_name:
         window_type = 'gaussian'
-    elif wildcards.model_name.startswith('Observer'):
-        window_type = 'gaussian'
-    if wildcards.model_name.startswith("RGC") or wildcards.model_name.startswith('Observer'):
-        # Observer and RGC model both only need a single scale of
-        # PoolingWindows.
+    if wildcards.model_name.startswith("RGC"):
+        # RGC model only needs a single scale of PoolingWindows.
         size = ','.join([str(i) for i in im_shape])
         return window_template.format(scaling=wildcards.scaling, size=size,
                                       max_ecc=max_ecc, t_width=t_width,
