@@ -2,15 +2,11 @@
 
 This started with the PooledV1 model (found in extra_packages/plenoptic_part in
 this repo and used to synthesize the model metamers used in this experiment).
-This model was then changed to use the not-downsampled and tightframe version
-of the steerable pyramid, in order to remove the necessity of the normalizing
-across spatial scales. This entailed a bit of restructuring, so that this
-should be functionally the same as PooledV1 in what it computes, interacting
-with it is a bit different. This should hopefully be simpler, with unnecessary
-options removed.
 
-We then added on extra bells and whistles in order to
-improve the predictive ability of the observer model.
+This model was then cleaned up a bit to make adding the extensions to improve
+its predictive ability a bit cleaner, removing unnecessary code and
+streamlining it. We then added on extra bells and whistles in order to improve
+the predictive ability of the observer model.
 
 """
 import torch
@@ -22,6 +18,7 @@ from torch import nn
 import plenoptic as po
 import sys
 import os.path as op
+import itertools
 sys.path.append(op.join(op.dirname(op.realpath(__file__)), '..',
                         'extra-packages', 'pooling-windows'))
 from pooling import PoolingWindows
@@ -90,13 +87,6 @@ class ObserverModel(nn.Module):
         there for cached versions of the windows we create, load them if
         they exist and create and cache them if they don't. If None, we
         don't check for or cache the windows.
-    mode : {'distance', 'synthesis'}, optional
-        Whether to use this model for computing perceptual distance or for
-        synthesizing images. If the latter, the representation will be slightly
-        different so as to make it roughly equivalent to the PooledV1 model (in
-        particular, the steerable pyramid is not tight_frame and mean_luminance
-        is divided by 10*(order+1) so that all portions of the representation
-        are roughly equivalent in magnitude).
 
     Attributes
     ----------
@@ -200,15 +190,12 @@ class ObserverModel(nn.Module):
     """
 
     def __init__(self, scaling, img_res, num_scales=4, order=3,
-                 min_eccentricity=.5, max_eccentricity=15, cache_dir=None,
-                 mode='distance'):
+                 min_eccentricity=.5, max_eccentricity=15, cache_dir=None):
         super().__init__()
         self.PoolingWindows = PoolingWindows(scaling, img_res,
                                              min_eccentricity,
-                                             # we always want 1 scale for
-                                             # pooling windows, because we use
-                                             # the not-downsampled pyramid
-                                             max_eccentricity, num_scales=1,
+                                             max_eccentricity,
+                                             num_scales=num_scales,
                                              cache_dir=cache_dir,
                                              window_type='gaussian',
                                              std_dev=1)
@@ -234,11 +221,16 @@ class ObserverModel(nn.Module):
         self.order = order
         self.complex_steerable_pyramid = po.simul.Steerable_Pyramid_Freq(
             img_res, self.num_scales, self.order, is_complex=True,
-            downsample=False, tight_frame=False if mode == 'synthesis' else True)
+            downsample=True, tight_frame=False)
         self.scales = ['mean_luminance'] + list(range(num_scales))[::-1]
-        if mode not in ['synthesis', 'distance']:
-            raise Exception(f"Don't know how to handle mode {mode}!")
-        self.mode = mode
+        self._n_windows = {}
+        for i in range(num_scales):
+            n_windows = (self.PoolingWindows.angle_windows[i].shape[0] *
+                         self.PoolingWindows.ecc_windows[i].shape[0])
+            for j in range(order+1):
+                self._n_windows[(i, j)] = n_windows
+        self._n_windows['mean_luminance'] = (self.PoolingWindows.angle_windows[0].shape[0] *
+                                             self.PoolingWindows.ecc_windows[0].shape[0])
 
     def forward(self, image, scales=[]):
         r"""Generate the V1 representation of an image.
@@ -248,8 +240,7 @@ class ObserverModel(nn.Module):
         image : torch.Tensor
             A tensor containing the image to analyze. We want to operate
             on this in the pytorch-y way, so we want it to be 4d (batch,
-            channel, height, width). If it has fewer than 4 dimensions,
-            we will unsqueeze it until its 4d
+            channel, height, width).
         scales : list, optional
             Which scales to include in the returned representation. If an empty
             list (the default), we include all scales. Otherwise, can contain
@@ -266,40 +257,24 @@ class ObserverModel(nn.Module):
             outputs of the complex steerable pyramid.
 
         """
-        while image.ndimension() < 4:
-            image = image.unsqueeze(0)
         if image.shape[1] != 1:
             raise Exception("Haven't thought about how to handle images with"
                             " more than 1 channel!")
         if not scales:
             scales = self.scales
-        # initialize these with empty tensors so that torch.cat runs
-        # successfully even if they don't get updated. Need to manually set
-        # device and dtype to make sure we don't have any issues combining
-        # them.
-        mean_complex_cell_responses = torch.tensor([], device=image.device,
-                                                   dtype= image.dtype)
-        mean_luminance = torch.tensor([], device=image.device,
-                                      dtype=image.dtype)
+        representation = {}
         if any([i in self.complex_steerable_pyramid.scales for i in scales]):
             # because self.scales never includes residual_highpass and
             # residual_lowpass, we never have the residuals in pyr_coeffs.
             pyr_coeffs = self.complex_steerable_pyramid(image, scales)
-            complex_cell_responses, pyr_info = self.complex_steerable_pyramid.convert_pyr_to_tensor(pyr_coeffs)
-            self._pyr_info = pyr_info
             # to get the energy, we just square and take the absolute value
             # (since this is a complex tensor, this is equivalent to summing
-            # across the real and imaginary components). the if statement
-            # avoids the residuals
-            complex_cell_responses = complex_cell_responses.pow(2).abs()
-            mean_complex_cell_responses = self.PoolingWindows(complex_cell_responses)
+            # across the real and imaginary components).
+            representation = self.PoolingWindows({k: v.pow(2).abs()
+                                                  for k, v in pyr_coeffs.items()})
         if 'mean_luminance' in scales:
-            mean_luminance = self.PoolingWindows(image)
-            # this is necessary for synthesis, to make its magnitude
-            # approximately the same as the pyramid coefficients.
-            if self.mode == 'synthesis':
-                mean_luminance = mean_luminance / (10 * (self.order+1))
-        return torch.cat([mean_complex_cell_responses, mean_luminance], dim=1)
+            representation['mean_luminance'] = self.PoolingWindows(image)
+        return torch.cat(list(representation.values()), dim=-1)
 
     def _gen_spatial_masks(self, n_angles=4):
         r"""Generate spatial masks.
@@ -325,13 +300,14 @@ class ObserverModel(nn.Module):
 
         """
         masks = {}
-        ecc = torch.ones_like(self.PoolingWindows.ecc_windows[0], dtype=int)
-        angles = torch.zeros_like(self.PoolingWindows.angle_windows[0], dtype=int)
-        for j in range(n_angles):
-            angles[j*angles.shape[0]//4:(j+1)*angles.shape[0]//4] = j
-        windows = torch.einsum('ahw,ehw->ea', angles, ecc)
-        for j, val in enumerate(sorted(windows.unique())):
-            masks[f'region_{j}'] = (windows == val).flatten()
+        for i in range(self.num_scales):
+            ecc = torch.ones_like(self.PoolingWindows.ecc_windows[0], dtype=int)
+            angles = torch.zeros_like(self.PoolingWindows.angle_windows[0], dtype=int)
+            for j in range(n_angles):
+                angles[j*angles.shape[0]//4:(j+1)*angles.shape[0]//4] = j
+            windows = torch.einsum('ahw,ehw->ea', angles, ecc)
+            for j, val in enumerate(sorted(windows.unique())):
+                masks[(i, f'region_{j}')] = (windows == val).flatten()
         return masks
 
     def to(self, *args, do_windows=True, **kwargs):
@@ -574,6 +550,43 @@ class ObserverModel(nn.Module):
         else:
             raise Exception("Don't know how to handle model_name %s!" % model_name)
 
+    def output_to_representation(self, data, scales=[]):
+        r"""Convert output to representation.
+
+        This takes data that looks like the output from the ``forward()`` call
+        (a big 3d tensor) and returns a dictionary whose keys are
+        ``"mean_luminance"`` and ``(scale, orientation)`` tuples).
+
+        Parameters
+        ----------
+        data : torch.Tensor
+            The data to convert. Should look like the value returned by
+            this model's forward call (i.e., a 3d tensor).
+        scales : list, optional
+            Which scales are included in ``data``. See the docstring of
+            ``forward()`` for more details.
+
+        Returns
+        -------
+        representation : dict
+            Dictionary of 3d tensors, with keys descried above.
+
+        """
+        if not scales:
+            scales = self.scales
+        data_dict = {}
+        idx = 0
+        for k, n_win in self._n_windows.items():
+            if k not in scales and k[0] not in scales:
+                continue
+            data_dict[k] = data[:, :, idx:idx+n_win]
+            idx += n_win
+        if idx != data.shape[-1]:
+            raise Exception("scales argument was incorrect --  there was "
+                            "a mismatch between the number of elements in "
+                            "`data` and the number we put into the dictionary!")
+        return data_dict
+
     def summarize_representation(self, data, summary_func='mse', by_angle=False):
         r"""Summarize representation by key and (optionally) quadrant.
 
@@ -612,28 +625,36 @@ class ObserverModel(nn.Module):
             corresponding summarized representation
 
         """
+        data_shape = data.shape[:-1]
+        data = self.output_to_representation(data)
         if not self._spatial_masks and by_angle:
             self._spatial_masks = self._gen_spatial_masks()
         if summary_func == 'mse':
             summary_func = lambda x: torch.pow(x, 2).mean()
         elif summary_func == 'l2':
             summary_func = lambda x: torch.norm(x, 2)
+        keys = ['mean_luminance'] + [(i, j) for i, j in
+                                     itertools.product(range(self.num_scales),
+                                                       range(self.order+1))]
         if by_angle:
-            keys = [f'region_{i}' for i in range(4)]
-        else:
-            keys = ['whole_image']
+            keys = [(k, f'region_{i}') for i in range(4) for k in keys]
         # This is slightly complicated because summary_func takes a tensor and
         # returns a scalar -- if we could also pass a dim arg, this would be
         # simpler, but we don't want to restrict ourselves that way.
-        summarized = {k: torch.empty(data.shape[:-1]) for k in keys}
-        for i, batch_d in enumerate(data):
-            for j, channel_d in enumerate(batch_d):
-                if by_angle:
-                    for k in range(4):
-                        mask = self._spatial_masks[f'region_{k}']
-                        summarized[f'region_{k}'][i, j] = summary_func(channel_d[mask]).item()
-                else:
-                    summarized['whole_image'][i, j] = summary_func(channel_d).item()
+        summarized = {k: torch.empty(data_shape) for k in keys}
+        for k, v in data.items():
+            if isinstance(k, str):
+                mask_k = 0
+            else:
+                mask_k = k[0]
+            for i, batch_d in enumerate(v):
+                for j, channel_d in enumerate(batch_d):
+                    if by_angle:
+                        for ang in range(4):
+                            mask = self._spatial_masks[(mask_k, f'region_{ang}')]
+                            summarized[(k, f'region_{ang}')][i, j] = summary_func(channel_d[mask]).item()
+                    else:
+                        summarized[k][i, j] = summary_func(channel_d).item()
         return summarized
 
     @classmethod
@@ -685,6 +706,31 @@ class ObserverModel(nn.Module):
             title = default_title
         return title
 
+    def _representation_for_plotting(self, data, batch_idx=0):
+        """Transform representation for plotting.
+
+        Convert the 3d tensor output to a dictionary of 1d arrays containing
+        responses for a single batch_idx. Keys are ``'mean_luminance'`` and
+        ``(scale, orientation)`` tuples.
+
+        Parameters
+        ----------
+        data : torch.Tensor
+            The data to convert. Should look like the output, with the exact
+            same structure
+        batch_idx : int, optional
+            Which index to take from the batch dimension
+
+        Returns
+        -------
+        representation_to_plot : dict
+            Dictionary of 1d arrays, with keys descried above.
+
+        """
+        data = self.output_to_representation(data)
+        return {k: po.to_numpy(v[batch_idx]).flatten()
+                for k, v in data.items()}
+
     def update_plot(self, axes, data, batch_idx=0):
         r"""Update the information in our representation plot.
 
@@ -732,8 +778,8 @@ class ObserverModel(nn.Module):
         """
         stem_artists = []
         axes = [ax for ax in axes if len(ax.containers) == 1]
-        data = po.to_numpy(data[batch_idx])
-        for ax, d in zip(axes, data):
+        data = self._representation_for_plotting(data, batch_idx)
+        for ax, d in zip(axes, data.values()):
             sc = update_stem(ax.containers[0], d)
             stem_artists.extend([sc.markerline, sc.stemlines])
         return stem_artists
@@ -853,20 +899,21 @@ class ObserverModel(nn.Module):
         fig, gs, title_list = self._plot_helper(2*n_rows, 2*n_cols, figsize,
                                                 ax, title, batch_idx)
         axes = []
-        for i, d in enumerate(po.to_numpy(data[batch_idx])):
+        data = self._representation_for_plotting(data, batch_idx)
+        for i, (k, v) in enumerate(data.items()):
             scale = i // (self.order+1)
             band = i % (self.order+1)
             if scale < self.num_scales:
-                t = self._get_title(title_list, i, f"scale {scale}, band {band}")
+                t = self._get_title(title_list, i, "scale {}, band {}".format(*k))
                 ax = fig.add_subplot(gs[int(2*band):int(2*(band+1)), int(col_multiplier*scale):
                                         int(col_multiplier*(scale+col_offset))])
-                ax = clean_stem_plot(d, ax, t, ylim)
+                ax = clean_stem_plot(v, ax, t, ylim)
                 axes.append(ax)
             else:
-                t = self._get_title(title_list, i, 'mean luminance')
+                t = self._get_title(title_list, i, k)
                 # middle row and last column
                 ax = fig.add_subplot(gs[n_rows-1:n_rows+1, 2*(n_cols-1):])
-                ax = clean_stem_plot(d, ax, t, ylim)
+                ax = clean_stem_plot(v, ax, t, ylim)
                 axes.append(ax)
         return fig, axes
 
@@ -927,28 +974,32 @@ class ObserverModel(nn.Module):
         titles = []
         axes = []
         imgs = []
-        # project expects a 3d tensor
-        data = self.PoolingWindows.project(data)[batch_idx]
+        zooms = []
+        # project expects a dictionary of 3d tensors
+        data = self.PoolingWindows.project(self.output_to_representation(data))
+        data = {k: v[batch_idx].squeeze() for k, v in data.items()}
         for i in self.scales:
             if isinstance(i, str):
                 continue
-            titles.append(self._get_title(title_list, i, "scale %s" % i))
-            img = torch.zeros_like(data[0])
+            titles.append(self._get_title(title_list, i, f"scale {i}"))
+            img = torch.zeros_like(data[(i, 0)])
             for j in range(self.order+1):
-                img += data[i*(self.order+1)+j]
+                img += data[(i, j)]
             ax = fig.add_subplot(gs[0, int(i)])
             ax = clean_up_axes(ax, False, ['top', 'right', 'bottom', 'left'], ['x', 'y'])
             imgs.append(img)
             axes.append(ax)
+            zooms.append(zoom * round(data[(0, 0)].shape[-1] / img.shape[-1]))
         ax = fig.add_subplot(gs[1, 0])
         ax = clean_up_axes(ax, False, ['top', 'right', 'bottom', 'left'],
                            ['x', 'y'])
         axes.append(ax)
         titles.append(self._get_title(title_list, len(self.scales)-1, 'mean_luminance'))
-        imgs.append(data[-1])
+        imgs.append(data['mean_luminance'])
+        zooms.append(zoom)
         vrange, cmap = pt.tools.display.colormap_range([po.to_numpy(i) for i in imgs],
                                                        vrange)
-        for ax, img, t, vr in zip(axes, imgs, titles, vrange):
+        for ax, img, t, vr, z in zip(axes, imgs, titles, vrange, zooms):
             po.imshow(img.unsqueeze(0).unsqueeze(0), ax=ax, vrange=vr,
-                      cmap=cmap, title=t, zoom=zoom)
+                      cmap=cmap, title=t, zoom=z)
         return fig, axes

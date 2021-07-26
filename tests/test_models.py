@@ -231,15 +231,23 @@ class TestObserverModel(object):
         obs = fov.ObserverModel(1, img.shape[-2:], num_scales=num_scales,
                                 order=order)
         rep = obs(img)
-        assert rep.shape[1] == obs.num_scales * (obs.order+1) + 1
+        total_elts = 0
+        for k, v in obs._n_windows.items():
+            total_elts += v
+        assert rep.shape == (*img.shape[:2], total_elts)
+        rep = obs.output_to_representation(rep)
+        n_parts = obs.num_scales * (obs.order+1) + 1
+        assert len(rep.keys()) == n_parts
 
     def test_obs_scales(self):
         img = po.load_images(op.join(DATA_DIR, 'nuts.pgm'))
         obs = fov.ObserverModel(1, img.shape[-2:])
         reduced_rep = obs(img, ['mean_luminance', 0])
-        assert reduced_rep.shape[1] == obs.order+1 + 1
+        reduced_rep = obs.output_to_representation(reduced_rep, ['mean_luminance', 0])
+        assert len(reduced_rep.keys()) == obs.order+1 + 1
         reduced_rep = obs(img, ['mean_luminance'])
-        assert reduced_rep.shape[1] == 1
+        reduced_rep = obs.output_to_representation(reduced_rep, ['mean_luminance'])
+        assert len(reduced_rep.keys()) == 1
 
     @pytest.mark.parametrize('num_scales', [1, 4])
     @pytest.mark.parametrize('order', [1, 3])
@@ -248,7 +256,8 @@ class TestObserverModel(object):
                                 order=order)
         rep = obs(img)
         fig, axes = obs.plot_representation(rep)
-        assert len(axes) == rep.shape[1]
+        n_parts = obs.num_scales * (obs.order+1) + 1
+        assert len(axes) == n_parts
         fig, axes = obs.plot_representation_image(rep)
         assert len(axes) == obs.num_scales + 1
 
@@ -289,15 +298,15 @@ class TestObserverModel(object):
         rep = obs(img)
         fig, axes = obs.plot_representation(rep)
         obs.update_plot(axes, torch.rand_like(rep))
-        for ax, data in zip(axes, rep[0]):
+        for ax, data in zip(axes, obs.output_to_representation(rep).values()):
             plotted_data = torch.tensor([s[1, 1] for s in
                                          ax.containers[0].stemlines.get_segments()])
-            assert torch.any(data!=plotted_data)
+            assert torch.any(data != plotted_data)
         obs.update_plot(axes, rep)
-        for ax, data in zip(axes, rep[0]):
+        for ax, data in zip(axes, obs.output_to_representation(rep).values()):
             plotted_data = torch.tensor([s[1, 1] for s in
                                          ax.containers[0].stemlines.get_segments()])
-            assert torch.all(data==plotted_data)
+            assert torch.all(data == plotted_data)
 
     def test_obs_to(self, img, obs):
         # can't test float16, because some operations are unsupported
