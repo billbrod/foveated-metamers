@@ -339,7 +339,7 @@ def add_response_info(expt_df, trials, subject_name, session_number, run_number)
     return expt_df
 
 
-def summarize_expt(expt_df, dep_variables=['scaling', 'trial_type'], bootstrap_num=0):
+def summarize_expt(expt_df, dep_variables=['subject_name', 'scaling', 'trial_type'], bootstrap_num=0):
     r"""Summarize expt_df to get proportion correct
 
     Here, we take the ``expt_df`` summarizing the experiment's trials and the
@@ -375,7 +375,7 @@ def summarize_expt(expt_df, dep_variables=['scaling', 'trial_type'], bootstrap_n
     """
     expt_df = expt_df.copy()
 
-    gb_cols = (['subject_name', 'image_name', 'model'] + dep_variables)
+    gb_cols = (['image_name', 'model'] + dep_variables)
 
     gb = expt_df.groupby(gb_cols)
     summary_df = gb.count()['trial_number'].reset_index()
