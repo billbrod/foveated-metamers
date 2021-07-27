@@ -690,10 +690,6 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, style=None,
 
     """
     # set defaults based on hue and style args
-    if hue is not None:
-        kwargs.setdefault('palette', plotting.get_palette(hue, expt_df[hue].unique()))
-    else:
-        kwargs.setdefault('color', 'k')
     if curve_fit:
         kwargs['linestyle'] = ''
         kwargs.setdefault('dashes', False)
@@ -711,6 +707,10 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, style=None,
         col_wrap = None
     # remap the image names to be better for plotting
     expt_df = plotting._remap_image_names(expt_df)
+    if hue is not None:
+        kwargs.setdefault('palette', plotting.get_palette(hue, expt_df[hue].unique()))
+    else:
+        kwargs.setdefault('color', 'k')
     if col == 'image_name':
         img_order = plotting.get_order('image_name')
         kwargs.setdefault('col_order', img_order)
@@ -789,14 +789,18 @@ def run_length_plot(expt_df, col=None, row=None, hue=None, col_wrap=None,
     return g
 
 
-def compare_loss_and_performance_plot(expt_df, stim_df, col='scaling',
-                                      row=None, hue='image_name', col_wrap=4):
-    """Plot synthesis loss and behavioral performance against each other.
+def compare_loss_and_performance_plot(expt_df, stim_df, x='loss', col='scaling',
+                                      row=None, hue='image_name', col_wrap=4,
+                                      plot_kind='scatter', height=3,
+                                      logscale_xaxis=True):
+    """Compare an image metric with behavioral performance.
 
-    Plots synthesis loss on the x-axis and proportion correct on the y-axis, to
-    see if there's any relationship there. Hopefully, there's not (that is,
-    synthesis progressed to the point where there's no real difference in
-    image from more iterations)
+    By default, this plots synthesis loss on the x-axis and proportion correct
+    on the y-axis, to see if there's any relationship there. Hopefully, there's
+    not (that is, synthesis progressed to the point where there's no real
+    difference in image from more iterations). By changing `x` to
+    `'image_mse'`, we compare the behavioral performance against the MSE
+    between the reference and synthesized images.
 
     Currently, only works for comparison='ref' (comparison between reference
     and natural images), because we plot each seed separately and
@@ -812,12 +816,21 @@ def compare_loss_and_performance_plot(expt_df, stim_df, col='scaling',
     stim_df : pd.DataFrame
         The metamer information dataframe, as created by
         `stimuli.create_metamer_df`
+    x : str, optional
+        Variable to plot on the x-axis. Must be a column in either expt_df or
+        stim_df.
     col, row, hue : str or None, optional
         The variables in expt_df to facet along the columns, rows, and hues,
         respectively.
     col_wrap : int or None, optional
         If row is None, how many columns to have before wrapping to the next
         row. If this is not None and row is not None, will raise an Exception
+    plot_kind : {'scatter', 'line'}, optional
+        Whether to plot this as a scatter or line plot.
+    height : float, optional
+        Height of the axes.
+    logscale_xaxis : bool, optional
+        If True, we logscale the x-axis. Else, it's a linear scale.
 
     Returns
     -------
@@ -837,29 +850,36 @@ def compare_loss_and_performance_plot(expt_df, stim_df, col='scaling',
     # contains all trials, all scaling for a given image)
     expt_df = analysis.summarize_expt(expt_df, ['session_number', 'scaling',
                                                 'trial_type', 'unique_seed'])
-    expt_df = expt_df.set_index(['subject_name', 'session_number', 'image_name',
-                                 'scaling', 'unique_seed'])
-    stim_df = stim_df.rename(columns={'seed': 'unique_seed'})
-    stim_df = stim_df.set_index(['image_name', 'scaling',
-                                 'unique_seed'])['loss'].dropna()
-    expt_df = expt_df.merge(stim_df, left_index=True,
-                            right_index=True,).reset_index()
+    if x not in expt_df.columns:
+        expt_df = expt_df.set_index(['subject_name', 'session_number', 'image_name',
+                                     'scaling', 'unique_seed'])
+        stim_df = stim_df.rename(columns={'seed': 'unique_seed'})
+        stim_df = stim_df.set_index(['image_name', 'scaling',
+                                     'unique_seed'])[x].dropna()
+        expt_df = expt_df.merge(stim_df, left_index=True,
+                                right_index=True,).reset_index()
     col_order, hue_order, row_order = None, None, None
+    expt_df = plotting._remap_image_names(expt_df)
     if col is not None:
         col_order = plotting.get_order(col, expt_df[col].unique())
+    else:
+        col_wrap = None
     if row is not None:
         row_order = plotting.get_order(row, expt_df[row].unique())
     if hue is not None:
         hue_order = plotting.get_order(hue, expt_df[hue].unique())
-    g = sns.relplot(data=expt_df, x='loss', y='proportion_correct',
-                    hue=hue, col=col, kind='scatter', col_wrap=col_wrap,
-                    height=3, row=row, col_order=col_order,
+    g = sns.relplot(data=expt_df, x=x, y='proportion_correct',
+                    hue=hue, col=col, kind=plot_kind, col_wrap=col_wrap,
+                    height=height, row=row, col_order=col_order,
                     hue_order=hue_order, row_order=row_order)
-    g.set(xscale='log', xlim=plotting.get_log_ax_lims(expt_df.loss),
-          ylabel='Proportion correct')
-    g = plotting.title_experiment_summary_plots(g, expt_df,
-                                                'Performance vs. synthesis loss',
-                                                '\nHopefully no relationship here')
+    if logscale_xaxis:
+        g.set(xscale='log', xlim=plotting.get_log_ax_lims(expt_df[x]))
+    g.set(ylabel='Proportion correct')
+    if x == 'loss':
+        title = ('Performance vs. synthesis loss', '\nHopefully no relationship here')
+    else:
+        title = (f'Performance vs. {x}', '')
+    g = plotting.title_experiment_summary_plots(g, expt_df, *title)
     return g
 
 

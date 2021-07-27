@@ -80,6 +80,11 @@ def get_palette(col, col_unique=None, as_dict=True):
         assert len(all_vals) == 2, "Currently only support 2 model values"
         pal = sns.color_palette('BrBG', 3)
         pal = [(*pal[0], .5), (*pal[0], 1)]
+    elif col == 'image_name':
+        all_vals = [i.replace('_symmetric', '') for i in config['IMAGE_NAME']['ref_image']]
+        pal = sns.color_palette('husl', len(all_vals))
+        all_vals = sorted(all_vals, key=lambda x: get_order('image_name').index(x))
+        pal = dict(zip(all_vals, pal))
     else:
         if col_nunique is None:
             col_nunique = 10
@@ -359,14 +364,14 @@ def _remap_image_names(df):
     all_imgs_both = [config['IMAGE_NAME']['ref_image'],
                      config['DEFAULT_METAMERS']['image_name']]
     remapped = False
-    img_order = get_order('image_name')
     for all_imgs in all_imgs_both:
         # if we have down sampled images, we want to do same thing as the normal case
         if any([i.replace('_downsample-2', '') in all_imgs for i in df.image_name.unique()]):
             # while still gathering data, will not have all images in the df.
             # Adding these blank lines gives us blank subplots in the performance
             # plot, so that each image is in the same place
-            extra_ims = [i for i in all_imgs if i.replace('_ran', '_downsample-2_ran') not in df.image_name.unique()]
+            extra_ims = [i for i in all_imgs if i.replace('_ran', '_downsample-2_ran') not in df.image_name.unique()
+                         and i not in df.image_name.unique()]
             df = df.copy().append(pd.DataFrame({'image_name': extra_ims}), True)
             # strip out the parts of the image name that are consistent across
             # images
@@ -487,7 +492,7 @@ def _add_legend(df, g=None, fig=None, hue=None, style=None, palette={},
     lw = mpl.rcParams["lines.linewidth"] * 1.8
     if hue is not None:
         try:
-            sorted_hue = sorted(df[hue].unique())
+            sorted_hue = get_order(hue, df[hue].unique())
         except TypeError:
             sorted_hue = sorted(df[hue].unique(), key=lambda x: 1e32 if isinstance(x, str) else x)
         artists[hue] = ax.scatter([], [], s=0)

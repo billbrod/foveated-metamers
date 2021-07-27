@@ -1224,15 +1224,17 @@ rule plot_loss_performance_comparison:
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description_comp-ref.csv'),
     output:
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-ref',
-                'task-split_comp-ref_loss_comparison.svg'),
+                'task-split_comp-ref_{x}_comparison.svg'),
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-ref',
-                'task-split_comp-ref_loss_comparison_subjects.svg'),
+                'task-split_comp-ref_{x}_comparison_subjects.svg'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-ref',
+                'task-split_comp-ref_{x}_comparison_line.svg'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-ref',
-                'task-split_comp-ref_loss_comparison.log'),
+                'task-split_comp-ref_{x}_comparison.log'),
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-ref',
-                'task-split_comp-ref_loss_comparison_benchmark.txt'),
+                'task-split_comp-ref_{x}_comparison_benchmark.txt'),
     run:
         import foveated_metamers as fov
         import pandas as pd
@@ -1241,10 +1243,13 @@ rule plot_loss_performance_comparison:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 stim_df = pd.read_csv(input[-1])
                 expt_df = pd.read_csv(input[0])
-                g = fov.figures.compare_loss_and_performance_plot(expt_df, stim_df)
+                g = fov.figures.compare_loss_and_performance_plot(expt_df, stim_df, x=wildcards.x)
                 g.fig.savefig(output[0], bbox_inches='tight')
-                g = fov.figures.compare_loss_and_performance_plot(expt_df, stim_df, col_wrap=None, row='subject_name')
+                g = fov.figures.compare_loss_and_performance_plot(expt_df, stim_df, x=wildcards.x, col_wrap=None, row='subject_name')
                 g.fig.savefig(output[1], bbox_inches='tight')
+                g = fov.figures.compare_loss_and_performance_plot(expt_df, stim_df, x=wildcards.x, col=None, plot_kind='line',
+                                                                  height=5, logscale_xaxis=True if wildcards.x=='loss' else False)
+                g.fig.savefig(output[2], bbox_inches='tight')
 
 
 rule simulate_dataset:
