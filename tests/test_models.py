@@ -5,6 +5,7 @@ import torch
 import matplotlib.pyplot as plt
 import pytest
 import plenoptic as po
+import numpy as np
 sys.path.append(op.join(op.dirname(op.realpath(__file__)), '..',
                         'extra_packages'))
 import plenoptic_part as pop
@@ -26,6 +27,34 @@ def img():
 @pytest.fixture(scope='package')
 def obs(img):
     return fov.ObserverModel(1, img.shape[-2:])
+
+
+def norm_dict_old():
+    norm_dict = {'complex_cell_responses': {}}
+    for i in range(4):
+        for j in range(4):
+            norm_dict['complex_cell_responses'][(i, j)] = torch.rand(10, 1)
+    norm_dict['cone_responses'] = torch.rand(10, 1)
+    return norm_dict
+
+
+def norm_dict_new():
+    norm_dict = {}
+    for i in range(4):
+        for j in range(4):
+            norm_dict[(i, j)] = np.random.rand(2)
+    norm_dict['mean_luminance'] = np.random.rand(2)
+    return norm_dict
+
+
+@pytest.fixture(scope='package')
+def norm_dict(request):
+    if request.param == 'norm_dict_old':
+        return norm_dict_old()
+    elif request.param == 'norm_dict_new':
+        return norm_dict_new()
+    elif request.param == 'none':
+        return {}
 
 
 class TestPooledVentralStream(object):
@@ -227,9 +256,11 @@ class TestObserverModel(object):
 
     @pytest.mark.parametrize('num_scales', [1, 3, 4])
     @pytest.mark.parametrize('order', [1, 3])
-    def test_obs_basic(self, num_scales, order, img):
+    @pytest.mark.parametrize('norm_dict', ['none', 'norm_dict_old', 'norm_dict_new'],
+                             indirect=True)
+    def test_obs_basic(self, num_scales, order, img, norm_dict):
         obs = fov.ObserverModel(1, img.shape[-2:], num_scales=num_scales,
-                                order=order)
+                                order=order, normalize_dict=norm_dict)
         rep = obs(img)
         total_elts = 0
         for k, v in obs._n_windows.items():
@@ -239,9 +270,11 @@ class TestObserverModel(object):
         n_parts = obs.num_scales * (obs.order+1) + 1
         assert len(rep.keys()) == n_parts
 
-    def test_obs_scales(self):
+    @pytest.mark.parametrize('norm_dict', ['none', 'norm_dict_old', 'norm_dict_new'],
+                             indirect=True)
+    def test_obs_scales(self, norm_dict):
         img = po.load_images(op.join(DATA_DIR, 'nuts.pgm'))
-        obs = fov.ObserverModel(1, img.shape[-2:])
+        obs = fov.ObserverModel(1, img.shape[-2:], norm_dict)
         reduced_rep = obs(img, ['mean_luminance', 0])
         reduced_rep = obs.output_to_representation(reduced_rep, ['mean_luminance', 0])
         assert len(reduced_rep.keys()) == obs.order+1 + 1
