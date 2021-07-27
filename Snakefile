@@ -1206,7 +1206,7 @@ rule combine_all_behavior:
         import contextlib
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                expt_df = pd.concat([pd.read_csv(i) for i in input[:-1]])
+                expt_df = pd.concat([pd.read_csv(i) for i in input])
                 expt_df.to_csv(output[0], index=False)
                 g = fov.figures.performance_plot(expt_df, hue='subject_name',
                                                  height=2.5, curve_fit=True,
