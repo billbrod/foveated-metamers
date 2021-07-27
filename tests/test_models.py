@@ -274,7 +274,7 @@ class TestObserverModel(object):
                              indirect=True)
     def test_obs_scales(self, norm_dict):
         img = po.load_images(op.join(DATA_DIR, 'nuts.pgm'))
-        obs = fov.ObserverModel(1, img.shape[-2:], norm_dict)
+        obs = fov.ObserverModel(1, img.shape[-2:], normalize_dict=norm_dict)
         reduced_rep = obs(img, ['mean_luminance', 0])
         reduced_rep = obs.output_to_representation(reduced_rep, ['mean_luminance', 0])
         assert len(reduced_rep.keys()) == obs.order+1 + 1
