@@ -255,9 +255,10 @@ class ObserverModel(nn.Module):
                                         'num_scales': num_scales})
         self.num_scales = num_scales
         self.order = order
+        # in order to match PooledV1, tight_frame=True
         self.complex_steerable_pyramid = po.simul.Steerable_Pyramid_Freq(
             img_res, self.num_scales, self.order, is_complex=True,
-            downsample=True, tight_frame=False)
+            downsample=True, tight_frame=True)
         self.scales = ['mean_luminance'] + list(range(num_scales))[::-1]
         self._n_windows = {}
         for i in range(num_scales):

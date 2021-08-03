@@ -1480,8 +1480,11 @@ class PooledV1(PooledVentralStream):
                                         'num_scales': num_scales})
         self.num_scales = num_scales
         self.order = order
+        # before the change in how complex tensors were handled, the default
+        # was tight_frame=True. set that so it's comparable.
         self.complex_steerable_pyramid = po.simul.Steerable_Pyramid_Freq(img_res, self.num_scales,
-                                                                         self.order, is_complex=True)
+                                                                         self.order, is_complex=True,
+                                                                         tight_frame=True)
         self.scales = ['mean_luminance'] + list(range(num_scales))[::-1]
         self.image = None
         self.pyr_coeffs = None
