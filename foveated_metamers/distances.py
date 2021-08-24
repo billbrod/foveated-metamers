@@ -97,13 +97,17 @@ def model_distance(model, synth_model_name, ref_image_name, scaling):
                                          scaling=scaling)
     with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
         config = yaml.safe_load(f)
-    met_natural_imgs = ['llama', 'highway_symmetric', 'rocks', 'boats', 'gnarled']
+    # the scaling values used for the ref-natural comparison are the same as
+    # those used for the ref comparison
+    ref_natural_scaling = config[synth_model_name.split('_')[0]]['scaling']
+    if synth_model_name.startswith("V1") and scaling in ref_natural_scaling:
+        paths += utils.generate_metamer_paths(synth_model_name,
+                                              image_name=ref_image_name,
+                                              comp='ref-natural',
+                                              scaling=scaling)
     met_natural_scaling = config[synth_model_name.split('_')[0]]['scaling'][2:]
     met_natural_scaling += config[synth_model_name.split('_')[0]]['met_v_met_scaling'][:2]
-    met_natural_scaling += [1.5]
-    if (synth_model_name.startswith("V1") and
-        any([ref_image_name.startswith(im) for im in met_natural_imgs]) and
-        scaling in met_natural_scaling):
+    if synth_model_name.startswith("V1") and scaling in met_natural_scaling:
         paths += utils.generate_metamer_paths(synth_model_name,
                                               image_name=ref_image_name,
                                               comp='met-natural',
@@ -113,7 +117,9 @@ def model_distance(model, synth_model_name, ref_image_name, scaling):
     ref_image_rep = model(ref_image)
     df = []
     reps = OrderedDict()
-    for i, (im, p) in enumerate(zip(synth_images, paths)):
+    # the unsqueeze is to make sure that the images are 4d when passed to the
+    # model, as expected
+    for i, (im, p) in enumerate(zip(synth_images.unsqueeze(1), paths)):
         image_name = op.splitext(op.basename(p))[0]
         reps[image_name] = model(im)
         dist = pop.optim.mse(reps[image_name], ref_image_rep).item()

@@ -458,8 +458,8 @@ def get_mem_estimate(wildcards, partition=None):
     """
     try:
         if 'size-2048,2600' in wildcards.image_name:
-            if 'gaussian' in wildcards.model_name:
-                if 'V1' in wildcards.model_name:
+            if 'gaussian' in wildcards.model_name or 'Obs' in wildcards.model_name:
+                if 'V1' in wildcards.model_name or 'Obs' in wildcards.model_name:
                     if float(wildcards.scaling) < .1:
                         mem = 128
                     else:
@@ -572,7 +572,7 @@ rule cache_windows:
 
 
 def get_norm_dict(wildcards):
-    if 'norm' in wildcards.model_name:
+    if 'norm' in wildcards.model_name or wildcards.model_name.startswith('Obs'):
         preproc = ''
         # lienar images should also use the degamma'd textures
         if 'degamma' in wildcards.image_name or any([i in wildcards.image_name for i in LINEAR_IMAGES]):
@@ -618,7 +618,7 @@ def get_windows(wildcards):
     t_width = 1.0
     if 'cosine' in wildcards.model_name:
         window_type = 'cosine'
-    elif 'gaussian' in wildcards.model_name:
+    elif 'gaussian' in wildcards.model_name or wildcards.model_name.startswith('Obs'):
         window_type = 'gaussian'
     if wildcards.model_name.startswith("RGC"):
         # RGC model only needs a single scale of PoolingWindows.
@@ -626,7 +626,7 @@ def get_windows(wildcards):
         return window_template.format(scaling=wildcards.scaling, size=size,
                                       max_ecc=max_ecc, t_width=t_width,
                                       min_ecc=min_ecc, window_type=window_type,)
-    elif wildcards.model_name.startswith('V1'):
+    elif wildcards.model_name.startswith('V1') or wildcards.model_name.startswith('Obs'):
         windows = []
         # need them for every scale
         try:
@@ -2102,14 +2102,13 @@ def get_all_synth_images(wildcards):
         synth_imgs += utils.generate_metamer_paths(wildcards.synth_model_name,
                                                    image_name=wildcards.image_name,
                                                    comp='met')
-    if wildcards.synth_model_name.startswith("V1") and any([wildcards.image_name.startswith(im) for im in met_imgs]):
+    if wildcards.synth_model_name.startswith("V1"):
         synth_imgs += utils.generate_metamer_paths(wildcards.synth_model_name,
                                                    image_name=wildcards.image_name,
                                                    comp='met-natural')
         synth_imgs += utils.generate_metamer_paths(wildcards.synth_model_name,
                                                    image_name=wildcards.image_name,
-                                                   comp='met-natural',
-                                                   scaling=1.5)
+                                                   comp='ref-natural')
     return synth_imgs
 
 
@@ -2146,16 +2145,30 @@ rule compute_distances:
                     norm_dict = torch.load(input.norm_dict)
                 else:
                     norm_dict = None
-                model = fov.create_metamers.setup_model(wildcards.model_name, float(wildcards.scaling),
-                                                        ref_image, float(wildcards.min_ecc),
-                                                        float(wildcards.max_ecc), params.cache_dir,
-                                                        norm_dict)[0]
+                if wildcards.model_name.startswith('Obs'):
+                    if wildcards.model_name == 'Obs_sfp':
+                        sf_params = {'sf_weighting_sigma': 2.2,
+                                     'sf_weighting_slope': .12,
+                                     'sf_weighting_intercept': 3.5,
+                                     'sf_weighting_amplitude': 1,
+                                     'sf_weighting_mean_lum': 1}
+                    else:
+                        raise Exception("Don't know how to handle observer models without using sfp parameters!")
+                    model = fov.ObserverModel(float(wildcards.scaling), ref_image.shape[-2:],
+                                              6, 3, normalize_dict=norm_dict,
+                                              cache_dir=params.cache_dir,
+                                              min_eccentricity=float(wildcards.min_ecc),
+                                              max_eccentricity=float(wildcards.max_ecc),
+                                              **sf_params)
+                else:
+                    model = fov.create_metamers.setup_model(wildcards.model_name, float(wildcards.scaling),
+                                                            ref_image, float(wildcards.min_ecc),
+                                                            float(wildcards.max_ecc), params.cache_dir,
+                                                            norm_dict)[0]
                 synth_scaling = config[wildcards.synth_model_name.split('_')[0]]['scaling']
                 met_imgs = ['llama', 'highway_symmetric', 'rocks', 'boats', 'gnarled']
                 if not wildcards.synth_model_name.startswith('RGC') or any([wildcards.image_name.startswith(im) for im in met_imgs]):
                     synth_scaling += config[wildcards.synth_model_name.split('_')[0]]['met_v_met_scaling']
-                if wildcards.synth_model_name.startswith("V1") and any([wildcards.image_name.startswith(im) for im in met_imgs]):
-                    synth_scaling += config[wildcards.synth_model_name.split('_')[0]]['met_v_met_scaling'][:2]
                 df = []
                 for sc in synth_scaling:
                     df.append(fov.distances.model_distance(model, wildcards.synth_model_name,
