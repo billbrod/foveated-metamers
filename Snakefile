@@ -2147,9 +2147,23 @@ rule compute_distances:
                     norm_dict = None
                 if wildcards.model_name.startswith('Obs'):
                     if wildcards.model_name == 'Obs_sfp':
+                        # these values come from my spatial frequency
+                        # preferences experiment, using fMRI to measure
+                        # spatial frequency tuning in human V1
                         sf_params = {'sf_weighting_sigma': 2.2,
                                      'sf_weighting_slope': .12,
                                      'sf_weighting_intercept': 3.5,
+                                     'sf_weighting_amplitude': 1,
+                                     # this value was unmeasured in our
+                                     # experiment, so I don't know what to do
+                                     # with it
+                                     'sf_weighting_mean_lum': 1}
+                    elif wildcards.model_name == 'Obs_null':
+                        # these values should be exactly equivalent to the V1
+                        # model, not reweighting the values at all
+                        sf_params = {'sf_weighting_sigma': 1e10,
+                                     'sf_weighting_slope': 0,
+                                     'sf_weighting_intercept': 1,
                                      'sf_weighting_amplitude': 1,
                                      'sf_weighting_mean_lum': 1}
                     else:
