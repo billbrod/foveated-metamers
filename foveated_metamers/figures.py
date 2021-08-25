@@ -848,7 +848,7 @@ def compare_loss_and_performance_plot(expt_df, stim_df, x='loss', col='scaling',
     # adding session_number here doesn't change results except to make sure
     # that the session_number column is preserved in the output (each session
     # contains all trials, all scaling for a given image)
-    expt_df = analysis.summarize_expt(expt_df, ['session_number', 'scaling',
+    expt_df = analysis.summarize_expt(expt_df, ['subject_name', 'session_number', 'scaling',
                                                 'trial_type', 'unique_seed'])
     if x not in expt_df.columns:
         expt_df = expt_df.set_index(['subject_name', 'session_number', 'image_name',
