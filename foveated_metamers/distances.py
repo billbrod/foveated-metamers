@@ -160,8 +160,18 @@ def model_distance(model, synth_model_name, ref_image_name, scaling,
     df['image_2_init_type'] = df.image_2.apply(_find_init_type)
     df['image_1_init_supertype'] = df.image_1_init_type.apply(lambda x: {'white': 'noise', 'reference': 'reference'}.get(x, 'natural'))
     df['image_2_init_supertype'] = df.image_2_init_type.apply(lambda x: {'white': 'noise', 'reference': 'reference'}.get(x, 'natural'))
-    metamer_vs_reference = np.logical_or((df.image_1_seed == 'reference').values,
-                                         (df.image_2_seed == 'reference').values)
-    df['trial_type'] = np.where(metamer_vs_reference, 'metamer_vs_reference',
-                                'metamer_vs_metamer')
+
+    def get_trial_type(x):
+        trial_type = 'metamer_vs_'
+        if 'reference' in x.image_1_init_supertype or 'reference' in x.image_2_init_supertype:
+            trial_type += 'reference'
+        else:
+            trial_type += 'metamer'
+        if 'natural' in x.image_1_init_supertype or 'natural' in x.image_2_init_supertype:
+            trial_type += '-natural'
+        # we did not do this type of trial
+        if 'noise' in x.image_1_init_supertype and 'natural' in x.image_2_init_supertype:
+            trial_type = 'not_run'
+        return trial_type
+    df['trial_type'] = df.apply(get_trial_type, 1)
     return df
