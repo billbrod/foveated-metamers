@@ -2253,12 +2253,40 @@ rule synthesis_distance_plot:
         import foveated_metamers as fov
         import pandas as pd
         import contextlib
-        import seaborn as sns
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 df = pd.concat([pd.read_csv(f) for f in input]).reset_index(drop=True)
                 g = fov.figures.synthesis_distance_plot(df, x='metamer_vs_reference')
                 g.savefig(output[0], bbox_inches='tight')
+
+
+rule distance_vs_performance_plot:
+    input:
+        op.join(config["DATA_DIR"], 'distances', '{distance_model}', 'scaling-{scaling}', 'e0-{min_ecc}_em-{max_ecc}_all_distances.csv'),
+        lambda wildcards: [op.join(config["DATA_DIR"], 'behavioral', '{{synthesis_model}}', 'task-split_comp-{comp}',
+                                   'task-split_comp-{comp}_data.csv').format(comp=c)
+                           for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'ref-natural']}.get(wildcards.synthesis_model, ['met', 'ref'])],
+    output:
+        op.join(config['DATA_DIR'], 'distances', '{distance_model}', 'scaling-{scaling}',
+                '{synthesis_model}_e0-{min_ecc}_em-{max_ecc}_distance_vs_performance.{ext}')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'distances', '{distance_model}', 'scaling-{scaling}',
+                '{synthesis_model}_e0-{min_ecc}_em-{max_ecc}_distance_vs_performance_{ext}.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'distances', '{distance_model}', 'scaling-{scaling}',
+                '{synthesis_model}_e0-{min_ecc}_em-{max_ecc}_distance_vs_performance_{ext}_benchmark.txt')
+    run:
+        import foveated_metamers as fov
+        import pandas as pd
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                dist_df = pd.read_csv(input[0])
+                expt_df = pd.concat([pd.read_csv(f) for f in input[1:]])
+                logscale_xaxis = True if wildcards.synthesis_model.startswith('V1') else False
+                g = fov.figures.compare_distance_and_performance(expt_df, dist_df,
+                                                                 logscale_xaxis=logscale_xaxis)
+                g.savefig(output[0])
 
 
 rule freeman_windows:

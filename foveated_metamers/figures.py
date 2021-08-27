@@ -2053,3 +2053,149 @@ def dacey_mcmc_plot(inf_data, df, aspect=1, logscale_axes=True, hdi=.95):
     g.set(xlabel="Eccentrictiy (degrees)",
           ylabel="Dendritic field diameter (degrees)")
     return g
+
+
+def compare_distance_and_performance(expt_df, dist_df, col='image_name',
+                                     row=None, hue='scaling',
+                                     style='trial_type', col_wrap=5, height=3,
+                                     logscale_xaxis=False):
+    """Compare model distance and human performance.
+
+    This is intended for use with a single distance model (e.g., the
+    ObserverModel), to visualize the relationship between model distance and
+    human behavioral performance. We just plot them against each other, not
+    doing anything to try and use distance to predict discriminability or
+    performance directly; this is more preliminary.
+
+    Two notes:
+
+    - We expect this to be called with images from a single synthesis model.
+
+    - We perform an inner join between the dist_df and expt_df, so we will only
+      plot points for those pairs of images that have behavioral data (and
+      distances, but that's cheap to calculate). In particular, this means
+      there will not be many RGC metamer_vs_metamer points.
+
+    - We average over different samples. For each comparison, synthesis model,
+      reference image, and scaling we have 3 separate synthesized images. We
+      average the distance and performance across these.
+   
+    Parameters
+    ----------
+    expt_df : pd.DataFrame
+        DataFrame containing the results of at least one session for at least
+        one subject, as created by a combination of
+        `analysis.create_experiment_df` and `analysis.add_response_info`, then
+        concatenating them across runs (and maybe sessions / subjects).
+    dist_df : pd.DataFrame
+        DataFrame containing the distance between images for a single distance
+        model.
+    col, row, hue, style : str or None, optional
+        The variables in expt_df to facet along the columns, rows, hues, and
+        styles, respectively.
+    col_wrap : int or None, optional
+        If row is None, how many columns to have before wrapping to the next
+        row. If this is not None and row is not None, will raise an Exception.
+        Ignored if col=None.
+    height : float, optional
+        Height of the axes.
+    logscale_xaxis : bool, optional
+        If True, we logscale the x-axis. Else, it's a linear scale.
+
+    """
+    if dist_df.distance_model.nunique() > 1 or dist_df.distance_scaling.nunique() > 1:
+        raise Exception("Haven't thought through how to create this plot with more than one"
+                        " distance model / scaling!")
+    if expt_df.model.nunique() > 1:
+        raise Exception("Haven't thought through how to create this plot with more than one"
+                        " synthesis model!")
+    model_name = f'{dist_df.distance_model.unique()[0]}({dist_df.distance_scaling.unique()[0]})'
+    dist_df = dist_df.groupby(['distance_model', 'distance_scaling', 'synthesis_model',
+                               'ref_image', 'synthesis_scaling', 'trial_type']).distance.mean().reset_index()
+
+    expt_df = analysis.summarize_expt(expt_df, ['scaling', 'trial_type'])
+    expt_df = plotting._remap_image_names(expt_df)
+    dist_df = dist_df.rename(columns={'synthesis_scaling': 'scaling', 'synthesis_model': 'model',
+                                      'ref_image': 'image_name'})
+
+    # using an inner merge means we drop the columns where we don't have
+    # behavioral data
+    dist_df = dist_df.merge(expt_df, 'inner')
+
+    kwargs = {}
+    marker_adjust = {}
+    if style is not None:
+        style_dict = plotting.get_style(style, dist_df[style].unique())
+        # we never want to connect these points, so don't do anything for
+        # dashes
+        dashes_dict = style_dict.pop('dashes_dict', {})
+        marker_adjust = style_dict.pop('marker_adjust', {})
+        kwargs.update(style_dict)
+    # seaborn raises an error if col_wrap is non-None when col is None or row
+    # is not None, so prevent that possibility
+    if col is None or row is not None:
+        col_wrap = None
+    if hue is not None:
+        kwargs.setdefault('palette', plotting.get_palette(hue, dist_df[hue].unique()))
+    if col == 'image_name':
+        img_order = plotting.get_order('image_name')
+        kwargs.setdefault('col_order', img_order)
+
+    g = plotting.lineplot_like_pointplot(dist_df, x='distance',
+                                         y='proportion_correct', hue=hue,
+                                         col=col, style=style,
+                                         col_wrap=col_wrap, height=height,
+                                         legend=False, linestyle='',
+                                         **kwargs)
+    if logscale_xaxis:
+        g.set(xscale='log')
+
+    if marker_adjust:
+        labels = {v: k for k, v in kwargs.get('markers', {}).items()}
+        final_markers = plotting._marker_adjust(g.axes.flatten(),
+                                                marker_adjust, labels)
+    else:
+        final_markers = {}
+
+    # create the legend
+    plotting._add_legend(dist_df, g, None, hue, style,
+                         kwargs.get('palette', {}), final_markers,
+                         dashes_dict, 'brief')
+
+    # Clean up labels
+
+    # got this from https://stackoverflow.com/a/36369238/4659293
+    n_rows, n_cols = g.fig.axes[0].get_subplotspec().get_gridspec().get_geometry()
+    # we want to add some newlines at end of title, based on number of rows, to
+    # make sure there's enough space
+    end_newlines = ''
+    if n_rows > 1:
+        end_newlines += '\n\n'
+    if n_rows > 3:
+        end_newlines += '\n'
+    if n_rows > 10:
+        end_newlines += '\n\n'
+    g.fig.suptitle(f'{model_name} distance vs. behavioral performance for '
+                   f'synthesis model {dist_df.model.unique()[0]}{end_newlines}',
+                   va='bottom')
+    g.set_titles('{col_name}')
+    # got this from https://stackoverflow.com/a/36369238/4659293
+    n_rows, n_cols = g.axes[0].get_subplotspec().get_gridspec().get_geometry()
+    y_idx = n_cols * ((n_rows-1)//2)
+    if n_rows % 2 == 0:
+        yval = 0
+    else:
+        yval = .5
+    x_idx = -((n_cols+1)//2)
+    if n_cols % 2 == 0:
+        xval = 0
+    else:
+        xval = .5
+    ylabel = 'Average proportion correct'
+    xlabel = 'Model distance'
+    g.set(xlabel='', ylabel='')
+    g.fig.subplots_adjust(hspace=.2, wspace=.1, top=1)
+    g.axes[y_idx].set_ylabel(ylabel, y=yval, ha='center')
+    g.axes[x_idx].set_xlabel(xlabel, x=xval, ha='center')
+
+    return g

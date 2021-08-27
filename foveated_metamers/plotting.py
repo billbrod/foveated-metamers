@@ -453,7 +453,7 @@ def _psychophysical_curve_ticks(df, axes, logscale_xaxis=False, height=5,
 
 
 def _add_legend(df, g=None, fig=None, hue=None, style=None, palette={},
-                final_markers={}, dashes_dict={}):
+                final_markers={}, dashes_dict={}, legend_content='full'):
     """Add legend, making use of custom hue and style.
 
     Since we modify the markers after the fact, we can't rely on seaborn's
@@ -482,6 +482,10 @@ def _add_legend(df, g=None, fig=None, hue=None, style=None, palette={},
         Must be non-empty if style is not None. Dictionary between levels of
         style variable and dash options, as passed to sns.relplot() or related
         functions
+    legend_content : {'full', 'brief'}, optional
+        Whether to include all hue levels or a sample of evenly spaced values
+        (only if hue is numeric). NOTE: 'brief' currently only affects hue
+        levels, all style levels are always included.
 
     """
     artists = {}
@@ -495,6 +499,12 @@ def _add_legend(df, g=None, fig=None, hue=None, style=None, palette={},
             sorted_hue = get_order(hue, df[hue].unique())
         except TypeError:
             sorted_hue = sorted(df[hue].unique(), key=lambda x: 1e32 if isinstance(x, str) else x)
+        if legend_content == 'brief':
+            sorted_hue = [h for h in sorted_hue if is_numeric(h)]
+            # definitely want the first and last value, and then three more,
+            # roughly evenly spaced
+            sorted_hue = (sorted_hue[:-1:len(sorted_hue)//4] + [sorted_hue[-1]])
+            sorted_hue += [h for h in sorted_hue if not is_numeric(h)]
         artists[hue] = ax.scatter([], [], s=0)
         for hue_val in sorted_hue:
             if isinstance(hue_val, float) and np.isnan(hue_val):
@@ -511,13 +521,19 @@ def _add_legend(df, g=None, fig=None, hue=None, style=None, palette={},
             for style_val in sorted(sty_unique):
                 if isinstance(style_val, float) and np.isnan(style_val):
                     continue
-                style_key = [k for k in final_markers.keys() if style_val in k][0]
+                style_key = [k for k in final_markers.keys() if style_val in k]
+                # we want to grab the corresponding style_key. the following
+                # should work
+                if len(style_key) > 1:
+                    style_key = [k for k in style_key if k == style_val][0]
+                else:
+                    style_key = style_key[0]
                 markers = {k: v for k, v in final_markers[style_key].items()}
                 markers['mec'] = 'k'
                 markers['mfc'] = 'k' if markers['mfc'] != 'w' else 'w'
                 markers['mew'] = lw
                 artists[style_val] = ax.plot([], [], color='k', lw=lw,
-                                             dashes=dashes_dict[style_key],
+                                             dashes=dashes_dict.get(style_key, []),
                                              **markers)[0]
     if artists:
         if g is not None:
