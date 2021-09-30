@@ -371,8 +371,18 @@ def unpooled_response_model(scaling, model='V1', observed_responses=None):
         trial_type_plate = numpyro.plate('trial_type', scaling.shape[-1], dim=-1)
     image_name_plate = numpyro.plate('image_name', scaling.shape[-(2-dim_offset)],
                                      dim=-(2-dim_offset))
-    subject_name_plate = numpyro.plate('subject_name', scaling.shape[-(3-dim_offset)],
-                                       dim=-(3-dim_offset))
+    # similarly for subjects
+    if scaling.shape[1] == 1:
+        scaling = scaling.squeeze(1)
+        if observed_responses is not None:
+            # first dim of observed_responses is trials (which scaling doesn't
+            # have), so subject is third, rather than second
+            observed_responses = observed_responses.squeeze(2)
+        dim_offset += 1
+        subject_name_plate = None
+    else:
+        subject_name_plate = numpyro.plate('subject_name', scaling.shape[-(3-dim_offset)],
+                                           dim=-(3-dim_offset))
     scaling_plate = numpyro.plate('scaling', scaling.shape[-(4-dim_offset)],
                                   dim=-(4-dim_offset))
     obs_nans = None
@@ -394,42 +404,49 @@ def unpooled_response_model(scaling, model='V1', observed_responses=None):
         s0_mean = -4
 
     def _sample(scaling, observed_responses, obs_nans):
-        with subject_name_plate:
-            lapse_rate = numpyro.sample('pi_l', dist.Beta(2, 50))
-            with image_name_plate:
-                # expected value of 5 for exponentiated version, which looks reasonable
-                a0 = numpyro.sample('a0', dist.Normal(1.6, 1))
-                # use the prior mean from above
-                s0 = numpyro.sample('s0', dist.Normal(s0_mean, 1))
-                # this is the value without the lapse rate
-                prop_corr = proportion_correct_curve(scaling, jnp.exp(a0), jnp.exp(s0))
-                # now with the lapse rate
-                prob_corr = numpyro.deterministic('probability_correct',
-                                                  ((1 - lapse_rate) * prop_corr +
-                                                   lapse_rate * chance_correct))
-                with trials_plate, scaling_plate:
-                    if obs_nans is not None:
-                        # expand this out, for broadcasting purposes
-                        prob_corr_nan = jnp.expand_dims(prob_corr, 0).tile((observed_responses.shape[0],
-                                                                            *([1]*prob_corr.ndim)))
-                        # sample the responses...
-                        imputed_responses = numpyro.sample(
-                            'responses_imputed',
-                            dist.Bernoulli(prob_corr_nan, validate_args=True).mask(False)
-                        )
-                        # ...and insert the imputed responses where there are
-                        # NaNs in the observed data.
-                        observed_responses = jnp.where(obs_nans,
-                                                       imputed_responses,
-                                                       observed_responses)
-                    return numpyro.sample('responses', dist.Bernoulli(prob_corr,
-                                                                      validate_args=True),
-                                          obs=observed_responses)
+        lapse_rate = numpyro.sample('pi_l', dist.Beta(2, 50))
+        with image_name_plate:
+            # expected value of 5 for exponentiated version, which looks reasonable
+            a0 = numpyro.sample('a0', dist.Normal(1.6, 1))
+            # use the prior mean from above
+            s0 = numpyro.sample('s0', dist.Normal(s0_mean, 1))
+            # this is the value without the lapse rate
+            prop_corr = proportion_correct_curve(scaling, jnp.exp(a0), jnp.exp(s0))
+            # now with the lapse rate
+            prob_corr = numpyro.deterministic('probability_correct',
+                                              ((1 - lapse_rate) * prop_corr +
+                                               lapse_rate * chance_correct))
+            with trials_plate, scaling_plate:
+                if obs_nans is not None:
+                    # expand this out, for broadcasting purposes
+                    prob_corr_nan = jnp.expand_dims(prob_corr, 0).tile((observed_responses.shape[0],
+                                                                        *([1]*prob_corr.ndim)))
+                    # sample the responses...
+                    imputed_responses = numpyro.sample(
+                        'responses_imputed',
+                        dist.Bernoulli(prob_corr_nan, validate_args=True).mask(False)
+                    )
+                    # ...and insert the imputed responses where there are
+                    # NaNs in the observed data.
+                    observed_responses = jnp.where(obs_nans,
+                                                   imputed_responses,
+                                                   observed_responses)
+                return numpyro.sample('responses', dist.Bernoulli(prob_corr,
+                                                                  validate_args=True),
+                                      obs=observed_responses)
     if trial_type_plate is not None:
         with trial_type_plate:
-            return _sample(scaling, observed_responses, obs_nans)
+            if subject_name_plate is not None:
+                with subject_name_plate:
+                    return _sample(scaling, observed_responses, obs_nans)
+            else:
+                return _sample(scaling, observed_responses, obs_nans)
     else:
-        return _sample(scaling, observed_responses, obs_nans)
+        if subject_name_plate is not None:
+            with subject_name_plate:
+                return _sample(scaling, observed_responses, obs_nans)
+        else:
+            return _sample(scaling, observed_responses, obs_nans)
 
 
 def assemble_dataset_from_expt_df(expt_df,
@@ -837,10 +854,14 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
         inf_data.log_likelihood = inf_data.log_likelihood.expand_dims('model', -1).assign_coords({'model': dataset.model})
     if obs.shape[2] == 1:
         # then there was only one subject and it was squeezed out during
-        # fitting -- add it in now
-        for k in ['log_a0_subject', 'log_s0_subject', 'pi_l']:
-            inf_data.posterior[k] = inf_data.posterior[k].expand_dims('subject_name', 2)
-            inf_data.prior[k] = inf_data.prior[k].expand_dims('subject_name', 2)
+        # fitting -- add it in now. The list below contains all the variables
+        # for partially-pooled and unpooled models that need subject added
+        for k in ['log_a0_subject', 'log_s0_subject', 'pi_l', 'a0', 's0']:
+            # the posterior and prior have the same variables, so only need to
+            # check one
+            if k in inf_data.posterior:
+                inf_data.posterior[k] = inf_data.posterior[k].expand_dims('subject_name', 2)
+                inf_data.prior[k] = inf_data.prior[k].expand_dims('subject_name', 2)
         inf_data.posterior = inf_data.posterior.assign_coords({'subject_name': dataset.subject_name})
         inf_data.prior = inf_data.prior.assign_coords({'subject_name': dataset.subject_name})
         inf_data.posterior_predictive = inf_data.posterior_predictive.expand_dims('subject_name', 2).assign_coords({'subject_name': dataset.subject_name})
