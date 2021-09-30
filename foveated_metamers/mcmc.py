@@ -193,14 +193,24 @@ def partially_pooled_response_model(scaling, model='V1', observed_responses=None
         scaling = scaling.squeeze(-1)
         if observed_responses is not None:
             observed_responses = observed_responses.squeeze(-1)
-        dim_offset = 1
+        dim_offset += 1
         trial_type_plate = None
     else:
         trial_type_plate = numpyro.plate('trial_type', scaling.shape[-1], dim=-1)
     image_name_plate = numpyro.plate('image_name', scaling.shape[-(2-dim_offset)],
                                      dim=-(2-dim_offset))
-    subject_name_plate = numpyro.plate('subject_name', scaling.shape[-(3-dim_offset)],
-                                       dim=-(3-dim_offset))
+    # similarly for subjects
+    if scaling.shape[1] == 1:
+        scaling = scaling.squeeze(1)
+        if observed_responses is not None:
+            # first dim of observed_responses is trials (which scaling doesn't
+            # have), so subject is third, rather than second
+            observed_responses = observed_responses.squeeze(2)
+        dim_offset += 1
+        subject_name_plate = None
+    else:
+        subject_name_plate = numpyro.plate('subject_name', scaling.shape[-(3-dim_offset)],
+                                           dim=-(3-dim_offset))
     scaling_plate = numpyro.plate('scaling', scaling.shape[-(4-dim_offset)],
                                   dim=-(4-dim_offset))
     obs_nans = None
@@ -211,6 +221,42 @@ def partially_pooled_response_model(scaling, model='V1', observed_responses=None
                                      dim=-(5-dim_offset))
     else:
         trials_plate = numpyro.plate('trials', 1, dim=-(5-dim_offset))
+
+    # similar to trial_type_plate, we do this so we can sample with or without
+    # the subject_name_plate
+    def _sample_subj(scaling, observed_responses, obs_nans, a0_global_mean, s0_global_mean,
+                     s0_subject_sd, a0_subject_sd, a0_image, s0_image):
+        s0_subject = numpyro.sample('log_s0_subject', dist.Normal(0, s0_subject_sd))
+        a0_subject = numpyro.sample('log_a0_subject', dist.Normal(0, a0_subject_sd))
+        lapse_rate = numpyro.sample('pi_l', dist.Beta(2, 50))
+        with image_name_plate:
+            # combine global, subject, and image effects
+            a0 = a0_global_mean + a0_subject + a0_image
+            s0 = s0_global_mean + s0_subject + s0_image
+            # this is the value without the lapse rate
+            prop_corr = proportion_correct_curve(scaling, jnp.exp(a0), jnp.exp(s0))
+            # now with the lapse rate
+            prob_corr = numpyro.deterministic('probability_correct',
+                                              ((1 - lapse_rate) * prop_corr +
+                                               lapse_rate * chance_correct))
+            with trials_plate, scaling_plate:
+                if obs_nans is not None:
+                    # expand this out, for broadcasting purposes
+                    prob_corr_nan = jnp.expand_dims(prob_corr, 0).tile((observed_responses.shape[0],
+                                                                        *([1]*prob_corr.ndim)))
+                    # sample the responses...
+                    imputed_responses = numpyro.sample(
+                        'responses_imputed',
+                        dist.Bernoulli(prob_corr_nan, validate_args=True).mask(False)
+                    )
+                    # ...and insert the imputed responses where there are
+                    # NaNs in the observed data.
+                    observed_responses = jnp.where(obs_nans,
+                                                   imputed_responses,
+                                                   observed_responses)
+                return numpyro.sample('responses', dist.Bernoulli(prob_corr,
+                                                                  validate_args=True),
+                                      obs=observed_responses)
 
     def _sample(scaling, observed_responses, obs_nans):
         # expected value of 5 for exponentiated version, which looks reasonable
@@ -231,38 +277,16 @@ def partially_pooled_response_model(scaling, model='V1', observed_responses=None
         with image_name_plate:
             s0_image = numpyro.sample('log_s0_image', dist.Normal(0, s0_image_sd))
             a0_image = numpyro.sample('log_a0_image', dist.Normal(0, a0_image_sd))
-        with subject_name_plate:
-            s0_subject = numpyro.sample('log_s0_subject', dist.Normal(0, s0_subject_sd))
-            a0_subject = numpyro.sample('log_a0_subject', dist.Normal(0, a0_subject_sd))
-            lapse_rate = numpyro.sample('pi_l', dist.Beta(2, 50))
-            with image_name_plate:
-                # combine global, subject, and image effects
-                a0 = a0_global_mean + a0_subject + a0_image
-                s0 = s0_global_mean + s0_subject + s0_image
-                # this is the value without the lapse rate
-                prop_corr = proportion_correct_curve(scaling, jnp.exp(a0), jnp.exp(s0))
-                # now with the lapse rate
-                prob_corr = numpyro.deterministic('probability_correct',
-                                                  ((1 - lapse_rate) * prop_corr +
-                                                   lapse_rate * chance_correct))
-                with trials_plate, scaling_plate:
-                    if obs_nans is not None:
-                        # expand this out, for broadcasting purposes
-                        prob_corr_nan = jnp.expand_dims(prob_corr, 0).tile((observed_responses.shape[0],
-                                                                            *([1]*prob_corr.ndim)))
-                        # sample the responses...
-                        imputed_responses = numpyro.sample(
-                            'responses_imputed',
-                            dist.Bernoulli(prob_corr_nan, validate_args=True).mask(False)
-                        )
-                        # ...and insert the imputed responses where there are
-                        # NaNs in the observed data.
-                        observed_responses = jnp.where(obs_nans,
-                                                       imputed_responses,
-                                                       observed_responses)
-                    return numpyro.sample('responses', dist.Bernoulli(prob_corr,
-                                                                      validate_args=True),
-                                          obs=observed_responses)
+        if subject_name_plate is not None:
+            with subject_name_plate:
+                return _sample_subj(scaling, observed_responses, obs_nans,
+                                    a0_global_mean, s0_global_mean, s0_subject_sd,
+                                    a0_subject_sd, a0_image, s0_image)
+        else:
+            return _sample_subj(scaling, observed_responses, obs_nans,
+                                a0_global_mean, s0_global_mean, s0_subject_sd,
+                                a0_subject_sd, a0_image, s0_image)
+
     if trial_type_plate is not None:
         with trial_type_plate:
             return _sample(scaling, observed_responses, obs_nans)
@@ -699,10 +723,15 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
         posterior_predictive, prior, prior_predictive, and observed_data.
 
     """
-    if len(dataset.subject_name) == 1 or len(dataset.image_name) == 1:
-        raise Exception("This will fail if subject_name or image_name only "
+    if len(dataset.image_name) == 1:
+        raise Exception("This will fail if image_name only "
                         "has one value! We can handle only 1 trial_type, "
                         "but others must have multiple")
+    if len(dataset.subject_name) == 1:
+        if len(dataset.trial_type) > 1 or len(dataset.model) > 1:
+            raise Exception("If we only have one subject, we need to have "
+                            "only one model and trial type -- haven't thought"
+                            " through how to handle the other case.")
     if mcmc_model_type == 'partially-pooled':
         response_model = partially_pooled_response_model
     elif mcmc_model_type == 'unpooled':
@@ -765,7 +794,9 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
                                                'scaling'])
     # drop the dummy dimension -- it gets broadcasted out but filled with NaNs.
     # also the probability_correct shouldn't be in the posterior
-    inf_data.posterior = inf_data.posterior.dropna('dummy').squeeze('dummy', True).drop(['probability_correct', 'scaling'])
+    if 'dummy' in inf_data.posterior.coords:
+        inf_data.posterior = inf_data.posterior.dropna('dummy').squeeze('dummy', True)
+    inf_data.posterior = inf_data.posterior.drop(['probability_correct', 'scaling'])
     inf_data.prior = inf_data.prior.dropna('dummy').squeeze('dummy', True)
     # for the predictives, there's no NaNs in the dummy dimensions, they're
     # just extra single dimensions, so we can squeeze them right out
@@ -794,6 +825,7 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
         inf_data.prior = inf_data.prior.expand_dims('trial_type', -1).assign_coords({'trial_type': dataset.trial_type})
         inf_data.prior_predictive = inf_data.prior_predictive.expand_dims('trial_type', -1).assign_coords({'trial_type': dataset.trial_type})
         inf_data.observed_data = inf_data.observed_data.expand_dims('trial_type', -1).assign_coords({'trial_type': dataset.trial_type})
+        inf_data.log_likelihood = inf_data.log_likelihood.expand_dims('trial_type', -1).assign_coords({'trial_type': dataset.trial_type})
     if obs.shape[-1] == 1:
         # then there was only one model and it was squeezed out during fitting
         # -- add it in now.
@@ -802,6 +834,21 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
         inf_data.prior = inf_data.prior.expand_dims('model', -1).assign_coords({'model': dataset.model})
         inf_data.prior_predictive = inf_data.prior_predictive.expand_dims('model', -1).assign_coords({'model': dataset.model})
         inf_data.observed_data = inf_data.observed_data.expand_dims('model', -1).assign_coords({'model': dataset.model})
+        inf_data.log_likelihood = inf_data.log_likelihood.expand_dims('model', -1).assign_coords({'model': dataset.model})
+    if obs.shape[2] == 1:
+        # then there was only one subject and it was squeezed out during
+        # fitting -- add it in now
+        for k in ['log_a0_subject', 'log_s0_subject', 'pi_l']:
+            inf_data.posterior[k] = inf_data.posterior[k].expand_dims('subject_name', 2)
+            inf_data.prior[k] = inf_data.prior[k].expand_dims('subject_name', 2)
+        inf_data.posterior = inf_data.posterior.assign_coords({'subject_name': dataset.subject_name})
+        inf_data.prior = inf_data.prior.assign_coords({'subject_name': dataset.subject_name})
+        inf_data.posterior_predictive = inf_data.posterior_predictive.expand_dims('subject_name', 2).assign_coords({'subject_name': dataset.subject_name})
+        inf_data.prior_predictive = inf_data.prior_predictive.expand_dims('subject_name', 2).assign_coords({'subject_name': dataset.subject_name})
+        # responses already has a subject_name dim, so only need to add it to
+        # imputed_responses
+        inf_data.observed_data['imputed_responses'] = inf_data.observed_data['imputed_responses'].expand_dims('subject_name', 2)
+        inf_data.log_likelihood = inf_data.log_likelihood.expand_dims('subject_name', 2).assign_coords({'subject_name': dataset.subject_name})
     inf_data.add_groups({'metadata': {'mcmc_model_type': mcmc_model_type}})
     if mcmc_model_type == 'unpooled':
         # in this case, we want to drop all the values where we had no
