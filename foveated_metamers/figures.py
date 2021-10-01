@@ -1195,7 +1195,15 @@ def psychophysical_curve_parameters(inf_data, x='image_name', y='value',
         marker_adjust = {}
     # remap the image names to be better for plotting
     if 'image_name' in df.columns:
-        df = plotting._remap_image_names(df)
+        # want to make sure each added entry in df has proper values for mapping
+        # row and col in FacetGrid
+        extra_cols = {}
+        if col is not None and col != 'image_name':
+            extra_cols[col] = df[col].unique()
+        if row is not None and row != 'image_name':
+            extra_cols[row] = df[row].unique()
+        extra_cols = {k: v  if len(v) > 1 else v[0] for k, v in extra_cols.items()}
+        df = plotting._remap_image_names(df, **extra_cols)
     x_order = kwargs.pop('x_order', None)
     if x == 'image_name' and x_order is None:
         x_order = plotting.get_order(x)
@@ -1234,6 +1242,13 @@ def psychophysical_curve_parameters(inf_data, x='image_name', y='value',
     if len(model_type) > 1:
         model_type = ['multiple']
     fig.suptitle(f"Psychophysical curve parameter values for {model_type[0]} MCMC", va='bottom')
+    for ax in fig.axes:
+        # reset xlim. not sure why, but if the last xvalues are all "fake data"
+        # (that is, the y value was NaNs, so they show up as a tick mark with
+        # nothing above it), they were getting cut off. this makes sure that the
+        # xlim includes all xticks
+        xlim = ax.get_xlim()
+        ax.set_xlim(xlim[0], max(ax.get_xticks())+abs(xlim[0]))
     return fig
 
 

@@ -200,8 +200,8 @@ def get_style(col, col_unique, as_dict=True):
             markers = {k: v for k, v in markers.items() if k in uniq}
         elif col_val == 'mcmc_model_type':
             all_vals = ['unpooled', 'partially-pooled']
-            marker_adjust = {c: {'marker': m} for c, m in
-                             zip(all_vals, ['v', 'o'])}
+            marker_adjust = {c: {'alpha': m} for c, m in
+                             zip(all_vals, [.5, 1])}
             dashes_dict = dict(zip(all_vals, len(all_vals)*['']))
             markers = dict(zip(all_vals, len(all_vals)*['o']))
         else:
@@ -305,7 +305,8 @@ def _marker_adjust(axes, marker_adjust, label_map):
         a legend.
 
     """
-    def _adjust_one_marker(line, fc=None, ec=None, ew=None, s=None, marker=None):
+    def _adjust_one_marker(line, fc=None, ec=None, ew=None, s=None, marker=None,
+                           alpha=1):
         original_fc = line.get_mfc()
         lw = line.get_lw()
         original_ms = line.get_ms() + line.get_mew()
@@ -318,6 +319,7 @@ def _marker_adjust(axes, marker_adjust, label_map):
         if fc is not None:
             line.set_mfc(fc)
         if ec is not None:
+            ec = (*ec, alpha)
             line.set_mec(ec)
         if ew is not None:
             line.set_mew(ew)
@@ -326,7 +328,8 @@ def _marker_adjust(axes, marker_adjust, label_map):
         if marker is not None:
             line.set_marker(marker)
         return {'marker': line.get_marker(), 'mec': line.get_mec(),
-                'mfc': line.get_mfc(), 'ms': line.get_ms(), 'mew': line.get_mew()}
+                'mfc': line.get_mfc(), 'ms': line.get_ms(), 'mew': line.get_mew(),
+                'alpha': line.get_alpha()}
 
     artists = {}
     for ax in axes:
@@ -337,7 +340,7 @@ def _marker_adjust(axes, marker_adjust, label_map):
     return artists
 
 
-def _remap_image_names(df):
+def _remap_image_names(df, **extra_cols):
     """Prepare image names for plotting.
 
     This function remaps the image names in df to drop the parts that are
@@ -349,6 +352,12 @@ def _remap_image_names(df):
     df : pd.DataFrame
         DataFrame containing the behavioral results or psychophysical curve
         fits to those results.
+    extra_cols :
+        extra columns to put into the added rows. intended use case is for the
+        columns mapped along FacetGrid rows and cols, so that if image_name is
+        plotted along the xaxis, those images without data still get xticks. At
+        most one of these can be a list or array, others must all be a single
+        value.
 
     Returns
     -------
@@ -364,6 +373,11 @@ def _remap_image_names(df):
     all_imgs_both = [config['IMAGE_NAME']['ref_image'],
                      config['DEFAULT_METAMERS']['image_name']]
     remapped = False
+    idx = [0]
+    if extra_cols:
+        idx = [len(v) if hasattr(v, '__len__') and not isinstance(v, str)
+               else 0 for k, v in extra_cols.items() ]
+        idx = list(range(max(idx)))
     for all_imgs in all_imgs_both:
         # if we have down sampled images, we want to do same thing as the normal case
         if any([i.replace('_downsample-2', '') in all_imgs for i in df.image_name.unique()]):
@@ -372,7 +386,8 @@ def _remap_image_names(df):
             # plot, so that each image is in the same place
             extra_ims = [i for i in all_imgs if i.replace('_ran', '_downsample-2_ran') not in df.image_name.unique()
                          and i not in df.image_name.unique()]
-            df = df.copy().append(pd.DataFrame({'image_name': extra_ims}), True)
+            for im in extra_ims:
+                df = df.copy().append(pd.DataFrame({'image_name': im, **extra_cols}, idx), True)
             # strip out the parts of the image name that are consistent across
             # images
             df.image_name = df.image_name.apply(lambda x: x.replace('_symmetric', '').replace('_range-.05,.95_size-2048,2600', '').replace('_downsample-2', ''))
@@ -534,10 +549,15 @@ def _add_legend(df, g=None, fig=None, hue=None, style=None, palette={},
                 else:
                     style_key = style_key[0]
                 markers = {k: v for k, v in final_markers[style_key].items()}
-                markers['mec'] = 'k'
-                markers['mfc'] = 'k' if markers['mfc'] != 'w' else 'w'
+                alpha = markers.pop('alpha', 1)
+                if alpha is None:
+                    alpha = 1
+                # want alpha to affect the lines and marker edges
+                markers['mec'] = (0, 0, 0, alpha)
+                # only want alpha to affect marker face color if it's not white
+                markers['mfc'] = (0, 0, 0, alpha) if markers['mfc'] != 'w' else 'w'
                 markers['mew'] = lw
-                artists[style_val] = ax.plot([], [], color='k', lw=lw,
+                artists[style_val] = ax.plot([], [], color=markers['mec'], lw=lw,
                                              dashes=dashes_dict.get(style_key, []),
                                              **markers)[0]
     if artists:
@@ -819,6 +839,10 @@ def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
                                                                      ci)
         dashes = dashes_dict.get(n, '')
         marker = copy.deepcopy(markers.get(n, mpl.rcParams['scatter.marker']))
+        if isinstance(marker, dict):
+            alpha = marker.pop('alpha', 1)
+        else:
+            alpha = 1
         if draw_ctr_pts:
             if isinstance(marker, dict):
                 # modify the dict (which is the kind that would be passed to
@@ -830,6 +854,17 @@ def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
                 marker.pop('s', None)
                 if marker.get('ec', None) == 'original_fc':
                     marker['ec'] = kwargs['color']
+                # if we're not setting edge color directly, then we're probably
+                # using a regular "filled-in" marker, so change the color (we
+                # don't want to set alpha if the face is white)
+                if marker.get('ec', None) is not None:
+                    marker['ec'] = (*marker['ec'], alpha)
+                else:
+                    kwargs['color'] = (*kwargs['color'], alpha)
+                # if fc is None, we want to ignore it and use color instead
+                if marker.get('fc', 'empty') is None:
+                    marker.pop('fc')
+                    kwargs['color'] = (*kwargs['color'], alpha)
                 # scatter expects s to be the size in pts**2, whereas we expect
                 # size to be the diameter, so we convert that (following how
                 # it's handled by seaborn's stripplot)
@@ -846,7 +881,8 @@ def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
             dots.append(None)
         if join is True:
             lines.append(ax.plot(x_data, plot_data.values, linewidth=lw,
-                                 markersize=size, dashes=dashes, **kwargs))
+                                 markersize=size, dashes=dashes, alpha=alpha,
+                                 **kwargs))
         else:
             lines.append(None)
         # if we attach label to the CI, then the legend may use the CI
@@ -855,7 +891,7 @@ def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
         if ci_mode == 'lines':
             for x_, (ci_low, ci_high) in zip(x_data, zip(*plot_cis)):
                 cis.append(ax.plot([x_, x_], [ci_low, ci_high], linewidth=lw,
-                                   **kwargs))
+                                   alpha=alpha, **kwargs))
         elif ci_mode == 'fill':
             cis.append(ax.fill_between(x_data, plot_cis[0].values, plot_cis[1].values,
                                        alpha=ci_alpha, **kwargs))
@@ -1469,7 +1505,8 @@ def _facetted_scatter_ci_dist(data, x, y, hue=None, style=None, x_order=None,
                 marker_dict = {'marker': marker_adjust[m].get('marker', 'o'),
                                'mew': dots[0].get_lw()[0], 'mfc': fc,
                                'ms': np.sqrt(dots[0].get_sizes()[0]),
-                               'mec': dots[0].get_edgecolor()[0]}
+                               'mec': dots[0].get_edgecolor()[0],
+                               'alpha': marker_adjust[m].get('alpha', 1)}
                 final_markers[m] = marker_dict
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
