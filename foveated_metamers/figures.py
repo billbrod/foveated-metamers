@@ -1762,10 +1762,14 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
                 color = 'k'
             else:
                 color = palette[d[hue].unique()[0]]
-            ax.fill_between(xlim, means[y].min(), means[y].max(), color=color,
-                            alpha=.2)
-            ax.axhline(means.query("hdi==50")[y].values,
-                       linestyle='--', color=color)
+            if len(means.query("hdi==50")) == 1:
+                # only plot the average line and HDI if this axis contains a
+                # single set of parameters (that is, for a single model, trial
+                # type, and MCMC model type). otherwise, it's confusing
+                ax.fill_between(xlim, means[y].min(), means[y].max(), color=color,
+                                alpha=.2)
+                ax.axhline(means.query("hdi==50")[y].values,
+                           linestyle='--', color=color)
             ax.set_xlim(xlim)
             final_markers.update(markers_tmp)
 

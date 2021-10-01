@@ -525,7 +525,12 @@ def _add_legend(df, g=None, fig=None, hue=None, style=None, palette={},
                 # we want to grab the corresponding style_key. the following
                 # should work
                 if len(style_key) > 1:
-                    style_key = [k for k in style_key if k == style_val][0]
+                    try:
+                        style_key = [k for k in style_key if k == style_val][0]
+                    except IndexError:
+                        # we get here if the values of style_key are tuples,
+                        # rather than strings
+                        style_key = [k for k in style_key if style_val in k][0]
                 else:
                     style_key = style_key[0]
                 markers = {k: v for k, v in final_markers[style_key].items()}
