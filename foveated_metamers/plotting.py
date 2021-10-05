@@ -43,6 +43,9 @@ def get_palette(col, col_unique=None, as_dict=True):
         col_nunique = None
     else:
         col_nunique = len(col_unique)
+        # this way we ignore all nans, which cause problems for sorting
+        col_unique = [i for i in col_unique if not isinstance(i, float) or
+                      not np.isnan(i)]
     if col == 'subject_name':
         all_vals = psychophys_vars['SUBJECTS']
         pal = sns.color_palette('deep', len(all_vals))
