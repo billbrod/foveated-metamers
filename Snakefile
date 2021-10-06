@@ -1867,7 +1867,8 @@ rule performance_figure:
                 g = fov.figures.performance_plot(expt_df, hue=hue,
                                                  height=height, col=col,
                                                  curve_fit=True,
-                                                 style='trial_type')
+                                                 style='trial_type',
+                                                 tabular_trial_type_legend=True)
                 g.fig.savefig(output[0], bbox_inches='tight')
 
 
@@ -2040,8 +2041,11 @@ rule performance_comparison_figure:
                                                  height=height,
                                                  style='trial_type',
                                                  aspect=2 if col is None else 1,
-                                                 logscale_xaxis=logscale_xaxis)
+                                                 logscale_xaxis=logscale_xaxis,
+                                                 tabular_trial_type_legend=True)
                 if col is None:
+                    # need to draw so that the following code can check text size
+                    g.fig.canvas.draw()
                     fov.plotting.add_physiological_scaling_bars(g.ax, az.from_netcdf(input[-1]))
                 g.fig.savefig(output[0], bbox_inches='tight')
 

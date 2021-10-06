@@ -15,6 +15,15 @@ import itertools
 from collections import OrderedDict
 
 
+TRIAL_TYPE_TO_LONG_LEGEND = {
+    'metamer_vs_metamer': ['Synthesized vs Synthesized', 'White noise', 'White noise'],
+    'metamer_vs_metamer-downsample': ['Synthesized vs Synthesized', 'White noise (large pixels)', 'White noise (large pixels)'],
+    'metamer_vs_metamer-natural': ['Synthesized vs Synthesized', 'Natural image A', 'Natural image B'],
+    'metamer_vs_reference': ['Original vs Synthesized', 'Original image', 'White noise'],
+    'metamer_vs_reference-natural': ['Original vs Synthesized', 'Original image', 'Natural image A'],
+}
+
+
 def get_palette(col, col_unique=None, as_dict=True):
     """Get palette for column.
 
@@ -470,8 +479,9 @@ def _psychophysical_curve_ticks(df, axes, logscale_xaxis=False, height=5,
         ax.xaxis.set_minor_locator(mpl.ticker.FixedLocator(minor_xticks))
 
 
-def _add_legend(df, g=None, fig=None, hue=None, style=None, palette={},
-                final_markers={}, dashes_dict={}, legend_content='full'):
+def _add_legend(df, fig=None, hue=None, style=None, palette={},
+                final_markers={}, dashes_dict={}, legend_content='full',
+                tabular_trial_type_legend=False):
     """Add legend, making use of custom hue and style.
 
     Since we modify the markers after the fact, we can't rely on seaborn's
@@ -482,11 +492,8 @@ def _add_legend(df, g=None, fig=None, hue=None, style=None, palette={},
     ----------
     df : pd.DataFrame
         DataFrame containing the plotted data
-    g : sns.FacetGrid
-        FacetGrid containing the plots. One of this or fig must be set (not
-        both.)
     fig : plt.Figure
-        Figure containing the plots. One of this or g must be set (not both)
+        Figure containing the plots.
     hue, style : str or None, optional
         The columns in df that were uesd to facet hue and style, respectively.
     palette : dict, optional
@@ -504,13 +511,13 @@ def _add_legend(df, g=None, fig=None, hue=None, style=None, palette={},
         Whether to include all hue levels or a sample of evenly spaced values
         (only if hue is numeric). NOTE: 'brief' currently only affects hue
         levels, all style levels are always included.
+    tabular_trial_type_legend : bool, optional
+        Whether to create a tabular legend for trial_type. See the
+        `tabular_legend` function for details.
 
     """
     artists = {}
-    if g is not None:
-        ax = g.axes.flatten()[0]
-    else:
-        ax = fig.axes[0]
+    ax = fig.axes[0]
     lw = mpl.rcParams["lines.linewidth"] * 1.8
     if hue is not None:
         try:
@@ -564,18 +571,23 @@ def _add_legend(df, g=None, fig=None, hue=None, style=None, palette={},
                                              dashes=dashes_dict.get(style_key, []),
                                              **markers)[0]
     if artists:
-        if g is not None:
-            # in order for add_legend() to work, _hue_var and hue_names both
-            # need to be None (otherwise, it will default to using them, even
-            # when passing the artists dict)
-            g._hue_var = None
-            g.hue_names = None
-            g.add_legend(artists)
-        else:
-            fig.legend(list(artists.values()), list(artists.keys()),
-                       frameon=False, bbox_to_anchor=(.95, .5),
-                       bbox_transform=fig.transFigure, loc='center left',
-                       borderaxespad=0)
+        labels = list(artists.keys())
+        trial_type_labels = []
+        if tabular_trial_type_legend:
+            trial_type_labels = [lab for lab in labels if lab in
+                                 TRIAL_TYPE_TO_LONG_LEGEND.keys()]
+            labels = [lab for lab in labels if lab != 'trial_type' and
+                      # one extra empty string for the trial_type title
+                      lab not in trial_type_labels] + ['']
+            labels += ['' for _ in trial_type_labels]
+        leg = fig.legend(list(artists.values()), labels,
+                         frameon=False, bbox_to_anchor=(1, .5),
+                         bbox_transform=fig.transFigure, loc='center left',
+                         borderaxespad=0)
+        if tabular_trial_type_legend:
+            # need to draw so we can legend location and size
+            fig.canvas.draw()
+            tabular_legend(fig, leg, trial_type_labels, 'trial_type')
 
 
 def _jitter_data(data, jitter):
@@ -1760,3 +1772,207 @@ def _spectra_dataset_to_dataframe(spectra, data='sf'):
     df = pd.concat([df, met_df])
     df.image_type = df.image_type.apply(lambda x: x.replace(f'_{data}_amplitude', ''))
     return df
+
+
+def tabular_legend(fig, legend, labels, title='trial_type'):
+    """Add a tabular legend for trial_type to figure.
+
+    This is a fancier version of the legend explaining trial type, grouping
+    them visually by "big category" (synthesized vs synthesized or original vs
+    synthesized), as well as trying to make it more explicit what the two
+    images being compared are.
+
+    It should be called after the regular legend is created, without labels,
+    and tries to place the table correctly, so that it lines up with the
+    handles of the existing legend, adjusting for number of rows, etc. It is
+    much larger than the normal legend, so be aware of that. It is intended to
+    be placed off of the data, and so assumes that there's lots of horizontal
+    blank space to use. Should fit in the same amount of vertical space as a
+    regular legend, so shoudl be able to be part of multi-part legends (e.g.,
+    showing hue and style).
+
+    Parameters
+    ----------
+    fig : plt.Figure
+        The figure to add the table too.
+    legend : mpl.legend.Legend
+        The created legend, which should have handles but no labels.
+    labels : list
+        List of strings giving the plotted trial_types. Should correspond to
+        the handles on the legend, in that order.
+    title : str, optional
+        The title of legend, which will go in the top left corner of the table.
+
+    Returns
+    -------
+    table : mpl.table.Table
+        The created Table object.
+
+    """
+    def _fix_row_labels(all_rows, target_row, table):
+        """Merge cells and correct the spacing of the text.
+
+        idea taken from https://stackoverflow.com/questions/53783087/double-header-in-matplotlib-table
+
+        Parameters
+        ----------
+        all_rows : list of ints
+            List giving the index of rows of a certain type. All of these will be merged
+        target_row : int
+            Index of the only row to retain its text, rest will be made invisible.
+        table : matplotlib table
+            The table to modify.
+
+        """
+        # we add a 1 to all the row indices here because table has one more row than celltext
+        # (0th row corresponds to the column labels)
+        for i in all_rows:
+            visible_edges = 'RL'
+            if i == min(all_rows):
+                visible_edges += 'T'
+            if i == max(all_rows):
+                visible_edges += 'B'
+            table[i+1, 0].visible_edges = visible_edges
+            if i != target_row:
+                table[i+1, 0].get_text().set_visible(False)
+        # reposition text in the row labels so they're centered
+        txt = table[target_row+1, 0].get_text()
+        tgt_y = np.mean([table[i+1, 1].get_text().get_position() for i in all_rows], 0)[1]
+        txt.set_transform(mpl.transforms.Affine2D().translate(0, tgt_y - txt.get_position()[1]))
+
+    def _set_newlines(celltext):
+        """Replace spaces with newlines, depending on number of rows.
+
+        Idea here is to replace the spaces with newlines in the rowlabel
+        (Synthesis vs Synthesis, Original vs Synthesis) if there are enough
+        rows that it looks good
+
+        """
+        if len(celltext) >= 2:
+            celltext = [['\n'.join(c[0].rsplit(' ', 1)), *c[1:]] for c in celltext]
+        if len(celltext) >= 3:
+            celltext = [['\n'.join(c[0].rsplit(' ', 2)), *c[1:]] for c in celltext]
+        return celltext
+
+    # For all of these bboxes, we're getting them into figure coordinates, such
+    # that 0, 0 is the bottom left corner and 1, 1 is the top right. this is
+    # the bbox of the whole legend.
+    legend_loc = legend.get_window_extent().transformed(fig.transFigure.inverted())
+    # find the indices of the handles that are missing labels -- the first of
+    # these will be the anchor point for the top of our table, the last for the
+    # bottom.
+    empty_idx = np.argwhere([t.get_text()=='' for t in legend.texts])
+    # can't actually use the first one, because that's the placeholder for the
+    # title and so doesn't have a handle associated with it
+    first_idx = empty_idx.min()+1
+    last_idx = empty_idx.max()
+    # this is the bbox of the last handle in the legend, i.e., the bottom line
+    handle_loc1 = legend.legendHandles[last_idx].get_window_extent(fig.transFigure).transformed(fig.transFigure.inverted())
+    # some extra horizontal space
+    extra_horiz = handle_loc1.width/4
+    if len(empty_idx) > 2:
+        # and this is the second-to-last handle
+        handle_loc2 = legend.legendHandles[last_idx-1].get_window_extent(fig.transFigure).transformed(fig.transFigure.inverted())
+        # this is the amount of vertical space between adjacent lines in the
+        # legend
+        vert_space = (handle_loc2.y0 - handle_loc1.y0)/2
+    else:
+        # then we don't have two actual handles plotted and so need to be
+        # smarter, so we grab two above our first plotted handle...
+        handle_loc2 = legend.legendHandles[first_idx-2].get_window_extent(fig.transFigure).transformed(fig.transFigure.inverted())
+        # ... and say vert_space is half the vertical space between them. this
+        # is still the amount of vertical space between adjacent lines in the
+        # legend.
+        vert_space = (handle_loc2.y0 - handle_loc1.y0)/4
+    # and this is the first handle we want to mess with
+    handle_loc3 = legend.legendHandles[first_idx].get_window_extent(fig.transFigure).transformed(fig.transFigure.inverted())
+    # this is the x, y coordinates of the bottom left corner, then the width
+    # and height. .1 is a dummy width, as we'll redraw the table later on
+    table_loc = [handle_loc1.x1+extra_horiz,
+                 handle_loc1.y0 - vert_space,
+                 .1]
+    # need to get the height here
+    table_loc.append((handle_loc3.y0 + 3*vert_space) - table_loc[1])
+
+    celltext = [TRIAL_TYPE_TO_LONG_LEGEND[lab] for lab in labels]
+
+    vs_met = [i for i, lab in enumerate(celltext) if 'Original' not in lab[0]]
+    vs_ref = [i for i, lab in enumerate(celltext) if 'Original' in lab[0]]
+
+    if not all([all(i > np.array(vs_met)) for i in vs_ref]):
+        raise Exception("Handles out of order! All metamer_vs_metamer comparisons"
+                        " must precede all metamer_vs_reference comparisons!")
+
+    # remap spaces to newlines, as appropriate
+    celltext = [*_set_newlines([celltext[i] for i in vs_met]),
+                *_set_newlines([celltext[i] for i in vs_ref])]
+
+    # create a dummy table, so we know how long our text is.
+    table = fig.axes[0].table(celltext, colLabels=[title, 'Image A', 'Image B'],
+                              colColours=['none']*len(celltext[0]),
+                              cellColours=[['none']*len(celltext[0])]*len(celltext),
+                              bbox=table_loc, cellLoc='center',
+                              transform=fig.transFigure)
+    # force table to use the actual font size
+    table.auto_set_font_size(False)
+    table.set_fontsize(mpl.rcParams['legend.fontsize'])
+
+    # in order to determine the widths of the text, so as to size the table
+    # appropriately, we actually need to create it first (as far as I can
+    # tell). we take the created table, determine the widths of the text, and
+    # use that to figure out how wide we want the table to be and the relative
+    # widths of the columns
+    text_lengths = np.empty_like(celltext, dtype=float)
+    for row, col in itertools.product(range(text_lengths.shape[0]),
+                                      range(text_lengths.shape[1])):
+        # table's 0th row is the header, which isn't included in text_lengths,
+        # so need to add a 1 here
+        txt = table[row+1, col].get_text().get_window_extent()
+        # add an extra bit of horizontal space
+        text_lengths[row, col] = txt.transformed(fig.transFigure.inverted()).width + 3*extra_horiz
+
+    # remove and then redraw the table
+    table.remove()
+    # use the text lengths to determine the width of the table, leave the rest
+    # unchanged
+    table_loc[2] = text_lengths.sum(1).max()
+    # find the width of each column that has text in it
+    column_widths = (text_lengths / text_lengths.min(where=text_lengths>0,
+                                                     initial=text_lengths.max())).max(0)
+    # draw the same table, now setting colWidths
+    table = fig.axes[0].table(celltext, colLabels=[title, 'Image A', 'Image B'],
+                              colColours=['none']*3, colWidths=column_widths,
+                              cellColours=[['none']*3]*len(celltext), bbox=table_loc,
+                              cellLoc='center', transform=fig.transFigure)
+    # force table to use the actual font size
+    table.auto_set_font_size(False)
+    table.set_fontsize(mpl.rcParams['legend.fontsize'])
+
+    # need to draw here so the text positions are calculated
+    fig.canvas.draw()
+
+    if len(vs_met):
+        ctr_vs_met = vs_met[len(vs_met)//2]
+        _fix_row_labels(vs_met, ctr_vs_met, table)
+    if len(vs_ref):
+        ctr_vs_ref = vs_ref[len(vs_ref)//2]
+        _fix_row_labels(vs_ref, ctr_vs_ref, table)
+
+    # "merge" cells and correct text alignments
+    table[0, 0].visible_edges = 'open'
+
+    if len(vs_ref):
+        # can't color in the cells and then change their visible edges because of
+        # this bug:
+        # https://stackoverflow.com/questions/52566037/is-it-possible-to-customise-the-visible-edges-of-a-matplotlib-table-cell-while-a
+        # so we create a rectangle behind the rows we want to highlight -- those
+        # that are vs_ref comparisons
+        xy = table[max(vs_ref)+1, 0].get_xy()
+        height = sum([table[i+1, 0].get_height() for i in vs_ref])
+        width = sum([table[max(vs_ref)+1, i].get_width() for i in
+                     range(len(celltext[0]))])
+        rect = mpl.patches.Rectangle(xy, width, height, zorder=0,
+                                     color='lightgrey', clip_on=False,
+                                     transform=fig.transFigure)
+        fig.add_artist(rect)
+    return table

@@ -649,7 +649,7 @@ def simulate_num_trials(params, row='critical_scaling_true', col='variable'):
 
 def performance_plot(expt_df, col='image_name', row=None, hue=None, style=None,
                      col_wrap=5, ci=95, curve_fit=False, logscale_xaxis=False,
-                     **kwargs):
+                     tabular_trial_type_legend=False, **kwargs):
     """Plot performance as function of scaling.
 
     With default arguments, this is meant to show the results for all sessions
@@ -680,6 +680,9 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, style=None,
         extend the x-values until performance hits chance.
     logscale_xaxis : bool, optional
         If True, we logscale the x-axis. Else, it's a linear scale.
+    tabular_trial_type_legend : bool, optional
+        Whether to create a tabular legend for trial_type. See the
+        `tabular_legend` function for details.
     kwargs :
         passed to plotting.lineplot_like_pointplot
 
@@ -742,9 +745,9 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, style=None,
                                          kwargs.get('height', 5),
                                          col)
     # create the legend
-    plotting._add_legend(expt_df, g, None, hue, style,
-                         kwargs.get('palette', {}), final_markers,
-                         dashes_dict)
+    plotting._add_legend(expt_df, g.fig, hue, style, kwargs.get('palette', {}),
+                         final_markers, dashes_dict,
+                         tabular_trial_type_legend=tabular_trial_type_legend)
     return g
 
 
@@ -1003,7 +1006,7 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
                                          kwargs.get('height', 5),
                                          col)
     # create the legend
-    plotting._add_legend(df, g, None, hue, style,
+    plotting._add_legend(df, g.fig, hue, style,
                          kwargs.get('palette', {}),
                          final_markers, dashes_dict)
     return g
@@ -1236,7 +1239,7 @@ def psychophysical_curve_parameters(inf_data, x='image_name', y='value',
             final_markers.update(markers_tmp)
 
     # create the legend
-    plotting._add_legend(df, None, fig, hue, style, palette,
+    plotting._add_legend(df, fig, hue, style, palette,
                          final_markers, {k: '' for k in marker_adjust.keys()})
     model_type = df.mcmc_model_type.unique()
     if len(model_type) > 1:
@@ -1504,7 +1507,7 @@ def partially_pooled_metaparameters(inf_data, hue='model', style='trial_type',
             ax.tick_params('x', labelbottom=False)
         elif 'Lapse' in k:
             ax.set_ylim((0, ax.get_ylim()[1]))
-    plotting._add_legend(metaparams, None, fig, hue, style, palette,
+    plotting._add_legend(metaparams, fig, hue, style, palette,
                          final_markers, {k: '' for k in marker_adjust.keys()})
     fig.suptitle("Parameter values 1 for partially-pooled MCMC\n", y=.95, va='bottom')
     return fig
@@ -1639,7 +1642,7 @@ def partially_pooled_parameters(inf_data, hue='model', style='trial_type',
             ax.set_xlim(xlim)
 
     # create the legend
-    plotting._add_legend(params, None, fig, hue, style, palette,
+    plotting._add_legend(params, fig, hue, style, palette,
                          final_markers, {k: '' for k in marker_adjust.keys()})
     fig.suptitle("Parameter values 2 for partially-pooled MCMC", y=.95)
     return fig
@@ -1789,7 +1792,7 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
             final_markers.update(markers_tmp)
 
     # create the legend
-    plotting._add_legend(df, None, fig, hue, style, palette,
+    plotting._add_legend(df, fig, hue, style, palette,
                          final_markers, {k: '' for k in marker_adjust.keys()})
     model_type = df.mcmc_model_type.unique()
     if len(model_type) > 1:
@@ -1883,7 +1886,7 @@ def amplitude_spectra(spectra, hue='scaling', style=None, col='image_name',
     g.set_ylabels('Amplitude')
     g.set_xlabels('Spatial frequency (cycles/image)')
     # create the legend
-    plotting._add_legend(df, g, None, hue, style,
+    plotting._add_legend(df, g.fig, hue, style,
                          kwargs.get('palette', {}), final_markers,
                          dashes_dict)
     # we use spectra because it doesn't include np.nan from dummy rows
@@ -1997,7 +2000,7 @@ def amplitude_orientation(spectra, hue='scaling', style=None, col='image_name',
             ticklabels.append('')
     g.set_xticklabels(ticklabels)
     # create the legend
-    plotting._add_legend(df, g, None, hue, style,
+    plotting._add_legend(df, g.fig, hue, style,
                          kwargs.get('palette', {}), final_markers,
                          dashes_dict)
     # we use spectra because it doesn't include np.nan from dummy rows
@@ -2177,7 +2180,7 @@ def compare_distance_and_performance(expt_df, dist_df, col='image_name',
         final_markers = {}
 
     # create the legend
-    plotting._add_legend(dist_df, g, None, hue, style,
+    plotting._add_legend(dist_df, g.fig, hue, style,
                          kwargs.get('palette', {}), final_markers,
                          dashes_dict, 'brief')
 
