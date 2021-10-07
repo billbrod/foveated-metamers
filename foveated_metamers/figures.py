@@ -889,7 +889,7 @@ def compare_loss_and_performance_plot(expt_df, stim_df, x='loss', col='scaling',
 def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
                                style=None, col_wrap=5, comparison='ref',
                                logscale_xaxis=False, hdi=.95, query_str=None,
-                               **kwargs):
+                               tabular_trial_type_legend=False, **kwargs):
     """Plot posterior predictive check.
 
     In order to make sure that our MCMC gave us a reasonable fit, we plot the
@@ -917,6 +917,9 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
     query_str : str or None, optional
         If not None, the string to query dataframe with to limit the plotted
         data (e.g., "distribution == 'posterior'").
+    tabular_trial_type_legend : bool, optional
+        Whether to create a tabular legend for trial_type. See the
+        `tabular_legend` function for details.
     kwargs :
         passed to sns.FacetGrid
 
@@ -1008,7 +1011,8 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
     # create the legend
     plotting._add_legend(df, g.fig, hue, style,
                          kwargs.get('palette', {}),
-                         final_markers, dashes_dict)
+                         final_markers, dashes_dict,
+                         tabular_trial_type_legend=tabular_trial_type_legend)
     return g
 
 
@@ -1655,6 +1659,7 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
                                     height=4, aspect=2, x_dodge=.15, hdi=.95,
                                     rotate_xticklabels=True,
                                     title_str="{row_val} | {col_val}",
+                                    tabular_trial_type_legend=True,
                                     **kwargs):
     """Show psychophysical group-level means, with HDI error bars.
 
@@ -1700,6 +1705,9 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
         Format string for axes titles. Can include {row_val}, {col_val}, {row},
         {col} (for the values and names of those facets, respectively) and
         plain text.
+    tabular_trial_type_legend : bool, optional
+        Whether to create a tabular legend for trial_type. See the
+        `tabular_legend` function for details.
     kwargs :
         passed to plt.subplots
 
@@ -1793,7 +1801,8 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
 
     # create the legend
     plotting._add_legend(df, fig, hue, style, palette,
-                         final_markers, {k: '' for k in marker_adjust.keys()})
+                         final_markers, {k: '' for k in marker_adjust.keys()},
+                         tabular_trial_type_legend=tabular_trial_type_legend)
     model_type = df.mcmc_model_type.unique()
     if len(model_type) > 1:
         model_type = ['multiple']

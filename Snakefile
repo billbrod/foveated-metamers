@@ -1897,7 +1897,8 @@ rule mcmc_figure:
                 style, fig_width = fov.style.plotting_style(wildcards.context)
                 plt.style.use(style)
                 if wildcards.plot_type == 'params-grouplevel':
-                    fig = fov.figures.psychophysical_grouplevel_means(inf_data, height=fig_width/4)
+                    fig = fov.figures.psychophysical_grouplevel_means(inf_data, height=fig_width/4,
+                                                                      tabular_trial_type_legend=True)
                     for ax in fig.axes:
                         ax.set_title(ax.get_title().replace('a0', 'gain').replace('s0', 'critical scaling'))
                     fig.suptitle(fig._suptitle.get_text(), y=1.05)
@@ -1919,8 +1920,12 @@ rule mcmc_figure:
                             inf_data = inf_data.query("level=='subject_name'").rename(
                                 columns={'dependent_var': 'subject_name'})
                             inf_data['image_name'] = 'all images'
-                    fig = fov.figures.posterior_predictive_check(inf_data, col=col, hue=hue, style=style,
-                                                                 height=height)
+                    fig = fov.figures.posterior_predictive_check(inf_data,
+                                                                 col=col,
+                                                                 hue=hue,
+                                                                 style=style,
+                                                                 height=height,
+                                                                 tabular_trial_type_legend=True)
                 else:
                     raise Exception(f"Don't know how to handle plot type {wildcards.plot_type}!")
                 fig.savefig(output[0], bbox_inches='tight')
@@ -1932,7 +1937,7 @@ rule mcmc_performance_comparison_figure:
                  'task-split_comp-{comp}_mcmc_{{mcmc_model}}_step-1_prob-.8_depth-10'
                  '_c-4_d-10000_w-10000_s-0.nc').format(comp=c, model_name=m)
          for m in MODELS
-         for c in {'V1_norm_s6_gaussian': ['met', 'ref'], 'RGC_norm_gaussian': ['ref']}[m]],
+         for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'met-downsample-2', 'ref-natural'], 'RGC_norm_gaussian': ['ref', 'met']}[m]],
         op.join(config['DATA_DIR'], 'dacey_data',
                 'Dacey1992_mcmc_step-.1_prob-.8_depth-10_c-4_d-1000_w-1000_s-10.nc'),
     output:
@@ -1967,14 +1972,16 @@ rule mcmc_performance_comparison_figure:
                     df['subject_name'] = 'all subjects'
                 else:
                     raise Exception(f"Don't know how to handle focus {wildcards.focus}!")
-                fig = fov.figures.posterior_predictive_check(df, col=None,
-                                                             hue='model',
-                                                             style='trial_type',
-                                                             height=fig_width/3,
-                                                             aspect=2,
-                                                             logscale_xaxis=True)
-                fov.plotting.add_physiological_scaling_bars(fig.ax, az.from_netcdf(input[-1]))
-                fig.savefig(output[0], bbox_inches='tight')
+                g = fov.figures.posterior_predictive_check(df, col=None,
+                                                           hue='model',
+                                                           style='trial_type',
+                                                           height=fig_width/3,
+                                                           aspect=2,
+                                                           logscale_xaxis=True,
+                                                           tabular_trial_type_legend=True)
+                g.fig.canvas.draw()
+                fov.plotting.add_physiological_scaling_bars(g.ax, az.from_netcdf(input[-1]))
+                g.savefig(output[0], bbox_inches='tight')
 
 
 rule performance_comparison_figure:
