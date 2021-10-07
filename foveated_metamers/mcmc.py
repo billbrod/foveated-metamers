@@ -866,10 +866,7 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
         inf_data.prior = inf_data.prior.assign_coords({'subject_name': dataset.subject_name})
         inf_data.posterior_predictive = inf_data.posterior_predictive.expand_dims('subject_name', 2).assign_coords({'subject_name': dataset.subject_name})
         inf_data.prior_predictive = inf_data.prior_predictive.expand_dims('subject_name', 2).assign_coords({'subject_name': dataset.subject_name})
-        # responses already has a subject_name dim, so only need to add it to
-        # imputed_responses
-        if 'imputed_responses' in inf_data.observed_data:
-            inf_data.observed_data['imputed_responses'] = inf_data.observed_data['imputed_responses'].expand_dims('subject_name', 2)
+        inf_data.observed_data = inf_data.observed_data.expand_dims('subject_name', 2).assign_coords({'subject_name': dataset.subject_name})
         inf_data.log_likelihood = inf_data.log_likelihood.expand_dims('subject_name', 2).assign_coords({'subject_name': dataset.subject_name})
     inf_data.add_groups({'metadata': {'mcmc_model_type': mcmc_model_type}})
     if mcmc_model_type == 'unpooled':
