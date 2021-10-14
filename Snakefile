@@ -1970,6 +1970,11 @@ rule mcmc_performance_comparison_figure:
                     df = df.query("level=='all'")
                     df['image_name'] = 'all images'
                     df['subject_name'] = 'all subjects'
+                elif wildcards.focus == 'comp-base':
+                    query_str = 'trial_type in ["metamer_vs_metamer", "metamer_vs_reference"] & level == "all"'
+                    df = df.query(query_str)
+                    df['image_name'] = 'all images'
+                    df['subject_name'] = 'all subjects'
                 else:
                     raise Exception(f"Don't know how to handle focus {wildcards.focus}!")
                 g = fov.figures.posterior_predictive_check(df, col=None,
