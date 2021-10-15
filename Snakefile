@@ -2489,3 +2489,16 @@ rule dacey_mcmc_plot:
                 plt.style.use(style)
                 fig = fov.figures.dacey_mcmc_plot(inf_data, df, logscale_axes='log' in wildcards.logscale)
                 fig.savefig(output[0])
+
+
+rule psychphys_expt_fig:
+    input:
+        op.join('reports/figures/psychophys_expt.svg'),
+    output:
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'psychophys_expt.svg')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'psychophys_expt.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'psychophys_expt_benchmark.txt')
+    shell:
+        "cp {input} {output}"
