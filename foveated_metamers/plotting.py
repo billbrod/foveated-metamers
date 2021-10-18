@@ -16,11 +16,11 @@ from collections import OrderedDict
 
 
 TRIAL_TYPE_TO_LONG_LEGEND = {
-    'metamer_vs_metamer': ['Synthesized vs Synthesized', 'White noise', 'White noise'],
-    'metamer_vs_metamer-downsample': ['Synthesized vs Synthesized', 'White noise (large pixels)', 'White noise (large pixels)'],
-    'metamer_vs_metamer-natural': ['Synthesized vs Synthesized', 'Natural image A', 'Natural image B'],
-    'metamer_vs_reference': ['Original vs Synthesized', 'Original image', 'White noise'],
-    'metamer_vs_reference-natural': ['Original vs Synthesized', 'Original image', 'Natural image A'],
+    'metamer_vs_metamer': ['Synthesized vs Synthesized', 'White noise seed', 'White noise seed'],
+    'metamer_vs_metamer-downsample': ['Synthesized vs Synthesized', 'White noise seed (large pixels)', 'White noise seed (large pixels)'],
+    'metamer_vs_metamer-natural': ['Synthesized vs Synthesized', 'Natural image seed A', 'Natural image seed B'],
+    'metamer_vs_reference': ['Original vs Synthesized', 'Original image', 'White noise seed'],
+    'metamer_vs_reference-natural': ['Original vs Synthesized', 'Original image', 'Natural image seed A'],
 }
 
 
