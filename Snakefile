@@ -1869,6 +1869,8 @@ rule performance_figure:
                                                  curve_fit=True,
                                                  style='trial_type',
                                                  tabular_trial_type_legend=True)
+                if wildcards.context == 'paper':
+                    g.fig.suptitle('')
                 g.fig.savefig(output[0], bbox_inches='tight')
 
 
@@ -1928,6 +1930,8 @@ rule mcmc_figure:
                                                                  tabular_trial_type_legend=True)
                 else:
                     raise Exception(f"Don't know how to handle plot type {wildcards.plot_type}!")
+                if wildcards.context == 'paper':
+                    fig.suptitle('')
                 fig.savefig(output[0], bbox_inches='tight')
 
 
@@ -1997,6 +2001,8 @@ rule mcmc_performance_comparison_figure:
                                                            tabular_trial_type_legend=True)
                 g.fig.canvas.draw()
                 fov.plotting.add_physiological_scaling_bars(g.ax, az.from_netcdf(input[-1]))
+                if wildcards.context == 'paper':
+                    g.fig.suptitle('')
                 g.savefig(output[0], bbox_inches='tight')
 
 
@@ -2070,6 +2076,8 @@ rule performance_comparison_figure:
                     # need to draw so that the following code can check text size
                     g.fig.canvas.draw()
                     fov.plotting.add_physiological_scaling_bars(g.ax, az.from_netcdf(input[-1]))
+                if wildcards.context == 'paper':
+                    g.fig.suptitle('')
                 g.fig.savefig(output[0], bbox_inches='tight')
 
 

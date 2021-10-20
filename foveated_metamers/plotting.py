@@ -1128,8 +1128,6 @@ def _label_and_title_psychophysical_curve_plot(g, df, summary_text, ci=None, hdi
         ci_txt = f"{ci}% CI"
     elif hdi is not None:
         ci_txt = f"{hdi*100}% HDI"
-    g.set_ylabels(f'Proportion correct (with {ci_txt})')
-    g.set_xlabels('Scaling')
     g.set(ylim=(.3, 1.05))
     title_experiment_summary_plots(g, df, summary_text)
     g.set_titles('{col_name}')
@@ -1146,14 +1144,19 @@ def _label_and_title_psychophysical_curve_plot(g, df, summary_text, ci=None, hdi
         xval = 0
     else:
         xval = .5
-    # first axis will always have a ylabel and last one will always have an
-    # xlabel
-    ylabel = axes[0].get_ylabel()
-    xlabel = axes[-1].get_xlabel()
+    ylabel = f'Proportion correct (with {ci_txt})'
+    xlabel = 'Scaling'
     g.set(xlabel='', ylabel='')
     g.fig.subplots_adjust(hspace=.2, wspace=.1, top=1)
     axes[y_idx].set_ylabel(ylabel, y=yval, ha='center')
     axes[x_idx].set_xlabel(xlabel, x=xval, ha='center')
+    # need to call draw here, ino rder for the following to be able to run
+    g.fig.canvas.draw()
+    ylabel = axes[y_idx].yaxis.get_label().get_window_extent()
+    # then the ylabel is taller than the figure, so let's insert a newline break
+    if ylabel.transformed(g.fig.transFigure.inverted()).height > 1:
+        ylabel = f'Proportion correct\n(with {ci_txt})'
+        axes[y_idx].set_ylabel(ylabel, y=yval, ha='center')
 
 
 def fit_psychophysical_curve(x, y, hue=None, style=None, pal={}, dashes_dict={},
