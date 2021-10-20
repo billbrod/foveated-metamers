@@ -71,7 +71,7 @@ def plotting_style(context='paper', for_package='matplotlib', figsize='full'):
                            'legend.title_fontsize': 10,
                            'axes.linewidth': 1.0,
                            'grid.linewidth': 0.8,
-                           'lines.linewidth': 1.2,
+                           'lines.linewidth': 1.0,
                            'lines.markersize': 4.8,
                            'patch.linewidth': 1.2,
                            'xtick.major.width': 1.0,

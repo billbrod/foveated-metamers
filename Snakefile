@@ -1869,6 +1869,8 @@ rule performance_figure:
                                                  curve_fit=True,
                                                  style='trial_type',
                                                  tabular_trial_type_legend=True)
+                if wildcards.context == 'paper':
+                    g.fig.suptitle('')
                 g.fig.savefig(output[0], bbox_inches='tight')
 
 
@@ -1928,6 +1930,8 @@ rule mcmc_figure:
                                                                  tabular_trial_type_legend=True)
                 else:
                     raise Exception(f"Don't know how to handle plot type {wildcards.plot_type}!")
+                if wildcards.context == 'paper':
+                    fig.suptitle('')
                 fig.savefig(output[0], bbox_inches='tight')
 
 
@@ -1964,7 +1968,13 @@ rule mcmc_performance_comparison_figure:
                                                       'predictive grouplevel means', hdi=.95))
                 df = pd.concat(df)
                 if wildcards.focus.startswith('sub'):
-                    df = df.query(f"level=='subject_name' & dependent_var=='{wildcards.focus}'").rename(columns={'dependent_var': 'subject_name'})
+                    focus = wildcards.focus
+                    query_str = ''
+                    if 'comp-natural' in wildcards.focus:
+                        query_str = "trial_type in ['metamer_vs_metamer', 'metamer_vs_reference', 'metamer_vs_metamer-natural', 'metamer_vs_reference-natural'] & "
+                        focus = focus.replace('_comp-natural', '')
+                    query_str += f"level=='subject_name' & dependent_var=='{focus}'"
+                    df = df.query(query_str).rename(columns={'dependent_var': 'subject_name'})
                     df['image_name'] = 'all images'
                 elif wildcards.focus == 'comp-all':
                     df = df.query("level=='all'")
@@ -1972,6 +1982,11 @@ rule mcmc_performance_comparison_figure:
                     df['subject_name'] = 'all subjects'
                 elif wildcards.focus == 'comp-base':
                     query_str = 'trial_type in ["metamer_vs_metamer", "metamer_vs_reference"] & level == "all"'
+                    df = df.query(query_str)
+                    df['image_name'] = 'all images'
+                    df['subject_name'] = 'all subjects'
+                elif wildcards.focus == 'comp-ref':
+                    query_str = 'trial_type in ["metamer_vs_reference"] & level == "all"'
                     df = df.query(query_str)
                     df['image_name'] = 'all images'
                     df['subject_name'] = 'all subjects'
@@ -1986,6 +2001,8 @@ rule mcmc_performance_comparison_figure:
                                                            tabular_trial_type_legend=True)
                 g.fig.canvas.draw()
                 fov.plotting.add_physiological_scaling_bars(g.ax, az.from_netcdf(input[-1]))
+                if wildcards.context == 'paper':
+                    g.fig.suptitle('')
                 g.savefig(output[0], bbox_inches='tight')
 
 
@@ -2059,6 +2076,8 @@ rule performance_comparison_figure:
                     # need to draw so that the following code can check text size
                     g.fig.canvas.draw()
                     fov.plotting.add_physiological_scaling_bars(g.ax, az.from_netcdf(input[-1]))
+                if wildcards.context == 'paper':
+                    g.fig.suptitle('')
                 g.fig.savefig(output[0], bbox_inches='tight')
 
 
