@@ -1864,13 +1864,14 @@ def tabular_legend(fig, legend, labels, title='trial_type',
             celltext = [['\n'.join(c[0].rsplit(' ', 2)), *c[1:]] for c in celltext]
         return celltext
 
+    # place the old legend underneath the figure
     if place_under_fig:
         bbox = legend.get_window_extent().transformed(fig.transFigure.inverted())
         orig_bbox = {'height': bbox.height, 'width': bbox.width, 'x0': bbox.x0,
                      'x1': bbox.x1, 'y0': bbox.y0, 'y1': bbox.y1}
         bbox.x0 = 0
         bbox.x1 = bbox.x0 + orig_bbox['width']
-        bbox.y1 = -.05
+        bbox.y1 = 0
         bbox.y0 = bbox.y1 - orig_bbox['height']
         legend.set_bbox_to_anchor(bbox, transform=fig.transFigure)
     # For all of these bboxes, we're getting them into figure coordinates, such

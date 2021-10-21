@@ -1910,7 +1910,7 @@ rule mcmc_figure:
                     col = 'image_name'
                     hue = 'subject_name'
                     style = 'trial_type'
-                    height = fig_width / 6
+                    height = fig_width / 5 if tab_legend == 'under' else fig_width / 6
                     if 'focus' in wildcards.plot_type:
                         inf_data = fov.mcmc.inf_data_to_df(inf_data, 'predictive grouplevel means', hdi=.95)
                         if 'focus-image' in wildcards.plot_type:
@@ -1934,6 +1934,9 @@ rule mcmc_figure:
                     raise Exception(f"Don't know how to handle plot type {wildcards.plot_type}!")
                 if wildcards.context == 'paper':
                     g.fig.suptitle('')
+                    # also need to move the titles down a bit
+                    for ax in g.axes.flatten():
+                        ax.set_title(ax.get_title(), y=.9)
                 g.savefig(output[0], bbox_inches='tight')
 
 
