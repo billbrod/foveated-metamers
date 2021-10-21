@@ -680,9 +680,10 @@ def performance_plot(expt_df, col='image_name', row=None, hue=None, style=None,
         extend the x-values until performance hits chance.
     logscale_xaxis : bool, optional
         If True, we logscale the x-axis. Else, it's a linear scale.
-    tabular_trial_type_legend : bool, optional
+    tabular_trial_type_legend : {True, False, 'under'}, optional
         Whether to create a tabular legend for trial_type. See the
-        `tabular_legend` function for details.
+        `tabular_legend` function for details. If 'under', we call
+        `tabular_legend` with `place_under_fig=True`
     kwargs :
         passed to plotting.lineplot_like_pointplot
 
@@ -917,9 +918,10 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
     query_str : str or None, optional
         If not None, the string to query dataframe with to limit the plotted
         data (e.g., "distribution == 'posterior'").
-    tabular_trial_type_legend : bool, optional
+    tabular_trial_type_legend : {True, False, 'under'}, optional
         Whether to create a tabular legend for trial_type. See the
-        `tabular_legend` function for details.
+        `tabular_legend` function for details. If 'under', we call
+        `tabular_legend` with `place_under_fig=True`
     kwargs :
         passed to sns.FacetGrid
 
@@ -1705,9 +1707,10 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
         Format string for axes titles. Can include {row_val}, {col_val}, {row},
         {col} (for the values and names of those facets, respectively) and
         plain text.
-    tabular_trial_type_legend : bool, optional
+    tabular_trial_type_legend : {True, False, 'under'}, optional
         Whether to create a tabular legend for trial_type. See the
-        `tabular_legend` function for details.
+        `tabular_legend` function for details. If 'under', we call
+        `tabular_legend` with `place_under_fig=True`
     kwargs :
         passed to plt.subplots
 

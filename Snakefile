@@ -1851,6 +1851,7 @@ rule performance_figure:
         import matplotlib.pyplot as plt
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                tab_legend = 'under' if wildcards.context == 'paper' else True
                 expt_df = pd.read_csv(input[0])
                 style, fig_width = fov.style.plotting_style(wildcards.context)
                 plt.style.use(style)
@@ -1868,7 +1869,7 @@ rule performance_figure:
                                                  height=height, col=col,
                                                  curve_fit=True,
                                                  style='trial_type',
-                                                 tabular_trial_type_legend=True)
+                                                 tabular_trial_type_legend=tab_legend)
                 if wildcards.context == 'paper':
                     g.fig.suptitle('')
                 g.fig.savefig(output[0], bbox_inches='tight')
@@ -1898,9 +1899,10 @@ rule mcmc_figure:
                 inf_data = az.from_netcdf(input[0])
                 style, fig_width = fov.style.plotting_style(wildcards.context)
                 plt.style.use(style)
+                tab_legend = 'under' if wildcards.context == 'paper' else True
                 if wildcards.plot_type == 'params-grouplevel':
                     fig = fov.figures.psychophysical_grouplevel_means(inf_data, height=fig_width/4,
-                                                                      tabular_trial_type_legend=True)
+                                                                      tabular_trial_type_legend=tab_legend)
                     for ax in fig.axes:
                         ax.set_title(ax.get_title().replace('a0', 'gain').replace('s0', 'critical scaling'))
                     fig.suptitle(fig._suptitle.get_text(), y=1.05)
@@ -1922,17 +1924,17 @@ rule mcmc_figure:
                             inf_data = inf_data.query("level=='subject_name'").rename(
                                 columns={'dependent_var': 'subject_name'})
                             inf_data['image_name'] = 'all images'
-                    fig = fov.figures.posterior_predictive_check(inf_data,
-                                                                 col=col,
-                                                                 hue=hue,
-                                                                 style=style,
-                                                                 height=height,
-                                                                 tabular_trial_type_legend=True)
+                    g = fov.figures.posterior_predictive_check(inf_data,
+                                                               col=col,
+                                                               hue=hue,
+                                                               style=style,
+                                                               height=height,
+                                                               tabular_trial_type_legend=tab_legend)
                 else:
                     raise Exception(f"Don't know how to handle plot type {wildcards.plot_type}!")
                 if wildcards.context == 'paper':
-                    fig.suptitle('')
-                fig.savefig(output[0], bbox_inches='tight')
+                    g.fig.suptitle('')
+                g.savefig(output[0], bbox_inches='tight')
 
 
 rule mcmc_performance_comparison_figure:
@@ -1962,6 +1964,8 @@ rule mcmc_performance_comparison_figure:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 style, fig_width = fov.style.plotting_style(wildcards.context)
                 plt.style.use(style)
+                tab_legend = 'under' if wildcards.context == 'paper' else True
+                height = fig_width / 2 if tab_legend == 'under' else fig_width / 3
                 df = []
                 for f in input[:-1]:
                     df.append(fov.mcmc.inf_data_to_df(az.from_netcdf(f),
@@ -1995,10 +1999,10 @@ rule mcmc_performance_comparison_figure:
                 g = fov.figures.posterior_predictive_check(df, col=None,
                                                            hue='model',
                                                            style='trial_type',
-                                                           height=fig_width/3,
+                                                           height=height,
                                                            aspect=2,
                                                            logscale_xaxis=True,
-                                                           tabular_trial_type_legend=True)
+                                                           tabular_trial_type_legend=tab_legend)
                 g.fig.canvas.draw()
                 fov.plotting.add_physiological_scaling_bars(g.ax, az.from_netcdf(input[-1]))
                 if wildcards.context == 'paper':
@@ -2029,6 +2033,7 @@ rule performance_comparison_figure:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 col = None
+                tab_legend = 'under' if wildcards.context == 'paper' else True
                 logscale_xaxis = True
                 curve_fit = 'to_chance'
                 if wildcards.focus.startswith('sub'):
@@ -2071,7 +2076,7 @@ rule performance_comparison_figure:
                                                  style='trial_type',
                                                  aspect=2 if col is None else 1,
                                                  logscale_xaxis=logscale_xaxis,
-                                                 tabular_trial_type_legend=True)
+                                                 tabular_trial_type_legend=tab_legend)
                 if col is None:
                     # need to draw so that the following code can check text size
                     g.fig.canvas.draw()

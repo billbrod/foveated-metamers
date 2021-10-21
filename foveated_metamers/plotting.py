@@ -511,9 +511,10 @@ def _add_legend(df, fig=None, hue=None, style=None, palette={},
         Whether to include all hue levels or a sample of evenly spaced values
         (only if hue is numeric). NOTE: 'brief' currently only affects hue
         levels, all style levels are always included.
-    tabular_trial_type_legend : bool, optional
+    tabular_trial_type_legend : {True, False, 'under'}, optional
         Whether to create a tabular legend for trial_type. See the
-        `tabular_legend` function for details.
+        `tabular_legend` function for details. If 'under', we call
+        `tabular_legend` with `place_under_fig=True`
 
     """
     artists = {}
@@ -581,13 +582,14 @@ def _add_legend(df, fig=None, hue=None, style=None, palette={},
                       lab not in trial_type_labels] + ['']
             labels += ['' for _ in trial_type_labels]
         leg = fig.legend(list(artists.values()), labels,
-                         frameon=False, bbox_to_anchor=(1, .5),
+                         frameon=False, bbox_to_anchor=(.97, .5),
                          bbox_transform=fig.transFigure, loc='center left',
                          borderaxespad=0)
         if tabular_trial_type_legend:
             # need to draw so we can legend location and size
             fig.canvas.draw()
-            tabular_legend(fig, leg, trial_type_labels, 'trial_type')
+            tabular_legend(fig, leg, trial_type_labels, 'trial_type',
+                           tabular_trial_type_legend == 'under')
 
 
 def _jitter_data(data, jitter):
@@ -1777,7 +1779,8 @@ def _spectra_dataset_to_dataframe(spectra, data='sf'):
     return df
 
 
-def tabular_legend(fig, legend, labels, title='trial_type'):
+def tabular_legend(fig, legend, labels, title='trial_type',
+                   place_under_fig=False):
     """Add a tabular legend for trial_type to figure.
 
     This is a fancier version of the legend explaining trial type, grouping
@@ -1805,6 +1808,10 @@ def tabular_legend(fig, legend, labels, title='trial_type'):
         the handles on the legend, in that order.
     title : str, optional
         The title of legend, which will go in the top left corner of the table.
+    place_under_fig : bool, optional
+        Whether to place the tabular legend in the original legend location (if
+        False) or underneath the figure (if True). You might want to do this
+        because the legend ends up being rather wide.
 
     Returns
     -------
@@ -1857,10 +1864,19 @@ def tabular_legend(fig, legend, labels, title='trial_type'):
             celltext = [['\n'.join(c[0].rsplit(' ', 2)), *c[1:]] for c in celltext]
         return celltext
 
+    if place_under_fig:
+        bbox = legend.get_window_extent().transformed(fig.transFigure.inverted())
+        orig_bbox = {'height': bbox.height, 'width': bbox.width, 'x0': bbox.x0,
+                     'x1': bbox.x1, 'y0': bbox.y0, 'y1': bbox.y1}
+        bbox.x0 = 0
+        bbox.x1 = bbox.x0 + orig_bbox['width']
+        bbox.y1 = -.05
+        bbox.y0 = bbox.y1 - orig_bbox['height']
+        legend.set_bbox_to_anchor(bbox, transform=fig.transFigure)
     # For all of these bboxes, we're getting them into figure coordinates, such
     # that 0, 0 is the bottom left corner and 1, 1 is the top right. this is
     # the bbox of the whole legend.
-    legend_loc = legend.get_window_extent().transformed(fig.transFigure.inverted())
+    legend_loc = legend.get_bbox_to_anchor().transformed(fig.transFigure.inverted())
     # find the indices of the handles that are missing labels -- the first of
     # these will be the anchor point for the top of our table, the last for the
     # bottom.
@@ -1896,6 +1912,13 @@ def tabular_legend(fig, legend, labels, title='trial_type'):
                  .1]
     # need to get the height here
     table_loc.append((handle_loc3.y0 + 3*vert_space) - table_loc[1])
+    # for older versions of matlab, get_window_extent doesn't update when
+    # elements are moved
+    # (https://matplotlib.org/3.2.2/api/_as_gen/matplotlib.axis.Axis.get_window_extent.html),
+    # so we do this correction for the new location of the legend
+    if place_under_fig:
+        table_loc[0] -= orig_bbox['x0'] - bbox.x0
+        table_loc[1] -= orig_bbox['y0'] - bbox.y0
 
     celltext = [TRIAL_TYPE_TO_LONG_LEGEND[lab] for lab in labels]
 
