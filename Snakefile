@@ -2515,7 +2515,7 @@ rule dacey_mcmc_plot:
                 fig.savefig(output[0])
 
 
-rule psychphys_expt_fig:
+rule psychophys_expt_fig:
     input:
         op.join('reports/figures/psychophys_expt.svg'),
     output:
