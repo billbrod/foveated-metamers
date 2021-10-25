@@ -2269,11 +2269,13 @@ def write_create_bitmap_resolution(path, res=300):
         doc = xmltodict.parse(f.read())
     opts = [i for i in doc['inkscape']['group'] if 'options' == i['@id']][0]
     create_bm =[i for i in opts['group'] if 'createbitmap' == i['@id']]
-    if len(create_bm) > 0:
+    orig = '64'
+    if len(create_bm) > 0 and '@resolution' in create_bm[0]:
         orig = create_bm[0]['@resolution']
         create_bm[0]['@resolution'] = str(res)
+    elif len(create_bm) > 0:
+        create_bm[0]['@resolution'] = str(res)
     else:
-        orig = '64'
         create_bm = OrderedDict({'@id': 'createbitmap', '@resolution': str(res)})
         opts.append(create_bm)
     with open(path, 'w') as f:

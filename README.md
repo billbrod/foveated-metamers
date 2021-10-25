@@ -57,6 +57,9 @@ multiple jobs using the same GPU.
 
 TODO: ADD DOCKER IMAGES
 
+Other requirements:
+- inkscape, at least version 1.0.2
+
 ## Experiment environment
 
 For running the experiment, need to install `glfw` from your package
