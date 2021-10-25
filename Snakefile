@@ -2575,14 +2575,15 @@ rule embed_bitmaps_into_figure:
     output:
         op.join(config['DATA_DIR'], 'figures', '{context}', '{figure_name}_dpi-{bitmap_dpi}.svg')
     log:
-        op.join(config['DATA_DIR'], 'log', 'figures', '{context}', '{figure_name}_dpi-{bitmap_dpi}_svg.log')
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{figure_name}_dpi-{bitmap_dpi}_svg.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'log', 'figures', '{context}', '{figure_name}_dpi-{bitmap_dpi}_svg_benchmark.txt')
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{figure_name}_dpi-{bitmap_dpi}_svg_benchmark.txt')
     run:
         import subprocess
         import shutil
         import contextlib
         import foveated_metamers as fov
+        from glob import glob
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 orig_dpi = fov.figures.write_create_bitmap_resolution(input[0], wildcards.bitmap_dpi)
@@ -2591,6 +2592,13 @@ rule embed_bitmaps_into_figure:
                 action_str = select_ids + "SelectionCreateBitmap;select-clear;" + select_ids + "EditDelete;"
                 action_str += "FileSave;FileQuit;"
                 shutil.copy(input[1], output[0])
-                print(action_str)
+                print(f"inkscape action string:\n{action_str}")
                 subprocess.call(['inkscape', '-g', f'--actions={action_str}', output[0]])
+                # the inkscape call above embeds the bitmaps but also apparently
+                # creates a separate png file containing the embedded bitmaps,
+                # which we want to remove
+                extra_files = glob(output[0] + '-*')
+                print(f"will remove the following: {extra_files}")
+                for f in extra_files:
+                    os.remove(f)
                 fov.figures.write_create_bitmap_resolution(input[0], orig_dpi)
