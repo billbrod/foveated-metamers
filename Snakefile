@@ -2566,3 +2566,31 @@ rule psychophys_expt_fig:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'psychophys_expt_benchmark.txt')
     shell:
         "cp {input} {output}"
+
+
+rule embed_bitmaps_into_figure:
+    input:
+        config['INKSCAPE_PREF_FILE'],
+        op.join(config['DATA_DIR'], 'figures', '{context}', '{figure_name}.svg')
+    output:
+        op.join(config['DATA_DIR'], 'figures', '{context}', '{figure_name}_dpi-{bitmap_dpi}.svg')
+    log:
+        op.join(config['DATA_DIR'], 'log', 'figures', '{context}', '{figure_name}_dpi-{bitmap_dpi}_svg.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'log', 'figures', '{context}', '{figure_name}_dpi-{bitmap_dpi}_svg_benchmark.txt')
+    run:
+        import subprocess
+        import shutil
+        import contextlib
+        import foveated_metamers as fov
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                orig_dpi = fov.figures.write_create_bitmap_resolution(input[0], wildcards.bitmap_dpi)
+                ids = fov.figures.get_image_ids(input[1])
+                select_ids = ''.join([f'select-by-id:{id};' for id in ids])
+                action_str = select_ids + "SelectionCreateBitmap;select-clear;" + select_ids + "EditDelete;"
+                action_str += "FileSave;FileQuit;"
+                shutil.copy(input[1], output[0])
+                print(action_str)
+                subprocess.call(['inkscape', '-g', f'--actions={action_str}', output[0]])
+                fov.figures.write_create_bitmap_resolution(input[0], orig_dpi)

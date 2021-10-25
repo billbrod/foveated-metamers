@@ -17,6 +17,8 @@ import os.path as op
 import arviz as az
 from . import utils, plotting, analysis, mcmc, other_data
 import sys
+from collections import OrderedDict
+import xmltodict
 sys.path.append(op.join(op.dirname(op.realpath(__file__)), '..', 'extra_packages'))
 import plenoptic_part as pop
 
@@ -2233,3 +2235,76 @@ def compare_distance_and_performance(expt_df, dist_df, col='image_name',
     g.axes[x_idx].set_xlabel(xlabel, x=xval, ha='center')
 
     return g
+
+
+def write_create_bitmap_resolution(path, res=300):
+    """Write specified create bitmap resolution to inkscape preferences.xml.
+
+    Intended to be used once at the beginning and once at the end, like so:
+
+    ```
+    orig_dpi = write_create_bitmap_resolution(path, 300)
+    # DO SOME STUFF
+    write_create_bitmap_resolution(path, orig_dpi)
+    ```
+
+    Thus we don't end up permanently modifying the resolution.
+
+    Parameters
+    ----------
+    path : str
+        path to the inkscape preferences file, probably
+        ~/.config/inkscape/preferences.xml
+    res : int or str, optional
+        Target resolution for create bitmap.
+
+    Returns
+    -------
+    orig : str
+        The original dpi of createbitmap. If none found, returns '64', the
+        default.
+
+    """
+    with open(op.expanduser(path)) as f:
+        doc = xmltodict.parse(f.read())
+    opts = [i for i in doc['inkscape']['group'] if 'options' == i['@id']][0]
+    create_bm =[i for i in opts['group'] if 'createbitmap' == i['@id']]
+    if len(create_bm) > 0:
+        orig = create_bm[0]['@resolution']
+        create_bm[0]['@resolution'] = str(res)
+    else:
+        orig = '64'
+        create_bm = OrderedDict({'@id': 'createbitmap', '@resolution': str(res)})
+        opts.append(create_bm)
+    with open(path, 'w') as f:
+        xmltodict.unparse(doc, output=f)
+    return orig
+
+
+def get_image_ids(path):
+    """Get inkscape ids of images that are linked (vs embedded).
+
+    We only check the images, and we return the ids of all that contain an
+    @xlink:href field which points to an existing file.
+
+    Parameters
+    ----------
+    path : str
+        Path to the svg.
+
+    Returns
+    -------
+    ids : list
+        List of strings containing the ids of these images. These can then be
+        used with the inskcape command line, like so: `f'inkscape -g
+        --action="select-by-id:{ids[0]};EditDelete;" {path}'`
+
+    """
+    with open(path) as f:
+        doc = xmltodict.parse(f.read())
+    images = doc['svg']['g']['image']
+    ids = []
+    for im in images:
+        if '@xlink:href' in im and op.exists(im['@xlink:href']):
+            ids.append(im['@id'])
+    return ids

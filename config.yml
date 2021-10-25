@@ -1,6 +1,9 @@
 DATA_DIR: "/home/billbrod/Desktop/metamers/"
 TEXTURE_DIR: "/home/billbrod/Desktop/textures/cropped512-gray-jpg"
 
+# required for making some of the figures
+INKSCAPE_PREF_FILE: "/home/billbrod/.config/inkscape/preferences.xml"
+
 REF_IMAGE_TEMPLATE_PATH: "{DATA_DIR}/ref_images/{image_name}.png"
 METAMER_TEMPLATE_PATH: "{DATA_DIR}/metamers/{model_name}/{image_name}/scaling-{scaling}/opt-{optimizer}_loss-{loss}/fr-{fract_removed}_lc-{loss_fract}_lt-{loss_change_thresh}_li-{loss_change_iter}_cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}/seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc:.03f}_em-{max_ecc:.03f}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}{save_all}_metamer.png"
 
