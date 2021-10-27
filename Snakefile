@@ -1727,13 +1727,13 @@ rule window_example_figure:
                                    utils.generate_metamer_paths(**wildcards)],
     output:
         report(op.join(config['DATA_DIR'], 'figures', '{context}', '{model_name}',
-                       '{image_name}_scaling-{scaling}_seed-{seed}_gpu-{gpu}_window.png'))
+                       '{image_name}_scaling-{scaling}_seed-{seed_n}_gpu-{gpu}_window.png'))
     log:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
-                '{image_name}_scaling-{scaling}_seed-{seed}_gpu-{gpu}_window.log')
+                '{image_name}_scaling-{scaling}_seed-{seed_n}_gpu-{gpu}_window.log')
     benchmark:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
-                '{image_name}_scaling-{scaling}_seed-{seed}_gpu-{gpu}_window_benchmark.txt')
+                '{image_name}_scaling-{scaling}_seed-{seed_n}_gpu-{gpu}_window_benchmark.txt')
     params:
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
     resources:
@@ -2699,3 +2699,29 @@ rule compose_figures:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 if 'model_schematic' in wildcards.fig_name:
                     fov.compose_figures.model_schematic(*input, output[0], wildcards.context)
+
+
+rule metamer_comparison_figure:
+    input:
+        op.join('reports', 'figures', 'metamer_comparison.svg'),
+        op.join(config['DATA_DIR'], 'ref_images_preproc', '{image_name}_gamma-corrected_range-.05,.95_size-2048,2600.png'),
+        lambda wildcards: [op.join(config['DATA_DIR'], 'figures', '{{context}}', '{model_name}',
+                                   '{{image_name}}_range-.05,.95_size-2048,2600_scaling-{scaling}_seed-0_gpu-{gpu}_window.png').format(
+                                       model_name=m, scaling=sc, gpu=0 if float(sc) < config['GPU_SPLIT'] else 1)
+                           for m, sc in zip(['RGC_norm_gaussian', 'RGC_norm_gaussian', 'V1_norm_s6_gaussian', 'V1_norm_s6_gaussian'],
+                                            wildcards.scaling.split(','))]
+    output:
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'metamer_comparison_{image_name}_scaling-{scaling}.svg')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'metamer_comparison_{image_name}_scaling-{scaling}.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'metamer_comparison_{image_name}_scaling-{scaling}_benchmark.txt')
+    run:
+        import subprocess
+        import shutil
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                shutil.copy(input[0], output[0])
+                for i, im in enumerate(input[1:]):
+                    subprocess.call(['sed', '-i', f's|IMAGE{i+1}|{im}|', output[0]])
