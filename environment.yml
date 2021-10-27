@@ -28,3 +28,5 @@ dependencies:
       - tabulate==0.8.9
       - git+https://github.com/LabForComputationalVision/plenoptic.git@main
       - xmltodict>=0.12
+      - svgutils
+      - flatten_dict

@@ -19,6 +19,7 @@ from . import utils, plotting, analysis, mcmc, other_data
 import sys
 from collections import OrderedDict
 import xmltodict
+import flatten_dict
 sys.path.append(op.join(op.dirname(op.realpath(__file__)), '..', 'extra_packages'))
 import plenoptic_part as pop
 
@@ -2304,9 +2305,13 @@ def get_image_ids(path):
     """
     with open(path) as f:
         doc = xmltodict.parse(f.read())
-    images = doc['svg']['g']['image']
-    ids = []
-    for im in images:
-        if '@xlink:href' in im and op.exists(im['@xlink:href']):
-            ids.append(im['@id'])
+    # we can have a strange hierarchy in the svg, depending on how we've
+    # grouped images. this avoids all that by flattening it out...
+    flattened_svg = flatten_dict.flatten(doc['svg']['g'], enumerate_types=(list, ))
+    # then we grab the xlink:href field for each image
+    images = {k: v for k, v in flattened_svg.items() if 'image' in k
+              and '@xlink:href' in k}
+    # and grab only the ids of those images whose xlink:href exists
+    ids = [flattened_svg[(*k[:-1], '@id')] for k, v in images.items()
+           if op.exists(v)]
     return ids

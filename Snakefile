@@ -47,7 +47,7 @@ wildcard_constraints:
     logscale="log|linear",
     mcmc_model="partially-pooled|unpooled",
 ruleorder:
-    collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check > mcmc_compare_plot > mcmc_plots
+    collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check > mcmc_compare_plot > mcmc_plots > embed_bitmaps_into_figure > compose_figures
 
 LINEAR_IMAGES = config['IMAGE_NAME']['ref_image']
 MODELS = [config[i]['model_name'] for i in ['RGC', 'V1']]
@@ -2571,13 +2571,13 @@ rule psychophys_expt_fig:
 rule embed_bitmaps_into_figure:
     input:
         config['INKSCAPE_PREF_FILE'],
-        op.join(config['DATA_DIR'], 'figures', '{context}', '{figure_name}.svg')
+        op.join(config['DATA_DIR'], '{folder}', '{context}', '{figure_name}.svg')
     output:
-        op.join(config['DATA_DIR'], 'figures', '{context}', '{figure_name}_dpi-{bitmap_dpi}.svg')
+        op.join(config['DATA_DIR'], '{folder}', '{context}', '{figure_name}_dpi-{bitmap_dpi}.svg')
     log:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{figure_name}_dpi-{bitmap_dpi}_svg.log')
+        op.join(config['DATA_DIR'], 'logs', '{folder}', '{context}', '{figure_name}_dpi-{bitmap_dpi}_svg.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{figure_name}_dpi-{bitmap_dpi}_svg_benchmark.txt')
+        op.join(config['DATA_DIR'], 'logs', '{folder}', '{context}', '{figure_name}_dpi-{bitmap_dpi}_svg_benchmark.txt')
     run:
         import subprocess
         import shutil
@@ -2602,3 +2602,100 @@ rule embed_bitmaps_into_figure:
                 for f in extra_files:
                     os.remove(f)
                 fov.figures.write_create_bitmap_resolution(input[0], orig_dpi)
+
+
+rule window_contours_figure:
+    output:
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'window_contours_size-{size}_scaling-{scaling}_linewidth-{lw}_background-{bg}.svg'),
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'window_contours_size-{size}_scaling-{scaling}_linewidth-{lw}_background-{bg}.log'),
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'window_contours_size-{size}_scaling-{scaling}_linewidth-{lw}_background-{bg}_benchmark.txt'),
+    run:
+        import contextlib
+        import sys
+        import matplotlib.pyplot as plt
+        import foveated_metamers as fov
+        sys.path.append(op.join(op.dirname(op.realpath(__file__)), 'extra_packages/pooling-windows'))
+        import pooling
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                size = [int(i) for i in wildcards.size.split(',')]
+                pw = pooling.PoolingWindows(float(wildcards.scaling), size, std_dev=1,
+                                            window_type='gaussian')
+                # we ignore figure size, because we are going to rescale this
+                # when we move it around
+                style, _ = fov.style.plotting_style(wildcards.context)
+                if wildcards.bg == 'none':
+                    # set both axes and figure facecolor to transparent
+                    style['axes.facecolor'] = (0, 0, 0, 0)
+                    style['figure.facecolor'] = (0, 0, 0, 0)
+                elif wildcards.bg == 'white':
+                    # want to see the border of the axis
+                    style['axes.edgecolor'] = (0, 0, 0, 1)
+                    style['axes.linewidth'] = .5*float(wildcards.lw)*style['lines.linewidth']
+                else:
+                    raise Exception("Can only handle background none or white!")
+                plt.style.use(style)
+                # since this is being shrunk, we need to make the lines thicker
+                ax = pw.plot_windows(subset=False,
+                                     linewidths=float(wildcards.lw)*style['lines.linewidth'])
+                if wildcards.bg == 'none':
+                    # this is the background image underneath the contour lines
+                    # -- we want it to be invisible so we can overlay these
+                    # contours on another image.
+                    ax.images[0].set_visible(False)
+                else:
+                    # want to see the border of the axis
+                    ax.set_frame_on(True)
+                    ax.spines['top'].set_visible(True)
+                    ax.spines['right'].set_visible(True)
+                ax.figure.savefig(output[0], bbox_inches='tight')
+
+
+rule model_schematic_figure:
+    input:
+        op.join('reports', 'figures', 'model_schematic.svg'),
+        op.join(config['DATA_DIR'], 'ref_images_preproc', '{image_name}_gamma-corrected_range-.05,.95_size-2048,2600.png'),
+    output:
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'model_schematic_{image_name}.svg')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'model_schematic_{image_name}.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'model_schematic_{image_name}_benchmark.txt')
+    run:
+        import subprocess
+        import shutil
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                shutil.copy(input[0], output[0])
+                subprocess.call(['sed', '-i', f's|IMAGE1|{input[1]}|', output[0]])
+
+
+def get_compose_figures_input(wildcards):
+    path_template = os.path.join(config['DATA_DIR'], "figures", wildcards.context, "{}.svg")
+    if 'model_schematic' in wildcards.fig_name:
+        paths = [path_template.format(wildcards.fig_name),
+                 path_template.format('window_contours_size-2048,2600_scaling-1_linewidth-15_background-none'),
+                 path_template.format('window_contours_size-2048,2600_scaling-1_linewidth-36_background-white')]
+    return paths
+
+
+rule compose_figures:
+    input:
+        get_compose_figures_input,
+    output:
+        op.join(config['DATA_DIR'], 'compose_figures', '{context}', '{fig_name}.svg')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'compose_figures', '{context}', '{fig_name}.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'compose_figures', '{context}', '{fig_name}_benchmark.txt')
+    run:
+        import subprocess
+        import contextlib
+        import foveated_metamers as fov
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                if 'model_schematic' in wildcards.fig_name:
+                    fov.compose_figures.model_schematic(*input, output[0], wildcards.context)

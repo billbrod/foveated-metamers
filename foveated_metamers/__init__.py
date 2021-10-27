@@ -12,3 +12,4 @@ from . import mcmc
 from . import style
 from .observer_model import ObserverModel
 from . import other_data
+from . import compose_figures
