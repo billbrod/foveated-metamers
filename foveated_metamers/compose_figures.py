@@ -114,3 +114,39 @@ def model_schematic(schematic_fig, contour_fig_large, contour_fig_small,
         SVG(contour_fig_small).scale(.0255).move(388+8, 362-15),
         SVG(contour_fig_small).scale(.0255).move(388, 362),
     ).save(save_path)
+
+
+def metamer_comparison(metamer_fig, scaling_vals, save_path, context='paper'):
+    """Add text labeling model metamer scaling values.
+
+    Parameters
+    ----------
+    metamer_fig : str
+        Path to the metamer comparison figure.
+    save_path : str
+        path to save the composed figure at
+    context : {'paper', 'poster'}, optional
+        plotting context that's being used for this figure (as in
+        seaborn's set_context function). if poster, will scale things up. Note
+        that, for this figure, only paper has really been checked
+
+    """
+    text_params, figure_width = style.plotting_style(context, 'svgutils', 'full')
+    figure_width = _convert_to_pix(figure_width)
+    metamer_fig = SVG(metamer_fig, 'inkscape')
+    # font_size is for panel labels and so too large for what we want here --
+    # we want two thirds the size
+    font_size = float(text_params.pop('size').replace('pt', ''))
+    font_size = _convert_to_pix(f'{font_size*2/3}pt')
+    compose.Figure(
+        figure_width, metamer_fig.height * calc_scale('inkscape'),
+        metamer_fig,
+        compose.Text(f'Scaling = {scaling_vals[0]}', 120, 240, size=font_size,
+                     **text_params),
+        compose.Text(f'Scaling = {scaling_vals[1]}', 395, 240, size=font_size,
+                     **text_params),
+        compose.Text(f'Scaling = {scaling_vals[2]}', 120, 485, size=font_size,
+                     **text_params),
+        compose.Text(f'Scaling = {scaling_vals[3]}', 395, 485, size=font_size,
+                     **text_params),
+    ).save(save_path)

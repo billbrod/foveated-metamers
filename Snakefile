@@ -2679,6 +2679,8 @@ def get_compose_figures_input(wildcards):
         paths = [path_template.format(wildcards.fig_name),
                  path_template.format('window_contours_size-2048,2600_scaling-1_linewidth-15_background-none'),
                  path_template.format('window_contours_size-2048,2600_scaling-1_linewidth-36_background-white')]
+    if 'metamer_comparison' in wildcards.fig_name:
+        paths = [path_template.format(wildcards.fig_name)]
     return paths
 
 
@@ -2699,6 +2701,10 @@ rule compose_figures:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 if 'model_schematic' in wildcards.fig_name:
                     fov.compose_figures.model_schematic(*input, output[0], wildcards.context)
+                if 'metamer_comparison' in wildcards.fig_name:
+                    scaling = re.findall('scaling-([0-9,.]+)', wildcards.fig_name)[0]
+                    scaling = [float(sc) for sc in scaling.split(',')]
+                    fov.compose_figures.metamer_comparison(*input, scaling, output[0], wildcards.context)
 
 
 rule metamer_comparison_figure:
