@@ -57,10 +57,6 @@ def plotting_style(context='paper', for_package='matplotlib', figsize='full'):
                   'figure.subplot.right': .96,
                   'figure.subplot.bottom': .11,
                   'figure.subplot.top': .97}
-                  # this is necessary for dealing with underscores in column
-                  # names, see
-                  # https://github.com/matplotlib/matplotlib/issues/17774
-                  # 'text.latex.preamble': r"\usepackage{underscore}"}
         if context == 'paper':
             params.update({'font.size': 10,
                            'axes.labelsize': 10,
