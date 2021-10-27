@@ -603,7 +603,11 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
                     except KeyError:
                         pass
             else:
-                scaling = kwargs['scaling']
+                try:
+                    scaling = float(kwargs['scaling'])
+                except TypeError:
+                    # then this is a list
+                    scaling = [float(sc) for sc in kwargs['scaling']]
             if 'init' not in kwargs.keys():
                 if 'natural' in comp:
                     args['init_type'] = 'natural'
@@ -649,7 +653,7 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
                         if isinstance(tmp_seed_n, str) and tmp_seed_n.startswith('index'):
                             tmp_seed_n = init_type.index(tmp['init_type'])
                         tmp['seed'] = seeds_dict[(tmp['image_name'].replace('_downsample-2', ''),
-                                                  tmp['scaling'])][tmp_seed_n]
+                                                  tmp['scaling'])][int(tmp_seed_n)]
                     except KeyError:
                         raise Exception(f"{tmp['image_name']} and {tmp['scaling']} (for model {model}) "
                                         "not found in the default set of metamers with pre-generated seeds"
