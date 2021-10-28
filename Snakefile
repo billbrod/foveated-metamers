@@ -2574,7 +2574,10 @@ rule psychophys_expt_fig:
 
 rule embed_bitmaps_into_figure:
     input:
-        config['INKSCAPE_PREF_FILE'],
+        # marking this as ancient means we don't rerun this step if the
+        # preferences file has changed, which is good because it changes
+        # everytime we run this step
+        ancient(config['INKSCAPE_PREF_FILE']),
         op.join(config['DATA_DIR'], '{folder}', '{context}', '{figure_name}.svg')
     output:
         op.join(config['DATA_DIR'], '{folder}', '{context}', '{figure_name}_dpi-{bitmap_dpi}.svg')
@@ -2826,7 +2829,6 @@ rule cutout_figures:
                 # cutout is centered
                 fov.figures.add_cutout_box(periphery_fig.axes[0], plot_periphery=False, colors='b')
                 if wildcards.fixation_cross == 'cross':
-                    fov.figures.add_fixation_cross(periphery_fig.axes[0])
                     fov.figures.add_fixation_cross(fovea_fig.axes[0])
                 fig.savefig(output[0])
                 fovea_fig.savefig(output[1])
