@@ -138,7 +138,7 @@ def get_image_cutout(images, window_size=400, periphery_offset=(-800, -1000)):
     return fovea, periphery
 
 
-def cutout_figure(images, window_size=400, periphery_offset=(-800, -1000), max_ecc=30.2,
+def cutout_figure(images, window_size=400, periphery_offset=(-800, -1000), max_ecc=26.8,
                   plot_fovea=True, plot_periphery=True):
     """create figure showing cutout views of different images
 
@@ -200,7 +200,7 @@ def cutout_figure(images, window_size=400, periphery_offset=(-800, -1000), max_e
 
 
 def scaling_comparison_figure(model_name, image_name, scaling_vals, seed, window_size=400,
-                              periphery_offset=(-800, -1000), max_ecc=30.2, **kwargs):
+                              periphery_offset=(-800, -1000), max_ecc=26.8, **kwargs):
     r"""Create a figure showing cut-out views of all scaling values
 
     We want to be able to easily visually compare metamers across
