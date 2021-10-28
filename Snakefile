@@ -2606,7 +2606,11 @@ rule embed_bitmaps_into_figure:
                 extra_files = glob(output[0] + '-*') + glob(output[0].replace(',', '_') + '-*')
                 print(f"will remove the following: {extra_files}")
                 for f in extra_files:
-                    os.remove(f)
+                    try:
+                        os.remove(f)
+                    except FileNotFoundError:
+                        # then the file was removed by something else
+                        continue
                 fov.figures.write_create_bitmap_resolution(input[0], orig_dpi)
 
 
