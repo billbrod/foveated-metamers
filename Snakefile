@@ -2711,7 +2711,9 @@ rule compose_figures:
                 if 'metamer_comparison' in wildcards.fig_name:
                     scaling = re.findall('scaling-([0-9,.]+)', wildcards.fig_name)[0]
                     scaling = [float(sc) for sc in scaling.split(',')]
-                    fov.compose_figures.metamer_comparison(*input, scaling, output[0], wildcards.context)
+                    fov.compose_figures.metamer_comparison(*input, scaling, output[0],
+                                                           'nocutout' not in wildcards.fig_name,
+                                                           wildcards.context)
 
 
 def get_metamer_comparison_figure_inputs(wildcards):

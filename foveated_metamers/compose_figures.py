@@ -116,15 +116,23 @@ def model_schematic(schematic_fig, contour_fig_large, contour_fig_small,
     ).save(save_path)
 
 
-def metamer_comparison(metamer_fig, scaling_vals, save_path, context='paper'):
+def metamer_comparison(metamer_fig, scaling_vals, save_path, cutout_fig=False,
+                       context='paper'):
     """Add text labeling model metamer scaling values.
 
     Parameters
     ----------
     metamer_fig : str
         Path to the metamer comparison figure.
+    scaling_vals : list
+        List of strings or floats, the scaling values to use for labeling the
+        figure.
     save_path : str
         path to save the composed figure at
+    cutout_fig : bool, optional
+        Whether this is the nocutout (False) or cutout (True) version of the
+        metamer comparison figure, which changes where we place the scaling
+        labels.
     context : {'paper', 'poster'}, optional
         plotting context that's being used for this figure (as in
         seaborn's set_context function). if poster, will scale things up. Note
@@ -135,18 +143,24 @@ def metamer_comparison(metamer_fig, scaling_vals, save_path, context='paper'):
     figure_width = _convert_to_pix(figure_width)
     metamer_fig = SVG(metamer_fig, 'inkscape')
     # font_size is for panel labels and so too large for what we want here --
-    # we want two thirds the size
+    # we want two-thirds or five-ninths the size (converting from 18pt to 12pt
+    # or 10pt, respectively)
     font_size = float(text_params.pop('size').replace('pt', ''))
-    font_size = _convert_to_pix(f'{font_size*2/3}pt')
+    if not cutout_fig:
+        font_size = _convert_to_pix(f'{font_size*2/3}pt')
+        txt_move = [(120, 240), (380, 240), (120, 485), (395, 485)]
+    else:
+        font_size = _convert_to_pix(f'{font_size*5/9}pt')
+        txt_move = [(100, 162), (380, 162), (100, 326), (380, 326)]
     compose.Figure(
         figure_width, metamer_fig.height * calc_scale('inkscape'),
         metamer_fig,
-        compose.Text(f'Scaling = {scaling_vals[0]}', 120, 240, size=font_size,
+        compose.Text(f'Scaling = {scaling_vals[0]}', *txt_move[0], size=font_size,
                      **text_params),
-        compose.Text(f'Scaling = {scaling_vals[1]}', 395, 240, size=font_size,
+        compose.Text(f'Scaling = {scaling_vals[1]}', *txt_move[1], size=font_size,
                      **text_params),
-        compose.Text(f'Scaling = {scaling_vals[2]}', 120, 485, size=font_size,
+        compose.Text(f'Scaling = {scaling_vals[2]}', *txt_move[2], size=font_size,
                      **text_params),
-        compose.Text(f'Scaling = {scaling_vals[3]}', 395, 485, size=font_size,
+        compose.Text(f'Scaling = {scaling_vals[3]}', *txt_move[3], size=font_size,
                      **text_params),
     ).save(save_path)
