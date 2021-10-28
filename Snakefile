@@ -2594,10 +2594,12 @@ rule embed_bitmaps_into_figure:
                 shutil.copy(input[1], output[0])
                 print(f"inkscape action string:\n{action_str}")
                 subprocess.call(['inkscape', '-g', f'--actions={action_str}', output[0]])
-                # the inkscape call above embeds the bitmaps but also apparently
-                # creates a separate png file containing the embedded bitmaps,
-                # which we want to remove
-                extra_files = glob(output[0] + '-*')
+                # the inkscape call above embeds the bitmaps but also
+                # apparently creates a separate png file containing the
+                # embedded bitmaps, which we want to remove. commas get
+                # replaced with underscores in the paths of those files, so
+                # check for those as well
+                extra_files = glob(output[0] + '-*') + glob(output[0].replace(',', '_') + '-*')
                 print(f"will remove the following: {extra_files}")
                 for f in extra_files:
                     os.remove(f)
