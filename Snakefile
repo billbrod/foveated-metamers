@@ -1,5 +1,6 @@
 import os
 import math
+import itertools
 import re
 import imageio
 import time
@@ -46,6 +47,9 @@ wildcard_constraints:
     ecc_mask="|_eccmask-[0-9]+",
     logscale="log|linear",
     mcmc_model="partially-pooled|unpooled",
+    fixation_cross="cross|nocross",
+    cutout="cutout|nocutout",
+    context="paper|poster",
 ruleorder:
     collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check > mcmc_compare_plot > mcmc_plots > embed_bitmaps_into_figure > compose_figures
 
@@ -1755,7 +1759,7 @@ rule window_example_figure:
                     model, _, _, _ = fov.create_metamers.setup_model(wildcards.model_name.replace('_norm', ''),
                                                                      float(wildcards.scaling),
                                                                      image, min_ecc, max_ecc, params.cache_dir)
-                    fig = fov.figures.pooling_window_example(model.PoolingWindows, image)
+                    fig = fov.figures.pooling_window_example(model.PoolingWindows, image, vrange=(0, 1))
                     fig.savefig(output[0])
 
 
@@ -2672,7 +2676,8 @@ rule model_schematic_figure:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 shutil.copy(input[0], output[0])
-                subprocess.call(['sed', '-i', f's|IMAGE1|{input[1]}|', output[0]])
+                # we add the trailing " to make sure we only replace IMAGE1, not IMAGE10
+                subprocess.call(['sed', '-i', f's|IMAGE1"|{input[1]}"|', output[0]])
 
 
 def get_compose_figures_input(wildcards):
@@ -2709,21 +2714,33 @@ rule compose_figures:
                     fov.compose_figures.metamer_comparison(*input, scaling, output[0], wildcards.context)
 
 
-rule metamer_comparison_figure:
-    input:
+def get_metamer_comparison_figure_inputs(wildcards):
+    paths = [
         op.join('reports', 'figures', 'metamer_comparison.svg'),
         op.join(config['DATA_DIR'], 'ref_images_preproc', '{image_name}_gamma-corrected_range-.05,.95_size-2048,2600.png'),
-        lambda wildcards: [op.join(config['DATA_DIR'], 'figures', '{{context}}', '{model_name}',
-                                   '{{image_name}}_range-.05,.95_size-2048,2600_scaling-{scaling}_seed-0_gpu-{gpu}_window.png').format(
-                                       model_name=m, scaling=sc, gpu=0 if float(sc) < config['GPU_SPLIT'] else 1)
-                           for m, sc in zip(['RGC_norm_gaussian', 'RGC_norm_gaussian', 'V1_norm_s6_gaussian', 'V1_norm_s6_gaussian'],
-                                            wildcards.scaling.split(','))]
+        *[op.join(config['DATA_DIR'], 'figures', '{{context}}', '{model_name}',
+                  '{{image_name}}_range-.05,.95_size-2048,2600_scaling-{scaling}_seed-0_gpu-{gpu}_window.png').format(
+                      model_name=m, scaling=sc, gpu=0 if float(sc) < config['GPU_SPLIT'] else 1)
+          for m, sc in zip(['RGC_norm_gaussian', 'RGC_norm_gaussian', 'V1_norm_s6_gaussian', 'V1_norm_s6_gaussian'],
+                           wildcards.scaling.split(','))]
+    ]
+    if wildcards.cutout == 'cutout':
+        cuts = ['with_cutout_cross', 'foveal_cutout_cross', 'peripheral_cutout_cross']
+        paths[0] = paths[0].replace('.svg', '_cutout.svg')
+        paths[1:] = [p.replace('.png', f'_{c}.png').replace('ref_images_preproc', f'figures{os.sep}{{context}}')
+                     for c in cuts for p in paths[1:]]
+    return paths
+
+
+rule metamer_comparison_figure:
+    input:
+        get_metamer_comparison_figure_inputs,
     output:
-        op.join(config['DATA_DIR'], 'figures', '{context}', 'metamer_comparison_{image_name}_scaling-{scaling}.svg')
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'metamer_comparison_{image_name}_scaling-{scaling}_{cutout}.svg')
     log:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'metamer_comparison_{image_name}_scaling-{scaling}.log')
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'metamer_comparison_{image_name}_scaling-{scaling}_{cutout}.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'metamer_comparison_{image_name}_scaling-{scaling}_benchmark.txt')
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'metamer_comparison_{image_name}_scaling-{scaling}_{cutout}_benchmark.txt')
     run:
         import subprocess
         import shutil
@@ -2732,4 +2749,79 @@ rule metamer_comparison_figure:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 shutil.copy(input[0], output[0])
                 for i, im in enumerate(input[1:]):
-                    subprocess.call(['sed', '-i', f's|IMAGE{i+1}|{im}|', output[0]])
+                    print(f"Copying {im} into IMAGE{i+1}")
+                    # we add the trailing " to make sure we only replace IMAGE1, not IMAGE10
+                    subprocess.call(['sed', '-i', f's|IMAGE{i+1}"|{im}"|', output[0]])
+
+
+def get_cutout_figures_input(wildcards):
+    if '_window' in wildcards.image_name:
+        model_name = wildcards.image_name.split(os.sep)[0]
+        image_name = wildcards.image_name.split(os.sep)[1]
+        return op.join(config['DATA_DIR'], 'figures', '{context}', '{model_name}', '{image_name}.png').format(
+            model_name=model_name, image_name=image_name, context=wildcards.context)
+    else:
+        return op.join(config['DATA_DIR'], 'ref_images_preproc', '{image_name}.png').format(image_name=wildcards.image_name)
+
+
+rule cutout_figures:
+    input:
+        get_cutout_figures_input,
+    output:
+        op.join(config['DATA_DIR'], 'figures', '{context}', '{image_name}_with_cutout_{fixation_cross}.png'),
+        op.join(config['DATA_DIR'], 'figures', '{context}', '{image_name}_foveal_cutout_{fixation_cross}.png'),
+        op.join(config['DATA_DIR'], 'figures', '{context}', '{image_name}_peripheral_cutout_{fixation_cross}.png'),
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{image_name}_with_cutout_{fixation_cross}.log'),
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{image_name}_with_cutout_{fixation_cross}_benchmark.txt'),
+    run:
+        import subprocess
+        import contextlib
+        import foveated_metamers as fov
+        import plenoptic as po
+        import matplotlib.pyplot as plt
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                style, _ = fov.style.plotting_style(wildcards.context)
+                # needs to be an int so we can properly use it to slice into
+                # the iamge in the cutout_figure calls below
+                style['lines.linewidth'] = int(15*style['lines.linewidth'])
+                window_size = 400
+                plt.style.use(style)
+                # if we're loading in the metamer with window, it will have a
+                # red oval on it, which we want to preserve
+                im = po.load_images(input, as_gray=False)
+                # if we're loading in an image that is truly grayscale (i.e.,
+                # the ref_images_preproc ones), then it will only have one
+                # channel, even with as_gray=False, so we need to set as_rgb
+                # correctly.
+                fig = po.imshow(im, title=None, as_rgb=True if im.shape[1] > 1 else False,
+                                # need to make sure vrange is set, so the
+                                # dynamic range is the same as everywhere else
+                                vrange=(0, 1))
+                # we do the periphery and fovea separately, so we can plot them
+                # in separate colors
+                fov.figures.add_cutout_box(fig.axes[0], plot_periphery=False,
+                                           window_size=window_size)
+                fov.figures.add_cutout_box(fig.axes[0], plot_fovea=False, colors='b',
+                                           window_size=window_size)
+                if wildcards.fixation_cross == 'cross':
+                    fov.figures.add_fixation_cross(fig.axes[0])
+                # we add an extra bit to the window size here so that the
+                # addition of the cutout box doesn't cause the axes to resize
+                # (and the full width of the lines are visible)
+                fovea_fig = fov.figures.cutout_figure(im[0, 0], plot_periphery=False, label=False,
+                                                      window_size=window_size+style['lines.linewidth'])
+                periphery_fig = fov.figures.cutout_figure(im[0, 0], plot_fovea=False, label=False,
+                                                          window_size=window_size+style['lines.linewidth'])
+                fov.figures.add_cutout_box(fovea_fig.axes[0], plot_periphery=False)
+                # note that plot_periphery=False here because the peripheral
+                # cutout is centered
+                fov.figures.add_cutout_box(periphery_fig.axes[0], plot_periphery=False, colors='b')
+                if wildcards.fixation_cross == 'cross':
+                    fov.figures.add_fixation_cross(periphery_fig.axes[0])
+                    fov.figures.add_fixation_cross(fovea_fig.axes[0])
+                fig.savefig(output[0])
+                fovea_fig.savefig(output[1])
+                periphery_fig.savefig(output[2])

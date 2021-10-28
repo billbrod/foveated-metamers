@@ -24,9 +24,10 @@ sys.path.append(op.join(op.dirname(op.realpath(__file__)), '..', 'extra_packages
 import plenoptic_part as pop
 
 
-def add_cutout_box(axes, window_size=400, periphery_offset=(-800, -1000), colors='r',
-                   linestyles='--', plot_fovea=True, plot_periphery=True, **kwargs):
-    """add square to axes to show where the cutout comes from
+def add_cutout_box(axes, window_size=400, periphery_offset=(-800, -1000),
+                   colors='r', linestyles='--', plot_fovea=True,
+                   plot_periphery=True, **kwargs):
+    """Add square to axes to show where the cutout comes from.
 
     Parameters
     ----------
@@ -139,7 +140,7 @@ def get_image_cutout(images, window_size=400, periphery_offset=(-800, -1000)):
 
 
 def cutout_figure(images, window_size=400, periphery_offset=(-800, -1000), max_ecc=26.8,
-                  plot_fovea=True, plot_periphery=True):
+                  plot_fovea=True, plot_periphery=True, label=True):
     """create figure showing cutout views of different images
 
     if both `plot_fovea` and `plot_periphery` are False, this just
@@ -166,6 +167,8 @@ def cutout_figure(images, window_size=400, periphery_offset=(-800, -1000), max_e
         whether to plot the foveal cutout
     plot_periphery : bool, optional
         whether to plot peripheral cutout
+    label : bool, optional
+        whether to label the fovea and periphery with their approximate size
 
     Returns
     -------
@@ -191,11 +194,12 @@ def cutout_figure(images, window_size=400, periphery_offset=(-800, -1000), max_e
         else:
             periphery_ax_idx = 0
     fig = pt.imshow(imgs_to_plot, vrange=(0, 1), title=None, col_wrap=len(fovea))
-    if plot_fovea:
-        fig.axes[0].set(ylabel='Fovea\n($\pm$%.01f deg)' % window_extent_deg)
-    if plot_periphery:
-        ylabel = 'Periphery\n(%.01f$\pm$%.01f deg)' % (periphery_ctr_deg, window_extent_deg)
-        fig.axes[periphery_ax_idx].set(ylabel=ylabel)
+    if label:
+        if plot_fovea:
+            fig.axes[0].set(ylabel='Fovea\n($\pm$%.01f deg)' % window_extent_deg)
+        if plot_periphery:
+            ylabel = 'Periphery\n(%.01f$\pm$%.01f deg)' % (periphery_ctr_deg, window_extent_deg)
+            fig.axes[periphery_ax_idx].set(ylabel=ylabel)
     return fig
 
 
