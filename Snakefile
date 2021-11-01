@@ -2619,11 +2619,11 @@ rule embed_bitmaps_into_figure:
 
 rule window_contours_figure:
     output:
-        op.join(config['DATA_DIR'], 'figures', '{context}', 'window_contours_size-{size}_scaling-{scaling}_linewidth-{lw}_background-{bg}.svg'),
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'window_contours_fill-{fill}_size-{size}_scaling-{scaling}_linewidth-{lw}_background-{bg}.svg'),
     log:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'window_contours_size-{size}_scaling-{scaling}_linewidth-{lw}_background-{bg}.log'),
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'window_contours_fill-{fill}_size-{size}_scaling-{scaling}_linewidth-{lw}_background-{bg}.log'),
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'window_contours_size-{size}_scaling-{scaling}_linewidth-{lw}_background-{bg}_benchmark.txt'),
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'window_contours_fill-{fill}_size-{size}_scaling-{scaling}_linewidth-{lw}_background-{bg}_benchmark.txt'),
     run:
         import contextlib
         import sys
@@ -2650,8 +2650,13 @@ rule window_contours_figure:
                 else:
                     raise Exception("Can only handle background none or white!")
                 plt.style.use(style)
+                ax = None
+                if wildcards.fill == 'random':
+                    ax = pw.plot_window_values(subset=False)
+                elif wildcards.fill != 'none':
+                    raise Exception(f"Can only handle fill in {{'random', 'none'}}, but got value {wildcards.fill}!")
                 # since this is being shrunk, we need to make the lines thicker
-                ax = pw.plot_windows(subset=False,
+                ax = pw.plot_windows(ax=ax, subset=False,
                                      linewidths=float(wildcards.lw)*style['lines.linewidth'])
                 if wildcards.bg == 'none':
                     # this is the background image underneath the contour lines
@@ -2691,8 +2696,8 @@ def get_compose_figures_input(wildcards):
     path_template = os.path.join(config['DATA_DIR'], "figures", wildcards.context, "{}.svg")
     if 'model_schematic' in wildcards.fig_name:
         paths = [path_template.format(wildcards.fig_name),
-                 path_template.format('window_contours_size-2048,2600_scaling-1_linewidth-15_background-none'),
-                 path_template.format('window_contours_size-2048,2600_scaling-1_linewidth-36_background-white')]
+                 path_template.format('window_contours_fill-random_size-2048,2600_scaling-1_linewidth-15_background-none'),
+                 path_template.format('window_contours_fill-random_size-2048,2600_scaling-2_linewidth-36_background-white')]
     if 'metamer_comparison' in wildcards.fig_name:
         paths = [path_template.format(wildcards.fig_name)]
     return paths
