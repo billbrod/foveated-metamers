@@ -1731,13 +1731,13 @@ rule window_example_figure:
                                    utils.generate_metamer_paths(**wildcards)],
     output:
         report(op.join(config['DATA_DIR'], 'figures', '{context}', '{model_name}',
-                       '{image_name}_scaling-{scaling}_seed-{seed_n}_gpu-{gpu}_window.png'))
+                       '{image_name}_scaling-{scaling}_seed-{seed_n}_gpu-{gpu}_linewidth-{lw}_window.png'))
     log:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
-                '{image_name}_scaling-{scaling}_seed-{seed_n}_gpu-{gpu}_window.log')
+                '{image_name}_scaling-{scaling}_seed-{seed_n}_gpu-{gpu}_linewidth-{lw}_window.log')
     benchmark:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
-                '{image_name}_scaling-{scaling}_seed-{seed_n}_gpu-{gpu}_window_benchmark.txt')
+                '{image_name}_scaling-{scaling}_seed-{seed_n}_gpu-{gpu}_linewidth-{lw}_window_benchmark.txt')
     params:
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
     resources:
@@ -1748,19 +1748,21 @@ rule window_example_figure:
         import contextlib
         import imageio
         import plenoptic as po
+        import matplotlib.pyplot as plt
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                font_scale = {'poster': 1.7}.get(wildcards.context, 1)
+                style, _ = fov.style.plotting_style(wildcards.context)
+                plt.style.use(style)
                 min_ecc = config['DEFAULT_METAMERS']['min_ecc']
                 max_ecc = config['DEFAULT_METAMERS']['max_ecc']
-                with sns.plotting_context(wildcards.context, font_scale=font_scale):
-                    image = fov.utils.convert_im_to_float(imageio.imread(input.image[0]))
-                    # remove the normalizing aspect, since we don't need it here
-                    model, _, _, _ = fov.create_metamers.setup_model(wildcards.model_name.replace('_norm', ''),
-                                                                     float(wildcards.scaling),
-                                                                     image, min_ecc, max_ecc, params.cache_dir)
-                    fig = fov.figures.pooling_window_example(model.PoolingWindows, image, vrange=(0, 1))
-                    fig.savefig(output[0])
+                image = fov.utils.convert_im_to_float(imageio.imread(input.image[0]))
+                # remove the normalizing aspect, since we don't need it here
+                model, _, _, _ = fov.create_metamers.setup_model(wildcards.model_name.replace('_norm', ''),
+                                                                 float(wildcards.scaling),
+                                                                 image, min_ecc, max_ecc, params.cache_dir)
+                fig = fov.figures.pooling_window_example(model.PoolingWindows, image, vrange=(0, 1),
+                                                         linewidths=float(wildcards.lw)*style['lines.linewidth'])
+                fig.savefig(output[0])
 
 
 rule pixelwise_diff_figure:
@@ -2742,7 +2744,7 @@ def get_metamer_comparison_figure_inputs(wildcards):
         op.join('reports', 'figures', 'metamer_comparison.svg'),
         op.join(config['DATA_DIR'], 'ref_images_preproc', '{image_name}_gamma-corrected_range-.05,.95_size-2048,2600.png'),
         *[op.join(config['DATA_DIR'], 'figures', '{{context}}', '{model_name}',
-                  '{{image_name}}_range-.05,.95_size-2048,2600_scaling-{scaling}_seed-0_gpu-{gpu}_window.png').format(
+                  '{{image_name}}_range-.05,.95_size-2048,2600_scaling-{scaling}_seed-0_gpu-{gpu}_linewidth-15_window.png').format(
                       model_name=m, scaling=sc, gpu=0 if float(sc) < config['GPU_SPLIT'] else 1)
           for m, sc in zip(['RGC_norm_gaussian', 'RGC_norm_gaussian', 'V1_norm_s6_gaussian', 'V1_norm_s6_gaussian'],
                            wildcards.scaling.split(','))]
