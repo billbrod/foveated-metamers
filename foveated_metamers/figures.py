@@ -269,7 +269,7 @@ def scaling_comparison_figure(model_name, image_name, scaling_vals, seed, window
 
 
 def pooling_window_example(windows, image, target_eccentricity=24,
-                           windows_scale=0, **kwargs):
+                           windows_scale=0, linewidths=5, **kwargs):
     """Plot example window on image.
 
     This plots a single window, as close to the target_eccentricity as
@@ -289,6 +289,8 @@ def pooling_window_example(windows, image, target_eccentricity=24,
     windows_scale : int, optional
         The scale of the windows to plot. If greater than 0, we down-sampled
         image by a factor of 2 that many times so they plot correctly.
+    linewidths : float, optional
+        line width for the window contour.
     kwargs :
         Passed to pyrtools.imshow.
 
@@ -314,7 +316,7 @@ def pooling_window_example(windows, image, target_eccentricity=24,
         image = measure.block_reduce(image, (2, 2))
     fig = pt.imshow(image, title=None, **kwargs)
     fig.axes[0].contour(po.to_numpy(window).squeeze(), [target_amp],
-                        colors='r', linewidths=5)
+                        colors='r', linewidths=linewidths)
     return fig
 
 
