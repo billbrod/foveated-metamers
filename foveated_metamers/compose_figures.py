@@ -83,36 +83,49 @@ def _convert_to_pix(val):
             return compose.Unit(val).to('px').value
 
 
-def model_schematic(schematic_fig, contour_fig_large, contour_fig_small,
-                    save_path, context='paper'):
+def model_schematic(schematic_fig, contour_fig_large, contour_figs_small,
+                    save_path, fig_size='full', context='paper'):
     """Add window contours to the model schematic figure.
 
     Parameters
     ----------
-    schematic_fig, contour_fig_large, contour_fig_small : str
+    schematic_fig, contour_fig_large, contour_figs_small : str
         Paths to the model schematic figure and two versions of the window
         contour figure, one which will be displayed relatively large and one
         that will be a bit less than half that size (and should also have a
-        white background).
+        white background). contour_figs_small can be a single str or a list of 4
+        strs, in which case we'll use each of those separately.
     save_path : str
         path to save the composed figure at
+    fig_size : {'full', 'half'}, optional
+        We have two different versions of this figure, one full-width, one half.
+        This specifies which we're making.
     context : {'paper', 'poster'}, optional
         plotting context that's being used for this figure (as in
         seaborn's set_context function). if poster, will scale things up. Note
         that, for this figure, only paper has really been checked
 
     """
-    text_params, figure_width = style.plotting_style(context, 'svgutils', 'full')
+    text_params, figure_width = style.plotting_style(context, 'svgutils',
+                                                     fig_size)
     figure_width = _convert_to_pix(figure_width)
     schematic_fig = SVG(schematic_fig, 'inkscape')
+    if fig_size == 'full':
+        scales = [.06, .0255]
+        positions = [(209, 51), (417+8, 302-15), (417, 302),
+                     (388+8, 362-15), (388, 362)]
+    elif fig_size == 'half':
+        scales = [.04, .0151]
+        positions = [(162, 17), (247.5+5.5, 146.5-8.5), (247.5, 146.5),
+                     (230+5.5, 183-8.5), (230, 183)]
+    if isinstance(contour_figs_small, str):
+        contour_figs_small = [contour_figs_small] * 4
     compose.Figure(
         figure_width, schematic_fig.height * calc_scale('inkscape'),
         schematic_fig,
-        SVG(contour_fig_large).scale(.06).move(209, 51),
-        SVG(contour_fig_small).scale(.0255).move(417+8, 302-15),
-        SVG(contour_fig_small).scale(.0255).move(417, 302),
-        SVG(contour_fig_small).scale(.0255).move(388+8, 362-15),
-        SVG(contour_fig_small).scale(.0255).move(388, 362),
+        SVG(contour_fig_large).scale(scales[0]).move(*positions[0]),
+        *[SVG(fig).scale(scales[1]).move(*positions[i+1])
+          for i, fig in enumerate(contour_figs_small)],
     ).save(save_path)
 
 

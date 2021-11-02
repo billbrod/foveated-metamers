@@ -2651,10 +2651,12 @@ rule window_contours_figure:
                     raise Exception("Can only handle background none or white!")
                 plt.style.use(style)
                 ax = None
-                if wildcards.fill == 'random':
+                if 'random' in wildcards.fill:
+                    seed = int(wildcards.fill.split('-')[-1])
+                    np.random.seed(seed)
                     ax = pw.plot_window_values(subset=False)
                 elif wildcards.fill != 'none':
-                    raise Exception(f"Can only handle fill in {{'random', 'none'}}, but got value {wildcards.fill}!")
+                    raise Exception(f"Can only handle fill in {{'random-N', 'none'}} (where N is the seed), but got value {wildcards.fill}!")
                 # since this is being shrunk, we need to make the lines thicker
                 ax = pw.plot_windows(ax=ax, subset=False,
                                      linewidths=float(wildcards.lw)*style['lines.linewidth'])
@@ -2673,14 +2675,14 @@ rule window_contours_figure:
 
 rule model_schematic_figure:
     input:
-        op.join('reports', 'figures', 'model_schematic.svg'),
+        op.join('reports', 'figures', 'model_schematic_{width}.svg'),
         op.join(config['DATA_DIR'], 'ref_images_preproc', '{image_name}_gamma-corrected_range-.05,.95_size-2048,2600.png'),
     output:
-        op.join(config['DATA_DIR'], 'figures', '{context}', 'model_schematic_{image_name}.svg')
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'model_schematic_{width}_{image_name}.svg')
     log:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'model_schematic_{image_name}.log')
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'model_schematic_{width}_{image_name}.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'model_schematic_{image_name}_benchmark.txt')
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'model_schematic_{width}_{image_name}_benchmark.txt')
     run:
         import subprocess
         import shutil
@@ -2696,8 +2698,11 @@ def get_compose_figures_input(wildcards):
     path_template = os.path.join(config['DATA_DIR'], "figures", wildcards.context, "{}.svg")
     if 'model_schematic' in wildcards.fig_name:
         paths = [path_template.format(wildcards.fig_name),
-                 path_template.format('window_contours_fill-random_size-2048,2600_scaling-1_linewidth-15_background-none'),
-                 path_template.format('window_contours_fill-random_size-2048,2600_scaling-2_linewidth-36_background-white')]
+                 path_template.format('window_contours_fill-random-1_size-2048,2600_scaling-1_linewidth-15_background-white'),
+                 path_template.format('window_contours_fill-random-2_size-2048,2600_scaling-2_linewidth-36_background-white'),
+                 path_template.format('window_contours_fill-random-3_size-2048,2600_scaling-2_linewidth-36_background-white'),
+                 path_template.format('window_contours_fill-random-4_size-2048,2600_scaling-2_linewidth-36_background-white'),
+                 path_template.format('window_contours_fill-random-5_size-2048,2600_scaling-2_linewidth-36_background-white')]
     if 'metamer_comparison' in wildcards.fig_name:
         paths = [path_template.format(wildcards.fig_name)]
     return paths
@@ -2719,7 +2724,11 @@ rule compose_figures:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 if 'model_schematic' in wildcards.fig_name:
-                    fov.compose_figures.model_schematic(*input, output[0], wildcards.context)
+                    width = 'full' if 'full' in wildcards.fig_name else 'half'
+                    fov.compose_figures.model_schematic(input[0], input[1],
+                                                        input[2:], output[0],
+                                                        width,
+                                                        wildcards.context)
                 if 'metamer_comparison' in wildcards.fig_name:
                     scaling = re.findall('scaling-([0-9,.]+)', wildcards.fig_name)[0]
                     scaling = [float(sc) for sc in scaling.split(',')]
