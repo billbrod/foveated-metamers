@@ -4,29 +4,30 @@ channels:
   - conda-forge
   - defaults
   - bioconda
+  - pytorch
 dependencies:
-  - python==3.7.1
-  - pip==19.1.1
-  - ipykernel==5.1.1
-  - scipy==1.6.1
-  - seaborn==0.11
-  - pandas==1.2
-  - snakemake-minimal==5.10
-  - imageio==2.9
-  - scikit-image==0.18
-  - h5py==2.10
-  - matplotlib==3.3.4
+  - python>=3.7
+  - pip
+  - ipykernel
+  - scipy>=1.6
+  - seaborn>=0.11
+  - pandas>=1.2
+  - snakemake-minimal>=5.10,<6.0
+  - imageio>=2.9
+  - scikit-image>=0.18
+  - h5py>=2.10
+  - matplotlib>=3.3
+  - pytorch>=1.8
+  - numpyro>=0.5.0
+  - arviz>=0.11
+  - tabulate>=0.8.9
+  - xmltodict>=0.12
+  - svgutils
+  - pytest>=5.0.1
+  - gputil>=1.4.0
   - pip:
-      - pytest==5.0.1
       - torchcontrib==0.0.2
-      - torch==1.8
-      - pyrtools==1.0
-      - gputil==1.4.0
-      - numpyro>=0.5.0
-      - arviz==0.11
-      - funsor==0.4.0
-      - tabulate==0.8.9
+      - pyrtools>=1.0
       - git+https://github.com/LabForComputationalVision/plenoptic.git@main
-      - xmltodict>=0.12
-      - svgutils
       - flatten_dict
+      - funsor>=0.4.0
