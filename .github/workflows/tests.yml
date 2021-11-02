@@ -21,7 +21,8 @@ jobs:
           conda-channels: anaconda, conda-forge, bioconda
       - name: Create environment
         run: |
-          conda env create -f environment.yml
+          conda install mamba -n base -c conda-forge
+          mamba env create -f environment.yml
           source activate metamers
           pip install pytest
       - name: Run tests with pytest
@@ -45,7 +46,8 @@ jobs:
           conda-channels: anaconda, conda-forge, bioconda
       - name: Create environment
         run: |
-          conda env create -f environment.yml
+          conda install mamba -n base -c conda-forge
+          mamba env create -f environment.yml
           source activate metamers
       - name: Setup FFmpeg
         uses: FedericoCarboni/setup-ffmpeg@v1
@@ -79,9 +81,10 @@ jobs:
           conda-channels: anaconda, conda-forge, bioconda
       - name: Create environment
         run: |
-          conda env create -f environment.yml
+          conda install mamba -n base -c conda-forge
+          mamba env create -f environment.yml
           source activate metamers
-          pip install jupyter nbconvert
+          mamba install jupyter nbconvert
       - name: modify config.yml
         run: |
           sed -i 's|DATA_DIR:.*|DATA_DIR: "data/metamers"|g' config.yml
