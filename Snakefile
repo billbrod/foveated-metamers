@@ -2832,7 +2832,7 @@ rule cutout_figures:
                 fov.figures.add_cutout_box(fig.axes[0], plot_fovea=False, colors='b',
                                            window_size=window_size)
                 if wildcards.fixation_cross == 'cross':
-                    fov.figures.add_fixation_cross(fig.axes[0])
+                    fov.figures.add_fixation_cross(fig.axes[0], cross_size=150)
                 # we add an extra bit to the window size here so that the
                 # addition of the cutout box doesn't cause the axes to resize
                 # (and the full width of the lines are visible)
@@ -2845,7 +2845,7 @@ rule cutout_figures:
                 # cutout is centered
                 fov.figures.add_cutout_box(periphery_fig.axes[0], plot_periphery=False, colors='b')
                 if wildcards.fixation_cross == 'cross':
-                    fov.figures.add_fixation_cross(fovea_fig.axes[0])
+                    fov.figures.add_fixation_cross(fovea_fig.axes[0], cross_size=150)
                 fig.savefig(output[0])
                 fovea_fig.savefig(output[1])
                 periphery_fig.savefig(output[2])

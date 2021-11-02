@@ -9,8 +9,8 @@
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    width="624"
-   height="511.80444"
-   viewBox="0 0 624 511.80444"
+   height="527.80444"
+   viewBox="0 0 624 527.80444"
    version="1.1"
    id="svg8"
    inkscape:version="1.0.2 (1.0.2+r75+1)"
@@ -24,16 +24,16 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="1.3895833"
-     inkscape:cx="278.80346"
+     inkscape:zoom="1.3452058"
+     inkscape:cx="307.50497"
      inkscape:cy="442.22375"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
      units="px"
-     inkscape:window-width="1898"
-     inkscape:window-height="2094"
-     inkscape:window-x="3846"
+     inkscape:window-width="2852"
+     inkscape:window-height="1554"
+     inkscape:window-x="12"
      inkscape:window-y="50"
      inkscape:window-maximized="1"
      inkscape:document-rotation="0"
@@ -57,51 +57,51 @@
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1"
-     transform="translate(-13.898338,-11.249964)">
+     transform="translate(-18.393351,-11.249964)">
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none"
        x="-144.27179"
-       y="30.549601"
+       y="35.044613"
        id="text6877"
        transform="rotate(-90)"><tspan
          sodipodi:role="line"
          id="tspan6875"
          x="-144.27179"
-         y="30.549601"
+         y="35.044613"
          style="font-size:16px">Target image</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:1;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none"
-       x="-264.95938"
-       y="30.549601"
+       x="-273.15829"
+       y="35.044613"
        id="text6877-3"
        transform="rotate(-90)"><tspan
          sodipodi:role="line"
          id="tspan6875-7"
-         x="-264.95938"
-         y="30.549601"
-         style="font-size:16px;text-align:center;text-anchor:middle">Retina model </tspan><tspan
+         x="-273.15829"
+         y="35.044613"
+         style="font-size:16px;text-align:center;text-anchor:middle">Luminance model </tspan><tspan
          sodipodi:role="line"
-         x="-264.95938"
-         y="46.549603"
+         x="-273.15829"
+         y="51.044613"
          style="font-size:16px;text-align:center;text-anchor:middle"
          id="tspan15378">metamers</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:1;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none"
-       x="-441.24994"
-       y="30.549601"
+       x="-455.19385"
+       y="35.044613"
        id="text6877-3-5"
        transform="rotate(-90)"><tspan
          sodipodi:role="line"
          id="tspan6875-7-9"
-         x="-441.24994"
-         y="30.549601"
-         style="font-size:16px;text-align:center;text-anchor:middle">V1 model </tspan><tspan
+         x="-455.19385"
+         y="35.044613"
+         style="font-size:16px;text-align:center;text-anchor:middle">Energy model </tspan><tspan
          sodipodi:role="line"
-         x="-441.24994"
-         y="46.549603"
+         x="-455.19385"
+         y="51.044613"
          style="font-size:16px;text-align:center;text-anchor:middle"
          id="tspan15380">metamers</tspan></text>
     <rect
@@ -109,64 +109,64 @@
        id="rect7-0-8"
        width="204.74571"
        height="160.1427"
-       x="345.29288"
-       y="361.74628" />
+       x="349.7879"
+       y="377.74628" />
     <image
        xlink:href="IMAGE5"
-       width="207.07634"
-       height="162.4733"
-       preserveAspectRatio="none"
+       y="376.58109"
+       x="349.20529"
        id="image1608-6-7"
-       x="344.71027"
-       y="360.58109" />
+       preserveAspectRatio="none"
+       height="162.4733"
+       width="207.07634" />
     <rect
        style="fill:none;stroke:#000000;stroke-width:0.501251;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
        id="rect7-0-8-2-3"
        width="77.282104"
        height="78.501328"
-       x="555.46143"
-       y="361.15225" />
+       x="559.95642"
+       y="377.15225" />
     <image
        xlink:href="IMAGE10"
-       y="360.58105"
-       x="555.24152"
-       id="image1608-6-7-8-1"
-       preserveAspectRatio="none"
+       width="78.161812"
        height="79.643776"
-       width="78.161812" />
+       preserveAspectRatio="none"
+       id="image1608-6-7-8-1"
+       x="559.73651"
+       y="376.58105" />
     <rect
        style="fill:none;stroke:#000000;stroke-width:0.501251;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
        id="rect7-0-8-2-1-4"
        width="77.282104"
        height="78.501328"
-       x="555.46143"
-       y="443.98178" />
+       x="559.95642"
+       y="459.98178" />
     <image
        xlink:href="IMAGE15"
-       y="443.41064"
-       x="555.24152"
-       id="image1608-6-7-8-2-7"
-       preserveAspectRatio="none"
+       width="78.161812"
        height="79.643776"
-       width="78.161812" />
+       preserveAspectRatio="none"
+       id="image1608-6-7-8-2-7"
+       x="559.73651"
+       y="459.41064" />
     <rect
        style="fill:none;stroke:#000000;stroke-width:1.1653;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
        id="rect7-0-9"
        width="204.74571"
        height="160.1427"
-       x="345.29288"
-       y="186.84854" />
+       x="349.7879"
+       y="194.84854" />
     <image
        xlink:href="IMAGE3"
-       width="207.07634"
-       height="162.4733"
-       preserveAspectRatio="none"
+       y="193.68333"
+       x="349.20529"
        id="image1608-6-1"
-       x="344.71027"
-       y="185.68333" />
+       preserveAspectRatio="none"
+       height="162.4733"
+       width="207.07634" />
     <g
        id="g12260"
-       transform="matrix(0.27139522,0,0,0.35245842,485.26037,-97.687307)">
+       transform="matrix(0.27139522,0,0,0.35245842,489.75538,-89.68731)">
       <rect
          style="fill:none;stroke:#000000;stroke-width:1.62069;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
          id="rect7-0-8-2"
@@ -176,16 +176,16 @@
          y="804.47504" />
       <image
          xlink:href="IMAGE8"
-         y="802.85449"
-         x="257.74371"
-         id="image1608-6-7-8"
-         preserveAspectRatio="none"
+         width="287.99997"
          height="225.96645"
-         width="287.99997" />
+         preserveAspectRatio="none"
+         id="image1608-6-7-8"
+         x="257.74371"
+         y="802.85449" />
     </g>
     <g
        id="g12260-6"
-       transform="matrix(0.27139522,0,0,0.35245842,485.26037,-14.857779)">
+       transform="matrix(0.27139522,0,0,0.35245842,489.75538,-6.857779)">
       <rect
          style="fill:none;stroke:#000000;stroke-width:1.62069;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
          id="rect7-0-8-2-1"
@@ -195,31 +195,31 @@
          y="804.47504" />
       <image
          xlink:href="IMAGE13"
-         y="802.85449"
-         x="257.74371"
-         id="image1608-6-7-8-2"
-         preserveAspectRatio="none"
+         width="287.99997"
          height="225.96645"
-         width="287.99997" />
+         preserveAspectRatio="none"
+         id="image1608-6-7-8-2"
+         x="257.74371"
+         y="802.85449" />
     </g>
     <rect
        style="fill:none;stroke:#000000;stroke-width:1.1653;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
        id="rect7-0-3"
        width="204.74571"
        height="160.1427"
-       x="51.979324"
-       y="360.88409" />
+       x="56.474335"
+       y="376.88409" />
     <image
        xlink:href="IMAGE4"
-       width="207.07634"
-       height="162.4733"
-       preserveAspectRatio="none"
+       y="375.7189"
+       x="55.891708"
        id="image1608-6-6"
-       x="51.396698"
-       y="359.7189" />
+       preserveAspectRatio="none"
+       height="162.4733"
+       width="207.07634" />
     <g
        id="g14924"
-       transform="matrix(0.85604275,0,0,0.85604275,16.933588,-26.380507)">
+       transform="matrix(0.85604275,0,0,0.85604275,21.4286,-10.380507)">
       <rect
          style="fill:none;stroke:#000000;stroke-width:0.585544;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
          id="rect7-0-8-2-3-4"
@@ -229,16 +229,16 @@
          y="451.6954" />
       <image
          xlink:href="IMAGE9"
-         y="451.02817"
-         x="286.19403"
-         id="image1608-6-7-8-1-5"
-         preserveAspectRatio="none"
+         width="91.305969"
          height="93.037148"
-         width="91.305969" />
+         preserveAspectRatio="none"
+         id="image1608-6-7-8-1-5"
+         x="286.19403"
+         y="451.02817" />
     </g>
     <g
        id="g14896"
-       transform="matrix(0.85604275,0,0,0.85604275,16.933588,-26.380507)">
+       transform="matrix(0.85604275,0,0,0.85604275,21.4286,-10.380507)">
       <rect
          style="fill:none;stroke:#000000;stroke-width:0.585544;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
          id="rect7-0-8-2-1-4-0"
@@ -248,31 +248,31 @@
          y="548.45404" />
       <image
          xlink:href="IMAGE14"
-         y="547.78687"
-         x="286.19403"
-         id="image1608-6-7-8-2-7-3"
-         preserveAspectRatio="none"
+         width="91.305969"
          height="93.037148"
-         width="91.305969" />
+         preserveAspectRatio="none"
+         id="image1608-6-7-8-2-7-3"
+         x="286.19403"
+         y="547.78687" />
     </g>
     <rect
        style="fill:none;stroke:#000000;stroke-width:1.1653;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
        id="rect7-0-7"
        width="204.74571"
        height="160.1427"
-       x="51.979324"
-       y="186.84856" />
+       x="56.474335"
+       y="194.84856" />
     <image
        xlink:href="IMAGE2"
-       width="207.07634"
-       height="162.4733"
-       preserveAspectRatio="none"
+       y="193.68336"
+       x="55.891708"
        id="image1608-6-5"
-       x="51.396698"
-       y="185.68336" />
+       preserveAspectRatio="none"
+       height="162.4733"
+       width="207.07634" />
     <g
        id="g14598"
-       transform="matrix(0.85604275,0,0,0.85604275,16.933588,-12.181618)">
+       transform="matrix(0.85604275,0,0,0.85604275,21.4286,-4.181618)">
       <rect
          style="fill:none;stroke:#000000;stroke-width:0.585544;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
          id="rect7-0-8-2-3-1"
@@ -282,16 +282,16 @@
          y="231.8063" />
       <image
          xlink:href="IMAGE7"
-         y="231.13911"
-         x="286.19403"
-         id="image1608-6-7-8-1-0"
-         preserveAspectRatio="none"
+         width="91.305969"
          height="93.037148"
-         width="91.305969" />
+         preserveAspectRatio="none"
+         id="image1608-6-7-8-1-0"
+         x="286.19403"
+         y="231.13911" />
     </g>
     <g
        id="g14570"
-       transform="matrix(0.85604275,0,0,0.85604275,16.933588,-12.181618)">
+       transform="matrix(0.85604275,0,0,0.85604275,21.4286,-4.181618)">
       <rect
          style="fill:none;stroke:#000000;stroke-width:0.585544;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
          id="rect7-0-8-2-1-4-6"
@@ -301,43 +301,43 @@
          y="328.56494" />
       <image
          xlink:href="IMAGE12"
-         y="327.89777"
-         x="286.19403"
-         id="image1608-6-7-8-2-7-32"
-         preserveAspectRatio="none"
+         width="91.305969"
          height="93.037148"
-         width="91.305969" />
+         preserveAspectRatio="none"
+         id="image1608-6-7-8-2-7-32"
+         x="286.19403"
+         y="327.89777" />
     </g>
     <rect
        style="fill:none;stroke:#000000;stroke-width:1.1653;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
        id="rect7-0"
        width="204.74571"
        height="160.1427"
-       x="51.979324"
+       x="56.474335"
        y="12.415187" />
     <image
        xlink:href="IMAGE1"
-       width="207.07634"
-       height="162.4733"
-       preserveAspectRatio="none"
+       y="11.24998"
+       x="55.891708"
        id="image1608-6"
-       x="51.396698"
-       y="11.24998" />
+       preserveAspectRatio="none"
+       height="162.4733"
+       width="207.07634" />
     <image
        xlink:href="IMAGE6"
-       y="11.249964"
-       x="261.89722"
-       id="image1608-6-7-8-1-0-0"
-       preserveAspectRatio="none"
+       width="78.161812"
        height="79.643776"
-       width="78.161812" />
+       preserveAspectRatio="none"
+       id="image1608-6-7-8-1-0-0"
+       x="266.39224"
+       y="11.249964" />
     <image
        xlink:href="IMAGE11"
-       y="94.079521"
-       x="261.89722"
-       id="image1608-6-7-8-2-7-32-6"
-       preserveAspectRatio="none"
+       width="78.161812"
        height="79.643776"
-       width="78.161812" />
+       preserveAspectRatio="none"
+       id="image1608-6-7-8-2-7-32-6"
+       x="266.39224"
+       y="94.079521" />
   </g>
 </svg>
