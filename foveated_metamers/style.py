@@ -58,13 +58,13 @@ def plotting_style(context='paper', for_package='matplotlib', figsize='full'):
                   'figure.subplot.bottom': .11,
                   'figure.subplot.top': .97}
         if context == 'paper':
-            params.update({'font.size': 10,
+            params.update({'font.size': 8,
                            'axes.labelsize': 10,
                            'axes.titlesize': 10,
                            'xtick.labelsize': 8,
                            'ytick.labelsize': 8,
-                           'legend.fontsize': 10,
-                           'legend.title_fontsize': 10,
+                           'legend.fontsize': 8,
+                           'legend.title_fontsize': 8,
                            'axes.linewidth': 1.0,
                            'grid.linewidth': 0.8,
                            'lines.linewidth': 1.0,

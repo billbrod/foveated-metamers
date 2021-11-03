@@ -1973,8 +1973,8 @@ rule mcmc_performance_comparison_figure:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 style, fig_width = fov.style.plotting_style(wildcards.context)
                 plt.style.use(style)
-                tab_legend = 'under' if wildcards.context == 'paper' else True
-                height = fig_width / 2 if tab_legend == 'under' else fig_width / 3
+                tab_legend = False
+                height = fig_width / 2 if tab_legend == 'under' else fig_width / 3.1
                 df = []
                 for f in input[:-1]:
                     df.append(fov.mcmc.inf_data_to_df(az.from_netcdf(f),
@@ -2005,6 +2005,8 @@ rule mcmc_performance_comparison_figure:
                     df['subject_name'] = 'all subjects'
                 else:
                     raise Exception(f"Don't know how to handle focus {wildcards.focus}!")
+                df['model'] = df['model'].map(fov.plotting.MODEL_PLOT)
+                df['trial_type'] = df['trial_type'].map(fov.plotting.TRIAL_TYPE_PLOT)
                 g = fov.figures.posterior_predictive_check(df, col=None,
                                                            hue='model',
                                                            style='trial_type',

@@ -23,6 +23,18 @@ TRIAL_TYPE_TO_LONG_LEGEND = {
     'metamer_vs_reference-natural': ['Original vs Synthesized', 'Original image', 'Natural image seed A'],
 }
 
+TRIAL_TYPE_PLOT = {
+    'metamer_vs_metamer': 'Synth vs Synth: white noise',
+    'metamer_vs_metamer-downsample': 'Synth vs Synth: white noise (large pixels)',
+    'metamer_vs_metamer-natural': 'Synth vs Synth: natural image',
+    'metamer_vs_reference': 'Original vs Synth: white noise',
+    'metamer_vs_reference-natural': 'Original vs Synth: natural image',
+}
+
+MODEL_PLOT = {
+    'RGC_norm_gaussian': 'Luminance model',
+    'V1_norm_s6_gaussian': 'Energy model',
+}
 
 def get_palette(col, col_unique=None, as_dict=True):
     """Get palette for column.
@@ -67,7 +79,11 @@ def get_palette(col, col_unique=None, as_dict=True):
             if len(col_unique) == 1 and col_unique[0] in all_vals:
                 pass
             elif sorted(col_unique) != sorted(all_vals):
-                raise Exception(f"Don't know what to do with models {col_unique}")
+                all_vals = ['Luminance model', 'Energy model']
+                if len(col_unique) == 1 and col_unique[0] in all_vals:
+                    pass
+                elif sorted(col_unique) != sorted(all_vals):
+                    raise Exception(f"Don't know what to do with models {col_unique}")
         assert len(all_vals) == 2, "Currently only support 2 model values"
         pal = sns.color_palette('BrBG', 3)
         pal = [pal[0], pal[-1]]
@@ -180,10 +196,13 @@ def get_style(col, col_unique, as_dict=True):
                         'metamer_vs_metamer-natural', 'metamer_vs_metamer-downsample',
                         'metamer_vs_reference-natural']
             if any([c for c in uniq if c not in all_vals]):
+                backwards_map = {v: k for k, v in TRIAL_TYPE_PLOT.items()}
                 if all([c.startswith('trial_type_') for c in uniq]):
                     # this is the only exception we allow, which comes from
                     # simulated data
                     all_vals = uniq
+                elif all([backwards_map.get(c, c) in all_vals for c in uniq]):
+                    all_vals = [TRIAL_TYPE_PLOT[c] for c in all_vals]
                 else:
                     raise Exception("Got unsupported value for "
                                     f"col='trial_type', {uniq}")
@@ -1130,7 +1149,7 @@ def _label_and_title_psychophysical_curve_plot(g, df, summary_text, ci=None, hdi
         ci_txt = f"{ci}% CI"
     elif hdi is not None:
         ci_txt = f"{hdi*100}% HDI"
-    g.set(ylim=(.3, 1.05))
+    g.set(ylim=(.4, 1.05))
     title_experiment_summary_plots(g, df, summary_text)
     g.set_titles('{col_name}')
     axes = g.axes.flatten()
