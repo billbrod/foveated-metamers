@@ -24,11 +24,11 @@ TRIAL_TYPE_TO_LONG_LEGEND = {
 }
 
 TRIAL_TYPE_PLOT = {
-    'metamer_vs_metamer': 'Synth vs Synth: white noise',
-    'metamer_vs_metamer-downsample': 'Synth vs Synth: white noise (large pixels)',
-    'metamer_vs_metamer-natural': 'Synth vs Synth: natural image',
-    'metamer_vs_reference': 'Original vs Synth: white noise',
-    'metamer_vs_reference-natural': 'Original vs Synth: natural image',
+    'metamer_vs_metamer': 'Synth vs Synth:\nwhite noise',
+    'metamer_vs_metamer-downsample': 'Synth vs Synth:\nwhite noise (large pixels)',
+    'metamer_vs_metamer-natural': 'Synth vs Synth:\nnatural image',
+    'metamer_vs_reference': 'Original vs Synth:\nwhite noise',
+    'metamer_vs_reference-natural': 'Original vs Synth:\nnatural image',
 }
 
 MODEL_PLOT = {
@@ -68,7 +68,7 @@ def get_palette(col, col_unique=None, as_dict=True):
         col_unique = [i for i in col_unique if not isinstance(i, float) or
                       not np.isnan(i)]
     if col == 'subject_name':
-        all_vals = psychophys_vars['SUBJECTS']
+        all_vals = sorted(psychophys_vars['SUBJECTS'])
         pal = sns.color_palette('deep', len(all_vals))
     elif col == 'model':
         all_vals = [config['RGC']['model_name'], config['V1']['model_name']]
@@ -95,17 +95,14 @@ def get_palette(col, col_unique=None, as_dict=True):
         pal = sns.color_palette('Reds_r', len(scaling_vals))
         pal = dict(zip(scaling_vals, pal))
         pal['ref_image'] = 'k'
+        all_vals = sorted(all_vals)
     elif col == 'cell_type':
-        all_vals = ['parasol', 'midget']
+        all_vals = ['midget', 'parasol']
         if len(col_unique) == 1 and col_unique[0] in all_vals:
             pass
         elif sorted(col_unique) != sorted(all_vals):
-            all_vals = ['Retina', 'V1']
-            if len(col_unique) == 1 and col_unique[0] in all_vals:
-                pass
-            elif sorted(col_unique) != sorted(all_vals):
-                raise Exception(f"Don't know what to do with models {col_unique}")
-        assert len(all_vals) == 2, "Currently only support 2 model values"
+            raise Exception(f"Don't know what to do with cell_type {col_unique}")
+        assert len(all_vals) == 2, "Currently only support 2 cell types"
         pal = sns.color_palette('BrBG', 3)
         pal = [(*pal[0], .5), (*pal[0], 1)]
     elif col == 'image_name':
@@ -119,8 +116,9 @@ def get_palette(col, col_unique=None, as_dict=True):
         else:
             all_vals = col_unique
         pal = [f'C{i}' for i in range(col_nunique)]
+        all_vals = sorted(all_vals)
     if as_dict and not isinstance(pal, dict):
-        pal = dict(zip(sorted(all_vals), pal))
+        pal = dict(zip(all_vals, pal))
     return pal
 
 
@@ -276,6 +274,11 @@ def get_order(col, col_unique=[]):
                  for i in img_order]
     if col == 'image_name':
         col_order = img_order
+    elif col == 'model':
+        if all([c in MODEL_PLOT.values() for c in col_unique]):
+            col_order = ['Luminance model', 'Energy model']
+        else:
+            col_order = sorted(col_unique)
     else:
         col_order = sorted(col_unique)
     return col_order

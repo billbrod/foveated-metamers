@@ -1857,7 +1857,6 @@ rule performance_figure:
         import matplotlib.pyplot as plt
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                tab_legend = 'under' if wildcards.context == 'paper' else True
                 expt_df = pd.read_csv(input[0])
                 style, fig_width = fov.style.plotting_style(wildcards.context)
                 plt.style.use(style)
@@ -1871,11 +1870,12 @@ rule performance_figure:
                     height = fig_width / 3
                 expt_df.model = expt_df.model.map(lambda x: {'RGC': 'Retina'}.get(x.split('_')[0],
                                                                                   x.split('_')[0]))
+                df['model'] = df['model'].map(fov.plotting.MODEL_PLOT)
+                df['trial_type'] = df['trial_type'].map(fov.plotting.TRIAL_TYPE_PLOT)
                 g = fov.figures.performance_plot(expt_df, hue=hue,
                                                  height=height, col=col,
                                                  curve_fit=True,
-                                                 style='trial_type',
-                                                 tabular_trial_type_legend=tab_legend)
+                                                 style='trial_type')
                 if wildcards.context == 'paper':
                     g.fig.suptitle('')
                 g.fig.savefig(output[0], bbox_inches='tight')
@@ -1905,10 +1905,8 @@ rule mcmc_figure:
                 inf_data = az.from_netcdf(input[0])
                 style, fig_width = fov.style.plotting_style(wildcards.context)
                 plt.style.use(style)
-                tab_legend = 'under' if wildcards.context == 'paper' else True
                 if wildcards.plot_type == 'params-grouplevel':
-                    fig = fov.figures.psychophysical_grouplevel_means(inf_data, height=fig_width/4,
-                                                                      tabular_trial_type_legend=tab_legend)
+                    fig = fov.figures.psychophysical_grouplevel_means(inf_data, height=fig_width/4)
                     for ax in fig.axes:
                         ax.set_title(ax.get_title().replace('a0', 'gain').replace('s0', 'critical scaling'))
                     fig.suptitle(fig._suptitle.get_text(), y=1.05)
@@ -1916,7 +1914,7 @@ rule mcmc_figure:
                     col = 'image_name'
                     hue = 'subject_name'
                     style = 'trial_type'
-                    height = fig_width / 5 if tab_legend == 'under' else fig_width / 6
+                    height = fig_width / 6
                     if 'focus' in wildcards.plot_type:
                         inf_data = fov.mcmc.inf_data_to_df(inf_data, 'predictive grouplevel means', hdi=.95)
                         if 'focus-image' in wildcards.plot_type:
@@ -1930,19 +1928,26 @@ rule mcmc_figure:
                             inf_data = inf_data.query("level=='subject_name'").rename(
                                 columns={'dependent_var': 'subject_name'})
                             inf_data['image_name'] = 'all images'
+                        inf_data['model'] = inf_data['model'].map(fov.plotting.MODEL_PLOT)
+                        inf_data['trial_type'] = inf_data['trial_type'].map(fov.plotting.TRIAL_TYPE_PLOT)
                     g = fov.figures.posterior_predictive_check(inf_data,
                                                                col=col,
                                                                hue=hue,
                                                                style=style,
-                                                               height=height,
-                                                               tabular_trial_type_legend=tab_legend)
+                                                               height=height)
                 else:
                     raise Exception(f"Don't know how to handle plot type {wildcards.plot_type}!")
                 if wildcards.context == 'paper':
                     g.fig.suptitle('')
-                    # also need to move the titles down a bit
-                    for ax in g.axes.flatten():
-                        ax.set_title(ax.get_title(), y=.9)
+                    for i, ax in enumerate(g.axes.flatten()):
+                        # also need to move the titles down a bit
+                        ax.set_title(ax.get_title(), y=.85)
+                        # still running into this issue
+                        # https://github.com/mwaskom/seaborn/issues/2293 with
+                        # things about this size, so we manually set the
+                        # xticklabels invisible
+                        if col == 'image_name' and i <= 14:
+                            [xticklab.set_visible(False) for xticklab in ax.get_xticklabels()]
                 g.savefig(output[0], bbox_inches='tight')
 
 
@@ -1973,8 +1978,7 @@ rule mcmc_performance_comparison_figure:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 style, fig_width = fov.style.plotting_style(wildcards.context)
                 plt.style.use(style)
-                tab_legend = False
-                height = fig_width / 2 if tab_legend == 'under' else fig_width / 3.1
+                height = fig_width / 2.5
                 df = []
                 for f in input[:-1]:
                     df.append(fov.mcmc.inf_data_to_df(az.from_netcdf(f),
@@ -2012,8 +2016,7 @@ rule mcmc_performance_comparison_figure:
                                                            style='trial_type',
                                                            height=height,
                                                            aspect=2,
-                                                           logscale_xaxis=True,
-                                                           tabular_trial_type_legend=tab_legend)
+                                                           logscale_xaxis=True)
                 g.fig.canvas.draw()
                 fov.plotting.add_physiological_scaling_bars(g.ax, az.from_netcdf(input[-1]))
                 if wildcards.context == 'paper':
@@ -2044,7 +2047,6 @@ rule performance_comparison_figure:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 col = None
-                tab_legend = 'under' if wildcards.context == 'paper' else True
                 logscale_xaxis = True
                 curve_fit = 'to_chance'
                 if wildcards.focus.startswith('sub'):
@@ -2080,14 +2082,15 @@ rule performance_comparison_figure:
                 style, fig_width = fov.style.plotting_style(wildcards.context)
                 plt.style.use(style)
                 height = fig_width / 3 if col is None else fig_width / 6
+                df['model'] = df['model'].map(fov.plotting.MODEL_PLOT)
+                df['trial_type'] = df['trial_type'].map(fov.plotting.TRIAL_TYPE_PLOT)
                 g = fov.figures.performance_plot(df, col=col,
                                                  curve_fit=curve_fit,
                                                  hue='model',
                                                  height=height,
                                                  style='trial_type',
                                                  aspect=2 if col is None else 1,
-                                                 logscale_xaxis=logscale_xaxis,
-                                                 tabular_trial_type_legend=tab_legend)
+                                                 logscale_xaxis=logscale_xaxis)
                 if col is None:
                     # need to draw so that the following code can check text size
                     g.fig.canvas.draw()
