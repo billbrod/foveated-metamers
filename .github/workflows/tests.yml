@@ -94,7 +94,7 @@ jobs:
       - name: Download data
         run : |
           source activate metamers
-          snakemake -prk download_freeman_check
+          snakemake -j 1 -prk download_freeman_check
       - name: run nbconvert
         run: |
           source activate metamers
