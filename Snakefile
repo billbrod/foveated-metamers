@@ -2745,14 +2745,22 @@ rule compose_figures:
 
 
 def get_metamer_comparison_figure_inputs(wildcards):
+    seeds = [0] * 4
+    scaling = wildcards.scaling.split(',')
+    # if we're showing two of the same scaling values, for either model, want to
+    # make sure the seeds are different
+    if scaling[0] == scaling[1]:
+        seeds[1] = 1
+    if scaling[2] == scaling[3]:
+        seeds[3] = 1
     paths = [
         op.join('reports', 'figures', 'metamer_comparison.svg'),
         op.join(config['DATA_DIR'], 'ref_images_preproc', '{image_name}_gamma-corrected_range-.05,.95_size-2048,2600.png'),
         *[op.join(config['DATA_DIR'], 'figures', '{{context}}', '{model_name}',
-                  '{{image_name}}_range-.05,.95_size-2048,2600_scaling-{scaling}_seed-0_gpu-{gpu}_linewidth-15_window.png').format(
-                      model_name=m, scaling=sc, gpu=0 if float(sc) < config['GPU_SPLIT'] else 1)
-          for m, sc in zip(['RGC_norm_gaussian', 'RGC_norm_gaussian', 'V1_norm_s6_gaussian', 'V1_norm_s6_gaussian'],
-                           wildcards.scaling.split(','))]
+                  '{{image_name}}_range-.05,.95_size-2048,2600_scaling-{scaling}_seed-{seed}_gpu-{gpu}_linewidth-15_window.png').format(
+                      model_name=m, scaling=sc, gpu=0 if float(sc) < config['GPU_SPLIT'] else 1, seed=s)
+          for m, sc, s in zip(['RGC_norm_gaussian', 'RGC_norm_gaussian', 'V1_norm_s6_gaussian', 'V1_norm_s6_gaussian'],
+                              scaling, seeds)]
     ]
     if wildcards.cutout == 'cutout':
         cuts = ['with_cutout_cross', 'foveal_cutout_cross', 'peripheral_cutout_cross']
