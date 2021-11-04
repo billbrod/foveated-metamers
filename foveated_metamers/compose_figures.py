@@ -164,16 +164,12 @@ def metamer_comparison(metamer_fig, scaling_vals, save_path, cutout_fig=False,
         txt_move = [(120, 240), (380, 240), (120, 485), (395, 485)]
     else:
         font_size = _convert_to_pix(f'{font_size*5/9}pt')
-        txt_move = [(100, 168), (380, 168), (100, 338), (380, 338)]
+        txt_move = [(100, 168), (380, 168), (100, 338), (380, 338),
+                    (100, 508), (380, 508)]
     compose.Figure(
         figure_width, metamer_fig.height * calc_scale('inkscape'),
         metamer_fig,
-        compose.Text(f'Scaling = {scaling_vals[0]}', *txt_move[0], size=font_size,
-                     **text_params),
-        compose.Text(f'Scaling = {scaling_vals[1]}', *txt_move[1], size=font_size,
-                     **text_params),
-        compose.Text(f'Scaling = {scaling_vals[2]}', *txt_move[2], size=font_size,
-                     **text_params),
-        compose.Text(f'Scaling = {scaling_vals[3]}', *txt_move[3], size=font_size,
-                     **text_params),
+        *[compose.Text(f'Scaling = {val}', *mv, size=font_size,
+                       **text_params)
+          for val, mv in zip(scaling_vals, txt_move)],
     ).save(save_path)

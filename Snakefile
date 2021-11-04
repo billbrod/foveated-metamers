@@ -48,7 +48,7 @@ wildcard_constraints:
     logscale="log|linear",
     mcmc_model="partially-pooled|unpooled",
     fixation_cross="cross|nocross",
-    cutout="cutout|nocutout",
+    cutout="cutout|nocutout|nocutout_natural-seed|cutout_natural-seed",
     context="paper|poster",
 ruleorder:
     collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check > mcmc_compare_plot > mcmc_plots > embed_bitmaps_into_figure > compose_figures
@@ -1731,13 +1731,13 @@ rule window_example_figure:
                                    utils.generate_metamer_paths(**wildcards)],
     output:
         report(op.join(config['DATA_DIR'], 'figures', '{context}', '{model_name}',
-                       '{image_name}_scaling-{scaling}_seed-{seed_n}_gpu-{gpu}_linewidth-{lw}_window.png'))
+                       '{image_name}_scaling-{scaling}_seed-{seed_n}_comp-{comp}_gpu-{gpu}_linewidth-{lw}_window.png'))
     log:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
-                '{image_name}_scaling-{scaling}_seed-{seed_n}_gpu-{gpu}_linewidth-{lw}_window.log')
+                '{image_name}_scaling-{scaling}_seed-{seed_n}_comp-{comp}_gpu-{gpu}_linewidth-{lw}_window.log')
     benchmark:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
-                '{image_name}_scaling-{scaling}_seed-{seed_n}_gpu-{gpu}_linewidth-{lw}_window_benchmark.txt')
+                '{image_name}_scaling-{scaling}_seed-{seed_n}_comp-{comp}_gpu-{gpu}_linewidth-{lw}_window_benchmark.txt')
     params:
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
     resources:
@@ -2745,28 +2745,38 @@ rule compose_figures:
 
 
 def get_metamer_comparison_figure_inputs(wildcards):
-    seeds = [0] * 4
     scaling = wildcards.scaling.split(',')
+    seeds = [0] * len(scaling)
     # if we're showing two of the same scaling values, for either model, want to
     # make sure the seeds are different
+    models = ['RGC_norm_gaussian', 'RGC_norm_gaussian', 'V1_norm_s6_gaussian', 'V1_norm_s6_gaussian']
     if scaling[0] == scaling[1]:
         seeds[1] = 1
     if scaling[2] == scaling[3]:
         seeds[3] = 1
+    if len(scaling) > 4 and scaling[4] == scaling[5]:
+        seeds[5] = 1
+    if 'natural-seed' in wildcards.cutout:
+        if len(scaling) != 6:
+            raise Exception(f"When generating {wildcards.cutout} metamer_comparison figure, need 6 scaling values!")
+        models = ['V1_norm_s6_gaussian'] * len(scaling)
+    else:
+        if len(scaling) != 4:
+            raise Exception(f"When generating {wildcards.cutout} metamer_comparison figure, need 4 scaling values!")
     paths = [
-        op.join('reports', 'figures', 'metamer_comparison.svg'),
+        op.join('reports', 'figures', 'metamer_comparison_{cutout}.svg'),
         op.join(config['DATA_DIR'], 'ref_images_preproc', '{image_name}_gamma-corrected_range-.05,.95_size-2048,2600.png'),
         *[op.join(config['DATA_DIR'], 'figures', '{{context}}', '{model_name}',
-                  '{{image_name}}_range-.05,.95_size-2048,2600_scaling-{scaling}_seed-{seed}_gpu-{gpu}_linewidth-15_window.png').format(
+                  '{{image_name}}_range-.05,.95_size-2048,2600_scaling-{scaling}_seed-{seed}_comp-ref_gpu-{gpu}_linewidth-15_window.png').format(
                       model_name=m, scaling=sc, gpu=0 if float(sc) < config['GPU_SPLIT'] else 1, seed=s)
-          for m, sc, s in zip(['RGC_norm_gaussian', 'RGC_norm_gaussian', 'V1_norm_s6_gaussian', 'V1_norm_s6_gaussian'],
-                              scaling, seeds)]
+          for m, sc, s in zip(models, scaling, seeds)]
     ]
-    if wildcards.cutout == 'cutout':
+    if 'natural-seed' in wildcards.cutout:
+        paths[1:] = [p.replace('comp-ref', 'comp-ref-natural') for p in paths[1:]]
+    if 'nocutout' not in wildcards.cutout:
         cuts = ['with_cutout_cross', 'foveal_cutout_cross', 'peripheral_cutout_cross']
-        paths[0] = paths[0].replace('.svg', '_cutout.svg')
         paths[1:] = [p.replace('.png', f'_{c}.png').replace('ref_images_preproc', f'figures{os.sep}{{context}}')
-                     for c in cuts for p in paths[1:]]
+                     for p in paths[1:] for c in cuts]
     return paths
 
 
