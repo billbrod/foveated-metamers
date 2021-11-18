@@ -1712,8 +1712,8 @@ def add_physiological_scaling_bars(ax, inf_data, bar_height=.04,
     """Draw bars showing range of physiological scaling values.
 
     We get the range of V1 values from using WebPlotDigitzer on Figure 1G of
-    the Wallis, 2019 paper. For RGC, we fit our own line to data from Dacey
-    1992 paper.
+    [1]_ (same values as in [2]_, Figure 5). For RGC, we fit our own line to
+    data from [3]_.
 
     Parameters
     ----------
@@ -1729,6 +1729,18 @@ def add_physiological_scaling_bars(ax, inf_data, bar_height=.04,
         physiological scaling, respectively.
     kwargs :
         Passed to mpl.patches.Polygon. Cannot contain color.
+
+    References
+    ----------
+    .. [1] Wallis, T. S., Funke, C. M., Ecker, A. S., Gatys, L. A., Wichmann,
+       F. A., & Bethge, M. (2019). Image content is more important than bouma's
+       law for scene metamers. eLife, 8(), . http://dx.doi.org/10.7554/elife.42512
+    .. [2] Freeman, J., & Simoncelli, E. P. (2011). Metamers of the ventral stream. Nature
+       Neuroscience, 14(9), 1195–1201. http://dx.doi.org/10.1038/nn.2889
+    .. [3] Dacey, D. M., & Petersen, M. R. (1992). Dendritic field size and
+       morphology of midget and parasol ganglion cells of the human retina.
+       Proceedings of the National Academy of Sciences, 89(20), 9666–9670.
+       http://dx.doi.org/10.1073/pnas.89.20.9666
 
     """
     pal = get_palette('model', ['Retina', 'V1'])

@@ -13,7 +13,7 @@ from .mcmc import _compute_hdi
 
 
 def assemble_dacey_dataset(df):
-    """Assemble xarray dataset from Dacey 1992 data.
+    """Assemble xarray dataset from [1]_ data.
 
     Parameters
     ----------
@@ -25,6 +25,13 @@ def assemble_dacey_dataset(df):
     -------
     dataset : xarray.Dataset
          That data, rearranged to a dataset.
+
+    References
+    ----------
+    .. [1] Dacey, D. M., & Petersen, M. R. (1992). Dendritic field size and
+       morphology of midget and parasol ganglion cells of the human retina.
+       Proceedings of the National Academy of Sciences, 89(20), 9666–9670.
+       http://dx.doi.org/10.1073/pnas.89.20.9666
 
     """
     df['dendritic_field_diameter_deg'] = df['dendritic_field_diameter_min'] / 60
