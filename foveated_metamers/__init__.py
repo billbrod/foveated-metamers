@@ -4,6 +4,7 @@ from . import stimuli
 from . import figures
 from . import distances
 from . import create_metamers
+from . import create_mad_images
 from . import curve_fit
 from . import simulate
 from . import plotting
