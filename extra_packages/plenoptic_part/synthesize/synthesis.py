@@ -4,9 +4,12 @@ import abc
 import re
 import torch
 from torch import optim
-import torchcontrib
 import numpy as np
 import warnings
+try:
+    import torchcontrib
+except ModuleNotFoundError:
+    warnings.warn("Unable to import torchcontrib, will be unable to use SWA!")
 import plenoptic as po
 from plenoptic.simulate.models.naive import Identity
 from ..tools.optim import l2_norm
