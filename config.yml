@@ -6,7 +6,6 @@ INKSCAPE_PREF_FILE: "/home/billbrod/.config/inkscape/preferences.xml"
 
 REF_IMAGE_TEMPLATE_PATH: "{DATA_DIR}/ref_images/{image_name}.png"
 METAMER_TEMPLATE_PATH: "{DATA_DIR}/metamers/{model_name}/{image_name}/scaling-{scaling}/opt-{optimizer}_loss-{loss}/fr-{fract_removed}_lc-{loss_fract}_lt-{loss_change_thresh}_li-{loss_change_iter}_cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}/seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc:.03f}_em-{max_ecc:.03f}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}{save_all}_metamer.png"
-MAD_TEMPLATE_PATH: "{DATA_DIR}/mad_images/fix-{fix_model_name}/synth-{synth_model_name}_{synth_target}/{image_name}/opt-{optimizer}_tradeoff-{tradeoff_lambda}_penalty-{range_lambda}_li-{loss_change_iter}/seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc:.03f}_em-{max_ecc:.03f}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}_mad.png"
 
 # if you want to run the checks against the original Freeman and Simoncelli
 # (rule freeman_check in Snakefile), 2011 windows, download these two matlab

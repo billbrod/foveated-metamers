@@ -1,9 +1,5 @@
 #!/usr/bin/python
 """create metamers for the experiment
-
-Note that, unlike create_mad_images.py, this uses the synthesis methods within
-plenoptic_part, part of this repo.
-
 """
 import torch
 import re
@@ -609,7 +605,7 @@ def save(save_path, metamer, animate_figsize, rep_image_figsize, img_zoom,
       ``os.path.splitext(save_path)[0] + "_metamer.npy"``.
     - The finished metamer 8-bit image, at
       ``os.path.splitext(save_path)[0] + "_metamer.png"``.
-    - The finished metamer 16-bit image, at
+    - The finished metamer 8-bit image, at
       ``os.path.splitext(save_path)[0] + "_metamer-16.png"``.
     - The 'rep_image', at ``os.path.splitext(save_path)[0]+"_rep.png"``.
       See ``summary_plots()`` docstring for a description of this plot.

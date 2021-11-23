@@ -50,7 +50,6 @@ wildcard_constraints:
     fixation_cross="cross|nocross",
     cutout="cutout|nocutout|nocutout_natural-seed|cutout_natural-seed",
     context="paper|poster",
-    synth_target="min|max"
 ruleorder:
     collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check > mcmc_compare_plot > mcmc_plots > embed_bitmaps_into_figure > compose_figures
 
@@ -66,9 +65,7 @@ REF_IMAGE_TEMPLATE_PATH = config['REF_IMAGE_TEMPLATE_PATH'].replace("{DATA_DIR}/
 # the regex here removes all string formatting codes from the string,
 # since Snakemake doesn't like them
 METAMER_TEMPLATE_PATH = re.sub(":.*?}", "}", config['METAMER_TEMPLATE_PATH'].replace("{DATA_DIR}/", DATA_DIR))
-MAD_TEMPLATE_PATH = re.sub(":.*?}", "}", config['MAD_TEMPLATE_PATH'].replace("{DATA_DIR}/", DATA_DIR))
 METAMER_LOG_PATH = METAMER_TEMPLATE_PATH.replace('metamers/{model_name}', 'logs/metamers/{model_name}').replace('_metamer.png', '.log')
-MAD_LOG_PATH = MAD_TEMPLATE_PATH.replace('mad_images/fix-', 'logs/mad_images/fix-').replace('_mad.png', '.log')
 CONTINUE_TEMPLATE_PATH = (METAMER_TEMPLATE_PATH.replace('metamers/{model_name}', 'metamers_continue/{model_name}')
                           .replace("{clamp_each_iter}/", "{clamp_each_iter}/attempt-{num}_iter-{extra_iter}"))
 CONTINUE_LOG_PATH = CONTINUE_TEMPLATE_PATH.replace('metamers_continue/{model_name}', 'logs/metamers_continue/{model_name}').replace('_metamer.png', '.log')
@@ -579,35 +576,15 @@ rule cache_windows:
 
 
 def get_norm_dict(wildcards):
-    # this is for metamers
-    try:
-        if 'norm' in wildcards.model_name or wildcards.model_name.startswith('Obs'):
-            preproc = ''
-            # lienar images should also use the degamma'd textures
-            if 'degamma' in wildcards.image_name or any([i in wildcards.image_name for i in LINEAR_IMAGES]):
-                preproc += '_degamma'
-            return op.join(config['DATA_DIR'], 'norm_stats', f'V1_texture{preproc}'
-                           '_norm_stats.pt')
-        else:
-            return []
-    # this is for MAD images
-    except AttributeError:
-        norm_dicts = []
-        if 'norm' in wildcards.fix_model_name or wildcards.fix_model_name.startswith('Obs'):
-            preproc = ''
-            # lienar images should also use the degamma'd textures
-            if 'degamma' in wildcards.image_name or any([i in wildcards.image_name for i in LINEAR_IMAGES]):
-                preproc += '_degamma'
-            norm_dicts.append(op.join(config['DATA_DIR'], 'norm_stats', f'V1_texture{preproc}'
-                                      '_norm_stats.pt'))
-        if 'norm' in wildcards.synth_model_name or wildcards.synth_model_name.startswith('Obs'):
-            preproc = ''
-            # lienar images should also use the degamma'd textures
-            if 'degamma' in wildcards.image_name or any([i in wildcards.image_name for i in LINEAR_IMAGES]):
-                preproc += '_degamma'
-            norm_dicts.append(op.join(config['DATA_DIR'], 'norm_stats', f'V1_texture{preproc}'
-                                      '_norm_stats.pt'))
-        return norm_dicts
+    if 'norm' in wildcards.model_name or wildcards.model_name.startswith('Obs'):
+        preproc = ''
+        # lienar images should also use the degamma'd textures
+        if 'degamma' in wildcards.image_name or any([i in wildcards.image_name for i in LINEAR_IMAGES]):
+            preproc += '_degamma'
+        return op.join(config['DATA_DIR'], 'norm_stats', f'V1_texture{preproc}'
+                       '_norm_stats.pt')
+    else:
+        return []
 
 
 def get_windows(wildcards):
@@ -643,49 +620,30 @@ def get_windows(wildcards):
         min_ecc = config['DEFAULT_METAMERS']['min_ecc']
         max_ecc = config['DEFAULT_METAMERS']['max_ecc']
     t_width = 1.0
-    try:
-        # this is for metamers
-        model_names = [wildcards.model_name]
-    except AttributeError:
-        # this is for MAD
-        model_names = [wildcards.fix_model_name, wildcards.synth_model_name]
-    windows = []
-    for mn in model_names:
-        if 'cosine' in mn:
-            window_type = 'cosine'
-        elif 'gaussian' in mn or mn.startswith('Obs'):
-            window_type = 'gaussian'
+    if 'cosine' in wildcards.model_name:
+        window_type = 'cosine'
+    elif 'gaussian' in wildcards.model_name or wildcards.model_name.startswith('Obs'):
+        window_type = 'gaussian'
+    if wildcards.model_name.startswith("RGC"):
+        # RGC model only needs a single scale of PoolingWindows.
+        size = ','.join([str(i) for i in im_shape])
+        return window_template.format(scaling=wildcards.scaling, size=size,
+                                      max_ecc=max_ecc, t_width=t_width,
+                                      min_ecc=min_ecc, window_type=window_type,)
+    elif wildcards.model_name.startswith('V1') or wildcards.model_name.startswith('Obs'):
+        windows = []
+        # need them for every scale
         try:
-            # this is for Metamers
-            scaling = wildcards.scaling
-        except AttributeError:
-            # this is for MAD
-            try:
-                scaling = mn.split('_scaling-')[1]
-                mn = mn.split('_scaling-')[0]
-            except IndexError:
-                scaling = None
-        if scaling is None:
-            continue
-        elif mn.startswith("RGC"):
-            # RGC model only needs a single scale of PoolingWindows.
-            size = ','.join([str(i) for i in im_shape])
-            windows.append(window_template.format(scaling=scaling, size=size,
-                                                  max_ecc=max_ecc, t_width=t_width,
-                                                  min_ecc=min_ecc, window_type=window_type,))
-        elif mn.startswith('V1') or mn.startswith('Obs'):
-            # need them for every scale
-            try:
-                num_scales = int(re.findall('s([0-9]+)', mn)[0])
-            except (IndexError, ValueError):
-                num_scales = 4
-            for i in range(num_scales):
-                output_size = ','.join([str(int(np.ceil(j / 2**i))) for j in im_shape])
-                windows.append(window_template.format(scaling=scaling, size=output_size,
-                                                      max_ecc=max_ecc,
-                                                      min_ecc=min_ecc,
-                                                      t_width=t_width, window_type=window_type))
-    return windows
+            num_scales = int(re.findall('s([0-9]+)', wildcards.model_name)[0])
+        except (IndexError, ValueError):
+            num_scales = 4
+        for i in range(num_scales):
+            output_size = ','.join([str(int(np.ceil(j / 2**i))) for j in im_shape])
+            windows.append(window_template.format(scaling=wildcards.scaling, size=output_size,
+                                                  max_ecc=max_ecc,
+                                                  min_ecc=min_ecc,
+                                                  t_width=t_width, window_type=window_type))
+        return windows
 
 def get_partition(wildcards, cluster):
     # if our V1 scaling value is small enough, we need a V100 and must specify
@@ -718,21 +676,11 @@ def get_cpu_num(wildcards):
         # then we're using the GPU and so don't really need CPUs
         cpus = 1
     else:
-        try:
-            # this is for Metamers
-            scaling = wildcards.scaling
-        except AttributeError:
-            # this is for MAD
-            scaling = [float(mn.split('_scaling-')[1]) if 'scaling' in mn else 1
-                       for mn in [wildcards.fix_model_name,
-                                  wildcards.synth_model_name]]
-            # want to get cpus based on the smallest scaling value
-            scaling = min(scaling)
         # these are all based on estimates from rusty (which automatically
         # gives each job 28 nodes), and checking seff to see CPU usage
-        if float(scaling) > .06:
+        if float(wildcards.scaling) > .06:
             cpus = 21
-        elif float(scaling) > .03:
+        elif float(wildcards.scaling) > .03:
             cpus = 26
         else:
             cpus = 28
@@ -743,14 +691,8 @@ def get_init_image(wildcards):
     if wildcards.init_type in ['white', 'gray', 'pink', 'blue']:
         return []
     else:
-        try:
-            # then this is just a nosie level, and there is no input required
-            float(wildcards.init_type)
-            return []
-        except ValueError:
-            return utils.get_ref_image_full_path(wildcards.init_type)
+        return utils.get_ref_image_full_path(wildcards.init_type)
 
-                           
 rule create_metamers:
     input:
         ref_image = lambda wildcards: utils.get_ref_image_full_path(wildcards.image_name),
@@ -1312,86 +1254,6 @@ rule plot_loss_performance_comparison:
                 g = fov.figures.compare_loss_and_performance_plot(expt_df, stim_df, x=wildcards.x, col=None, plot_kind='line',
                                                                   height=5, logscale_xaxis=True if wildcards.x=='loss' else False)
                 g.fig.savefig(output[2], bbox_inches='tight')
-
-
-rule create_mad_images:
-    input:
-        ref_image = lambda wildcards: utils.get_ref_image_full_path(wildcards.image_name),
-        windows = get_windows,
-        norm_dict = get_norm_dict,
-        init_image = get_init_image,
-    output:
-        MAD_TEMPLATE_PATH.replace('_mad.png', '.pt'),
-        MAD_TEMPLATE_PATH.replace('mad.png', 'synthesis.mp4'),
-        MAD_TEMPLATE_PATH.replace('mad.png', 'synthesis.png'),
-        MAD_TEMPLATE_PATH.replace('mad.png', 'image-diff.png'),
-        MAD_TEMPLATE_PATH.replace('.png', '.npy'),
-        report(MAD_TEMPLATE_PATH),
-    log:
-        MAD_LOG_PATH,
-    benchmark:
-        MAD_LOG_PATH.replace('.log', '_benchmark.txt'),
-    resources:
-        gpu = lambda wildcards: int(wildcards.gpu),
-        cpus_per_task = get_cpu_num,
-        mem = get_mem_estimate,
-        # this seems to be the best, anymore doesn't help and will eventually hurt
-        num_threads = 9,
-    params:
-        rusty_mem = lambda wildcards: get_mem_estimate(wildcards, 'rusty'),
-        cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
-        # if we can use a GPU, synthesis doesn't take very long. If we can't,
-        # it takes forever (7 days is probably not enough, but it's the most I
-        # can request on the cluster -- will then need to manually ask for more
-        # time).
-        time = lambda wildcards: {1: '12:00:00', 0: '7-00:00:00'}[int(wildcards.gpu)],
-        rusty_partition = lambda wildcards: get_partition(wildcards, 'rusty'),
-        rusty_constraint = lambda wildcards: get_constraint(wildcards, 'rusty'),
-    run:
-        import foveated_metamers as fov
-        import contextlib
-        with open(log[0], 'w', buffering=1) as log_file:
-            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                if resources.gpu == 1:
-                    get_gid = True
-                elif resources.gpu == 0:
-                    get_gid = False
-                else:
-                    raise Exception("Multiple gpus are not supported!")
-                # tradeoff_lambda can be a float or None
-                try:
-                    tradeoff_lambda = float(wildcards.tradeoff_lambda)
-                except ValueError:
-                    tradeoff_lambda = None
-                fix_norm_dict, synth_norm_dict = None, None
-                if 'norm' in wildcards.fix_model_name:
-                    fix_norm_dict = input.norm_dict[0]
-                    if 'norm' in wildcards.synth_model_name:
-                        synth_norm_dict = input.norm_dict[1]
-                elif 'norm' in wildcards.synth_model_name:
-                    synth_norm_dict = input.norm_dict[0]
-                with fov.utils.get_gpu_id(get_gid, on_cluster=ON_CLUSTER) as gpu_id:
-                    fov.create_mad_images.main(wildcards.fix_model_name,
-                                               wildcards.synth_model_name,
-                                               input.ref_image,
-                                               wildcards.synth_target,
-                                               int(wildcards.seed),
-                                               float(wildcards.min_ecc),
-                                               float(wildcards.max_ecc),
-                                               float(wildcards.learning_rate),
-                                               int(wildcards.max_iter),
-                                               float(wildcards.loss_thresh),
-                                               int(wildcards.loss_change_iter),
-                                               output[0],
-                                               float(wildcards.init_type),
-                                               gpu_id, params.cache_dir,
-                                               fix_norm_dict,
-                                               synth_norm_dict,
-                                               wildcards.optimizer,
-                                               tradeoff_lambda,
-                                               float(wildcards.range_lambda),
-                                               num_threads=resources.num_threads)
-
 
 
 rule simulate_dataset:
