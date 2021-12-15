@@ -554,11 +554,17 @@ def _add_legend(df, fig=None, hue=None, style=None, palette={},
             sorted_hue = (sorted_hue[:-1:len(sorted_hue)//4] + [sorted_hue[-1]])
             sorted_hue += [h for h in sorted_hue if not is_numeric(h)]
         artists[hue] = ax.scatter([], [], s=0)
+        included_hues = []
         for hue_val in sorted_hue:
             if isinstance(hue_val, float) and np.isnan(hue_val):
                 continue
+            # avoid duplicate hues
+            if palette[hue_val] in included_hues:
+                continue
             artists[hue_val] = ax.plot([], [], color=palette[hue_val],
                                        lw=lw)[0]
+            included_hues.append(palette[hue_val])
+
     if style is not None:
         if isinstance(style, str):
             style = [style]

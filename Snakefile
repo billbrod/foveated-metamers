@@ -48,7 +48,7 @@ wildcard_constraints:
     logscale="log|linear",
     mcmc_model="partially-pooled|unpooled",
     fixation_cross="cross|nocross",
-    cutout="cutout|nocutout|nocutout_natural-seed|cutout_natural-seed",
+    cutout="cutout|nocutout|nocutout_natural-seed|cutout_natural-seed|nocutout_small",
     context="paper|poster",
 ruleorder:
     collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check > mcmc_compare_plot > mcmc_plots > embed_bitmaps_into_figure > compose_figures
@@ -1900,6 +1900,7 @@ rule mcmc_figure:
         import contextlib
         import matplotlib.pyplot as plt
         import arviz as az
+        import warnings
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 inf_data = az.from_netcdf(input[0])
@@ -1915,6 +1916,7 @@ rule mcmc_figure:
                     hue = 'subject_name'
                     style = 'trial_type'
                     height = fig_width / 6
+                    kwargs = {}
                     if 'focus' in wildcards.plot_type:
                         inf_data = fov.mcmc.inf_data_to_df(inf_data, 'predictive grouplevel means', hdi=.95)
                         if 'focus-image' in wildcards.plot_type:
@@ -1922,6 +1924,20 @@ rule mcmc_figure:
                             inf_data = inf_data.query("level=='image_name'").rename(
                                 columns={'dependent_var': 'image_name'})
                             inf_data['subject_name'] = 'all subjects'
+                        elif 'focus-outlier' in wildcards.plot_type:
+                            assert inf_data.model.nunique() == 1, "focus-outlier currently only works with one model!"
+                            # this hackiness means that we facet image_name on
+                            # hue, so we plot each as a separate line, but set
+                            # the color of each line to be that of the model.
+                            pal = {k: fov.plotting.get_palette('model', inf_data.model.unique())[inf_data.model.unique()[0]]
+                                   for k in fov.plotting.get_palette('image_name')}
+                            hue = 'image_name'
+                            col = None
+                            height = fig_width / 2
+                            inf_data = inf_data.query("level=='image_name'").rename(
+                                columns={'dependent_var': 'image_name'})
+                            inf_data['subject_name'] = 'all subjects'
+                            kwargs['palette'] = pal
                         elif 'focus-subject' in wildcards.plot_type:
                             col = None
                             height = fig_width / 3
@@ -1934,9 +1950,14 @@ rule mcmc_figure:
                                                                col=col,
                                                                hue=hue,
                                                                style=style,
-                                                               height=height)
+                                                               height=height,
+                                                               **kwargs)
                 else:
                     raise Exception(f"Don't know how to handle plot type {wildcards.plot_type}!")
+                if 'focus-outlier' in wildcards.plot_type:
+                    # don't need the legend here, it's not doing much
+                    warnings.warn("Removing legend, because it's not doing much.")
+                    g.fig.legends[0].remove()
                 if wildcards.context == 'paper':
                     g.fig.suptitle('')
                     for i, ax in enumerate(g.axes.flatten()):
@@ -2711,7 +2732,9 @@ def get_compose_figures_input(wildcards):
                  path_template.format('window_contours_fill-random-4_size-2048,2600_scaling-2_linewidth-36_background-white'),
                  path_template.format('window_contours_fill-random-5_size-2048,2600_scaling-2_linewidth-36_background-white')]
     if 'metamer_comparison' in wildcards.fig_name:
-        paths = [path_template.format(wildcards.fig_name)]
+        paths = [path_template.format(wildcards.fig_name.replace('performance_', ''))]
+        if 'performance' in wildcards.fig_name:
+            paths.append(path_template.format('V1_norm_s6_gaussian/task-split_comp-ref_mcmc_partially-pooled_performance_focus-outlier'))
     return paths
 
 
@@ -2739,44 +2762,66 @@ rule compose_figures:
                 if 'metamer_comparison' in wildcards.fig_name:
                     scaling = re.findall('scaling-([0-9,.]+)', wildcards.fig_name)[0]
                     scaling = [float(sc) for sc in scaling.split(',')]
-                    fov.compose_figures.metamer_comparison(*input, scaling, output[0],
-                                                           'nocutout' not in wildcards.fig_name,
-                                                           wildcards.context)
+                    if 'performance' not in wildcards.fig_name:
+                        fov.compose_figures.metamer_comparison(*input, scaling, output[0],
+                                                               'nocutout' not in wildcards.fig_name,
+                                                               wildcards.context)
+                    else:
+                        fov.compose_figures.performance_metamer_comparison_small(input[1], input[0], scaling, output[0])
 
 
 def get_metamer_comparison_figure_inputs(wildcards):
-    scaling = wildcards.scaling.split(',')
+    image_name = wildcards.image_name.split(',')
+    if len(image_name) > 1 and 'small' not in wildcards.cutout:
+        raise Exception("Only 'small' metamer comparison figure can have two images!")
+    scaling = wildcards.scaling.split(',') * len(image_name)
     seeds = [0] * len(scaling)
     # if we're showing two of the same scaling values, for either model, want to
     # make sure the seeds are different
     models = ['RGC_norm_gaussian', 'RGC_norm_gaussian', 'V1_norm_s6_gaussian', 'V1_norm_s6_gaussian']
     if scaling[0] == scaling[1]:
         seeds[1] = 1
-    if scaling[2] == scaling[3]:
+    if len(scaling) > 2 and scaling[2] == scaling[3]:
         seeds[3] = 1
     if len(scaling) > 4 and scaling[4] == scaling[5]:
         seeds[5] = 1
+    uniq_imgs = image_name
     if 'natural-seed' in wildcards.cutout:
         if len(scaling) != 6:
             raise Exception(f"When generating {wildcards.cutout} metamer_comparison figure, need 6 scaling values!")
         models = ['V1_norm_s6_gaussian'] * len(scaling)
+    elif 'small' in wildcards.cutout:
+        # we check against 4 but say 2 are required here, because we multiplied
+        # scaling by len(image_name) above. since len(image_name) must be 2
+        # (which we check next), this is equivalent to checking that the input
+        # scaling was 2.
+        if len(scaling) != 4:
+            raise Exception(f"When generating {wildcards.cutout} metamer_comparison figure, need 2 scaling values!")
+        if len(image_name) != 2:
+            raise Exception(f"When generating {wildcards.cutout} metamer_comparison figure, need 2 image_name values!")
+        models = ['V1_norm_s6_gaussian'] * len(scaling)
+        image_name = image_name * 2
+        # when we increased the length of scaling above, it interleaved the
+        # values. this makes sure they're in the proper order
+        scaling = sorted(scaling)
     else:
         if len(scaling) != 4:
             raise Exception(f"When generating {wildcards.cutout} metamer_comparison figure, need 4 scaling values!")
     paths = [
         op.join('reports', 'figures', 'metamer_comparison_{cutout}.svg'),
-        op.join(config['DATA_DIR'], 'ref_images_preproc', '{image_name}_gamma-corrected_range-.05,.95_size-2048,2600.png'),
+        *[op.join(config['DATA_DIR'], 'ref_images_preproc', '{image_name}_gamma-corrected_range-.05,.95_size-2048,2600.png').format(image_name=im)
+          for im in uniq_imgs],
         *[op.join(config['DATA_DIR'], 'figures', '{{context}}', '{model_name}',
-                  '{{image_name}}_range-.05,.95_size-2048,2600_scaling-{scaling}_seed-{seed}_comp-ref_gpu-{gpu}_linewidth-15_window.png').format(
-                      model_name=m, scaling=sc, gpu=0 if float(sc) < config['GPU_SPLIT'] else 1, seed=s)
-          for m, sc, s in zip(models, scaling, seeds)]
+                  '{image_name}_range-.05,.95_size-2048,2600_scaling-{scaling}_seed-{seed}_comp-ref_gpu-{gpu}_linewidth-15_window.png').format(
+                      model_name=m, scaling=sc, gpu=0 if float(sc) < config['GPU_SPLIT'] else 1, seed=s, image_name=im)
+          for m, im, sc, s in zip(models, image_name, scaling, seeds)]
     ]
     if 'natural-seed' in wildcards.cutout:
-        paths[1:] = [p.replace('comp-ref', 'comp-ref-natural') for p in paths[1:]]
+        paths[len(uniq_imgs):] = [p.replace('comp-ref', 'comp-ref-natural') for p in paths[len(uniq_imgs):]]
     if 'nocutout' not in wildcards.cutout:
         cuts = ['with_cutout_cross', 'foveal_cutout_cross', 'peripheral_cutout_cross']
-        paths[1:] = [p.replace('.png', f'_{c}.png').replace('ref_images_preproc', f'figures{os.sep}{{context}}')
-                     for p in paths[1:] for c in cuts]
+        paths[len(uniq_imgs):] = [p.replace('.png', f'_{c}.png').replace('ref_images_preproc', f'figures{os.sep}{{context}}')
+                                  for p in paths[len(uniq_imgs):] for c in cuts]
     return paths
 
 
@@ -2888,3 +2933,4 @@ rule paper_figures:
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_ivy_scaling-.01,.058,.063,.27_cutout_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_gnarled_scaling-1.5,1.5,1.5,1.5_cutout_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_portrait_symmetric_scaling-.063,.063,.12,.12,.4,.4_cutout_natural-seed_dpi-300.svg'),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'performance_metamer_comparison_llama,nyc_scaling-.063,.27_nocutout_small_dpi-300.svg'),

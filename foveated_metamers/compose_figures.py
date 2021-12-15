@@ -173,3 +173,44 @@ def metamer_comparison(metamer_fig, scaling_vals, save_path, cutout_fig=False,
                        **text_params)
           for val, mv in zip(scaling_vals, txt_move)],
     ).save(save_path)
+
+
+def performance_metamer_comparison_small(performance_fig, metamer_fig,
+                                         scaling_vals, save_path,
+                                         context='paper'):
+    """Add text labeling model metamer scaling values.
+
+    Parameters
+    ----------
+    performance_fig, metamer_fig : str
+        Paths to the performance and small metamer comparison figures.
+    scaling_vals : list
+        List of strings or floats, the scaling values to use for labeling the
+        figure.
+    save_path : str
+        path to save the composed figure at
+    context : {'paper', 'poster'}, optional
+        plotting context that's being used for this figure (as in
+        seaborn's set_context function). if poster, will scale things up. Note
+        that, for this figure, only paper has really been checked
+
+    """
+    text_params, figure_width = style.plotting_style(context, 'svgutils', 'full')
+    figure_width = _convert_to_pix(figure_width)
+    metamer_fig = SVG(metamer_fig, 'inkscape')
+    performance_fig = SVG(performance_fig, 'matplotlib')
+    # font_size is for panel labels and so too large for the titles -- we want
+    # five-ninths the size (converting from 18pt to 10pt)
+    font_size = float(text_params.pop('size').replace('pt', ''))
+    title_font_size = _convert_to_pix(f'{font_size*5/9}pt')
+    txt_move = [(60, 333), (197+50, 333), (2*197+50, 333)]
+    text = ['Target image'] + [f'Scaling = {val}' for val in scaling_vals]
+    compose.Figure(
+        figure_width, 2.1 * metamer_fig.height * calc_scale('inkscape'),
+        performance_fig.move(0, 10),
+        compose.Text('A', 0, 25, size=font_size, **text_params),
+        metamer_fig.move(0, 340),
+        compose.Text('B', 0, 330, size=font_size, **text_params),
+        *[compose.Text(txt, *mv, size=title_font_size, **text_params)
+          for txt, mv in zip(text, txt_move)],
+    ).save(save_path)
