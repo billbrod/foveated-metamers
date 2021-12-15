@@ -2887,4 +2887,4 @@ rule paper_figures:
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'model_schematic_halfwidth_ivy_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_ivy_scaling-.01,.058,.063,.27_cutout_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_gnarled_scaling-1.5,1.5,1.5,1.5_cutout_dpi-300.svg'),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_portrait_scaling-.063,.063,.12,.12,.4,.4_cutout_natural-seed_dpi-300.svg'),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_portrait_symmetric_scaling-.063,.063,.12,.12,.4,.4_cutout_natural-seed_dpi-300.svg'),
