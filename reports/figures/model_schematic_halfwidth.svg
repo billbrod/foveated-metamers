@@ -8,9 +8,9 @@
    xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="312"
-   height="254.83745"
-   viewBox="0 0 312 254.83742"
+   width="307.53339"
+   height="282.83746"
+   viewBox="0 0 307.53339 282.83743"
    version="1.1"
    id="svg8"
    inkscape:version="1.0.2 (1.0.2+r75+1)"
@@ -17506,15 +17506,15 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="2"
-     inkscape:cx="214.9799"
+     inkscape:cx="212.7466"
      inkscape:cy="237.75892"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
      units="px"
-     inkscape:window-width="1418"
+     inkscape:window-width="2852"
      inkscape:window-height="1554"
-     inkscape:window-x="1446"
+     inkscape:window-x="12"
      inkscape:window-y="50"
      inkscape:window-maximized="1"
      inkscape:document-rotation="0"
@@ -17531,7 +17531,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -17539,7 +17539,7 @@
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1"
-     transform="translate(-12.333789,-20.125249)">
+     transform="translate(-14.567089,-20.125249)">
     <text
        id="text22995-0"
        y="30.255432"
@@ -17555,11 +17555,11 @@
        xml:space="preserve"
        style="font-style:normal;font-weight:normal;font-size:13.3333px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.297623;stroke-linecap:butt;stroke-linejoin:round"
        x="168.30124"
-       y="136.50993"
+       y="164.50993"
        id="text22995-0-4"><tspan
          sodipodi:role="line"
          x="168.30124"
-         y="136.50993"
+         y="164.50993"
          style="font-size:13.3333px;text-align:center;text-anchor:middle;stroke-width:0.297623"
          id="tspan21065">Local spectral energy model</tspan></text>
     <g
@@ -17582,12 +17582,12 @@
            y="151.97519" />
         <image
            xlink:href="IMAGE1"
-           y="151.79881"
-           x="11.144237"
-           id="image1608"
-           preserveAspectRatio="none"
+           width="31.344563"
            height="24.593126"
-           width="31.344563" />
+           preserveAspectRatio="none"
+           id="image1608"
+           x="11.144237"
+           y="151.79881" />
       </g>
       <rect
          style="fill:#ffffff;stroke:#000000;stroke-width:0.524106;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
@@ -17618,7 +17618,7 @@
     </g>
     <g
        id="g9985"
-       transform="matrix(1.0288167,0,0,1.0288167,-0.97003219,-54.889951)">
+       transform="matrix(1.0288167,0,0,1.0288167,-0.97003219,-26.889951)">
       <rect
          y="205.10493"
          x="163.98283"
@@ -18874,12 +18874,12 @@
          y="221.98705" />
       <image
          xlink:href="IMAGE1"
-         y="221.46297"
-         x="15.101941"
-         id="image1608-6"
-         preserveAspectRatio="none"
+         width="93.134323"
          height="73.073723"
-         width="93.134323" />
+         preserveAspectRatio="none"
+         id="image1608-6"
+         x="15.101941"
+         y="221.46297" />
       <rect
          style="fill:#ffffff;stroke:#000000;stroke-width:0.21915;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
          id="rect7-9-6"
