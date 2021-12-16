@@ -1931,6 +1931,9 @@ rule mcmc_figure:
                             # the color of each line to be that of the model.
                             pal = {k: fov.plotting.get_palette('model', inf_data.model.unique())[inf_data.model.unique()[0]]
                                    for k in fov.plotting.get_palette('image_name')}
+                            kwargs['hue_order'] = sorted(fov.plotting.get_palette('image_name').keys())
+                            # want to highlight nyc and llama by reducing every other line's alpha
+                            alpha = [1 if k in ['nyc', 'llama'] else .25 for k in kwargs['hue_order']]
                             hue = 'image_name'
                             col = None
                             height = fig_width / 2
@@ -1938,6 +1941,7 @@ rule mcmc_figure:
                                 columns={'dependent_var': 'image_name'})
                             inf_data['subject_name'] = 'all subjects'
                             kwargs['palette'] = pal
+                            kwargs['hue_kws'] = {'alpha': alpha}
                         elif 'focus-subject' in wildcards.plot_type:
                             col = None
                             height = fig_width / 3

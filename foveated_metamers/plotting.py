@@ -924,22 +924,28 @@ def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
                                        marker=marker, **kwargs))
         else:
             dots.append(None)
+        # do this to avoid modifying kwargs for future loops
+        ci_kwargs = copy.deepcopy(kwargs)
+        # we use this to modify the specified alpha. since it lies between 0
+        # and 1, we multiply to combine effects
+        kwarg_alpha = ci_kwargs.pop('alpha', 1)
         if join is True:
             lines.append(ax.plot(x_data, plot_data.values, linewidth=lw,
-                                 markersize=size, dashes=dashes, alpha=alpha,
-                                 **kwargs))
+                                 markersize=size, dashes=dashes,
+                                 alpha=kwarg_alpha * alpha,
+                                 **ci_kwargs))
         else:
             lines.append(None)
         # if we attach label to the CI, then the legend may use the CI
         # artist, which we don't want
-        kwargs.pop('label', None)
+        ci_kwargs.pop('label', None)
         if ci_mode == 'lines':
             for x_, (ci_low, ci_high) in zip(x_data, zip(*plot_cis)):
                 cis.append(ax.plot([x_, x_], [ci_low, ci_high], linewidth=lw,
-                                   alpha=alpha, **kwargs))
+                                   alpha=kwarg_alpha * alpha, **ci_kwargs))
         elif ci_mode == 'fill':
             cis.append(ax.fill_between(x_data, plot_cis[0].values, plot_cis[1].values,
-                                       alpha=ci_alpha, **kwargs))
+                                       alpha=kwarg_alpha * ci_alpha, **ci_kwargs))
         else:
             raise Exception(f"Don't know how to handle ci_mode {ci_mode}!")
         # if we do the following when x is numeric, things get messed up.
