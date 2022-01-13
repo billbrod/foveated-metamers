@@ -115,9 +115,9 @@ def model_schematic(schematic_fig, contour_fig_large, contour_figs_small,
         positions = [(209, 51), (417+8, 302-15), (417, 302),
                      (388+8, 362-15), (388, 362)]
     elif fig_size == 'half':
-        scales = [.04, .0151]
-        positions = [(162, 17), (247.5+5.5, 146.5-8.5), (247.5, 146.5),
-                     (230+5.5, 183-8.5), (230, 183)]
+        scales = [.0395, .0151]
+        positions = [(160, 17), (245.5+5.5, 172.5-8.5), (245.5, 172.5),
+                     (228+5.5, 209-8.5), (228, 209)]
     if isinstance(contour_figs_small, str):
         contour_figs_small = [contour_figs_small] * 4
     compose.Figure(
