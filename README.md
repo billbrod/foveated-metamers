@@ -818,6 +818,15 @@ python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/{model}/stimul
    the environmental variable from within Snakefile, but I can't make that work.
    Running the calls with `use_multiproc=False` will also work, though it will
    obviously be much slower.
+2. When trying to use the `embed_bitmaps_into_figure` rule on a drive mounted
+   using `rclone` (I had my data stored on a Google Drive that I was using
+   `rclone` to mount on my laptop), I got a `'Bad file descriptor'` error from
+   python when it tried to write the snakemake log at the end of the step. It
+   appears to be [this
+   issue](https://forum.rclone.org/t/bad-file-descriptor-when-moving-files-to-rclone-mount-point/13936),
+   adding the `--vfs-cache-mode writes` flag to the `rclone mount` command
+   worked (though I also had to give myself full permissions on the rclone cache
+   folder: `sudo chmod -R 777 ~/.cache/rclone`).
 
 # References
 
