@@ -1925,15 +1925,12 @@ rule mcmc_figure:
                                 columns={'dependent_var': 'image_name'})
                             inf_data['subject_name'] = 'all subjects'
                         elif 'focus-outlier' in wildcards.plot_type:
-                            assert inf_data.model.nunique() == 1, "focus-outlier currently only works with one model!"
-                            # this hackiness means that we facet image_name on
-                            # hue, so we plot each as a separate line, but set
-                            # the color of each line to be that of the model.
-                            pal = {k: fov.plotting.get_palette('model', inf_data.model.unique())[inf_data.model.unique()[0]]
-                                   for k in fov.plotting.get_palette('image_name')}
+                            assert inf_data.model.nunique() == 1 and inf_data.model.unique()[0].startswith('V1'), "focus-outlier currently only works with V1 model!"
+                            # want to highlight nyc and llama by changing their color ...
+                            pal = fov.plotting.get_palette('image_name_focus-outlier')
+                            # and plotting them on top of other lines
                             kwargs['hue_order'] = sorted(fov.plotting.get_palette('image_name').keys())
-                            # want to highlight nyc and llama by reducing every other line's alpha
-                            alpha = [1 if k in ['nyc', 'llama'] else .25 for k in kwargs['hue_order']]
+                            zorder = [2 if k in ['nyc', 'llama'] else 1 for k in kwargs['hue_order']]
                             hue = 'image_name'
                             col = None
                             height = fig_width / 2
