@@ -566,7 +566,7 @@ def _add_legend(df, fig=None, hue=None, style=None, palette={},
             # roughly evenly spaced
             sorted_hue = (sorted_hue[:-1:len(sorted_hue)//4] + [sorted_hue[-1]])
             sorted_hue += [h for h in sorted_hue if not is_numeric(h)]
-        artists[hue] = ax.scatter([], [], s=0)
+        artists[hue.capitalize()] = ax.scatter([], [], s=0)
         included_hues = []
         for hue_val in sorted_hue:
             if isinstance(hue_val, float) and np.isnan(hue_val):
@@ -577,12 +577,15 @@ def _add_legend(df, fig=None, hue=None, style=None, palette={},
             artists[hue_val] = ax.plot([], [], color=palette[hue_val],
                                        lw=lw)[0]
             included_hues.append(palette[hue_val])
+        if style is not None:
+            # add a blank so we have an extra line between categories
+            artists[''] = ax.scatter([], [], s=0)
 
     if style is not None:
         if isinstance(style, str):
             style = [style]
         for sty in style:
-            artists[sty] = ax.scatter([], [], s=0)
+            artists[sty.capitalize().replace('_', ' ')] = ax.scatter([], [], s=0)
             sty_unique = [s for s in df[sty].unique() if isinstance(s, str) or
                           not np.isnan(s)]
             for style_val in sorted(sty_unique):
