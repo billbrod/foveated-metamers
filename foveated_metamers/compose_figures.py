@@ -4,6 +4,9 @@
 import re
 from svgutils import compose
 from . import style
+import matplotlib as mpl
+import tempfile
+import matplotlib.pyplot as plt
 
 
 def calc_scale(created_in='matplotlib'):
@@ -81,6 +84,33 @@ def _convert_to_pix(val):
             return float(v) * (90/72)
         else:
             return compose.Unit(val).to('px').value
+
+
+def _create_tmp_rectangle(height=1.7, width=6.5, **kwargs):
+    """Create a svg in a temporary file that just contains a single rectangle.
+
+    Parameters
+    ----------
+    height, width : float
+        height and width of rectangle, specified in inches.
+    kwargs :
+        passed to mpl.patches.Rectangle
+
+    Returns
+    -------
+    filename : str
+        path to the temporary file
+
+    """
+    fig, ax = plt.subplots(1, 1, figsize=(width, height))
+    ax.set_visible(False)
+    rect = mpl.patches.Rectangle((0, 0), 1, 1, transform=fig.transFigure,
+                                 **kwargs)
+    fig.add_artist(rect)
+    name = tempfile.NamedTemporaryFile().name + '.svg'
+    fig.savefig(name, bbox_inches='tight', pad_inches=0, transparent=True)
+    plt.close(fig)
+    return name
 
 
 def model_schematic(schematic_fig, contour_fig_large, contour_figs_small,
@@ -176,8 +206,8 @@ def metamer_comparison(metamer_fig, scaling_vals, save_path, cutout_fig=False,
 
 
 def performance_metamer_comparison_small(performance_fig, metamer_fig,
-                                         scaling_vals, save_path,
-                                         context='paper'):
+                                         scaling_vals, rectangle_colors,
+                                         save_path, context='paper'):
     """Add text labeling model metamer scaling values.
 
     Parameters
@@ -187,6 +217,8 @@ def performance_metamer_comparison_small(performance_fig, metamer_fig,
     scaling_vals : list
         List of strings or floats, the scaling values to use for labeling the
         figure.
+    rectangle_colors : list
+        List of two colors for the rectangle edges
     save_path : str
         path to save the composed figure at
     context : {'paper', 'poster'}, optional
@@ -196,7 +228,11 @@ def performance_metamer_comparison_small(performance_fig, metamer_fig,
 
     """
     text_params, figure_width = style.plotting_style(context, 'svgutils', 'full')
-    figure_width = _convert_to_pix(figure_width)
+    # we do this to set the line thickness
+    params, _ = style.plotting_style(context, 'matplotlib', 'full')
+    plt.style.use(params)
+    # little bit of extra space for the borders
+    figure_width = _convert_to_pix(figure_width)+3
     metamer_fig = SVG(metamer_fig, 'inkscape')
     performance_fig = SVG(performance_fig, 'matplotlib')
     # font_size is for panel labels and so too large for the titles -- we want
@@ -205,6 +241,9 @@ def performance_metamer_comparison_small(performance_fig, metamer_fig,
     title_font_size = _convert_to_pix(f'{font_size*5/9}pt')
     txt_move = [(60, 333), (197+50, 333), (2*197+50, 333)]
     text = ['Target image'] + [f'Scaling = {val}' for val in scaling_vals]
+    rects = [SVG(_create_tmp_rectangle(ec=c, fill=False,
+                                       lw=2*params['lines.linewidth']),
+                 'matplotlib') for c in rectangle_colors]
     compose.Figure(
         figure_width, 2.1 * metamer_fig.height * calc_scale('inkscape'),
         performance_fig.move(0, 10),
@@ -213,4 +252,6 @@ def performance_metamer_comparison_small(performance_fig, metamer_fig,
         compose.Text('B', 0, 330, size=font_size, **text_params),
         *[compose.Text(txt, *mv, size=title_font_size, **text_params)
           for txt, mv in zip(text, txt_move)],
+        rects[0].move(1, 339),
+        rects[1].move(1, 339+160),
     ).save(save_path)

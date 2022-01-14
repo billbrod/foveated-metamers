@@ -1941,7 +1941,7 @@ rule mcmc_figure:
                                 columns={'dependent_var': 'image_name'})
                             inf_data['subject_name'] = 'all subjects'
                             kwargs['palette'] = pal
-                            kwargs['hue_kws'] = {'alpha': alpha}
+                            kwargs['hue_kws'] = {'zorder': zorder}
                         elif 'focus-subject' in wildcards.plot_type:
                             col = None
                             height = fig_width / 3
@@ -2755,6 +2755,7 @@ rule compose_figures:
         import subprocess
         import contextlib
         import foveated_metamers as fov
+        import re
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 if 'model_schematic' in wildcards.fig_name:
@@ -2771,7 +2772,11 @@ rule compose_figures:
                                                                'nocutout' not in wildcards.fig_name,
                                                                wildcards.context)
                     else:
-                        fov.compose_figures.performance_metamer_comparison_small(input[1], input[0], scaling, output[0])
+                        pal = fov.plotting.get_palette('image_name_focus-outlier')
+                        img_names = re.findall("metamer_comparison_([a-z,]+)_scaling", wildcards.fig_name)[0]
+                        fov.compose_figures.performance_metamer_comparison_small(input[1], input[0], scaling,
+                                                                                 [pal[name] for name in img_names.split(',')],
+                                                                                 output[0])
 
 
 def get_metamer_comparison_figure_inputs(wildcards):
@@ -2937,4 +2942,4 @@ rule paper_figures:
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_ivy_scaling-.01,.058,.063,.27_cutout_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_gnarled_scaling-1.5,1.5,1.5,1.5_cutout_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_portrait_symmetric_scaling-.063,.063,.12,.12,.4,.4_cutout_natural-seed_dpi-300.svg'),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'performance_metamer_comparison_llama,nyc_scaling-.063,.27_nocutout_small_dpi-300.svg'),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'performance_metamer_comparison_nyc,llama_scaling-.063,.27_nocutout_small_dpi-300.svg'),

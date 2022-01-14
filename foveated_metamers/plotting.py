@@ -41,7 +41,7 @@ def get_palette(col, col_unique=None, as_dict=True):
 
     Parameters
     ----------
-    col : {'subject_name', 'model', 'scaling', 'cell_type', str}
+    col : {'subject_name', 'model', 'scaling', 'cell_type', 'image_name', 'image_name_focus-outlier', str}
         The column to return the palette for. If we don't have a particular
         palette picked out, the palette will contain the strings 'C0', 'C1',
         etc, which use the default palette.
@@ -110,6 +110,19 @@ def get_palette(col, col_unique=None, as_dict=True):
         pal = sns.color_palette('husl', len(all_vals))
         all_vals = sorted(all_vals, key=lambda x: get_order('image_name').index(x))
         pal = dict(zip(all_vals, pal))
+    elif col == 'image_name_focus-outlier':
+        all_vals = [i.replace('_symmetric', '') for i in config['IMAGE_NAME']['ref_image']]
+        warnings.warn("focus-outlier only implemented for V1 so far, highlighting nyc and llama")
+        # this hackiness means that we facet image_name on hue, so we plot each
+        # as a separate line, but set the color of each line to be that of the
+        # model.
+        pal = {k: get_palette('model', ['V1'])['V1'] for k in all_vals}
+        # found these two extra colors using
+        # https://medialab.github.io/iwanthue/ (4-color palette, pinned the two
+        # colors we use for V1 and RGC models, plus midgray). these also should
+        # be tuples, like everything else
+        pal['nyc'] = tuple(np.array([161, 107, 192]) / 255)
+        pal['llama'] = tuple(np.array([204, 85, 92]) / 255)
     else:
         if col_nunique is None:
             col_nunique = 10
