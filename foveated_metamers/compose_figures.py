@@ -208,7 +208,7 @@ def metamer_comparison(metamer_fig, scaling_vals, save_path, cutout_fig=False,
 def performance_metamer_comparison_small(performance_fig, metamer_fig,
                                          scaling_vals, rectangle_colors,
                                          save_path, context='paper'):
-    """Add text labeling model metamer scaling values.
+    """Combine performance and small metamer performance comparison figs.
 
     Parameters
     ----------
@@ -254,4 +254,49 @@ def performance_metamer_comparison_small(performance_fig, metamer_fig,
           for txt, mv in zip(text, txt_move)],
         rects[0].move(1, 339),
         rects[1].move(1, 339+160),
+    ).save(save_path)
+
+
+def combine_one_ax_figs(figs, save_path, context='paper'):
+    """Combine one-ax figures showing performance separately per subject or image.
+
+    Parameters
+    ----------
+    figs : list
+        Lists of paths to the four figures to combine (one per model by trial type)
+    save_path : str
+        Path to save the composed figure at.
+    context : {'paper', 'poster'}, optional
+        plotting context that's being used for this figure (as in
+        seaborn's set_context function). if poster, will scale things up. Note
+        that, for this figure, only paper has really been checked
+
+    """
+    text_params, figure_width = style.plotting_style(context, 'svgutils', 'full')
+    # little bit of extra space for the borders
+    figure_width = _convert_to_pix(figure_width)
+    figs = [SVG(fig, 'matplotlib') for fig in figs]
+    # create rectangles to block out the labels we don't want to see
+    ylabel_rect = SVG(_create_tmp_rectangle(figure_width+20, .1, fc='w', ec='none'),
+                      'matplotlib')
+    xlabel_rect = SVG(_create_tmp_rectangle(.2, figure_width, fc='w', ec='none'),
+                      'matplotlib')
+    # font_size is for panel labels and so too large for the titles
+    font_size = float(text_params.pop('size').replace('pt', ''))
+    compose.Figure(
+        # height needs room for xaxis label and titles as well
+        figure_width, figure_width+35,
+        # want to go through this backwards so the first figures are on top
+        *[fig.move(9 + i // 2 * (figure_width/2 - 10), 15 + i % 2 * figure_width/2)
+          for i, fig in enumerate(figs)][::-1],
+        ylabel_rect.move(9+figure_width/2+5, 15),
+        xlabel_rect.move(9, figure_width/2+15),
+        compose.Text('Luminance model', 109, 15, size=font_size,
+                     **text_params),
+        compose.Text('Energy model', 109+figure_width/2+10+10, 15,
+                     size=font_size, **text_params),
+        compose.Text('Original vs Synth: white noise', 13, figure_width/2-20,
+                     size=font_size, **text_params).rotate(270, 13, figure_width/2-20),
+        compose.Text('Synth vs Synth: white noise', 13, figure_width-25,
+                     size=font_size, **text_params).rotate(270, 13, figure_width-25),
     ).save(save_path)

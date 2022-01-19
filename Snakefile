@@ -2759,6 +2759,13 @@ def get_compose_figures_input(wildcards):
         paths = [path_template.format(wildcards.fig_name.replace('performance_', ''))]
         if 'performance' in wildcards.fig_name:
             paths.append(path_template.format('V1_norm_s6_gaussian/task-split_comp-ref_mcmc_partially-pooled_performance_focus-outlier'))
+    if 'all_comps_summary' in wildcards.fig_name:
+        mcmc_model, focus = re.findall('all_comps_summary_([a-z-]+)_focus-([a-z-_]+)', wildcards.fig_name)[0]
+        paths = [
+            path_template.format('{model}/task-split_comp-{comp}_mcmc_{mcmc_model}_performance_focus-{focus}').format(
+                mcmc_model=mcmc_model, focus=focus, model=model, comp=comp)
+            for model in ['RGC_norm_gaussian', 'V1_norm_s6_gaussian'] for comp in ['ref', 'met']
+        ]
     return paths
 
 
@@ -2797,6 +2804,8 @@ rule compose_figures:
                         fov.compose_figures.performance_metamer_comparison_small(input[1], input[0], scaling,
                                                                                  [pal[name] for name in img_names.split(',')],
                                                                                  output[0])
+                if "all_comps_summary" in wildcards.fig_name:
+                    fov.compose_figures.combine_one_ax_figs(input, output[0])
 
 
 def get_metamer_comparison_figure_inputs(wildcards):
