@@ -112,11 +112,12 @@ def get_palette(col, col_unique=None, as_dict=True):
         pal = dict(zip(all_vals, pal))
     elif col == 'image_name_focus-outlier':
         all_vals = [i.replace('_symmetric', '') for i in config['IMAGE_NAME']['ref_image']]
-        warnings.warn("focus-outlier only implemented for V1 so far, highlighting nyc and llama")
+        assert len(col_unique) == 1, "Only works for a single model so far."
+        warnings.warn("focus-outlier only highlights nyc and llama right now")
         # this hackiness means that we facet image_name on hue, so we plot each
         # as a separate line, but set the color of each line to be that of the
         # model.
-        pal = {k: get_palette('model', ['V1'])['V1'] for k in all_vals}
+        pal = {k: get_palette('model', col_unique)[col_unique[0]] for k in all_vals}
         # found these two extra colors using
         # https://medialab.github.io/iwanthue/ (4-color palette, pinned the two
         # colors we use for V1 and RGC models, plus midgray). these also should
@@ -566,7 +567,7 @@ def _add_legend(df, fig=None, hue=None, style=None, palette={},
             # roughly evenly spaced
             sorted_hue = (sorted_hue[:-1:len(sorted_hue)//4] + [sorted_hue[-1]])
             sorted_hue += [h for h in sorted_hue if not is_numeric(h)]
-        artists[hue.capitalize()] = ax.scatter([], [], s=0)
+        artists[hue.capitalize().replace('_', ' ')] = ax.scatter([], [], s=0)
         included_hues = []
         for hue_val in sorted_hue:
             if isinstance(hue_val, float) and np.isnan(hue_val):

@@ -1920,14 +1920,22 @@ rule mcmc_figure:
                     if 'focus' in wildcards.plot_type:
                         inf_data = fov.mcmc.inf_data_to_df(inf_data, 'predictive grouplevel means', hdi=.95)
                         if 'focus-image' in wildcards.plot_type:
-                            hue = 'model'
+                            if 'one-ax' in wildcards.plot_type:
+                                assert inf_data.model.nunique() == 1, "focus-image_one-ax currently only works with one model!"
+                                pal = {k: fov.plotting.get_palette('model', inf_data.model.unique())[inf_data.model.unique()[0]]
+                                       for k in fov.plotting.get_palette('image_name')}
+                                hue = 'image_name'
+                                col = None
+                                height = fig_width / 2
+                                kwargs['palette'] = pal
+                            else:
+                                hue = 'model'
                             inf_data = inf_data.query("level=='image_name'").rename(
                                 columns={'dependent_var': 'image_name'})
                             inf_data['subject_name'] = 'all subjects'
                         elif 'focus-outlier' in wildcards.plot_type:
-                            assert inf_data.model.nunique() == 1 and inf_data.model.unique()[0].startswith('V1'), "focus-outlier currently only works with V1 model!"
                             # want to highlight nyc and llama by changing their color ...
-                            pal = fov.plotting.get_palette('image_name_focus-outlier')
+                            pal = fov.plotting.get_palette('image_name_focus-outlier', inf_data.model.unique())
                             # and plotting them on top of other lines
                             kwargs['hue_order'] = sorted(fov.plotting.get_palette('image_name').keys())
                             zorder = [2 if k in ['nyc', 'llama'] else 1 for k in kwargs['hue_order']]
@@ -1941,7 +1949,14 @@ rule mcmc_figure:
                             kwargs['hue_kws'] = {'zorder': zorder}
                         elif 'focus-subject' in wildcards.plot_type:
                             col = None
-                            height = fig_width / 3
+                            if 'one-ax' in wildcards.plot_type:
+                                height = fig_width / 2
+                                assert inf_data.model.nunique() == 1, "focus-image_one-ax currently only works with one model!"
+                                pal = {k: fov.plotting.get_palette('model', inf_data.model.unique())[inf_data.model.unique()[0]]
+                                       for k in fov.plotting.get_palette('subject_name')}
+                                kwargs['palette'] = pal
+                            else:
+                                height = fig_width / 3
                             inf_data = inf_data.query("level=='subject_name'").rename(
                                 columns={'dependent_var': 'subject_name'})
                             inf_data['image_name'] = 'all images'
@@ -1955,7 +1970,7 @@ rule mcmc_figure:
                                                                **kwargs)
                 else:
                     raise Exception(f"Don't know how to handle plot type {wildcards.plot_type}!")
-                if 'focus-outlier' in wildcards.plot_type:
+                if 'focus-outlier' in wildcards.plot_type or 'one-ax' in wildcards.plot_type:
                     # don't need the legend here, it's not doing much
                     warnings.warn("Removing legend, because it's not doing much.")
                     g.fig.legends[0].remove()
@@ -1983,7 +1998,8 @@ rule mcmc_performance_comparison_figure:
         op.join(config['DATA_DIR'], 'dacey_data',
                 'Dacey1992_mcmc_step-.1_prob-.8_depth-10_c-4_d-1000_w-1000_s-10.nc'),
     output:
-        op.join(config['DATA_DIR'], 'figures', '{context}', 'mcmc_{mcmc_model}_performance_{focus}.{ext}')
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'mcmc_{mcmc_model}_performance_{focus}.{ext}'),
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'mcmc_{mcmc_model}_performance_{focus}_legend.{ext}')
     log:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}',
                 'mcmc_{mcmc_model}_performance_{focus}_{ext}.log')
@@ -2044,6 +2060,13 @@ rule mcmc_performance_comparison_figure:
                 if wildcards.context == 'paper':
                     g.fig.suptitle('')
                 g.savefig(output[0], bbox_inches='tight')
+                # just save the legend, which we'll reuse later. need to redraw
+                # canvas to make sure this works correctly
+                g.fig.canvas.draw()
+                g.ax.set_frame_on(False)
+                g.savefig(output[1],
+                          # this gets the bbox, in inches, of the legend
+                          bbox_inches=g.fig.legends[0].get_window_extent().inverse_transformed(g.fig.dpi_scale_trans))
 
 
 rule performance_comparison_figure:
