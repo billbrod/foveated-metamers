@@ -2823,13 +2823,16 @@ def get_metamer_comparison_figure_inputs(wildcards):
         seeds[1] = 1
     if len(scaling) > 2 and scaling[2] == scaling[3]:
         seeds[3] = 1
-    if len(scaling) > 4 and scaling[4] == scaling[5]:
+    if len(scaling) > 5 and scaling[4] == scaling[5]:
         seeds[5] = 1
     uniq_imgs = image_name
     if 'natural-seed' in wildcards.cutout:
-        if len(scaling) != 6:
-            raise Exception(f"When generating {wildcards.cutout} metamer_comparison figure, need 6 scaling values!")
+        if len(scaling) != 5:
+            raise Exception(f"When generating {wildcards.cutout} metamer_comparison figure, need 5 scaling values!")
         models = ['V1_norm_s6_gaussian'] * len(scaling)
+        seeds = [0, 1, 2, 0, 1]
+        image_name = image_name * len(scaling)
+        comps = ['ref-natural', 'ref-natural', 'ref-natural', 'ref', 'ref']
     elif 'small' in wildcards.cutout:
         # we check against 4 but say 2 are required here, because we multiplied
         # scaling by len(image_name) above. since len(image_name) must be 2
@@ -2844,20 +2847,21 @@ def get_metamer_comparison_figure_inputs(wildcards):
         # when we increased the length of scaling above, it interleaved the
         # values. this makes sure they're in the proper order
         scaling = sorted(scaling)
+        comps = ['ref'] * len(scaling)
     else:
         if len(scaling) != 4:
             raise Exception(f"When generating {wildcards.cutout} metamer_comparison figure, need 4 scaling values!")
+        image_name = image_name * len(scaling)
+        comps = ['ref'] * len(scaling)
     paths = [
         op.join('reports', 'figures', 'metamer_comparison_{cutout}.svg'),
         *[op.join(config['DATA_DIR'], 'ref_images_preproc', '{image_name}_gamma-corrected_range-.05,.95_size-2048,2600.png').format(image_name=im)
           for im in uniq_imgs],
         *[op.join(config['DATA_DIR'], 'figures', '{{context}}', '{model_name}',
-                  '{image_name}_range-.05,.95_size-2048,2600_scaling-{scaling}_seed-{seed}_comp-ref_gpu-{gpu}_linewidth-15_window.png').format(
-                      model_name=m, scaling=sc, gpu=0 if float(sc) < config['GPU_SPLIT'] else 1, seed=s, image_name=im)
-          for m, im, sc, s in zip(models, image_name, scaling, seeds)]
+                  '{image_name}_range-.05,.95_size-2048,2600_scaling-{scaling}_seed-{seed}_comp-{comp}_gpu-{gpu}_linewidth-15_window.png').format(
+                      model_name=m, scaling=sc, gpu=0 if float(sc) < config['GPU_SPLIT'] else 1, seed=s, image_name=im, comp=comp)
+          for m, im, sc, s, comp in zip(models, image_name, scaling, seeds, comps)]
     ]
-    if 'natural-seed' in wildcards.cutout:
-        paths[len(uniq_imgs):] = [p.replace('comp-ref', 'comp-ref-natural') for p in paths[len(uniq_imgs):]]
     if 'nocutout' not in wildcards.cutout:
         cuts = ['with_cutout_cross', 'foveal_cutout_cross', 'peripheral_cutout_cross']
         paths[len(uniq_imgs):] = [p.replace('.png', f'_{c}.png').replace('ref_images_preproc', f'figures{os.sep}{{context}}')
