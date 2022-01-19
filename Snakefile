@@ -2799,7 +2799,9 @@ rule compose_figures:
                                                                'nocutout' not in wildcards.fig_name,
                                                                wildcards.context)
                     else:
-                        pal = fov.plotting.get_palette('image_name_focus-outlier')
+                        # doesn't matter what we put in here, we're only using
+                        # the outlier colors
+                        pal = fov.plotting.get_palette('image_name_focus-outlier', ['V1'])
                         img_names = re.findall("metamer_comparison_([a-z,]+)_scaling", wildcards.fig_name)[0]
                         fov.compose_figures.performance_metamer_comparison_small(input[1], input[0], scaling,
                                                                                  [pal[name] for name in img_names.split(',')],
