@@ -1907,6 +1907,9 @@ rule mcmc_figure:
                 style, fig_width = fov.style.plotting_style(wildcards.context)
                 plt.style.use(style)
                 if wildcards.plot_type == 'params-grouplevel':
+                    inf_data = fov.mcmc.inf_data_to_df(inf_data, 'parameter grouplevel means',
+                                                       query_str="distribution=='posterior'", hdi=.95)
+                    inf_data['trial_type'] = inf_data['trial_type'].map(fov.plotting.TRIAL_TYPE_PLOT)
                     col = 'level'
                     fig = fov.figures.psychophysical_grouplevel_means(inf_data,
                                                                       height=fig_width/4,

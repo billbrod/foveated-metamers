@@ -1670,7 +1670,7 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
                                     height=4, aspect=2, x_dodge=.15, hdi=.95,
                                     rotate_xticklabels=True,
                                     title_str="{row_val} | {col_val}",
-                                    tabular_trial_type_legend=True,
+                                    tabular_trial_type_legend=False,
                                     **kwargs):
     """Show psychophysical group-level means, with HDI error bars.
 
