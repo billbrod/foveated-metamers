@@ -1907,7 +1907,10 @@ rule mcmc_figure:
                 style, fig_width = fov.style.plotting_style(wildcards.context)
                 plt.style.use(style)
                 if wildcards.plot_type == 'params-grouplevel':
-                    fig = fov.figures.psychophysical_grouplevel_means(inf_data, height=fig_width/4)
+                    col = 'level'
+                    fig = fov.figures.psychophysical_grouplevel_means(inf_data,
+                                                                      height=fig_width/4,
+                                                                      col=col)
                     for ax in fig.axes:
                         ax.set_title(ax.get_title().replace('a0', 'gain').replace('s0', 'critical scaling'))
                     fig.suptitle(fig._suptitle.get_text(), y=1.05)
@@ -1968,15 +1971,16 @@ rule mcmc_figure:
                                                                style=style,
                                                                height=height,
                                                                **kwargs)
+                    fig = g.fig
                 else:
                     raise Exception(f"Don't know how to handle plot type {wildcards.plot_type}!")
                 if 'focus-outlier' in wildcards.plot_type or 'one-ax' in wildcards.plot_type:
                     # don't need the legend here, it's not doing much
                     warnings.warn("Removing legend, because it's not doing much.")
-                    g.fig.legends[0].remove()
+                    fig.legends[0].remove()
                 if wildcards.context == 'paper':
-                    g.fig.suptitle('')
-                    for i, ax in enumerate(g.axes.flatten()):
+                    fig.suptitle('')
+                    for i, ax in enumerate(fig.axes):
                         # also need to move the titles down a bit
                         ax.set_title(ax.get_title(), y=.85)
                         # still running into this issue
@@ -1985,7 +1989,7 @@ rule mcmc_figure:
                         # xticklabels invisible
                         if col == 'image_name' and i <= 14:
                             [xticklab.set_visible(False) for xticklab in ax.get_xticklabels()]
-                g.savefig(output[0], bbox_inches='tight')
+                fig.savefig(output[0], bbox_inches='tight')
 
 
 rule mcmc_performance_comparison_figure:
