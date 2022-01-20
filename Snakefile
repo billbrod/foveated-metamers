@@ -2794,11 +2794,7 @@ rule compose_figures:
                 if 'metamer_comparison' in wildcards.fig_name:
                     scaling = re.findall('scaling-([0-9,.]+)', wildcards.fig_name)[0]
                     scaling = [float(sc) for sc in scaling.split(',')]
-                    if 'performance' not in wildcards.fig_name:
-                        fov.compose_figures.metamer_comparison(*input, scaling, output[0],
-                                                               'nocutout' not in wildcards.fig_name,
-                                                               wildcards.context)
-                    else:
+                    if 'performance' in wildcards.fig_name:
                         # doesn't matter what we put in here, we're only using
                         # the outlier colors
                         pal = fov.plotting.get_palette('image_name_focus-outlier', ['V1'])
@@ -2806,6 +2802,19 @@ rule compose_figures:
                         fov.compose_figures.performance_metamer_comparison_small(input[1], input[0], scaling,
                                                                                  [pal[name] for name in img_names.split(',')],
                                                                                  output[0])
+                    elif 'natural-seed' in wildcards.fig_name:
+                        labels = ['Natural image', 'Initialized with natural image 1',
+                                  'Initialized with natural image 2',
+                                  'Initialized with natural image 3',
+                                  'Initialized with white noise 1',
+                                  'Initialized with white noise 2']
+                        fov.compose_figures.metamer_comparison(*input, labels, output[0],
+                                                               'nocutout' not in wildcards.fig_name,
+                                                               True, wildcards.context)
+                    else:
+                        fov.compose_figures.metamer_comparison(*input, scaling, output[0],
+                                                               'nocutout' not in wildcards.fig_name,
+                                                               False, wildcards.context)
                 if "all_comps_summary" in wildcards.fig_name:
                     fov.compose_figures.combine_one_ax_figs(input, output[0])
 

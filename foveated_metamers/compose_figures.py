@@ -159,23 +159,26 @@ def model_schematic(schematic_fig, contour_fig_large, contour_figs_small,
     ).save(save_path)
 
 
-def metamer_comparison(metamer_fig, scaling_vals, save_path, cutout_fig=False,
-                       context='paper'):
+def metamer_comparison(metamer_fig, labels, save_path, cutout_fig=False,
+                       natural_seed_fig=False, context='paper'):
     """Add text labeling model metamer scaling values.
 
     Parameters
     ----------
     metamer_fig : str
         Path to the metamer comparison figure.
-    scaling_vals : list
-        List of strings or floats, the scaling values to use for labeling the
-        figure.
+    labels : list
+        List of strings or floats to label plots with. If floats, we assume
+        these are scaling values and add "Scaling = " to each of them. If
+        strings, we label as is.
     save_path : str
         path to save the composed figure at
     cutout_fig : bool, optional
         Whether this is the nocutout (False) or cutout (True) version of the
-        metamer comparison figure, which changes where we place the scaling
-        labels.
+        metamer comparison figure, which changes where we place the labels.
+    natural_seed_fig : bool, optional
+        Whether this is the natural-seed version of this fig or not, which
+        changes how we place the labels.
     context : {'paper', 'poster'}, optional
         plotting context that's being used for this figure (as in
         seaborn's set_context function). if poster, will scale things up. Note
@@ -185,23 +188,38 @@ def metamer_comparison(metamer_fig, scaling_vals, save_path, cutout_fig=False,
     text_params, figure_width = style.plotting_style(context, 'svgutils', 'full')
     figure_width = _convert_to_pix(figure_width)
     metamer_fig = SVG(metamer_fig, 'inkscape')
+    metamer_move = [0, 0]
+    figure_height = metamer_fig.height * calc_scale('inkscape')
     # font_size is for panel labels and so too large for what we want here --
     # we want two-thirds or five-ninths the size (converting from 18pt to 12pt
     # or 10pt, respectively)
     font_size = float(text_params.pop('size').replace('pt', ''))
+    labels = [f'Scaling = {val}' if isinstance(val, float) else val
+              for val in labels]
     if not cutout_fig:
         font_size = _convert_to_pix(f'{font_size*2/3}pt')
-        txt_move = [(120, 240), (380, 240), (120, 485), (395, 485)]
+        txt_move = [[120, 240], [380, 240], [120, 485], [395, 485]]
     else:
         font_size = _convert_to_pix(f'{font_size*5/9}pt')
-        txt_move = [(100, 168), (380, 168), (100, 338), (380, 338),
-                    (100, 508), (380, 508)]
+        txt_move = [[100, 168], [380, 168], [100, 338], [380, 338],
+                    [100, 508], [380, 508]]
+    # this has 6 subplots, and we want a label above each of them
+    if natural_seed_fig:
+        # want to shift the metamer figure down a little bit so there's room
+        # for labels on top row.
+        figure_height += 20
+        metamer_move[1] += 20
+        # +20 to account for the extra 20px added above, -170 because we want
+        # to move everything up a row.
+        txt_move = [[mv[0], mv[1]+20-170] for mv in txt_move]
+        # change the x value because they're longer than the scaling labels
+        txt_move = [[mv[0]-offset, mv[1]] for mv, offset
+                    in zip(txt_move, [10]+[53]*5)]
     compose.Figure(
-        figure_width, metamer_fig.height * calc_scale('inkscape'),
-        metamer_fig,
-        *[compose.Text(f'Scaling = {val}', *mv, size=font_size,
-                       **text_params)
-          for val, mv in zip(scaling_vals, txt_move)],
+        figure_width, figure_height,
+        metamer_fig.move(*metamer_move),
+        *[compose.Text(val, *mv, size=font_size, **text_params)
+          for val, mv in zip(labels, txt_move)],
     ).save(save_path)
 
 
