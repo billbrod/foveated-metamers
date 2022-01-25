@@ -1671,6 +1671,7 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
                                     rotate_xticklabels=True,
                                     title_str="{row_val} | {col_val}",
                                     tabular_trial_type_legend=False,
+                                    mean_line=True,
                                     **kwargs):
     """Show psychophysical group-level means, with HDI error bars.
 
@@ -1716,6 +1717,10 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
         Format string for axes titles. Can include {row_val}, {col_val}, {row},
         {col} (for the values and names of those facets, respectively) and
         plain text.
+    mean_line : {True, False, 'lines-only'}, optional
+        Whether to plot a dotted line and shaded region showing the overall
+        mean (with CI). If 'lines-only', only plot the mean line, not the
+        shaded region showing the 95% CI.
     tabular_trial_type_legend : {True, False, 'under'}, optional
         Whether to create a tabular legend for trial_type. See the
         `tabular_legend` function for details. If 'under', we call
@@ -1729,6 +1734,8 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
         figure containing the figure.
 
     """
+    if rotate_xticklabels is True:
+        rotate_xticklabels = 25
     kwargs.setdefault('sharey', 'row')
     kwargs.setdefault('sharex', 'col')
     if not isinstance(inf_data, pd.DataFrame):
@@ -1795,19 +1802,24 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
                                                              rotate_xticklabels,
                                                              xlabel, ylabel,
                                                              title_, ax=ax)
+            # some of our hues have data for fewer subjects, and so we can end
+            # up with fewer xticks and xticklabels than we should if they end
+            # up last. this makes sure we have all ticks and labels.
+            ax.set_xticks(np.arange(d[x].nunique()))
+            ax.set_xticklabels(x_ord if x_ord is not None else d[x].unique(),
+                               rotation=rotate_xticklabels, ha='right')
             xlim = ax.get_xlim()
-            if d[hue].nunique() > 1:
-                color = 'k'
-            else:
-                color = palette[d[hue].unique()[0]]
-            if len(means.query("hdi==50")) == 1:
-                # only plot the average line and HDI if this axis contains a
-                # single set of parameters (that is, for a single model, trial
-                # type, and MCMC model type). otherwise, it's confusing
-                ax.fill_between(xlim, means[y].min(), means[y].max(), color=color,
-                                alpha=.2)
-                ax.axhline(means.query("hdi==50")[y].values,
-                           linestyle='--', color=color)
+            for name, mn in means.groupby([hue, style]):
+                # plot the average line and HDI for each hue, style separately.
+                # this can be overwhelming, which is why we allow user to turn
+                # it off / modify it.
+                color = palette[name[0]]
+                if mean_line is True:
+                    ax.fill_between(xlim, mn[y].min(), mn[y].max(), color=color,
+                                    alpha=.2)
+                if mean_line:
+                    ax.axhline(mn.query("hdi==50")[y].values,
+                               linestyle='--', color=color)
             ax.set_xlim(xlim)
             final_markers.update(markers_tmp)
 

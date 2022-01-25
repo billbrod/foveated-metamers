@@ -50,6 +50,7 @@ wildcard_constraints:
     fixation_cross="cross|nocross",
     cutout="cutout|nocutout|nocutout_natural-seed|cutout_natural-seed|nocutout_small",
     context="paper|poster",
+    mcmc_plot_type="performance|params-(linear|log)-(none|lines|ci)",
 ruleorder:
     collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check > mcmc_compare_plot > mcmc_plots > embed_bitmaps_into_figure > compose_figures
 
@@ -2005,75 +2006,107 @@ rule mcmc_performance_comparison_figure:
         op.join(config['DATA_DIR'], 'dacey_data',
                 'Dacey1992_mcmc_step-.1_prob-.8_depth-10_c-4_d-1000_w-1000_s-10.nc'),
     output:
-        op.join(config['DATA_DIR'], 'figures', '{context}', 'mcmc_{mcmc_model}_performance_{focus}.{ext}'),
-        op.join(config['DATA_DIR'], 'figures', '{context}', 'mcmc_{mcmc_model}_performance_{focus}_legend.{ext}')
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'mcmc_{mcmc_model}_{mcmc_plot_type}_{focus}.{ext}'),
     log:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}',
-                'mcmc_{mcmc_model}_performance_{focus}_{ext}.log')
+                'mcmc_{mcmc_model}_{mcmc_plot_type}_{focus}_{ext}.log')
     benchmark:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}',
-                'mcmc_{mcmc_model}_performance_{focus}_{ext}_benchmark.txt')
+                'mcmc_{mcmc_model}_{mcmc_plot_type}_{focus}_{ext}_benchmark.txt')
     run:
         import foveated_metamers as fov
         import contextlib
         import pandas as pd
         import matplotlib.pyplot as plt
         import arviz as az
+        import warnings
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 style, fig_width = fov.style.plotting_style(wildcards.context)
                 plt.style.use(style)
-                height = fig_width / 2.5
+                if wildcards.mcmc_plot_type == 'performance':
+                    df_kind = 'predictive grouplevel means'
+                    query_str = None
+                elif 'params' in wildcards.mcmc_plot_type:
+                    df_kind = 'parameter grouplevel means'
+                    query_str = "distribution=='posterior'"
                 df = []
                 for f in input[:-1]:
                     df.append(fov.mcmc.inf_data_to_df(az.from_netcdf(f),
-                                                      'predictive grouplevel means', hdi=.95))
+                                                      df_kind, query_str,
+                                                      hdi=.95))
                 df = pd.concat(df)
+                query_str = None
+                perf_query_str = None
                 if wildcards.focus.startswith('sub'):
                     focus = wildcards.focus
-                    query_str = ''
                     if 'comp-natural' in wildcards.focus:
-                        query_str = "trial_type in ['metamer_vs_metamer', 'metamer_vs_reference', 'metamer_vs_metamer-natural', 'metamer_vs_reference-natural'] & "
+                        query_str = "trial_type in ['metamer_vs_metamer', 'metamer_vs_reference', 'metamer_vs_metamer-natural', 'metamer_vs_reference-natural']"
                         focus = focus.replace('_comp-natural', '')
-                    query_str += f"level=='subject_name' & dependent_var=='{focus}'"
-                    df = df.query(query_str).rename(columns={'dependent_var': 'subject_name'})
-                    df['image_name'] = 'all images'
+                    perf_query_str = f"level=='subject_name' & dependent_var=='{focus}'"
                 elif wildcards.focus == 'comp-all':
-                    df = df.query("level=='all'")
-                    df['image_name'] = 'all images'
-                    df['subject_name'] = 'all subjects'
+                    perf_query_str = "level=='all'"
                 elif wildcards.focus == 'comp-base':
-                    query_str = 'trial_type in ["metamer_vs_metamer", "metamer_vs_reference"] & level == "all"'
-                    df = df.query(query_str)
-                    df['image_name'] = 'all images'
-                    df['subject_name'] = 'all subjects'
+                    query_str = 'trial_type in ["metamer_vs_metamer", "metamer_vs_reference"]'
+                    perf_query_str = 'level == "all"'
                 elif wildcards.focus == 'comp-ref':
-                    query_str = 'trial_type in ["metamer_vs_reference"] & level == "all"'
-                    df = df.query(query_str)
-                    df['image_name'] = 'all images'
-                    df['subject_name'] = 'all subjects'
+                    query_str = 'trial_type in ["metamer_vs_reference"] '
+                    perf_query_str = 'level == "all"'
                 else:
                     raise Exception(f"Don't know how to handle focus {wildcards.focus}!")
+                if query_str is not None:
+                    df = df.query(query_str)
                 df['model'] = df['model'].map(fov.plotting.MODEL_PLOT)
                 df['trial_type'] = df['trial_type'].map(fov.plotting.TRIAL_TYPE_PLOT)
-                g = fov.figures.posterior_predictive_check(df, col=None,
-                                                           hue='model',
-                                                           style='trial_type',
-                                                           height=height,
-                                                           aspect=2,
-                                                           logscale_xaxis=True)
-                g.fig.canvas.draw()
-                fov.plotting.add_physiological_scaling_bars(g.ax, az.from_netcdf(input[-1]))
+                if wildcards.mcmc_plot_type == 'performance':
+                    if perf_query_str is not None:
+                        df = df.query(perf_query_str)
+                    if not wildcards.focus.startswith('sub'):
+                        df['subject_name'] = 'all subjects'
+                    else:
+                        df = df.rename(columns={'dependent_var': 'subject_name'})
+                    df['image_name'] = 'all images'
+                    g = fov.figures.posterior_predictive_check(df, col=None,
+                                                               hue='model',
+                                                               style='trial_type',
+                                                               height=fig_width/2.5,
+                                                               aspect=2,
+                                                               logscale_xaxis=True)
+                    g.fig.canvas.draw()
+                    fov.plotting.add_physiological_scaling_bars(g.ax, az.from_netcdf(input[-1]))
+                    fig = g.fig
+                elif 'params' in wildcards.mcmc_plot_type:
+                    mean_line = {'none': False, 'lines': 'lines-only', 'ci': True}[wildcards.mcmc_plot_type.split('-')[-1]]
+                    fig = fov.figures.psychophysical_grouplevel_means(df,
+                                                                      height=fig_width/3,
+                                                                      mean_line=mean_line)
+                    for i, ax in enumerate(fig.axes):
+                        if 'linear' in wildcards.mcmc_plot_type:
+                            if 'a0' in ax.get_title():
+                                ylim = (0, 10)
+                            elif 's0' in ax.get_title():
+                                ylim = (0, .5)
+                            ax.set(yscale='linear', ylim=ylim)
+                        elif 'log' in wildcards.mcmc_plot_type:
+                            if 'a0' in ax.get_title():
+                                ylim = (1e-1, 10)
+                            elif 's0' in ax.get_title():
+                                ylim = (1e-2, 1)
+                            ax.set(yscale='log', ylim=ylim)
+                        title = ax.get_title().replace('a0', 'Gain').replace('s0', 'Critical Scaling')
+                        title = title.split('|')[0]
+                        # remove title
+                        ax.set_title('')
+                        ax.set_xlabel(ax.get_xlabel().split('_')[0].capitalize())
+                        if i % 2 == 0:
+                            ax.set_ylabel(title)
+                    if wildcards.context == 'paper':
+                        warnings.warn("Removing legend, because other panel will have it.")
+                        fig.legends[0].remove()
+                    fig.suptitle(fig._suptitle.get_text(), y=1.05)
                 if wildcards.context == 'paper':
-                    g.fig.suptitle('')
-                g.savefig(output[0], bbox_inches='tight')
-                # just save the legend, which we'll reuse later. need to redraw
-                # canvas to make sure this works correctly
-                g.fig.canvas.draw()
-                g.ax.set_frame_on(False)
-                g.savefig(output[1],
-                          # this gets the bbox, in inches, of the legend
-                          bbox_inches=g.fig.legends[0].get_window_extent().inverse_transformed(g.fig.dpi_scale_trans))
+                    fig.suptitle('')
+                fig.savefig(output[0], bbox_inches='tight')
 
 
 rule performance_comparison_figure:
