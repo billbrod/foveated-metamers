@@ -114,7 +114,7 @@ def _create_tmp_rectangle(height=1.7, width=6.5, **kwargs):
 
 
 def model_schematic(schematic_fig, contour_fig_large, contour_figs_small,
-                    save_path, fig_size='full', context='paper'):
+                    fig_size='full', context='paper'):
     """Add window contours to the model schematic figure.
 
     Parameters
@@ -125,8 +125,6 @@ def model_schematic(schematic_fig, contour_fig_large, contour_figs_small,
         that will be a bit less than half that size (and should also have a
         white background). contour_figs_small can be a single str or a list of 4
         strs, in which case we'll use each of those separately.
-    save_path : str
-        path to save the composed figure at
     fig_size : {'full', 'half'}, optional
         We have two different versions of this figure, one full-width, one half.
         This specifies which we're making.
@@ -150,16 +148,16 @@ def model_schematic(schematic_fig, contour_fig_large, contour_figs_small,
                      (228+5.5, 209-8.5), (228, 209)]
     if isinstance(contour_figs_small, str):
         contour_figs_small = [contour_figs_small] * 4
-    compose.Figure(
+    return compose.Figure(
         figure_width, schematic_fig.height * calc_scale('inkscape'),
         schematic_fig,
         SVG(contour_fig_large).scale(scales[0]).move(*positions[0]),
         *[SVG(fig).scale(scales[1]).move(*positions[i+1])
           for i, fig in enumerate(contour_figs_small)],
-    ).save(save_path)
+    )
 
 
-def metamer_comparison(metamer_fig, labels, save_path, cutout_fig=False,
+def metamer_comparison(metamer_fig, labels, cutout_fig=False,
                        natural_seed_fig=False, context='paper'):
     """Add text labeling model metamer scaling values.
 
@@ -171,8 +169,6 @@ def metamer_comparison(metamer_fig, labels, save_path, cutout_fig=False,
         List of strings or floats to label plots with. If floats, we assume
         these are scaling values and add "Scaling = " to each of them. If
         strings, we label as is.
-    save_path : str
-        path to save the composed figure at
     cutout_fig : bool, optional
         Whether this is the nocutout (False) or cutout (True) version of the
         metamer comparison figure, which changes where we place the labels.
@@ -215,17 +211,17 @@ def metamer_comparison(metamer_fig, labels, save_path, cutout_fig=False,
         # change the x value because they're longer than the scaling labels
         txt_move = [[mv[0]-offset, mv[1]] for mv, offset
                     in zip(txt_move, [10]+[53]*5)]
-    compose.Figure(
+    return compose.Figure(
         figure_width, figure_height,
         metamer_fig.move(*metamer_move),
         *[compose.Text(val, *mv, size=font_size, **text_params)
           for val, mv in zip(labels, txt_move)],
-    ).save(save_path)
+    )
 
 
 def performance_metamer_comparison_small(performance_fig, metamer_fig,
                                          scaling_vals, rectangle_colors,
-                                         save_path, context='paper'):
+                                         context='paper'):
     """Combine performance and small metamer performance comparison figs.
 
     Parameters
@@ -237,8 +233,6 @@ def performance_metamer_comparison_small(performance_fig, metamer_fig,
         figure.
     rectangle_colors : list
         List of two colors for the rectangle edges
-    save_path : str
-        path to save the composed figure at
     context : {'paper', 'poster'}, optional
         plotting context that's being used for this figure (as in
         seaborn's set_context function). if poster, will scale things up. Note
@@ -262,7 +256,7 @@ def performance_metamer_comparison_small(performance_fig, metamer_fig,
     rects = [SVG(_create_tmp_rectangle(ec=c, fill=False,
                                        lw=2*params['lines.linewidth']),
                  'matplotlib') for c in rectangle_colors]
-    compose.Figure(
+    return compose.Figure(
         figure_width, 2.1 * metamer_fig.height * calc_scale('inkscape'),
         performance_fig.move(0, 10),
         compose.Text('A', 0, 25, size=font_size, **text_params),
@@ -272,18 +266,16 @@ def performance_metamer_comparison_small(performance_fig, metamer_fig,
           for txt, mv in zip(text, txt_move)],
         rects[0].move(1, 339),
         rects[1].move(1, 339+160),
-    ).save(save_path)
+    )
 
 
-def combine_one_ax_figs(figs, save_path, context='paper'):
+def combine_one_ax_figs(figs, context='paper'):
     """Combine one-ax figures showing performance separately per subject or image.
 
     Parameters
     ----------
     figs : list
         Lists of paths to the four figures to combine (one per model by trial type)
-    save_path : str
-        Path to save the composed figure at.
     context : {'paper', 'poster'}, optional
         plotting context that's being used for this figure (as in
         seaborn's set_context function). if poster, will scale things up. Note
@@ -301,7 +293,7 @@ def combine_one_ax_figs(figs, save_path, context='paper'):
                       'matplotlib')
     # font_size is for panel labels and so too large for the titles
     font_size = float(text_params.pop('size').replace('pt', ''))
-    compose.Figure(
+    return compose.Figure(
         # height needs room for xaxis label and titles as well
         figure_width, figure_width+35,
         # want to go through this backwards so the first figures are on top
@@ -317,4 +309,4 @@ def combine_one_ax_figs(figs, save_path, context='paper'):
                      size=font_size, **text_params).rotate(270, 13, figure_width/2-20),
         compose.Text('Synth vs Synth: white noise', 13, figure_width-25,
                      size=font_size, **text_params).rotate(270, 13, figure_width-25),
-    ).save(save_path)
+    )

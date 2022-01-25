@@ -2827,11 +2827,11 @@ rule compose_figures:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 if 'model_schematic' in wildcards.fig_name:
                     width = 'full' if 'full' in wildcards.fig_name else 'half'
-                    fov.compose_figures.model_schematic(input[0], input[1],
-                                                        input[2:], output[0],
-                                                        width,
-                                                        wildcards.context)
-                if 'metamer_comparison' in wildcards.fig_name:
+                    fig = fov.compose_figures.model_schematic(input[0],
+                                                              input[1],
+                                                              input[2:], width,
+                                                              wildcards.context)
+                elif 'metamer_comparison' in wildcards.fig_name:
                     scaling = re.findall('scaling-([0-9,.]+)', wildcards.fig_name)[0]
                     scaling = [float(sc) for sc in scaling.split(',')]
                     if 'performance' in wildcards.fig_name:
@@ -2839,24 +2839,24 @@ rule compose_figures:
                         # the outlier colors
                         pal = fov.plotting.get_palette('image_name_focus-outlier', ['V1'])
                         img_names = re.findall("metamer_comparison_([a-z,]+)_scaling", wildcards.fig_name)[0]
-                        fov.compose_figures.performance_metamer_comparison_small(input[1], input[0], scaling,
-                                                                                 [pal[name] for name in img_names.split(',')],
-                                                                                 output[0])
+                        fig = fov.compose_figures.performance_metamer_comparison_small(input[1], input[0], scaling,
+                                                                                       [pal[name] for name in img_names.split(',')])
                     elif 'natural-seed' in wildcards.fig_name:
                         labels = ['Natural image', 'Initialized with natural image 1',
                                   'Initialized with natural image 2',
                                   'Initialized with natural image 3',
                                   'Initialized with white noise 1',
                                   'Initialized with white noise 2']
-                        fov.compose_figures.metamer_comparison(*input, labels, output[0],
-                                                               'nocutout' not in wildcards.fig_name,
-                                                               True, wildcards.context)
+                        fig = fov.compose_figures.metamer_comparison(*input, labels,
+                                                                     'nocutout' not in wildcards.fig_name,
+                                                                     True, wildcards.context)
                     else:
-                        fov.compose_figures.metamer_comparison(*input, scaling, output[0],
-                                                               'nocutout' not in wildcards.fig_name,
-                                                               False, wildcards.context)
-                if "all_comps_summary" in wildcards.fig_name:
-                    fov.compose_figures.combine_one_ax_figs(input, output[0])
+                        fig = fov.compose_figures.metamer_comparison(*input, scaling,
+                                                                     'nocutout' not in wildcards.fig_name,
+                                                                     False, wildcards.context)
+                elif "all_comps_summary" in wildcards.fig_name:
+                    fig = fov.compose_figures.combine_one_ax_figs(input)
+                fig.save(output[0])
 
 
 def get_metamer_comparison_figure_inputs(wildcards):
