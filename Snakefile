@@ -2031,11 +2031,29 @@ rule mcmc_performance_comparison_figure:
                     df_kind = 'parameter grouplevel means'
                     query_str = "distribution=='posterior'"
                 df = []
+                # use this because we may drop some of the x-values, but we
+                # still want the same axes
+                x_order = set()
                 for f in input[:-1]:
-                    df.append(fov.mcmc.inf_data_to_df(az.from_netcdf(f),
+                    tmp = az.from_netcdf(f)
+                    if wildcards.focus.startswith('sub'):
+                        x_order = x_order.union(set(tmp.posterior.subject_name.values))
+                        tmp = tmp.sel(subject_name=wildcards.focus.split('_')[0])
+                        # need to have subject_name as a dimension still
+                        tmp.posterior = tmp.posterior.expand_dims('subject_name')
+                        tmp.prior = tmp.prior.expand_dims('subject_name')
+                        tmp.posterior_predictive = tmp.posterior_predictive.expand_dims('subject_name')
+                        tmp.prior_predictive = tmp.prior_predictive.expand_dims('subject_name')
+                        tmp.observed_data = tmp.observed_data.expand_dims('subject_name')
+                    df.append(fov.mcmc.inf_data_to_df(tmp,
                                                       df_kind, query_str,
                                                       hdi=.95))
                 df = pd.concat(df)
+                # if x_order is empty, we want it to be None
+                if not x_order:
+                    x_order = None
+                else:
+                    x_order = sorted(list(x_order))
                 query_str = None
                 perf_query_str = None
                 if wildcards.focus.startswith('sub'):
@@ -2078,8 +2096,9 @@ rule mcmc_performance_comparison_figure:
                 elif 'params' in wildcards.mcmc_plot_type:
                     mean_line = {'none': False, 'lines': 'lines-only', 'ci': True}[wildcards.mcmc_plot_type.split('-')[-1]]
                     fig = fov.figures.psychophysical_grouplevel_means(df,
-                                                                      height=fig_width/3,
-                                                                      mean_line=mean_line)
+                                                                      height=fig_width/4,
+                                                                      mean_line=mean_line,
+                                                                      x_order=x_order)
                     for i, ax in enumerate(fig.axes):
                         if 'linear' in wildcards.mcmc_plot_type:
                             if 'a0' in ax.get_title():
@@ -2806,6 +2825,10 @@ def get_compose_figures_input(wildcards):
                 mcmc_model=mcmc_model, focus=focus, model=model, comp=comp)
             for model in ['RGC_norm_gaussian', 'V1_norm_s6_gaussian'] for comp in ['ref', 'met']
         ]
+    if 'performance_comparison' in wildcards.fig_name:
+        mcmc_model, details, comp = re.findall('performance_comparison_([a-z-]+)_([a-z-]+)_((?:sub-[0-9]+_)?comp-[a-z-]+)', wildcards.fig_name)[0]
+        paths = [path_template.format(f'mcmc_{mcmc_model}_performance_{comp}'),
+                 path_template.format(f'mcmc_{mcmc_model}_params-{details}_{comp}')]
     return paths
 
 
@@ -2855,7 +2878,9 @@ rule compose_figures:
                                                                      'nocutout' not in wildcards.fig_name,
                                                                      False, wildcards.context)
                 elif "all_comps_summary" in wildcards.fig_name:
-                    fig = fov.compose_figures.combine_one_ax_figs(input)
+                    fig = fov.compose_figures.combine_one_ax_figs(input, wildcards.context)
+                elif "performance_comparison" in wildcards.fig_name:
+                    fig = fov.compose_figures.performance_comparison(*input, wildcards.context)
                 fig.save(output[0])
 
 
@@ -3014,8 +3039,8 @@ rule cutout_figures:
 
 rule paper_figures:
     input:
-        op.join(config['DATA_DIR'], 'figures', 'paper', "mcmc_partially-pooled_performance_comp-base.svg"),
-        op.join(config['DATA_DIR'], 'figures', 'paper', "mcmc_partially-pooled_performance_sub-00_comp-natural.svg"),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_partially-pooled_log-ci_comp-base.svg"),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_partially-pooled_log-ci_sub-00_comp-natural.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "ref_images_dpi-300.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', 'psychophys_expt.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'model_schematic_halfwidth_ivy_dpi-300.svg'),

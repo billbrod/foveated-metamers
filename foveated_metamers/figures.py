@@ -20,6 +20,7 @@ import sys
 from collections import OrderedDict
 import xmltodict
 import flatten_dict
+import warnings
 sys.path.append(op.join(op.dirname(op.realpath(__file__)), '..', 'extra_packages'))
 import plenoptic_part as pop
 
@@ -1775,7 +1776,10 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
     for i, c in enumerate(cols):
         for j, r in enumerate(rows):
             ax = axes[j, i]
-            if x == 'dependent_var' and x_order is None and 'image' in c:
+            # want to use img_order if relevant
+            if x == 'dependent_var' and 'image' in c:
+                if x_order is not None:
+                    warnings.warn(f"Using built in img_order instead of user-set x_order {x_order}")
                 x_ord = img_order
             else:
                 x_ord = x_order
@@ -1805,8 +1809,9 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
             # some of our hues have data for fewer subjects, and so we can end
             # up with fewer xticks and xticklabels than we should if they end
             # up last. this makes sure we have all ticks and labels.
-            ax.set_xticks(np.arange(d[x].nunique()))
-            ax.set_xticklabels(x_ord if x_ord is not None else d[x].unique(),
+            xticklabels = x_ord if x_ord is not None else d[x].unique()
+            ax.set_xticks(np.arange(len(xticklabels)))
+            ax.set_xticklabels(xticklabels,
                                rotation=rotate_xticklabels, ha='right')
             xlim = ax.get_xlim()
             for name, mn in means.groupby([hue, style]):

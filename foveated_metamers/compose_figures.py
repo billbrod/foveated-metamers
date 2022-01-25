@@ -303,7 +303,6 @@ def combine_one_ax_figs(figs, context='paper'):
 
     """
     text_params, figure_width = style.plotting_style(context, 'svgutils', 'full')
-    # little bit of extra space for the borders
     figure_width = _convert_to_pix(figure_width)
     figs = [SVG(fig, 'matplotlib') for fig in figs]
     # create rectangles to block out the labels we don't want to see
@@ -329,4 +328,34 @@ def combine_one_ax_figs(figs, context='paper'):
                      size=font_size, **text_params).rotate(270, 13, figure_width/2-20),
         compose.Text('Synth vs Synth: white noise', 13, figure_width-25,
                      size=font_size, **text_params).rotate(270, 13, figure_width-25),
+    )
+
+
+def performance_comparison(performance_fig, param_fig, context='paper'):
+    """Combine performance figure with parameter one for comparison.
+
+    Parameters
+    ----------
+    performance_fig, param_fig : str
+        Paths to the performance and parameter figures, respectively.
+    context : {'paper', 'poster'}, optional
+        plotting context that's being used for this figure (as in
+        seaborn's set_context function). if poster, will scale things up. Note
+        that, for this figure, only paper has really been checked
+
+    Returns
+    -------
+    fig : svgutils.compose.Figure
+        Figure containing composed plots
+
+    """
+    text_params, figure_width = style.plotting_style(context, 'svgutils', 'full')
+    figure_width = _convert_to_pix(figure_width)
+    # little bit of extra space for the borders
+    return compose.Figure(
+        figure_width+10, figure_width+30,
+        SVG(performance_fig).move(0, 25),
+        SVG(param_fig).move(0, figure_width/2),
+        compose.Text('A', 0, 25, **text_params),
+        compose.Text('B', 0, figure_width/2+25, **text_params),
     )
