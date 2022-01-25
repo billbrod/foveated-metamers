@@ -133,6 +133,11 @@ def model_schematic(schematic_fig, contour_fig_large, contour_figs_small,
         seaborn's set_context function). if poster, will scale things up. Note
         that, for this figure, only paper has really been checked
 
+    Returns
+    -------
+    fig : svgutils.compose.Figure
+        Figure containing composed plots
+
     """
     text_params, figure_width = style.plotting_style(context, 'svgutils',
                                                      fig_size)
@@ -179,6 +184,11 @@ def metamer_comparison(metamer_fig, labels, cutout_fig=False,
         plotting context that's being used for this figure (as in
         seaborn's set_context function). if poster, will scale things up. Note
         that, for this figure, only paper has really been checked
+
+    Returns
+    -------
+    fig : svgutils.compose.Figure
+        Figure containing composed plots
 
     """
     text_params, figure_width = style.plotting_style(context, 'svgutils', 'full')
@@ -238,6 +248,11 @@ def performance_metamer_comparison_small(performance_fig, metamer_fig,
         seaborn's set_context function). if poster, will scale things up. Note
         that, for this figure, only paper has really been checked
 
+    Returns
+    -------
+    fig : svgutils.compose.Figure
+        Figure containing composed plots
+
     """
     text_params, figure_width = style.plotting_style(context, 'svgutils', 'full')
     # we do this to set the line thickness
@@ -280,6 +295,11 @@ def combine_one_ax_figs(figs, context='paper'):
         plotting context that's being used for this figure (as in
         seaborn's set_context function). if poster, will scale things up. Note
         that, for this figure, only paper has really been checked
+
+    Returns
+    -------
+    fig : svgutils.compose.Figure
+        Figure containing composed plots
 
     """
     text_params, figure_width = style.plotting_style(context, 'svgutils', 'full')
