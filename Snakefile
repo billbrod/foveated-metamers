@@ -2052,15 +2052,15 @@ rule mcmc_performance_comparison_figure:
                 # if x_order is empty, we want it to be None
                 if not x_order:
                     x_order = None
+                # else, make it a list and sort it
                 else:
                     x_order = sorted(list(x_order))
                 query_str = None
                 perf_query_str = None
                 if wildcards.focus.startswith('sub'):
-                    focus = wildcards.focus
+                    focus = re.findall('(sub-[0-9]+)', wildcards.focus)[0]
                     if 'comp-natural' in wildcards.focus:
                         query_str = "trial_type in ['metamer_vs_metamer', 'metamer_vs_reference', 'metamer_vs_metamer-natural', 'metamer_vs_reference-natural']"
-                        focus = focus.replace('_comp-natural', '')
                     perf_query_str = f"level=='subject_name' & dependent_var=='{focus}'"
                 elif wildcards.focus == 'comp-all':
                     perf_query_str = "level=='all'"
@@ -2093,6 +2093,9 @@ rule mcmc_performance_comparison_figure:
                     g.fig.canvas.draw()
                     fov.plotting.add_physiological_scaling_bars(g.ax, az.from_netcdf(input[-1]))
                     fig = g.fig
+                    if 'line' in wildcards.focus:
+                        sc = re.findall('line-scaling-([.0-9]+)', wildcards.focus)[0]
+                        g.ax.axvline(float(sc), color='k')
                 elif 'params' in wildcards.mcmc_plot_type:
                     mean_line = {'none': False, 'lines': 'lines-only', 'ci': True}[wildcards.mcmc_plot_type.split('-')[-1]]
                     fig = fov.figures.psychophysical_grouplevel_means(df,
@@ -2826,8 +2829,8 @@ def get_compose_figures_input(wildcards):
             for model in ['RGC_norm_gaussian', 'V1_norm_s6_gaussian'] for comp in ['ref', 'met']
         ]
     if 'performance_comparison' in wildcards.fig_name:
-        mcmc_model, details, comp = re.findall('performance_comparison_([a-z-]+)_([a-z-]+)_((?:sub-[0-9]+_)?comp-[a-z-]+)', wildcards.fig_name)[0]
-        paths = [path_template.format(f'mcmc_{mcmc_model}_performance_{comp}'),
+        mcmc_model, details, comp, extra = re.findall('performance_comparison_([a-z-]+)_([a-z-]+)_((?:sub-[0-9]+_)?comp-[a-z-]+)([_a-z0-9.-]+)?', wildcards.fig_name)[0]
+        paths = [path_template.format(f'mcmc_{mcmc_model}_performance_{comp}{extra}'),
                  path_template.format(f'mcmc_{mcmc_model}_params-{details}_{comp}')]
     return paths
 
@@ -3040,7 +3043,7 @@ rule cutout_figures:
 rule paper_figures:
     input:
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_partially-pooled_log-ci_comp-base.svg"),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_partially-pooled_log-ci_sub-00_comp-natural.svg"),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_partially-pooled_log-ci_sub-00_comp-natural_line-scaling-0.27.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "ref_images_dpi-300.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', 'psychophys_expt2.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'model_schematic_halfwidth_ivy_dpi-300.svg'),
