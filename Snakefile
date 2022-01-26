@@ -1974,6 +1974,7 @@ rule mcmc_figure:
                                                                hue=hue,
                                                                style=style,
                                                                height=height,
+                                                               increase_size=False,
                                                                **kwargs)
                     fig = g.fig
                 else:
