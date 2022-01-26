@@ -2089,7 +2089,8 @@ rule mcmc_performance_comparison_figure:
                                                                style='trial_type',
                                                                height=fig_width/2.5,
                                                                aspect=2,
-                                                               logscale_xaxis=True)
+                                                               logscale_xaxis=True,
+                                                               increase_size=False)
                     g.fig.canvas.draw()
                     fov.plotting.add_physiological_scaling_bars(g.ax, az.from_netcdf(input[-1]))
                     fig = g.fig
@@ -2101,7 +2102,8 @@ rule mcmc_performance_comparison_figure:
                     fig = fov.figures.psychophysical_grouplevel_means(df,
                                                                       height=fig_width/4,
                                                                       mean_line=mean_line,
-                                                                      x_order=x_order)
+                                                                      x_order=x_order,
+                                                                      increase_size=False)
                     for i, ax in enumerate(fig.axes):
                         if 'linear' in wildcards.mcmc_plot_type:
                             if 'a0' in ax.get_title():

@@ -900,7 +900,8 @@ def compare_loss_and_performance_plot(expt_df, stim_df, x='loss', col='scaling',
 def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
                                style=None, col_wrap=5, comparison='ref',
                                logscale_xaxis=False, hdi=.95, query_str=None,
-                               tabular_trial_type_legend=False, **kwargs):
+                               tabular_trial_type_legend=False,
+                               increase_size=True, **kwargs):
     """Plot posterior predictive check.
 
     In order to make sure that our MCMC gave us a reasonable fit, we plot the
@@ -932,6 +933,9 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
         Whether to create a tabular legend for trial_type. See the
         `tabular_legend` function for details. If 'under', we call
         `tabular_legend` with `place_under_fig=True`
+    increase_size : bool, optional
+        If True, increase width of lines by factor of 1.8 in similar way to
+        pointplot. Else, use lines.linewidth.
     kwargs :
         passed to sns.FacetGrid
 
@@ -982,8 +986,8 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
                       **kwargs)
     g.map_dataframe(plotting.lineplot_like_pointplot, x='scaling',
                     y='responses', ci=None, style=style, legend=False,
-                    linestyle='', dashes=False, ax='map',
-                    markers=markers, color=color)
+                    linestyle='', dashes=False, ax='map', markers=markers,
+                    color=color, increase_size=increase_size)
     if marker_adjust:
         labels = {v: k for k, v in markers.items()}
         final_markers = plotting._marker_adjust(g.axes.flatten(),
@@ -992,9 +996,9 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
         final_markers = {}
 
     g.map_dataframe(plotting.scatter_ci_dist, x='scaling',
-                    y='probability_correct', like_pointplot=True, ci='hdi',
-                    join=True, ci_mode='fill', draw_ctr_pts=False, style=style,
-                    dashes_dict=dashes_dict)
+                    y='probability_correct', like_pointplot=increase_size,
+                    ci='hdi', join=True, ci_mode='fill', draw_ctr_pts=False,
+                    style=style, dashes_dict=dashes_dict)
     if col is None and row is None:
         assert len(g.axes)==1, "If col is None and row is None, there should only be one axis!"
         plotting.map_flat_line(x='scaling', y=.5, colors='k', ax=g.ax,
@@ -1673,6 +1677,7 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
                                     title_str="{row_val} | {col_val}",
                                     tabular_trial_type_legend=False,
                                     mean_line=True,
+                                    increase_size=True,
                                     **kwargs):
     """Show psychophysical group-level means, with HDI error bars.
 
@@ -1722,6 +1727,9 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
         Whether to plot a dotted line and shaded region showing the overall
         mean (with CI). If 'lines-only', only plot the mean line, not the
         shaded region showing the 95% CI.
+    increase_size : bool, True
+        If True, increase width of lines by factor of 1.8 in similar way to
+        pointplot. Else, use lines.linewidth.
     tabular_trial_type_legend : {True, False, 'under'}, optional
         Whether to create a tabular legend for trial_type. See the
         `tabular_legend` function for details. If 'under', we call
@@ -1805,7 +1813,8 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
                                                              palette,
                                                              rotate_xticklabels,
                                                              xlabel, ylabel,
-                                                             title_, ax=ax)
+                                                             title_, ax=ax,
+                                                             like_pointplot=increase_size)
             # some of our hues have data for fewer subjects, and so we can end
             # up with fewer xticks and xticklabels than we should if they end
             # up last. this makes sure we have all ticks and labels.

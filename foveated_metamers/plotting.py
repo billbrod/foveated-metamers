@@ -772,7 +772,7 @@ def _map_dataframe_prep(data, x, y, estimator, x_jitter, x_dodge, x_order,
 
 def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
                     estimator=np.median, draw_ctr_pts=True, ci_mode='lines',
-                    ci_alpha=.2, size=5, x_dodge=None, all_labels=None,
+                    ci_alpha=.2, size=None, x_dodge=None, all_labels=None,
                     like_pointplot=False, style=None, dashes_dict={},
                     markers={}, **kwargs):
     """Plot center points and specified CIs, for use with map_dataframe.
@@ -816,11 +816,12 @@ def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
         ci_alpha
     ci_alpha : float, optional
         the alpha value for the CI, if ci_mode=='fill'
-    size : float, optional
+    size : float or None, optional
         Diameter of the markers, in points. (Although plt.scatter is
         used to draw the points, the size argument here takes a "normal"
         markersize and not size^2 like plt.scatter, following how it's
-        done by seaborn.stripplot).
+        done by seaborn.stripplot). If None, we base size on linewidth to find
+        a decent size.
     x_dodge : float, None, or bool, optional
         to improve visibility with many points that have the same
         x-values (or are categorical), we can jitter the data along the
@@ -871,15 +872,16 @@ def scatter_ci_dist(x, y, ci=68, x_jitter=None, join=False,
     if like_pointplot:
         # copying from how seaborn.pointplot handles this, because they look nicer
         lw = mpl.rcParams["lines.linewidth"] * 1.8
-        # annoyingly, scatter and plot interpret size / markersize differently:
-        # for plot, it's roughly the area, whereas for scatter it's the
-        # diameter. In the following, we can use either; we use the sqrt of the
-        # value here so it has same interpretation as the size parameter.
         warnings.warn(f"with like_pointplot, overriding user-specified size {size}")
-        size = np.sqrt(np.pi * np.square(lw) * 4)
     else:
         # use default
         lw = mpl.rcParams['lines.linewidth']
+    # annoyingly, scatter and plot interpret size / markersize differently:
+    # for plot, it's roughly the area, whereas for scatter it's the
+    # diameter. In the following, we can use either; we use the square of the
+    # value here so it has same interpretation as the size parameter.
+    if like_pointplot or size is None:
+        size = np.sqrt(np.pi * np.square(lw) * 4)
     data = kwargs.pop('data')
     ax = kwargs.pop('ax', plt.gca())
     x_order = kwargs.pop('x_order', None)
@@ -1287,7 +1289,7 @@ def fit_psychophysical_curve(x, y, hue=None, style=None, pal={}, dashes_dict={},
 
 
 def lineplot_like_pointplot(data, x, y, col=None, row=None, hue=None, ci=95,
-                            col_wrap=None, ax=None, **kwargs):
+                            col_wrap=None, ax=None, increase_size=True, **kwargs):
     """Make a lineplot that looks like pointplot
 
     Pointplot looks nicer than lineplot for data with few points, but it
@@ -1318,6 +1320,9 @@ def lineplot_like_pointplot(data, x, y, col=None, row=None, hue=None, ci=95,
         If None, we create a new figure using relplot. If axis, we plot on that
         axis using lineplot. If `'map'`, we grab the current axis and plot on
         that with lineplot.
+    increase_size : bool, optional
+        If True, increase width of lines by factor of 1.8 in similar way to
+        pointplot. Else, use lines.linewidth.
     kwargs :
         passed to relplot / lineplot
 
@@ -1328,8 +1333,12 @@ def lineplot_like_pointplot(data, x, y, col=None, row=None, hue=None, ci=95,
 
     """
     kwargs.setdefault('dashes', False)
+    # need this to overwrite lineplot's default setting to 'w'
+    kwargs.setdefault('mec', None)
+    lw = mpl.rcParams["lines.linewidth"]
     # copying from how seaborn.pointplot handles this, because they look nicer
-    lw = mpl.rcParams["lines.linewidth"] * 1.8
+    if increase_size:
+        lw *= 1.8
     # annoyingly, scatter and plot interpret size / markersize differently: for
     # plot, it's roughly the area, whereas for scatter it's the diameter. so
     # the following (which uses plot), should use sqrt of the value that gets
@@ -1469,7 +1478,8 @@ def _facetted_scatter_ci_dist(data, x, y, hue=None, style=None, x_order=None,
                               label=None, all_labels=[None], x_dodge=None,
                               marker_adjust={}, palette={},
                               rotate_xticklabels=False, xlabel="", ylabel="",
-                              title_str="", color='k', ax=None):
+                              title_str="", color='k', ax=None,
+                              like_pointplot=True, **kwargs):
     """Use scatter_ci_dist, with style and hue, on a specific axis.
 
     Meant for use with our "custom facetting", this handles much of the
@@ -1524,6 +1534,12 @@ def _facetted_scatter_ci_dist(data, x, y, hue=None, style=None, x_order=None,
         hue level is not found in `palette`
     ax : axis or None
         The axis to plot on. If None, we grab current axis.
+    like_pointplot: bool, optional
+        If True, we tweak the aesthetics a bit (right now, just size of points
+        and lines) to look more like seaborn's pointplot. Good when there's
+        relatively little data. If True, this overrides the size option.
+    kwargs :
+        Passed to scatter_ci_dist
 
     Returns
     -------
@@ -1564,11 +1580,11 @@ def _facetted_scatter_ci_dist(data, x, y, hue=None, style=None, x_order=None,
             dots, _, _ = scatter_ci_dist(x, y, x_dodge=x_dodge,
                                          estimator=np.mean,
                                          all_labels=all_labels,
-                                         like_pointplot=True, ci='hdi',
+                                         like_pointplot=like_pointplot, ci='hdi',
                                          markers=marker_adjust,
                                          style=style, x_order=x_order,
                                          color=palette.get(n, color), data=h,
-                                         label=lab, ax=ax)
+                                         label=lab, ax=ax, **kwargs)
             if m is not None:
                 fc = dots[0].get_facecolor()[0]
                 if all(fc == 1):
