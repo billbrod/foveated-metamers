@@ -2672,13 +2672,13 @@ rule dacey_mcmc_plot:
 
 rule psychophys_expt_fig:
     input:
-        op.join('reports/figures/psychophys_expt.svg'),
+        op.join('reports/figures/psychophys_{expt}.svg'),
     output:
-        op.join(config['DATA_DIR'], 'figures', '{context}', 'psychophys_expt.svg')
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'psychophys_{expt}.svg')
     log:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'psychophys_expt.log')
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'psychophys_{expt}.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'psychophys_expt_benchmark.txt')
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'psychophys_{expt}_benchmark.txt')
     shell:
         "cp {input} {output}"
 
@@ -3042,7 +3042,7 @@ rule paper_figures:
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_partially-pooled_log-ci_comp-base.svg"),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_partially-pooled_log-ci_sub-00_comp-natural.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "ref_images_dpi-300.svg"),
-        op.join(config['DATA_DIR'], 'figures', 'paper', 'psychophys_expt.svg'),
+        op.join(config['DATA_DIR'], 'figures', 'paper', 'psychophys_expt2.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'model_schematic_halfwidth_ivy_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_ivy_scaling-.01,.058,.063,.27_cutout_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_gnarled_scaling-1.5,1.5,1.5,1.5_cutout_dpi-300.svg'),
