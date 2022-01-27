@@ -16,6 +16,29 @@ sys.path.append(op.join(op.dirname(op.realpath(__file__)), '..', 'extra_packages
 import plenoptic_part as pop
 
 
+def _create_bar_mask(bar_height, bar_width, fringe_proportion=.5):
+    """Create central bar with raised-cosine edges.
+
+    This is almost the same as the one we use for the experiment, except it
+    runs from 0 (fully opaque) to 1 (fully transparent), whereas, for
+    psychophy's mask, it ran from 1 (fully opaque) to -1 (fully transparent).
+
+    """
+    x = np.linspace(-bar_width//2, bar_width//2, bar_width)
+    fringe_width = fringe_proportion * x.max()
+    def raised_cos(x, start_x, end_x):
+        x = (x-start_x) / (end_x - start_x)
+        return .5*(1+np.cos(np.pi*x))
+    mask = np.piecewise(x, [x < -fringe_width, (x > -fringe_width) & (x < fringe_width), fringe_width < x],
+                       [lambda x: raised_cos(x, -fringe_width, x.min()), 1,
+                        lambda x: raised_cos(x, fringe_width, x.max())])
+    # this is different than our psychopy mask, where 1 means fully opaque and -1 means fully transparent.
+    # here, we want it to go from 0 (fully opaque) to 1 (fully transparent)
+    mask = 1 - mask
+    mask = np.repeat(np.expand_dims(mask, 0), bar_height, 0)
+    return mask
+
+
 def _find_seed(x):
     """Grabs seed from image name.
 
@@ -175,3 +198,58 @@ def model_distance(model, synth_model_name, ref_image_name, scaling,
         return trial_type
     df['trial_type'] = df.apply(get_trial_type, 1)
     return df
+
+
+def calculate_experiment_mse(stim, trial, bar_deg_size=2., screen_size_deg=73.45,
+                             screen_size_pix=3840):
+    """Calculate MSE for a single trial of the experiment.
+
+    We calculate the MSE between the images as displayed in the experiment:
+    gray bar down the center and only one side changing.
+
+    Note that we don't do anything to rescale the values in the stim array, and
+    the assumption is it contains the 8bit values going from 0 to 255
+
+    Parameters
+    ----------
+    stim : np.ndarray
+        Array of stimuli
+    trial : np.ndarray
+        2x2 array containing the indices presented in the trial, as you'd get
+        from `idx[:, 0, :]`, where `idx` is the stimulus presentation index.
+    bar_deg_size : float
+        Width of the bar, in degrees. Default matches experimental setup.
+    screen_size_deg : float
+        Width of the screen, in degrees. Default matches experimental setup.
+    screen_size_pix : float
+        Width of the screen, in pixels. Default matches experimental setup.
+
+    Returns
+    -------
+    mse : float
+        MSE between the two images presented in this trial.
+
+    """
+    bar_pix_size = int(bar_deg_size * (screen_size_pix / screen_size_deg))
+    bar = _create_bar_mask(stim.shape[1], bar_pix_size)
+    # unpack this to get the index of the stimulus on left and right, for first
+    # and second image
+    [[l1, l2], [r1, r2]] = trial
+
+    # initialize the first and second image
+    stim1 = np.empty_like(stim[0], dtype=float)
+    stim2 = np.empty_like(stim[0], dtype=float)
+
+    stim_half_width = stim.shape[-1] // 2
+    # insert the contents into the two halves of the image
+    stim1[:, :stim_half_width] = stim[l1, :, :stim_half_width]
+    stim1[:, stim_half_width:] = stim[r1, :, stim_half_width:]
+    stim2[:, :stim_half_width] = stim[l2, :, :stim_half_width]
+    stim2[:, stim_half_width:] = stim[r2, :, stim_half_width:]
+
+    # modulate the center by the masking bar
+    stim1[:, (stim_half_width-bar_pix_size//2):(stim_half_width+bar_pix_size//2)] *= bar
+    stim2[:, (stim_half_width-bar_pix_size//2):(stim_half_width+bar_pix_size//2)] *= bar
+
+    # and return the MSE
+    return np.square(stim1-stim2).sum()

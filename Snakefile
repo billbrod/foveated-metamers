@@ -2456,6 +2456,44 @@ rule synthesis_distance_plot:
                 g.savefig(output[0], bbox_inches='tight')
 
 
+rule calculate_experiment_mse:
+    input:
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_comp-{comp}.npy'),
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description_comp-{comp}.csv'),
+    output:
+        op.join(config["DATA_DIR"], 'distances', '{model_name}', 'expt_mse_comp-{comp}.csv'),
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'distances', '{model_name}', 'expt_mse_comp-{comp}.log'),
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'distances', '{model_name}', 'expt_mse_comp-{comp}_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import pandas as pd
+        import numpy as np
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                stim = np.load(input[0])
+                stim_df = pd.read_csv(input[1])
+                if wildcards.model_name == 'RGC_norm_gaussian' and wildcards.comp == 'met':
+                    # for this model and comparison, we only had 5 images
+                    names = stim_df.image_name.unique()[:5].tolist()
+                    stim_df = stim_df.query("image_name in @names")
+                # create a dummy idx, which is not randomized (that's what setting seed=None does)
+                idx = fov.stimuli.generate_indices_split(stim_df, None,
+                                                         f'met_v_{wildcards.comp.split("-")[0]}',
+                                                         12)
+                # this contains all the relevant metadata we want for this comparison
+                dist_df = fov.analysis.create_experiment_df_split(stim_df, idx)
+                mse = np.empty(len(dist_df))
+                # now iterate through all trials and compute the mse on each of
+                # them
+                for i in range(len(dist_df)):
+                    mse[i] = fov.distances.calculate_experiment_mse(stim, idx[:, i])
+                dist_df['experiment_mse'] = mse
+                dist_df.to_csv(output[0], index=False)
+
+
 rule distance_vs_performance_plot:
     input:
         op.join(config["DATA_DIR"], 'distances', '{distance_model}', 'scaling-{scaling}', 'e0-{min_ecc}_em-{max_ecc}_all_distances.csv'),

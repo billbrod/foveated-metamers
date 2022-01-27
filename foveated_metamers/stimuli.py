@@ -315,8 +315,9 @@ def generate_indices_split(df, seed, comparison='met_v_ref', n_repeats=None):
     df : pd.DataFrame
         The dataframe containing the metamer information, as created by
         ``create_metamer_df``
-    seed : int
-        The seed passed to ``np.random.seed``.
+    seed : int or None
+        The seed passed to ``np.random.seed``. If None, we don't permute
+        presentation index.
     comparison : {'met_v_met', 'met_v_ref'}, optional
         Whether to create the indices for comparing metamers against each other
         or against the reference image
@@ -409,7 +410,8 @@ def generate_indices_split(df, seed, comparison='met_v_ref', n_repeats=None):
     trials = trials.reshape(-1, 2, 2)
     # Now permute. we set the random seed at the top of this function for
     # reproducibility
-    trials = np.random.permutation(trials)
+    if seed is not None:
+        trials = np.random.permutation(trials)
     # and this rearranges it so left and right are along the first dimension,
     # then trials, then first and second stimulus. This needs to happen after
     # the permutation, because np.random.permutation only permutes along the
