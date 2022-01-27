@@ -252,4 +252,4 @@ def calculate_experiment_mse(stim, trial, bar_deg_size=2., screen_size_deg=73.45
     stim2[:, (stim_half_width-bar_pix_size//2):(stim_half_width+bar_pix_size//2)] *= bar
 
     # and return the MSE
-    return np.square(stim1-stim2).sum()
+    return np.square(stim1-stim2).mean()
