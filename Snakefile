@@ -2494,6 +2494,34 @@ rule calculate_experiment_mse:
                 dist_df.to_csv(output[0], index=False)
 
 
+rule experiment_mse_plot:
+    input:
+        op.join(config["DATA_DIR"], 'distances', '{model_name}', 'expt_mse_comp-{comp}.csv'),
+    output:
+        op.join(config["DATA_DIR"], 'distances', '{model_name}', 'expt_mse_comp-{comp}_heatmap.svg'),
+        op.join(config["DATA_DIR"], 'distances', '{model_name}', 'expt_mse_comp-{comp}_plot.svg'),
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'distances', '{model_name}', 'expt_mse_comp-{comp}_plots.log'),
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'distances', '{model_name}', 'expt_mse_comp-{comp}_plots_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import pandas as pd
+        import contextlib
+        import seaborn as sns
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                df = pd.read_csv(input[0])
+                g = fov.figures.experiment_mse_heatmap(df)
+                g.savefig(output[0])
+                df = fov.plotting._remap_image_names(df)
+                g = sns.relplot(data=df, x='scaling', y='experiment_mse',
+                                hue='image_name', style='changed_side', kind='line',
+                                palette=fov.plotting.get_palette('image_name'),
+                                hue_order=fov.plotting.get_order('image_name'))
+                g.savefig(output[1])
+
+
 rule distance_vs_performance_plot:
     input:
         op.join(config["DATA_DIR"], 'distances', '{distance_model}', 'scaling-{scaling}', 'e0-{min_ecc}_em-{max_ecc}_all_distances.csv'),

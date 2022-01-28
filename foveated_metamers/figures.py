@@ -2347,3 +2347,108 @@ def get_image_ids(path):
     ids = [flattened_svg[(*k[:-1], '@id')] for k, v in images.items()
            if op.exists(v)]
     return ids
+
+
+def experiment_mse_heatmap(df, x='trial_structure', y='scaling',
+                           col='image_name', col_wrap=5, **kwargs):
+    """Create a heatmap showing MSE from experiment, across all images of a given comparison.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        df containing the experiment_mse, as created by
+        calculate_experiment_mse
+    x, y : str, optional
+        variables to plot along the vertical, horizontal axes of the heatmap.
+        Must be columns from df
+    col : str, optional
+        variable to facet along the column axes of the figure. Must be column
+        from df
+    col_wrap : int, optional
+        number of columns before wrapping
+    kwargs :
+        Passed to sns.heatmap
+
+    Returns
+    -------
+    g : sns.FacetGrid
+        FacetGrid containing the plot
+
+    """
+    def _get_seed_n(x):
+        try:
+            # need to parse it as float first because int('0.0') will fail but
+            # float('0.0') will not
+            return int(float(x)) % 10
+        except ValueError:
+            return 'ref'
+
+    def get_trial_structure(row):
+        l1 = _get_seed_n(row.image_left_1)
+        l2 = _get_seed_n(row.image_left_2)
+        r1 = _get_seed_n(row.image_right_1)
+        r2 = _get_seed_n(row.image_right_2)
+        if l1 == l2:
+            change = 'R'
+            second = r2
+        elif r1 == r2:
+            change = 'L'
+            second = l2
+        return f'{l1},{second},{change}'
+
+    # we want to structure these hierarchically: first L/R, then the identity
+    # of the number, and finally whether 'ref' or the number came first
+    def _key(x):
+        x = x.split(',')
+        to_return = [x[-1]]
+        if x[0].isnumeric() and not x[1].isnumeric():
+            to_return.extend([x[0], x[1]])
+        elif not x[0].isnumeric() and x[1].isnumeric():
+            to_return.extend([x[1], x[0]])
+        # if both are numeric, this makes sure we put the similar values
+        # together: 0,1 and 1,0; then 0,2 and 2,0; then 2,1 and 1,2
+        else:
+            to_return.extend([int(x[1])+int(x[0])])
+        return to_return
+
+    df['trial_structure'] = df.apply(get_trial_structure, 1)
+
+    def facet_and_plot(data, x='trial_structure', y='scaling', **kwargs):
+        pivoted = pd.pivot_table(data, 'experiment_mse', y, x)
+        # do nothing if pivoted is empty, means there's no data to plot here
+        if pivoted.empty:
+            return
+        trial_structure_order = sorted(df.trial_structure.dropna().unique(),
+                                       key=_key)
+        img_order = plotting.get_order('image_name')
+        if x == 'trial_structure':
+            pivoted = pivoted[trial_structure_order]
+        elif y == 'image_name':
+            pivoted = pivoted.loc[trial_structure_order]
+        if x == 'image_name':
+            pivoted = pivoted[img_order]
+        elif y == 'image_name':
+            pivoted = pivoted.loc[img_order]
+        sns.heatmap(pivoted, ax=plt.gca(), **kwargs)
+
+    df['changed_side'] = df.trial_structure.apply(lambda x: x[-1])
+    df = plotting._remap_image_names(df)
+
+    g = sns.FacetGrid(df, col=col, col_wrap=5, aspect=1,
+                      col_order=plotting.get_order(col))
+    # only want a single color map, on a single color bar
+    cbar_ax = g.fig.add_axes([.92, .36, .02, .4])
+    g.map_dataframe(facet_and_plot, x=x, y=y, vmin=df.experiment_mse.min(),
+                    vmax=df.experiment_mse.max(), cbar_ax=cbar_ax)
+    g.fig.subplots_adjust(right=.9)
+    # normally this happens automatically, but sometimes it doesn't, so make
+    # sure.
+    for ax in g.fig.axes:
+        labels = ax.get_xticklabels()
+        if labels:
+            ax.set_xticklabels(labels, rotation=90)
+        labels = ax.get_yticklabels()
+        if labels:
+            ax.set_yticklabels(labels, rotation=0)
+
+    return g
