@@ -51,6 +51,9 @@ wildcard_constraints:
     cutout="cutout|nocutout|nocutout_natural-seed|cutout_natural-seed|nocutout_small",
     context="paper|poster",
     mcmc_plot_type="performance|params-(linear|log)-(none|lines|ci)",
+    # don't capture experiment-mse for x, but capture anything else, because
+    # experiment-mse is a different rule
+    x="(?!experiment-mse)(.*)",
 ruleorder:
     collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check > mcmc_compare_plot > mcmc_plots > embed_bitmaps_into_figure > compose_figures
 
@@ -2520,6 +2523,48 @@ rule experiment_mse_plot:
                                 palette=fov.plotting.get_palette('image_name'),
                                 hue_order=fov.plotting.get_order('image_name'))
                 g.savefig(output[1])
+
+
+rule experiment_mse_performance_comparison:
+    input:
+        op.join(config["DATA_DIR"], 'distances', '{model_name}', 'expt_mse_comp-{comp}.csv'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_data.csv'),
+    output:
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_experiment-mse_comparison.svg'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_experiment-mse_comparison_subjects.svg'),
+        op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_experiment-mse_comparison_line.svg'),
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_experiment-mse_comparison.log'),
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_experiment-mse_comparison_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import pandas as pd
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                mse_df = pd.read_csv(input[0])
+                expt_df = pd.read_csv(input[1])
+                g = fov.figures.compare_loss_and_performance_plot(expt_df,
+                                                                  mse_df, x='experiment_mse')
+                g.fig.savefig(output[0], bbox_inches='tight')
+                g = fov.figures.compare_loss_and_performance_plot(expt_df,
+                                                                  mse_df, x='experiment_mse',
+                                                                  col_wrap=None, row='subject_name')
+                g.fig.savefig(output[1], bbox_inches='tight')
+                g = fov.figures.compare_loss_and_performance_plot(expt_df,
+                                                                  mse_df,
+                                                                  x='experiment_mse',
+                                                                  col=None,
+                                                                  plot_kind='line',
+                                                                  height=5)
+                g.fig.savefig(output[2], bbox_inches='tight')
 
 
 rule distance_vs_performance_plot:

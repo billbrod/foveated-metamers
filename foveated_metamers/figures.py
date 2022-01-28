@@ -806,7 +806,7 @@ def run_length_plot(expt_df, col=None, row=None, hue=None, col_wrap=None,
 def compare_loss_and_performance_plot(expt_df, stim_df, x='loss', col='scaling',
                                       row=None, hue='image_name', col_wrap=4,
                                       plot_kind='scatter', height=3,
-                                      logscale_xaxis=True):
+                                      logscale_xaxis=True, **kwargs):
     """Compare an image metric with behavioral performance.
 
     By default, this plots synthesis loss on the x-axis and proportion correct
@@ -845,6 +845,8 @@ def compare_loss_and_performance_plot(expt_df, stim_df, x='loss', col='scaling',
         Height of the axes.
     logscale_xaxis : bool, optional
         If True, we logscale the x-axis. Else, it's a linear scale.
+    kwargs :
+        Passed to sns.relplot
 
     Returns
     -------
@@ -885,7 +887,7 @@ def compare_loss_and_performance_plot(expt_df, stim_df, x='loss', col='scaling',
     g = sns.relplot(data=expt_df, x=x, y='proportion_correct',
                     hue=hue, col=col, kind=plot_kind, col_wrap=col_wrap,
                     height=height, row=row, col_order=col_order,
-                    hue_order=hue_order, row_order=row_order)
+                    hue_order=hue_order, row_order=row_order, **kwargs)
     if logscale_xaxis:
         g.set(xscale='log', xlim=plotting.get_log_ax_lims(expt_df[x]))
     g.set(ylabel='Proportion correct')
