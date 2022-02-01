@@ -10,13 +10,14 @@ import torch
 import imageio
 from tqdm.auto import tqdm
 import plenoptic as po
+import pyrtools as pt
 import numpy as np
 import matplotlib.pyplot as plt
 from . import distances
 from . import create_metamers
 
 
-def mix_images(base_image, image_to_mix, alpha, direction='left'):
+def mix_images(base_image, image_to_mix, alpha, direction='L'):
     """Mix together two images on one horizontal half, with weight alpha.
 
     Note we do not add a bar or anything else here.
@@ -27,7 +28,7 @@ def mix_images(base_image, image_to_mix, alpha, direction='left'):
         The two images to mix.
     alpha : float
         The weight to multiply by image_to_mix
-    direction : {'left', 'right'}, optional
+    direction : {'L', 'R'}, optional
         Whether to add image_to_mix on left or right half.
 
     Returns
@@ -38,16 +39,16 @@ def mix_images(base_image, image_to_mix, alpha, direction='left'):
     """
     img_half_width = image_to_mix.shape[-1] // 2
     mixed_image = base_image.clone()
-    if direction == 'right':
+    if direction == 'R':
         mixed_image[..., img_half_width:] += alpha*image_to_mix[..., img_half_width:]
-    elif direction == 'left':
+    elif direction == 'L':
         mixed_image[..., :img_half_width] += alpha*image_to_mix[..., :img_half_width]
     else:
         raise Exception(f"Don't know how to handle direction {direction}")
     return mixed_image
 
 
-def obj_func(base_image, image_to_mix, alpha, target_err, direction='left'):
+def obj_func(base_image, image_to_mix, alpha, target_err, direction='L'):
     """Get mse and objective function value between base_image and the version mixed with image_to_mix.
 
     Note we do not add a bar or anything else here.
@@ -60,7 +61,7 @@ def obj_func(base_image, image_to_mix, alpha, target_err, direction='left'):
         The weight to multiply by image_to_mix
     target_err : float
         The target MSE value.
-    direction : {'left', 'right'}, optional
+    direction : {'L', 'R'}, optional
         Whether to add image_to_mix on left or right half.
 
     Returns
@@ -95,7 +96,7 @@ def find_alpha(base_image, image_to_mix, alpha, target_err, learning_rate,
         Learning rate for SGD.
     max_iter : int
         Maximum number of iterations to perform.
-    direction : {'left', 'right'}, optional
+    direction : {'L', 'R'}, optional
         Whether to add image_to_mix on left or right half.
 
     Returns
@@ -135,7 +136,7 @@ def find_alpha(base_image, image_to_mix, alpha, target_err, learning_rate,
 
 
 def main(base_image, image_to_mix, target_err, learning_rate, max_iter=100,
-         direction='left', seed=None, save_path=None, bar_deg_size=2.,
+         direction='L', seed=None, save_path=None, bar_deg_size=2.,
          screen_size_deg=73.45, screen_size_pix=3840):
     """Determine alpha value for mixing two images.
 
@@ -145,15 +146,16 @@ def main(base_image, image_to_mix, target_err, learning_rate, max_iter=100,
         The base image, to which we're adding alpha*image_to_mix on left or
         ride side. If a string, we assume it's a path and will load it in.
     image_to_mix : torch.Tensor or str
-        The other image, added to base_image. If a string, we assume it's a
-        path and will load it in.
+        The other image, added to base_image. If a string, we assume it's
+        either a type of noise, one of {'pink', 'white'}, or the path and will
+        load it in.
     target_err : float
         The target MSE value.
     learning_rate : float
         Learning rate for SGD.
     max_iter : int, optional
         Maximum number of iterations to perform.
-    direction : {'left', 'right'}, optional
+    direction : {'L', 'R'}, optional
         Whether to add image_to_mix on left or right half.
     seed : int or None, optional
         The number to use for initializing numpy and torch's random
@@ -183,7 +185,19 @@ def main(base_image, image_to_mix, target_err, learning_rate, max_iter=100,
     # for this, we want the images to be between 0 and 255 (that's the range we
     # calculated MSE on)
     base_image = 255 * create_metamers.setup_image(base_image)
-    image_to_mix = 255 * create_metamers.setup_image(image_to_mix)
+    if isinstance(image_to_mix, str) and image_to_mix in ['white', 'pink']:
+        if image_to_mix == 'white':
+            image_to_mix = torch.rand_like(base_image, dtype=torch.float32)
+        elif image_to_mix == 'pink':
+            # this `.astype` probably isn't necessary, but just in case
+            image_to_mix = pt.synthetic_images.pink_noise(base_image.shape[-2:]).astype(np.float32)
+            # need to rescale this so it lies between 0 and 1
+            image_to_mix += np.abs(image_to_mix.min())
+            image_to_mix /= image_to_mix.max()
+            image_to_mix = torch.Tensor(image_to_mix).unsqueeze(0).unsqueeze(0)
+        image_to_mix = 255* image_to_mix
+    else:
+        image_to_mix = 255 * create_metamers.setup_image(image_to_mix)
     bar_pix_size = int(bar_deg_size * (screen_size_pix / screen_size_deg))
     bar = distances._create_bar_mask(base_image.shape[1], bar_pix_size)
     base_image = distances._add_bar(base_image, bar)
@@ -199,8 +213,10 @@ def main(base_image, image_to_mix, target_err, learning_rate, max_iter=100,
             ax.semilogy(data)
         else:
             ax.plot(data)
+        if name == 'MSE':
+            ax.axhline(target_err, c='k', linestyle='--')
         ax.set(xlabel='iteration', ylabel=name,
-                   title=f'Final value = {data[-1]}')
+               title=f'Final value = {data[-1]}')
     if save_path is not None:
         mixed_image = mix_images(base_image, image_to_mix, alphas[-1], direction)
         mixed_image = po.to_numpy(mixed_image).squeeze()

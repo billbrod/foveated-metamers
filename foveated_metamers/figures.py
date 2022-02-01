@@ -2377,26 +2377,6 @@ def experiment_mse_heatmap(df, x='trial_structure', y='scaling',
         FacetGrid containing the plot
 
     """
-    def _get_seed_n(x):
-        try:
-            # need to parse it as float first because int('0.0') will fail but
-            # float('0.0') will not
-            return int(float(x)) % 10
-        except ValueError:
-            return 'ref'
-
-    def get_trial_structure(row):
-        l1 = _get_seed_n(row.image_left_1)
-        l2 = _get_seed_n(row.image_left_2)
-        r1 = _get_seed_n(row.image_right_1)
-        r2 = _get_seed_n(row.image_right_2)
-        if l1 == l2:
-            change = 'R'
-            second = r2
-        elif r1 == r2:
-            change = 'L'
-            second = l2
-        return f'{l1},{second},{change}'
 
     # we want to structure these hierarchically: first L/R, then the identity
     # of the number, and finally whether 'ref' or the number came first
@@ -2412,8 +2392,6 @@ def experiment_mse_heatmap(df, x='trial_structure', y='scaling',
         else:
             to_return.extend([int(x[1])+int(x[0])])
         return to_return
-
-    df['trial_structure'] = df.apply(get_trial_structure, 1)
 
     def facet_and_plot(data, x='trial_structure', y='scaling', **kwargs):
         pivoted = pd.pivot_table(data, 'experiment_mse', y, x)
@@ -2433,7 +2411,6 @@ def experiment_mse_heatmap(df, x='trial_structure', y='scaling',
             pivoted = pivoted.loc[img_order]
         sns.heatmap(pivoted, ax=plt.gca(), **kwargs)
 
-    df['changed_side'] = df.trial_structure.apply(lambda x: x[-1])
     df = plotting._remap_image_names(df)
 
     g = sns.FacetGrid(df, col=col, col_wrap=5, aspect=1,

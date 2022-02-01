@@ -2569,6 +2569,36 @@ rule experiment_mse_performance_comparison:
                 g.fig.savefig(output[2], bbox_inches='tight')
 
 
+
+rule mix_images_match_mse:
+    input:
+        ref_image = lambda wildcards: utils.get_ref_image_full_path(wildcards.ref_image),
+        init_image = get_init_image,
+        mse = op.join(config["DATA_DIR"], 'distances', '{model_name}', 'expt_mse_comp-{comp}.csv'),
+    output:
+        op.join(config['DATA_DIR'], 'synth_match_mse', '{model_name}_comp-{comp}', '{ref_image}_{init_type}_dir-{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}.png'),
+        op.join(config['DATA_DIR'], 'synth_match_mse', '{model_name}_comp-{comp}', '{ref_image}_{init_type}_dir-{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}_synth.svg'),
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'synth_match_mse', '{model_name}_comp-{comp}',
+                '{ref_image}_{init_type}_{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'synth_match_mse', '{model_name}_comp-{comp}',
+                '{ref_image}_{init_type}_{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}_benchmark.txt')
+    run:
+        import foveated_metamers as fov
+        import pandas as pd
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                mse = pd.read_csv(input.mse)
+                mse = mse.query(f"image_name=='{wildcards.ref_image}' & changed_side=='{wildcards.direction}'")
+                target_err = mse.experiment_mse.min()
+                fov.create_other_synth.main(input.ref_image, wildcards.init_type,
+                                            target_err, float(wildcards.lr),
+                                            int(wildcards.max_iter),
+                                            wildcards.direction,
+                                            int(wildcards.seed),
+                                            output[0])
 rule distance_vs_performance_plot:
     input:
         op.join(config["DATA_DIR"], 'distances', '{distance_model}', 'scaling-{scaling}', 'e0-{min_ecc}_em-{max_ecc}_all_distances.csv'),
