@@ -2494,6 +2494,8 @@ rule calculate_experiment_mse:
                 for i in range(len(dist_df)):
                     mse[i] = fov.distances.calculate_experiment_mse(stim, idx[:, i])
                 dist_df['experiment_mse'] = mse
+                dist_df['trial_structure'] = dist_df.apply(fov.distances._get_trial_structure, 1)
+                dist_df['changed_side'] = dist_df.trial_structure.apply(lambda x: x[-1])
                 dist_df.to_csv(output[0], index=False)
 
 

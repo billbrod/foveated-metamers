@@ -261,3 +261,27 @@ def calculate_experiment_mse(stim, trial, bar_deg_size=2., screen_size_deg=73.45
 
     # and return the MSE
     return np.square(stim1-stim2).mean()
+
+
+def _get_seed_n(x):
+    """Helper for expt_mse df."""
+    try:
+        # need to parse it as float first because int('0.0') will fail but
+        # float('0.0') will not
+        return int(float(x)) % 10
+    except ValueError:
+        return 'ref'
+
+def _get_trial_structure(row):
+    """Helper for expt_mse df."""
+    l1 = _get_seed_n(row.image_left_1)
+    l2 = _get_seed_n(row.image_left_2)
+    r1 = _get_seed_n(row.image_right_1)
+    r2 = _get_seed_n(row.image_right_2)
+    if l1 == l2:
+        change = 'R'
+        second = r2
+    elif r1 == r2:
+        change = 'L'
+        second = l2
+    return f'{l1},{second},{change}'
