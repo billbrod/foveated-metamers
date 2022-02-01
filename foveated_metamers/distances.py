@@ -39,6 +39,14 @@ def _create_bar_mask(bar_height, bar_width, fringe_proportion=.5):
     return mask
 
 
+def _add_bar(img, bar):
+    """Add bar to center of img."""
+    img_half_width = img.shape[-1] // 2
+    bar_half_width = bar.shape[-1] // 2
+    img[..., img_half_width-bar_half_width:img_half_width+bar_half_width] *= bar
+    return img
+
+
 def _find_seed(x):
     """Grabs seed from image name.
 
@@ -217,11 +225,11 @@ def calculate_experiment_mse(stim, trial, bar_deg_size=2., screen_size_deg=73.45
     trial : np.ndarray
         2x2 array containing the indices presented in the trial, as you'd get
         from `idx[:, 0, :]`, where `idx` is the stimulus presentation index.
-    bar_deg_size : float
+    bar_deg_size : float, optional
         Width of the bar, in degrees. Default matches experimental setup.
-    screen_size_deg : float
+    screen_size_deg : float, optional
         Width of the screen, in degrees. Default matches experimental setup.
-    screen_size_pix : float
+    screen_size_pix : float, optional
         Width of the screen, in pixels. Default matches experimental setup.
 
     Returns
@@ -248,8 +256,8 @@ def calculate_experiment_mse(stim, trial, bar_deg_size=2., screen_size_deg=73.45
     stim2[:, stim_half_width:] = stim[r2, :, stim_half_width:]
 
     # modulate the center by the masking bar
-    stim1[:, (stim_half_width-bar_pix_size//2):(stim_half_width+bar_pix_size//2)] *= bar
-    stim2[:, (stim_half_width-bar_pix_size//2):(stim_half_width+bar_pix_size//2)] *= bar
+    stim1 = _add_bar(stim1, bar)
+    stim2 = _add_bar(stim2, bar)
 
     # and return the MSE
     return np.square(stim1-stim2).mean()
