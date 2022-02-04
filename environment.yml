@@ -31,4 +31,5 @@ dependencies:
       - pyrtools>=1.0
       - git+https://github.com/LabForComputationalVision/plenoptic.git@main
       - flatten_dict
+      - blume >= 0.2.2
       - funsor>=0.4.0

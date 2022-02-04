@@ -359,3 +359,30 @@ def performance_comparison(performance_fig, param_fig, context='paper'):
         compose.Text('A', 0, 25, **text_params),
         compose.Text('B', 0, figure_width/2+25, **text_params),
     )
+
+
+def psychophys_schematic_with_table(psychophys_schem, table, context='paper'):
+    """Combine psychophysics schematic with table.
+
+    Parameters
+    ----------
+    psychophys_schem, table : str
+        Paths to the psychophysics schematic and table figures, respectively.
+    context : {'paper', 'poster'}, optional
+        plotting context that's being used for this figure (as in
+        seaborn's set_context function). if poster, will scale things up. Note
+        that, for this figure, only paper has really been checked
+
+    Returns
+    -------
+    fig : svgutils.compose.Figure
+        Figure containing composed plots
+    """
+    _, figure_width = style.plotting_style(context, 'svgutils', 'full')
+    figure_width = _convert_to_pix(figure_width)
+    figure_height = 3/4*figure_width-20
+    return compose.Figure(
+        figure_width, figure_height,
+        SVG(psychophys_schem, 'inkscape'),
+        SVG(table).move(0, figure_height/2),
+    )

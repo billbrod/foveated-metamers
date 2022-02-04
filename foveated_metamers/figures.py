@@ -21,6 +21,7 @@ from collections import OrderedDict
 import xmltodict
 import flatten_dict
 import warnings
+from blume.table import table as blume_table
 sys.path.append(op.join(op.dirname(op.realpath(__file__)), '..', 'extra_packages'))
 import plenoptic_part as pop
 
@@ -2431,3 +2432,64 @@ def experiment_mse_heatmap(df, x='trial_structure', y='scaling',
             ax.set_yticklabels(labels, rotation=0)
 
     return g
+
+
+def psychophysics_schematic_table(figsize=(5, 5)):
+    """Create table for showing comparison details.
+
+    Parameters
+    ----------
+    figsize : tuple
+        Size of the figure to create. Table will use whole figure.
+
+    Returns
+    -------
+    fig : plt.Figure
+        matplotlib figure containing the table.
+
+    """
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
+    ax.axis('off')
+    text = [
+        ['Original', 'Original', 'Synth'],
+        ['', 'Synth', 'Original'],
+        ['Synth', 'Original', 'Synth'],
+        ['', 'Synth', 'Original'],
+        ['Synth $i$', 'Synth $i$', 'Synth $j$'],
+        ['', 'Synth $j$', 'Synth $i$'],
+        ['Synth $j$', 'Synth $i$', 'Synth $j$'],
+        ['', 'Synth $j$', 'Synth $i$'],
+    ]
+    tab = blume_table(ax, text, cellLoc='center',
+                      rowLabels=['', '', 'Original vs.\nSynth', '', '', '', 'Synth vs.\nSynth', '', ],
+                      colLabels=['First image', 'Second image left', 'Second image right'],
+                      bbox=(0, 0, 1, 1))
+    # need to draw so that bbox locations are set.
+    fig.canvas.draw()
+    celld = tab.get_celld()
+    for i in range(8):
+        cell = celld[(i, -1)]
+        if i in [0, 4]:
+            cell.visible_edges = 'TL'
+        elif i == 7:
+            cell.visible_edges = 'BL'
+        else:
+            cell.visible_edges = 'L'
+        if cell.text:
+            bbox = cell.get_bbox()
+            ax.text(bbox.x1-bbox.width/4, bbox.y1, cell.text, ha='center',
+                    va='center', transform=ax.transAxes,
+                    size=cell._text.get_fontsize(), rotation=90)
+            # this determines the length of the dividing line, which we want to keep around
+            cell.set_text = '        '
+        cell = celld[(i, 0)]
+        if i in [0, 2, 4, 6]:
+            cell_bbox = cell.get_bbox()
+            ax.text(cell_bbox.x1-cell_bbox.width/2, cell_bbox.y0, cell.text,
+                    ha='center', va='center', transform=ax.transAxes,
+                    size=cell._text.get_fontsize())
+            cell.set_text = ''
+            cell.visible_edges = 'TLR'
+        else:
+            cell.visible_edges = 'BLR'
+    return fig

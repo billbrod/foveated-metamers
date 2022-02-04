@@ -2832,6 +2832,33 @@ rule psychophys_expt_fig:
         "cp {input} {output}"
 
 
+rule psychophys_expt_table:
+    input:
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'psychophys_{expt}.svg')
+    output:
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'psychophys_{expt}_with_table.svg')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'psychophys_{expt}_with_table.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'psychophys_{expt}_with_table_benchmark.txt')
+    run:
+        import contextlib
+        import foveated_metamers as fov
+        import matplotlib.pyplot as plt
+        import tempfile
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                style, fig_width = fov.style.plotting_style(wildcards.context,
+                                                            figsize='full')
+                plt.style.use(style)
+                table_fig = fov.figures.psychophysics_schematic_table((3/4*fig_width, 3/4*fig_width/2))
+                name = tempfile.NamedTemporaryFile().name + '.svg'
+                table_fig.savefig(name, bbox_inches='tight')
+                fig = fov.compose_figures.psychophys_schematic_with_table(input[0], name,
+                                                                          wildcards.context)
+                fig.save(output[0])
+
+
 rule embed_bitmaps_into_figure:
     input:
         # marking this as ancient means we don't rerun this step if the
