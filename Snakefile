@@ -2079,8 +2079,8 @@ rule mcmc_performance_comparison_figure:
                 if query_str is not None:
                     df = df.query(query_str)
                 df['model'] = df['model'].map(fov.plotting.MODEL_PLOT)
-                df['trial_type'] = df['trial_type'].map(fov.plotting.TRIAL_TYPE_PLOT)
                 if wildcards.mcmc_plot_type == 'performance':
+                    df['trial_type'] = df['trial_type'].map(fov.plotting.TRIAL_TYPE_PLOT)
                     if perf_query_str is not None:
                         df = df.query(perf_query_str)
                     if not wildcards.focus.startswith('sub'):
@@ -2103,6 +2103,9 @@ rule mcmc_performance_comparison_figure:
                         g.ax.axvline(float(sc), color='k')
                 elif 'params' in wildcards.mcmc_plot_type:
                     mean_line = {'none': False, 'lines': 'lines-only', 'ci': True}[wildcards.mcmc_plot_type.split('-')[-1]]
+                    warnings.warn("Removing luminance model, metamer_vs_metamer for params plot (it's not informative)")
+                    df = df.query("trial_type != 'metamer_vs_metamer' or model != 'Luminance model'")
+                    df['trial_type'] = df['trial_type'].map(fov.plotting.TRIAL_TYPE_PLOT)
                     fig = fov.figures.psychophysical_grouplevel_means(df,
                                                                       height=fig_width/4,
                                                                       mean_line=mean_line,
@@ -2116,10 +2119,16 @@ rule mcmc_performance_comparison_figure:
                                 ylim = (0, .5)
                             ax.set(yscale='linear', ylim=ylim)
                         elif 'log' in wildcards.mcmc_plot_type:
-                            if 'a0' in ax.get_title():
-                                ylim = (1e-1, 10)
-                            elif 's0' in ax.get_title():
-                                ylim = (1e-2, 1)
+                            if 'sub-00' in  wildcards.focus:
+                                if 'a0' in ax.get_title():
+                                    ylim = (9e-1, 10)
+                                elif 's0' in ax.get_title():
+                                    ylim = (1e-2, 5e-1)
+                            else:
+                                if 'a0' in ax.get_title():
+                                    ylim = (2e-1, 10)
+                                elif 's0' in ax.get_title():
+                                    ylim = (1e-2, 5e-1)
                             ax.set(yscale='log', ylim=ylim)
                         title = ax.get_title().replace('a0', 'Gain').replace('s0', 'Critical Scaling')
                         title = title.split('|')[0]
@@ -2134,6 +2143,12 @@ rule mcmc_performance_comparison_figure:
                     fig.suptitle(fig._suptitle.get_text(), y=1.05)
                 if wildcards.context == 'paper':
                     fig.suptitle('')
+                    # change title of this to be clearer. this is an
+                    # exceedingly hacky way of doing this.
+                    if len(fig.legends) > 0:
+                        leg = fig.legends[0]
+                        leg.texts = [t.set_text(t.get_text().replace('Trial type', 'Comparison'))
+                                     for t in leg.texts]
                 fig.savefig(output[0], bbox_inches='tight')
 
 
