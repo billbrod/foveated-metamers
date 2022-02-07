@@ -2594,7 +2594,8 @@ rule experiment_mse_example_img:
                                                        scaling=float(wildcards.scaling),
                                                        init_type=wildcards.init_type)
     output:
-        op.join(config['DATA_DIR'], 'synth_match_mse', '{model_name}_comp-{comp}', 'expt_{ref_image}_{init_type}_scaling-{scaling}_dir-{direction}_seed-{seed}.png'),
+        op.join(config['DATA_DIR'], 'synth_match_mse', '{model_name}_comp-{comp}', 'expt_img1_{ref_image}_{init_type}_scaling-{scaling}_dir-{direction}_seed-{seed}.png'),
+        op.join(config['DATA_DIR'], 'synth_match_mse', '{model_name}_comp-{comp}', 'expt_img2_{ref_image}_{init_type}_scaling-{scaling}_dir-{direction}_seed-{seed}.png'),
     log:
         op.join(config['DATA_DIR'], 'logs', 'synth_match_mse', '{model_name}_comp-{comp}', 'expt_{ref_image}_{init_type}_scaling-{scaling}_dir-{direction}_seed-{seed}.log'),
     benchmark:
@@ -2615,13 +2616,19 @@ rule experiment_mse_example_img:
                 metamer = metamer / np.iinfo(metamer.dtype).max
                 bar_pix_size = int(bar_deg_size * (screen_size_pix / screen_size_deg))
                 bar = fov.distances._create_bar_mask(ref_image.shape[0], bar_pix_size)
+                if wildcards.comp.startswith('ref'):
+                    orig = ref_image.copy()
+                elif wildcards.comp.startswith('met'):
+                    orig = metamer.copy()
+                orig = fov.distances._add_bar(orig, bar)
+                imageio.imwrite(output[0], orig)
                 half_width = ref_image.shape[-1] // 2
                 if wildcards.direction == 'L':
                     ref_image[..., :half_width] = metamer[..., :half_width]
                 elif wildcards.direction == 'R':
                     ref_image[..., half_width:] = metamer[..., half_width:]
                 ref_image = fov.distances._add_bar(ref_image, bar)
-                imageio.imwrite(output[0], ref_image)
+                imageio.imwrite(output[1], ref_image)
 
 
 rule mix_images_match_mse:
