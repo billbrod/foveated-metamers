@@ -2584,6 +2584,45 @@ rule experiment_mse_performance_comparison:
                 g.fig.savefig(output[2], bbox_inches='tight')
 
 
+rule experiment_mse_example_img:
+    input:
+        lambda wildcards: utils.get_ref_image_full_path(wildcards.ref_image),
+        lambda wildcards: utils.generate_metamer_paths(wildcards.model_name,
+                                                       comp=wildcards.comp,
+                                                       seed_n=int(wildcards.seed),
+                                                       image_name=wildcards.ref_image,
+                                                       scaling=float(wildcards.scaling),
+                                                       init_type=wildcards.init_type)
+    output:
+        op.join(config['DATA_DIR'], 'synth_match_mse', '{model_name}_comp-{comp}', 'expt_{ref_image}_{init_type}_scaling-{scaling}_dir-{direction}_seed-{seed}.png'),
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'synth_match_mse', '{model_name}_comp-{comp}', 'expt_{ref_image}_{init_type}_scaling-{scaling}_dir-{direction}_seed-{seed}.log'),
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'synth_match_mse', '{model_name}_comp-{comp}', 'expt_{ref_image}_{init_type}_scaling-{scaling}_dir-{direction}_seed-{seed}_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import contextlib
+        import numpy as np
+        import imageio
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                bar_deg_size = 2
+                screen_size_deg = 73.45
+                screen_size_pix = 3840
+                ref_image = imageio.imread(input[0])
+                ref_image = ref_image / np.iinfo(ref_image.dtype).max
+                metamer = imageio.imread(input[1])
+                metamer = metamer / np.iinfo(metamer.dtype).max
+                bar_pix_size = int(bar_deg_size * (screen_size_pix / screen_size_deg))
+                bar = fov.distances._create_bar_mask(ref_image.shape[0], bar_pix_size)
+                half_width = ref_image.shape[-1] // 2
+                if wildcards.direction == 'L':
+                    ref_image[..., :half_width] = metamer[..., :half_width]
+                elif wildcards.direction == 'R':
+                    ref_image[..., half_width:] = metamer[..., half_width:]
+                ref_image = fov.distances._add_bar(ref_image, bar)
+                imageio.imwrite(output[0], ref_image)
+
 
 rule mix_images_match_mse:
     input:
