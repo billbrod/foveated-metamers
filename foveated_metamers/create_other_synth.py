@@ -199,7 +199,7 @@ def main(base_image, image_to_mix, target_err, learning_rate, max_iter=100,
     else:
         image_to_mix = 255 * create_metamers.setup_image(image_to_mix)
     bar_pix_size = int(bar_deg_size * (screen_size_pix / screen_size_deg))
-    bar = distances._create_bar_mask(base_image.shape[1], bar_pix_size)
+    bar = distances._create_bar_mask(base_image.shape[-2], bar_pix_size)
     base_image = distances._add_bar(base_image, bar)
     image_to_mix = distances._add_bar(image_to_mix, bar)
     alpha = torch.rand(1).squeeze().requires_grad_()
