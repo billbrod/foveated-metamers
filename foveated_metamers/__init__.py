@@ -13,4 +13,5 @@ from . import style
 from .observer_model import ObserverModel
 from . import other_data
 from . import compose_figures
+from . import create_mad_images
 from . import create_other_synth

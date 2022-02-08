@@ -69,7 +69,9 @@ REF_IMAGE_TEMPLATE_PATH = config['REF_IMAGE_TEMPLATE_PATH'].replace("{DATA_DIR}/
 # the regex here removes all string formatting codes from the string,
 # since Snakemake doesn't like them
 METAMER_TEMPLATE_PATH = re.sub(":.*?}", "}", config['METAMER_TEMPLATE_PATH'].replace("{DATA_DIR}/", DATA_DIR))
+MAD_TEMPLATE_PATH = re.sub(":.*?}", "}", config['MAD_TEMPLATE_PATH'].replace("{DATA_DIR}/", DATA_DIR))
 METAMER_LOG_PATH = METAMER_TEMPLATE_PATH.replace('metamers/{model_name}', 'logs/metamers/{model_name}').replace('_metamer.png', '.log')
+MAD_LOG_PATH = MAD_TEMPLATE_PATH.replace('mad_images/1-{model_name_1}', 'logs/mad_images/1-{model_name_1}').replace('_mad.png', '.log')
 CONTINUE_TEMPLATE_PATH = (METAMER_TEMPLATE_PATH.replace('metamers/{model_name}', 'metamers_continue/{model_name}')
                           .replace("{clamp_each_iter}/", "{clamp_each_iter}/attempt-{num}_iter-{extra_iter}"))
 CONTINUE_LOG_PATH = CONTINUE_TEMPLATE_PATH.replace('metamers_continue/{model_name}', 'logs/metamers_continue/{model_name}').replace('_metamer.png', '.log')
@@ -663,7 +665,6 @@ def get_partition(wildcards, cluster):
         elif cluster == 'greene':
             return None
     else:
-        scaling = float(wildcards.scaling)
         if cluster == 'rusty':
             return 'gpu'
         elif cluster == 'greene':
@@ -682,12 +683,16 @@ def get_cpu_num(wildcards):
     else:
         # these are all based on estimates from rusty (which automatically
         # gives each job 28 nodes), and checking seff to see CPU usage
-        if float(wildcards.scaling) > .06:
-            cpus = 21
-        elif float(wildcards.scaling) > .03:
-            cpus = 26
-        else:
-            cpus = 28
+        try:
+            if float(wildcards.scaling) > .06:
+                cpus = 21
+            elif float(wildcards.scaling) > .03:
+                cpus = 26
+            else:
+                cpus = 28
+        except AttributeError:
+            # then we don't have a scaling attribute
+            cpus = 10
     return cpus
 
 
@@ -695,7 +700,12 @@ def get_init_image(wildcards):
     if wildcards.init_type in ['white', 'gray', 'pink', 'blue']:
         return []
     else:
-        return utils.get_ref_image_full_path(wildcards.init_type)
+        try:
+            # then this is just a noise level, and there is no input required
+            float(wildcards.init_type)
+            return []
+        except ValueError:
+            return utils.get_ref_image_full_path(wildcards.init_type)
 
 rule create_metamers:
     input:
@@ -2667,6 +2677,85 @@ rule mix_images_match_mse:
                                             wildcards.direction,
                                             int(wildcards.seed),
                                             output[0])
+
+
+rule create_mad_images:
+    input:
+        ref_image = lambda wildcards: utils.get_ref_image_full_path(wildcards.image_name),
+        init_image = get_init_image,
+    output:
+        MAD_TEMPLATE_PATH.replace('_mad.png', '.pt'),
+        MAD_TEMPLATE_PATH.replace('mad.png', 'synthesis.png'),
+        MAD_TEMPLATE_PATH.replace('mad.png', 'image-diff.png'),
+        MAD_TEMPLATE_PATH.replace('.png', '.npy'),
+        report(MAD_TEMPLATE_PATH),
+    log:
+        MAD_LOG_PATH,
+    benchmark:
+        MAD_LOG_PATH.replace('.log', '_benchmark.txt'),
+    resources:
+        gpu = lambda wildcards: int(wildcards.gpu),
+        cpus_per_task = get_cpu_num,
+        mem = get_mem_estimate,
+        # this seems to be the best, anymore doesn't help and will eventually hurt
+        num_threads = 9,
+    params:
+        rusty_mem = lambda wildcards: get_mem_estimate(wildcards, 'rusty'),
+        # if we can use a GPU, synthesis doesn't take very long. If we can't,
+        # it takes forever (7 days is probably not enough, but it's the most I
+        # can request on the cluster -- will then need to manually ask for more
+        # time).
+        time = lambda wildcards: {1: '12:00:00', 0: '7-00:00:00'}[int(wildcards.gpu)],
+        rusty_partition = lambda wildcards: get_partition(wildcards, 'rusty'),
+        rusty_constraint = lambda wildcards: get_constraint(wildcards, 'rusty'),
+    run:
+        import foveated_metamers as fov
+        import contextlib
+        import matplotlib as mpl
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                # having issues with the default matplotlib backend causing
+                # core dumps
+                mpl.use('svg')
+                if wildcards.fix_model_num == '1':
+                    assert wildcards.synth_model_num == '2'
+                    fix_model_name = wildcards.model_name_1
+                    synth_model_name = wildcards.model_name_2
+                elif wildcards.fix_model_num == '2':
+                    assert wildcards.synth_model_num == '1'
+                    fix_model_name = wildcards.model_name_2
+                    synth_model_name = wildcards.model_name_1
+                if resources.gpu == 1:
+                    get_gid = True
+                elif resources.gpu == 0:
+                    get_gid = False
+                else:
+                    raise Exception("Multiple gpus are not supported!")
+                # tradeoff_lambda can be a float or None
+                try:
+                    tradeoff_lambda = float(wildcards.tradeoff_lambda)
+                except ValueError:
+                    tradeoff_lambda = None
+                with fov.utils.get_gpu_id(get_gid, on_cluster=ON_CLUSTER) as gpu_id:
+                    fov.create_mad_images.main(fix_model_name,
+                                               synth_model_name,
+                                               input.ref_image,
+                                               wildcards.synth_target,
+                                               int(wildcards.seed),
+                                               float(wildcards.learning_rate),
+                                               int(wildcards.max_iter),
+                                               float(wildcards.stop_criterion),
+                                               int(wildcards.stop_iters),
+                                               output[0],
+                                               float(wildcards.init_type),
+                                               gpu_id,
+                                               wildcards.optimizer,
+                                               tradeoff_lambda,
+                                               float(wildcards.range_lambda),
+                                               num_threads=resources.num_threads)
+
+
+
 rule distance_vs_performance_plot:
     input:
         op.join(config["DATA_DIR"], 'distances', '{distance_model}', 'scaling-{scaling}', 'e0-{min_ecc}_em-{max_ecc}_all_distances.csv'),

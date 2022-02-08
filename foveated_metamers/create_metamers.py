@@ -37,7 +37,7 @@ def convert_seconds_to_str(secs):
     return "%d:%02d:%02d:%.03f" % (days, hours, minutes, seconds)
 
 
-def setup_image(image):
+def setup_image(image, n_channels=1):
     r"""setup the image
 
     We load in the image, if it's not already done so (converting it to
@@ -50,8 +50,10 @@ def setup_image(image):
         Either the path to the file to load in or the loaded-in
         image. If array_like, we assume it's already 2d (i.e.,
         grayscale)
-    device : torch.device
-        The torch device to put the image on
+    n_channels : int, optional
+        How many channels the image should have. Will always be grayscale, but
+        we may duplicate along one of the channels so we can feed this into
+        VGG16
 
     Returns
     -------
@@ -82,7 +84,7 @@ def setup_image(image):
     image = torch.tensor(image, dtype=torch.float32)
     while image.ndimension() < 4:
         image = image.unsqueeze(0)
-    return image
+    return image.repeat(1, n_channels, 1, 1)
 
 
 def find_figsizes(model_name, model, image_shape):
