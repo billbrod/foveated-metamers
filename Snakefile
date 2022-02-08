@@ -2637,8 +2637,8 @@ rule mix_images_match_mse:
         init_image = get_init_image,
         mse = op.join(config["DATA_DIR"], 'distances', '{model_name}', 'expt_mse_comp-{comp}.csv'),
     output:
-        op.join(config['DATA_DIR'], 'synth_match_mse', '{model_name}_comp-{comp}', '{ref_image}_{init_type}_dir-{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}.png'),
-        op.join(config['DATA_DIR'], 'synth_match_mse', '{model_name}_comp-{comp}', '{ref_image}_{init_type}_dir-{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}_synth.svg'),
+        op.join(config['DATA_DIR'], 'synth_match_mse', '{model_name}_comp-{comp}', '{ref_image}_init-{init_type}_dir-{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}.png'),
+        op.join(config['DATA_DIR'], 'synth_match_mse', '{model_name}_comp-{comp}', '{ref_image}_init-{init_type}_dir-{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}_synth.svg'),
     log:
         op.join(config['DATA_DIR'], 'logs', 'synth_match_mse', '{model_name}_comp-{comp}',
                 '{ref_image}_{init_type}_{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}.log')
@@ -2654,7 +2654,14 @@ rule mix_images_match_mse:
                 mse = pd.read_csv(input.mse)
                 mse = mse.query(f"image_name=='{wildcards.ref_image}' & changed_side=='{wildcards.direction}'")
                 target_err = mse.experiment_mse.min()
-                fov.create_other_synth.main(input.ref_image, wildcards.init_type,
+                # if the init_type corresponds to another image, we need its
+                # full path. else, just the string identifying the type of
+                # noise suffices
+                if input.init_image:
+                    other_img = input.init_image
+                else:
+                    other_img = wildcards.init_type
+                fov.create_other_synth.main(input.ref_image, other_img,
                                             target_err, float(wildcards.lr),
                                             int(wildcards.max_iter),
                                             wildcards.direction,

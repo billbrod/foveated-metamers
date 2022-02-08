@@ -17,7 +17,8 @@ from . import distances
 from . import create_metamers
 
 
-def mix_images(base_image, image_to_mix, alpha, direction='L'):
+def mix_images(base_image, image_to_mix, alpha, direction='L',
+               allowable_range=(0, 255)):
     """Mix together two images on one horizontal half, with weight alpha.
 
     Note we do not add a bar or anything else here.
@@ -30,6 +31,9 @@ def mix_images(base_image, image_to_mix, alpha, direction='L'):
         The weight to multiply by image_to_mix
     direction : {'L', 'R'}, optional
         Whether to add image_to_mix on left or right half.
+    allowable_range : tuple, optional
+        Allowable range. We set any values outside this range to the nearest
+        allowed value (e.g., all negative values to 0).
 
     Returns
     -------
@@ -45,6 +49,9 @@ def mix_images(base_image, image_to_mix, alpha, direction='L'):
         mixed_image[..., :img_half_width] += alpha*image_to_mix[..., :img_half_width]
     else:
         raise Exception(f"Don't know how to handle direction {direction}")
+    # clip values so we don't end up with values that can't be displayed
+    mixed_image[mixed_image < allowable_range[0]] = allowable_range[0]
+    mixed_image[mixed_image > allowable_range[1]] = allowable_range[1]
     return mixed_image
 
 
