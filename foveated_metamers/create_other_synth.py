@@ -17,7 +17,8 @@ from . import distances
 from . import create_metamers
 
 
-def mix_images(base_image, image_to_mix, alpha, direction='L'):
+def mix_images(base_image, image_to_mix, alpha, direction='L',
+               allowable_range=(0, 255)):
     """Mix together two images on one horizontal half, with weight alpha.
 
     Note we do not add a bar or anything else here.
@@ -30,6 +31,9 @@ def mix_images(base_image, image_to_mix, alpha, direction='L'):
         The weight to multiply by image_to_mix
     direction : {'L', 'R'}, optional
         Whether to add image_to_mix on left or right half.
+    allowable_range : tuple, optional
+        Allowable range. We set any values outside this range to the nearest
+        allowed value (e.g., all negative values to 0).
 
     Returns
     -------
@@ -45,6 +49,9 @@ def mix_images(base_image, image_to_mix, alpha, direction='L'):
         mixed_image[..., :img_half_width] += alpha*image_to_mix[..., :img_half_width]
     else:
         raise Exception(f"Don't know how to handle direction {direction}")
+    # clip values so we don't end up with values that can't be displayed
+    mixed_image[mixed_image < allowable_range[0]] = allowable_range[0]
+    mixed_image[mixed_image > allowable_range[1]] = allowable_range[1]
     return mixed_image
 
 
@@ -199,7 +206,7 @@ def main(base_image, image_to_mix, target_err, learning_rate, max_iter=100,
     else:
         image_to_mix = 255 * create_metamers.setup_image(image_to_mix)
     bar_pix_size = int(bar_deg_size * (screen_size_pix / screen_size_deg))
-    bar = distances._create_bar_mask(base_image.shape[1], bar_pix_size)
+    bar = distances._create_bar_mask(base_image.shape[-2], bar_pix_size)
     base_image = distances._add_bar(base_image, bar)
     image_to_mix = distances._add_bar(image_to_mix, bar)
     alpha = torch.rand(1).squeeze().requires_grad_()

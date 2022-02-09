@@ -2584,6 +2584,52 @@ rule experiment_mse_performance_comparison:
                 g.fig.savefig(output[2], bbox_inches='tight')
 
 
+rule experiment_mse_example_img:
+    input:
+        lambda wildcards: utils.get_ref_image_full_path(wildcards.ref_image),
+        lambda wildcards: utils.generate_metamer_paths(wildcards.model_name,
+                                                       comp=wildcards.comp,
+                                                       seed_n=int(wildcards.seed),
+                                                       image_name=wildcards.ref_image,
+                                                       scaling=float(wildcards.scaling),
+                                                       init_type=wildcards.init_type)
+    output:
+        op.join(config['DATA_DIR'], 'synth_match_mse', '{model_name}_comp-{comp}', 'expt_img1_{ref_image}_{init_type}_scaling-{scaling}_dir-{direction}_seed-{seed}.png'),
+        op.join(config['DATA_DIR'], 'synth_match_mse', '{model_name}_comp-{comp}', 'expt_img2_{ref_image}_{init_type}_scaling-{scaling}_dir-{direction}_seed-{seed}.png'),
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'synth_match_mse', '{model_name}_comp-{comp}', 'expt_{ref_image}_{init_type}_scaling-{scaling}_dir-{direction}_seed-{seed}.log'),
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'synth_match_mse', '{model_name}_comp-{comp}', 'expt_{ref_image}_{init_type}_scaling-{scaling}_dir-{direction}_seed-{seed}_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import contextlib
+        import numpy as np
+        import imageio
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                bar_deg_size = 2
+                screen_size_deg = 73.45
+                screen_size_pix = 3840
+                ref_image = imageio.imread(input[0])
+                ref_image = ref_image / np.iinfo(ref_image.dtype).max
+                metamer = imageio.imread(input[1])
+                metamer = metamer / np.iinfo(metamer.dtype).max
+                bar_pix_size = int(bar_deg_size * (screen_size_pix / screen_size_deg))
+                bar = fov.distances._create_bar_mask(ref_image.shape[0], bar_pix_size)
+                if wildcards.comp.startswith('ref'):
+                    orig = ref_image.copy()
+                elif wildcards.comp.startswith('met'):
+                    orig = metamer.copy()
+                orig = fov.distances._add_bar(orig, bar)
+                imageio.imwrite(output[0], orig)
+                half_width = ref_image.shape[-1] // 2
+                if wildcards.direction == 'L':
+                    ref_image[..., :half_width] = metamer[..., :half_width]
+                elif wildcards.direction == 'R':
+                    ref_image[..., half_width:] = metamer[..., half_width:]
+                ref_image = fov.distances._add_bar(ref_image, bar)
+                imageio.imwrite(output[1], ref_image)
+
 
 rule mix_images_match_mse:
     input:
@@ -2591,8 +2637,8 @@ rule mix_images_match_mse:
         init_image = get_init_image,
         mse = op.join(config["DATA_DIR"], 'distances', '{model_name}', 'expt_mse_comp-{comp}.csv'),
     output:
-        op.join(config['DATA_DIR'], 'synth_match_mse', '{model_name}_comp-{comp}', '{ref_image}_{init_type}_dir-{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}.png'),
-        op.join(config['DATA_DIR'], 'synth_match_mse', '{model_name}_comp-{comp}', '{ref_image}_{init_type}_dir-{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}_synth.svg'),
+        op.join(config['DATA_DIR'], 'synth_match_mse', '{model_name}_comp-{comp}', '{ref_image}_init-{init_type}_dir-{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}.png'),
+        op.join(config['DATA_DIR'], 'synth_match_mse', '{model_name}_comp-{comp}', '{ref_image}_init-{init_type}_dir-{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}_synth.svg'),
     log:
         op.join(config['DATA_DIR'], 'logs', 'synth_match_mse', '{model_name}_comp-{comp}',
                 '{ref_image}_{init_type}_{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}.log')
@@ -2608,7 +2654,14 @@ rule mix_images_match_mse:
                 mse = pd.read_csv(input.mse)
                 mse = mse.query(f"image_name=='{wildcards.ref_image}' & changed_side=='{wildcards.direction}'")
                 target_err = mse.experiment_mse.min()
-                fov.create_other_synth.main(input.ref_image, wildcards.init_type,
+                # if the init_type corresponds to another image, we need its
+                # full path. else, just the string identifying the type of
+                # noise suffices
+                if input.init_image:
+                    other_img = input.init_image
+                else:
+                    other_img = wildcards.init_type
+                fov.create_other_synth.main(input.ref_image, other_img,
                                             target_err, float(wildcards.lr),
                                             int(wildcards.max_iter),
                                             wildcards.direction,
