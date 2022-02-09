@@ -3228,6 +3228,76 @@ rule cutout_figures:
                 periphery_fig.savefig(output[2])
 
 
+def get_all_metamers(wildcards):
+    from foveated_metamers import stimuli
+    mets = {}
+    mets['v1_ref'] = utils.generate_metamer_paths('V1_norm_s6_gaussian')
+    mets['v1_met'] = utils.generate_metamer_paths('V1_norm_s6_gaussian', comp='met')
+    mets['v1_ref-nat'] = utils.generate_metamer_paths('V1_norm_s6_gaussian', comp='ref-natural')
+    mets['v1_met-nat'] = utils.generate_metamer_paths('V1_norm_s6_gaussian', comp='met-natural')
+    mets['rgc_ref'] = utils.generate_metamer_paths('RGC_norm_gaussian')
+    mets['rgc_met'] = utils.generate_metamer_paths('RGC_norm_gaussian', comp='met')
+
+    imgs = []
+    for i in range(3):
+        imgs.extend(stimuli.get_images_for_session('sub-00', i, True))
+
+    mets['v1_ref_downsample'] = utils.generate_metamer_paths('V1_norm_s6_gaussian',
+                                                           comp='met-downsample-2', image_name=imgs)
+    gamma_mets = {}
+    for k, v in mets.items():
+        gamma_mets[k+'_gamma'] = [img.replace('metamer.png', 'metamer_gamma-corrected.png')
+                                  for img in v]
+    mets.update(gamma_mets)
+    return mets
+
+
+rule rearrange_metamers_for_sharing:
+    input:
+        unpack(get_all_metamers),
+    output:
+        # this is hard-coded, because we're only doing it on simons cluster
+        op.join('/mnt/ceph/users/wbroderick/foveated_metamers_to_share/metadata.json')
+    run:
+        import json
+        import re
+        import foveated_metamers as fov
+        import os
+        metadata = []
+        comp_map = {'met': 'Synth vs. Synth: white noise', 'ref': 'Original vs. Synth: white noise',
+                    'met-nat': 'Synth vs. Synth: natural image', 'ref-nat': 'Original vs. Synth: natural image'}
+        ln_path_template = ('{model_path_name}/{target_image}/downsample-{downsampled}/scaling-{scaling}/'
+                            'seed-{random_seed}_init-{initialization_type}_gamma-{gamma_corrected}.png')
+        regex_str = ('metamers/metamers/([a-zA-z0-9_]+)/([a-z.0-9,-_]+?)/scaling-([0-9.]+)/.*?/.*?/'
+                     'seed-([0-9]+)_init-([a-z.0-9,-_]+?)_lr')
+        output_dir = op.dirname(output[0])
+        for comp, data in input.items():
+            if 'downsample' in comp:
+                downsampled = True
+            else:
+                downsampled = False
+            if 'gamma' in comp:
+                gamma_corrected = True
+            else:
+                gamma_corrected = False
+            comp = comp_map[comp.split('_')[1]]
+            for f in data:
+                model, img, scaling, seed, init = re.findall(regex_str, f)[0]
+                md = {'model_name': fov.plotting.MODEL_PLOT[model], 'downsampled': downsampled, 'gamma_corrected': gamma_corrected,
+                      'scaling': float(scaling), 'target_image': img.split('_')[0], 'random_seed': int(seed),
+                      'initialization_type': init.split('_')[0], 'psychophysics_comparison': comp}
+                model_path_name = md['model_name'].lower().replace(' ', '_')
+                ln_path = ln_path_template.format(model_path_name=model_path_name, **md)
+                md['file'] = ln_path
+                # don't create hardlink if it's already there
+                if not op.exists(op.join(output_dir, ln_path)):
+                    os.makedirs(op.join(output_dir, op.dirname(ln_path)), exist_ok=True)
+                    os.link(f, op.join(output_dir, ln_path))
+                metadata.append(md)
+        with open(output[0], 'w') as f:
+            json.dump(metadata, f)
+
+
 rule paper_figures:
     input:
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_partially-pooled_log-ci_comp-base.svg"),
