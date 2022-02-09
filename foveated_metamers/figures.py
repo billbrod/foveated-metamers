@@ -2352,15 +2352,17 @@ def get_image_ids(path):
     return ids
 
 
-def experiment_mse_heatmap(df, x='trial_structure', y='scaling',
-                           col='image_name', col_wrap=5, **kwargs):
-    """Create a heatmap showing MSE from experiment, across all images of a given comparison.
+def mse_heatmap(df, mse_val, x='trial_structure', y='scaling',
+                col='image_name', col_wrap=5, **kwargs):
+    """Create a heatmap showing MSE, across all images of a given comparison.
 
     Parameters
     ----------
     df : pd.DataFrame
         df containing the experiment_mse, as created by
         calculate_experiment_mse
+    mse_val : {'experiment_mse', 'full_image_mse'}
+        Which MSE value to plot.
     x, y : str, optional
         variables to plot along the vertical, horizontal axes of the heatmap.
         Must be columns from df
@@ -2395,7 +2397,7 @@ def experiment_mse_heatmap(df, x='trial_structure', y='scaling',
         return to_return
 
     def facet_and_plot(data, x='trial_structure', y='scaling', **kwargs):
-        pivoted = pd.pivot_table(data, 'experiment_mse', y, x)
+        pivoted = pd.pivot_table(data, mse_val, y, x)
         # do nothing if pivoted is empty, means there's no data to plot here
         if pivoted.empty:
             return
@@ -2418,8 +2420,8 @@ def experiment_mse_heatmap(df, x='trial_structure', y='scaling',
                       col_order=plotting.get_order(col))
     # only want a single color map, on a single color bar
     cbar_ax = g.fig.add_axes([.92, .36, .02, .4])
-    g.map_dataframe(facet_and_plot, x=x, y=y, vmin=df.experiment_mse.min(),
-                    vmax=df.experiment_mse.max(), cbar_ax=cbar_ax)
+    g.map_dataframe(facet_and_plot, x=x, y=y, vmin=df[mse_val].min(),
+                    vmax=df[mse_val].max(), cbar_ax=cbar_ax)
     g.fig.subplots_adjust(right=.9)
     # normally this happens automatically, but sometimes it doesn't, so make
     # sure.

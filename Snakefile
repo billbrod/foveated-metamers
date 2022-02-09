@@ -58,6 +58,7 @@ wildcard_constraints:
     # don't capture experiment-mse for x, but capture anything else, because
     # experiment-mse is a different rule
     x="(?!experiment-mse)(.*)",
+    mse="experiment_mse|full_image_mse"
 ruleorder:
     collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check > mcmc_compare_plot > mcmc_plots > embed_bitmaps_into_figure > compose_figures
 
@@ -2490,7 +2491,7 @@ rule synthesis_distance_plot:
                 g.savefig(output[0], bbox_inches='tight')
 
 
-rule calculate_experiment_mse:
+rule calculate_mse:
     input:
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_comp-{comp}.npy'),
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description_comp-{comp}.csv'),
@@ -2519,27 +2520,43 @@ rule calculate_experiment_mse:
                                                          12)
                 # this contains all the relevant metadata we want for this comparison
                 dist_df = fov.analysis.create_experiment_df_split(stim_df, idx)
-                mse = np.empty(len(dist_df))
+                expt_mse = np.empty(len(dist_df))
+                met_mse = np.empty(len(dist_df))
                 # now iterate through all trials and compute the mse on each of
                 # them
                 for i in range(len(dist_df)):
-                    mse[i] = fov.distances.calculate_experiment_mse(stim, idx[:, i])
-                dist_df['experiment_mse'] = mse
+                    # unpack this to get the index of the stimulus on left and right, for first
+                    # and second image
+                    [[l1, l2], [r1, r2]] = idx[:, i]
+                    # need to cast these as floats else the MSE will be *way*
+                    # off (like 100 instead of 8600). don't do the whole stim
+                    # array at once because that would *drastically* increase
+                    # memory use. and calculate_experiment_mse function handles
+                    # this internally
+                    img1 = stim[l1].astype(float)
+                    if l1 == l2:
+                        img2 = stim[r2].astype(float)
+                    else:
+                        img2 = stim[l2].astype(float)
+                    met_mse[i] = np.square(img1-img2).mean()
+                    expt_mse[i] = fov.distances.calculate_experiment_mse(stim, idx[:, i])
+                dist_df['experiment_mse'] = expt_mse
+                dist_df['full_image_mse'] = met_mse
                 dist_df['trial_structure'] = dist_df.apply(fov.distances._get_trial_structure, 1)
                 dist_df['changed_side'] = dist_df.trial_structure.apply(lambda x: x[-1])
                 dist_df.to_csv(output[0], index=False)
 
 
-rule experiment_mse_plot:
+rule mse_plot:
     input:
         op.join(config["DATA_DIR"], 'distances', '{model_name}', 'expt_mse_comp-{comp}.csv'),
     output:
-        op.join(config["DATA_DIR"], 'distances', '{model_name}', 'expt_mse_comp-{comp}_heatmap.svg'),
-        op.join(config["DATA_DIR"], 'distances', '{model_name}', 'expt_mse_comp-{comp}_plot.svg'),
+        op.join(config["DATA_DIR"], 'distances', '{model_name}', 'expt_mse_comp-{comp}_{mse}_heatmap.svg'),
+        op.join(config["DATA_DIR"], 'distances', '{model_name}', 'expt_mse_comp-{comp}_{mse}_plot.svg'),
     log:
-        op.join(config["DATA_DIR"], 'logs', 'distances', '{model_name}', 'expt_mse_comp-{comp}_plots.log'),
+        op.join(config["DATA_DIR"], 'logs', 'distances', '{model_name}', 'expt_mse_comp-{comp}_{mse}_plots.log'),
     log:
-        op.join(config["DATA_DIR"], 'logs', 'distances', '{model_name}', 'expt_mse_comp-{comp}_plots_benchmark.txt'),
+        op.join(config["DATA_DIR"], 'logs', 'distances', '{model_name}', 'expt_mse_comp-{comp}_{mse}_plots_benchmark.txt'),
     run:
         import foveated_metamers as fov
         import pandas as pd
@@ -2548,34 +2565,34 @@ rule experiment_mse_plot:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 df = pd.read_csv(input[0])
-                g = fov.figures.experiment_mse_heatmap(df)
+                g = fov.figures.mse_heatmap(df, wildcards.mse)
                 g.savefig(output[0])
                 df = fov.plotting._remap_image_names(df)
-                g = sns.relplot(data=df, x='scaling', y='experiment_mse',
+                g = sns.relplot(data=df, x='scaling', y=wildcards.mse,
                                 hue='image_name', style='changed_side', kind='line',
                                 palette=fov.plotting.get_palette('image_name'),
                                 hue_order=fov.plotting.get_order('image_name'))
                 g.savefig(output[1])
 
 
-rule experiment_mse_performance_comparison:
+rule mse_performance_comparison:
     input:
         op.join(config["DATA_DIR"], 'distances', '{model_name}', 'expt_mse_comp-{comp}.csv'),
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
                 'task-split_comp-{comp}_data.csv'),
     output:
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_experiment-mse_comparison.svg'),
+                'task-split_comp-{comp}_{mse}_comparison.svg'),
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_experiment-mse_comparison_subjects.svg'),
+                'task-split_comp-{comp}_{mse}_comparison_subjects.svg'),
         op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_experiment-mse_comparison_line.svg'),
+                'task-split_comp-{comp}_{mse}_comparison_line.svg'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_experiment-mse_comparison.log'),
+                'task-split_comp-{comp}_{mse}_comparison.log'),
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'behavioral', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_experiment-mse_comparison_benchmark.txt'),
+                'task-split_comp-{comp}_{mse}_comparison_benchmark.txt'),
     run:
         import foveated_metamers as fov
         import pandas as pd
@@ -2585,15 +2602,15 @@ rule experiment_mse_performance_comparison:
                 mse_df = pd.read_csv(input[0])
                 expt_df = pd.read_csv(input[1])
                 g = fov.figures.compare_loss_and_performance_plot(expt_df,
-                                                                  mse_df, x='experiment_mse')
+                                                                  mse_df, x=wildcards.mse)
                 g.fig.savefig(output[0], bbox_inches='tight')
                 g = fov.figures.compare_loss_and_performance_plot(expt_df,
-                                                                  mse_df, x='experiment_mse',
+                                                                  mse_df, x=wildcards.mse,
                                                                   col_wrap=None, row='subject_name')
                 g.fig.savefig(output[1], bbox_inches='tight')
                 g = fov.figures.compare_loss_and_performance_plot(expt_df,
                                                                   mse_df,
-                                                                  x='experiment_mse',
+                                                                  x=wildcards.mse,
                                                                   col=None,
                                                                   plot_kind='line',
                                                                   height=5)
