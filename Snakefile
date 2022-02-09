@@ -2681,8 +2681,8 @@ rule mix_images_match_mse:
 
 rule create_mad_images:
     input:
-        ref_image = lambda wildcards: utils.get_ref_image_full_path(wildcards.image_name),
-        init_image = get_init_image,
+        ref_image = op.join(config['DATA_DIR'], 'synth_match_mse', '{met_model_name}_comp-{comp}', 'expt_img1_{image_name}_{met_init_type}_scaling-{scaling}_dir-{direction}_seed-0.png'),
+        init_image = op.join(config['DATA_DIR'], 'synth_match_mse', '{met_model_name}_comp-{comp}', '{image_name}_init-{synth_init_type}_dir-{direction}_lr-1e-8_max-iter-200_seed-0.png'),
     output:
         MAD_TEMPLATE_PATH.replace('_mad.png', '.pt'),
         MAD_TEMPLATE_PATH.replace('mad.png', 'synthesis.png'),
@@ -2717,14 +2717,6 @@ rule create_mad_images:
                 # having issues with the default matplotlib backend causing
                 # core dumps
                 mpl.use('svg')
-                if wildcards.fix_model_num == '1':
-                    assert wildcards.synth_model_num == '2'
-                    fix_model_name = wildcards.model_name_1
-                    synth_model_name = wildcards.model_name_2
-                elif wildcards.fix_model_num == '2':
-                    assert wildcards.synth_model_num == '1'
-                    fix_model_name = wildcards.model_name_2
-                    synth_model_name = wildcards.model_name_1
                 if resources.gpu == 1:
                     get_gid = True
                 elif resources.gpu == 0:
@@ -2736,9 +2728,10 @@ rule create_mad_images:
                     tradeoff_lambda = float(wildcards.tradeoff_lambda)
                 except ValueError:
                     tradeoff_lambda = None
+                init_img = 255 * fov.create_metamers.setup_image(input.init_image)
                 with fov.utils.get_gpu_id(get_gid, on_cluster=ON_CLUSTER) as gpu_id:
-                    fov.create_mad_images.main(fix_model_name,
-                                               synth_model_name,
+                    fov.create_mad_images.main('mse',
+                                               wildcards.model_name,
                                                input.ref_image,
                                                wildcards.synth_target,
                                                int(wildcards.seed),
@@ -2747,7 +2740,7 @@ rule create_mad_images:
                                                float(wildcards.stop_criterion),
                                                int(wildcards.stop_iters),
                                                output[0],
-                                               float(wildcards.init_type),
+                                               init_img,
                                                gpu_id,
                                                wildcards.optimizer,
                                                tradeoff_lambda,

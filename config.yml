@@ -6,7 +6,7 @@ INKSCAPE_PREF_FILE: "/home/billbrod/.config/inkscape/preferences.xml"
 
 REF_IMAGE_TEMPLATE_PATH: "{DATA_DIR}/ref_images/{image_name}.png"
 METAMER_TEMPLATE_PATH: "{DATA_DIR}/metamers/{model_name}/{image_name}/scaling-{scaling}/opt-{optimizer}_loss-{loss}/fr-{fract_removed}_lc-{loss_fract}_lt-{loss_change_thresh}_li-{loss_change_iter}_cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}/seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc:.03f}_em-{max_ecc:.03f}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}{save_all}_metamer.png"
-MAD_TEMPLATE_PATH: "{DATA_DIR}/mad_images/1-{model_name_1}_2-{model_name_2}/{image_name}/fix-{fix_model_num}_synth-{synth_model_num}_{synth_target}/opt-{optimizer}_tradeoff-{tradeoff_lambda:.0e}_penalty-{range_lambda:.1e}_stop-iters-{stop_iters}/seed-{seed}_init-{init_type}_lr-{learning_rate}_iter-{max_iter}_stop-crit-{stop_criterion:.0e}_gpu-{gpu}_mad.png"
+MAD_TEMPLATE_PATH: "{DATA_DIR}/mad_images/{model_name}_{synth_target}/{met_model_name}_comp-{comp}_scaling-{scaling}_{image_name}_init-{met_init_type}_dir-{direction}_synth-{synth_init_type}/opt-{optimizer}_tradeoff-{tradeoff_lambda:.0e}_penalty-{range_lambda:.1e}_stop-iters-{stop_iters}/seed-{seed}_init-{init_type}_lr-{learning_rate}_iter-{max_iter}_stop-crit-{stop_criterion:.0e}_gpu-{gpu}_mad.png"
 
 # if you want to run the checks against the original Freeman and Simoncelli
 # (rule freeman_check in Snakefile), 2011 windows, download these two matlab

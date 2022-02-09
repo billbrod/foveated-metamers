@@ -376,8 +376,10 @@ def main(fix_metric_name, synthesis_metric_name, image, synthesis_target,
     save_path : str or None, optional
         If a str, the path to the file to save the MADCompetition object to. If
         None, we don't save the synthesis output (that's probably a bad idea)
-    initial_image : float, optional
-        std dev of Gaussian noise added to image to initialize synthesis.
+    initial_image : float or torch.Tensor, optional
+        If a float, standard deviation of the Gaussian noise used to initialize
+        ``synthesized_signal`` from ``reference_signal``. If a Tensor, the
+        initial image we use.
     gpu_id : int or None, optional
         If not None, the GPU we will use. If None, we run on CPU. We
         don't do anything clever to handle that here, but the
