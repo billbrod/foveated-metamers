@@ -1,3 +1,7 @@
+# required to fix this strange problem:
+# https://stackoverflow.com/questions/64797838/libgcc-s-so-1-must-be-installed-for-pthread-cancel-to-work
+import ctypes
+libgcc_s = ctypes.CDLL('libgcc_s.so.1')
 import os
 import math
 import itertools
@@ -71,7 +75,7 @@ REF_IMAGE_TEMPLATE_PATH = config['REF_IMAGE_TEMPLATE_PATH'].replace("{DATA_DIR}/
 METAMER_TEMPLATE_PATH = re.sub(":.*?}", "}", config['METAMER_TEMPLATE_PATH'].replace("{DATA_DIR}/", DATA_DIR))
 MAD_TEMPLATE_PATH = re.sub(":.*?}", "}", config['MAD_TEMPLATE_PATH'].replace("{DATA_DIR}/", DATA_DIR))
 METAMER_LOG_PATH = METAMER_TEMPLATE_PATH.replace('metamers/{model_name}', 'logs/metamers/{model_name}').replace('_metamer.png', '.log')
-MAD_LOG_PATH = MAD_TEMPLATE_PATH.replace('mad_images/1-{model_name_1}', 'logs/mad_images/1-{model_name_1}').replace('_mad.png', '.log')
+MAD_LOG_PATH = MAD_TEMPLATE_PATH.replace('mad_images/{model_name}', 'logs/mad_images/{model_name}').replace('_mad.png', '.log')
 CONTINUE_TEMPLATE_PATH = (METAMER_TEMPLATE_PATH.replace('metamers/{model_name}', 'metamers_continue/{model_name}')
                           .replace("{clamp_each_iter}/", "{clamp_each_iter}/attempt-{num}_iter-{extra_iter}"))
 CONTINUE_LOG_PATH = CONTINUE_TEMPLATE_PATH.replace('metamers_continue/{model_name}', 'logs/metamers_continue/{model_name}').replace('_metamer.png', '.log')
@@ -495,6 +499,8 @@ def get_mem_estimate(wildcards, partition=None):
                     # good
                     window_size = 0.49238059 / float(wildcards.scaling)
                     mem = int(5 * window_size)
+            else:
+                mem = 32
         else:
             # don't have a good estimate for these
             mem = 16
@@ -2728,7 +2734,6 @@ rule create_mad_images:
                     tradeoff_lambda = float(wildcards.tradeoff_lambda)
                 except ValueError:
                     tradeoff_lambda = None
-                init_img = 255 * fov.create_metamers.setup_image(input.init_image)
                 with fov.utils.get_gpu_id(get_gid, on_cluster=ON_CLUSTER) as gpu_id:
                     fov.create_mad_images.main('mse',
                                                wildcards.model_name,
@@ -2740,7 +2745,7 @@ rule create_mad_images:
                                                float(wildcards.stop_criterion),
                                                int(wildcards.stop_iters),
                                                output[0],
-                                               init_img,
+                                               input.init_image,
                                                gpu_id,
                                                wildcards.optimizer,
                                                tradeoff_lambda,

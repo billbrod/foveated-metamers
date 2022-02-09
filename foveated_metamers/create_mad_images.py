@@ -420,7 +420,13 @@ def main(fix_metric_name, synthesis_metric_name, image, synthesis_target,
     # for this, we want the images to be between 0 and 255
     image = 255 * create_metamers.setup_image(image,
                                               3 if ('VGG16' in fix_metric_name or 'VGG16' in synthesis_metric_name) else 1)
-    print(f"Using initial noise level {initial_image}")
+    if isinstance(initial_image, str):
+        print(f"Using initial image {initial_image}")
+        # then it's a path to a file we want to use
+        initial_image = 255 * create_metamers.setup_image(initial_image)
+        initial_image = create_metamers.setup_device(initial_image, gpu_id=gpu_id)[0]
+    else:
+        print(f"Using initial noise level {initial_image}")
     fix_metric, fix_model = setup_metric(fix_metric_name, image, gpu_id)
     fix_metric_str = f"Using fix metric {fix_metric_name}"
     synthesis_metric, synthesis_model = setup_metric(synthesis_metric_name,
