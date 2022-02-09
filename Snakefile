@@ -3257,7 +3257,7 @@ rule rearrange_metamers_for_sharing:
         unpack(get_all_metamers),
     output:
         # this is hard-coded, because we're only doing it on simons cluster
-        op.join('/mnt/ceph/users/wbroderick/foveated_metamers_to_share/metadata.json')
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/metadata.json'
     run:
         import json
         import re
@@ -3296,6 +3296,60 @@ rule rearrange_metamers_for_sharing:
                 metadata.append(md)
         with open(output[0], 'w') as f:
             json.dump(metadata, f)
+
+
+rule rearrange_natural_imgs_for_sharing:
+    input:
+        # this is hard-coded, because we're only doing it on simons cluster
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/metadata.json',
+        lambda wildcards: [utils.get_ref_image_full_path(img) for img in IMAGES],
+        lambda wildcards: [utils.get_ref_image_full_path(utils.get_gamma_corrected_ref_image(img))
+                           for img in IMAGES],
+    output:
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/azulejos_gamma-False.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/tiles_gamma-False.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/bike_gamma-False.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/graffiti_gamma-False.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/llama_gamma-False.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/terraces_gamma-False.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/treetop_gamma-False.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/grooming_gamma-False.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/palm_gamma-False.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/leaves_gamma-False.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/portrait_gamma-False.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/troop_gamma-False.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/quad_gamma-False.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/highway_gamma-False.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/ivy_gamma-False.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/nyc_gamma-False.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/rocks_gamma-False.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/boats_gamma-False.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/gnarled_gamma-False.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/lettuce_gamma-False.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/azulejos_gamma-True.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/tiles_gamma-True.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/bike_gamma-True.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/graffiti_gamma-True.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/llama_gamma-True.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/terraces_gamma-True.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/treetop_gamma-True.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/grooming_gamma-True.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/palm_gamma-True.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/leaves_gamma-True.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/portrait_gamma-True.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/troop_gamma-True.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/quad_gamma-True.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/highway_gamma-True.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/ivy_gamma-True.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/nyc_gamma-True.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/rocks_gamma-True.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/boats_gamma-True.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/gnarled_gamma-True.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/lettuce_gamma-True.png',
+    run:
+        import os
+        for inp, outp in zip(input[1:], output):
+            os.link(inp, outp)
 
 
 rule paper_figures:
