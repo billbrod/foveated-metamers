@@ -420,6 +420,7 @@ def main(fix_metric_name, synthesis_metric_name, image, synthesis_target,
     # for this, we want the images to be between 0 and 255
     image = 255 * create_metamers.setup_image(image,
                                               3 if ('VGG16' in fix_metric_name or 'VGG16' in synthesis_metric_name) else 1)
+    image = create_metamers.setup_device(image, gpu_id=gpu_id)[0]
     if isinstance(initial_image, str):
         print(f"Using initial image {initial_image}")
         # then it's a path to a file we want to use
@@ -428,13 +429,12 @@ def main(fix_metric_name, synthesis_metric_name, image, synthesis_target,
     else:
         print(f"Using initial noise level {initial_image}")
     fix_metric, fix_model = setup_metric(fix_metric_name, image, gpu_id)
-    fix_metric_str = f"Using fix metric {fix_metric_name}"
+    fix_metric_str = f"Using fix metric {fix_metric_name}, with initial value {fix_metric(initial_image, image)}"
+    print(fix_metric_str)
     synthesis_metric, synthesis_model = setup_metric(synthesis_metric_name,
                                                      image, gpu_id)
     synthesis_metric_str = f"Will {synthesis_target} synthesis metric {synthesis_metric_name}"
     print(synthesis_metric_str)
-    print(fix_metric_str)
-    image = create_metamers.setup_device(image, gpu_id=gpu_id)[0]
     store_progress = max(10, max_iter//100)
     mad = po.synth.MADCompetition(image, synthesis_metric, fix_metric, synthesis_target, initial_image,
                                   metric_tradeoff_lambda, range_penalty_lambda, allowed_range=(0, 255))

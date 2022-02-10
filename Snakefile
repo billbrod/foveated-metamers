@@ -2718,8 +2718,13 @@ rule mix_images_match_mse:
 
 rule create_mad_images:
     input:
-        ref_image = op.join(config['DATA_DIR'], 'synth_match_mse', '{met_model_name}_comp-{comp}', 'expt_img1_{image_name}_{met_init_type}_scaling-{scaling}_dir-{direction}_seed-0.png'),
-        init_image = op.join(config['DATA_DIR'], 'synth_match_mse', '{met_model_name}_comp-{comp}', '{image_name}_init-{synth_init_type}_dir-{direction}_lr-1e-8_max-iter-200_seed-0.png'),
+        ref_image = lambda wildcards: utils.get_ref_image_full_path(wildcards.image_name),
+        # we only support dir-None (that is, the full image synthesis). to
+        # support the half-image, would need to modify the metrics so they only
+        # compute loss on the target half (so gradient for other half is 0) and
+        # then reset that other half at end of synthesis (pytorch seems to
+        # randomly change pixels with 0 gradient)
+        init_image = op.join(config['DATA_DIR'], 'synth_match_mse', '{met_model_name}_comp-{comp}', '{image_name}_init-{synth_init_type}_scaling-{scaling}_dir-None_lr-1e-9_max-iter-200_seed-0.png'),
     output:
         MAD_TEMPLATE_PATH.replace('_mad.png', '.pt'),
         MAD_TEMPLATE_PATH.replace('mad.png', 'synthesis.png'),
