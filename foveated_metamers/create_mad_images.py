@@ -225,7 +225,7 @@ def plot_image_diff(mad, fix_model=None, synthesis_model=None):
         if im is None:
             continue
         if vr != 'indep0':
-            po.imshow(im, vrange=vr, title=title, ax=ax, zoom=1, as_rgb=as_rgb)
+            po.imshow(im, vrange=vr, title=title, ax=ax, zoom=.25, as_rgb=as_rgb)
         # then we're plotting the difference image
         else:
             if as_rgb:
@@ -236,7 +236,7 @@ def plot_image_diff(mad, fix_model=None, synthesis_model=None):
                 sub_axes = [ax]
             for i, ax in enumerate(sub_axes):
                 po.imshow(im, vrange=vr, title=title+ f'\n[channel {i}]', ax=ax, channel_idx=i,
-                          zoom=1)
+                          zoom=.25)
                 handles = []
                 labels = []
     # only need only plot of the synthesized image, so move the first one down.
