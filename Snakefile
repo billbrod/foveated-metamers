@@ -3428,7 +3428,7 @@ rule rearrange_metamers_for_sharing:
         unpack(get_all_metamers),
     output:
         # this is hard-coded, because we're only doing it on simons cluster
-        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/metadata.json'
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/metamer_metadata.json'
     run:
         import json
         import re
@@ -3471,8 +3471,6 @@ rule rearrange_metamers_for_sharing:
 
 rule rearrange_natural_imgs_for_sharing:
     input:
-        # this is hard-coded, because we're only doing it on simons cluster
-        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/metadata.json',
         lambda wildcards: [utils.get_ref_image_full_path(img) for img in IMAGES],
         lambda wildcards: [utils.get_ref_image_full_path(utils.get_gamma_corrected_ref_image(img))
                            for img in IMAGES],
@@ -3517,10 +3515,35 @@ rule rearrange_natural_imgs_for_sharing:
         '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/boats_gamma-True.png',
         '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/gnarled_gamma-True.png',
         '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/lettuce_gamma-True.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_metadata.json',
     run:
         import os
-        for inp, outp in zip(input[1:], output):
+        import json
+        metadata = []
+        for inp, outp in zip(input, output):
             os.link(inp, outp)
+            tgt_img, gamma = re.findall('([a-z]+)_gamma-([A-Za-z]+).png', outp)[0]
+            ln_path = outp.replace('/mnt/ceph/users/wbroderick/foveated_metamers_to_share/', '')
+            metadata.append({'file': ln_path, 'target_image': tgt_img, 'gamma': bool(gamma)})
+        with open(output[-1], 'w') as f:
+            json.dump(metadata, f)
+
+
+rule combine_sharing_metadata:
+    input:
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/metamer_metadata.json',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_metadata.json',
+    output:
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/metadata.json',
+    run:
+        import json
+        metadata = {}
+        with open(input[0]) as f:
+            metadata['metamers'] = json.load(f)
+        with open(input[1]) as f:
+            metadata['natural_images'] = json.load(f)
+        with open(output[0], 'w') as f:
+            json.dump(metadata, f)
 
 
 rule paper_figures:
