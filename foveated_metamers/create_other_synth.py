@@ -17,7 +17,7 @@ from . import distances
 from . import create_metamers
 
 
-def mix_images(base_image, image_to_mix, alpha, direction='L',
+def mix_images(base_image, image_to_mix, alpha, direction=None,
                allowable_range=(0, 255)):
     """Mix together two images on one horizontal half, with weight alpha.
 
@@ -29,8 +29,9 @@ def mix_images(base_image, image_to_mix, alpha, direction='L',
         The two images to mix.
     alpha : float
         The weight to multiply by image_to_mix
-    direction : {'L', 'R'}, optional
-        Whether to add image_to_mix on left or right half.
+    direction : {'L', 'R', None}, optional
+        Whether to add image_to_mix on left or right half or whole image. If
+        None, we don't add the bar and do the whole image.
     allowable_range : tuple, optional
         Allowable range. We set any values outside this range to the nearest
         allowed value (e.g., all negative values to 0).
@@ -47,6 +48,8 @@ def mix_images(base_image, image_to_mix, alpha, direction='L',
         mixed_image[..., img_half_width:] += alpha*image_to_mix[..., img_half_width:]
     elif direction == 'L':
         mixed_image[..., :img_half_width] += alpha*image_to_mix[..., :img_half_width]
+    elif direction is None:
+        mixed_image += alpha*image_to_mix
     else:
         raise Exception(f"Don't know how to handle direction {direction}")
     # clip values so we don't end up with values that can't be displayed
@@ -55,7 +58,7 @@ def mix_images(base_image, image_to_mix, alpha, direction='L',
     return mixed_image
 
 
-def obj_func(base_image, image_to_mix, alpha, target_err, direction='L'):
+def obj_func(base_image, image_to_mix, alpha, target_err, direction=None):
     """Get mse and objective function value between base_image and the version mixed with image_to_mix.
 
     Note we do not add a bar or anything else here.
@@ -68,8 +71,9 @@ def obj_func(base_image, image_to_mix, alpha, target_err, direction='L'):
         The weight to multiply by image_to_mix
     target_err : float
         The target MSE value.
-    direction : {'L', 'R'}, optional
-        Whether to add image_to_mix on left or right half.
+    direction : {'L', 'R', None}, optional
+        Whether to add image_to_mix on left or right half or whole image. If
+        None, we don't add the bar and do the whole image.
 
     Returns
     -------
@@ -103,8 +107,9 @@ def find_alpha(base_image, image_to_mix, alpha, target_err, learning_rate,
         Learning rate for SGD.
     max_iter : int
         Maximum number of iterations to perform.
-    direction : {'L', 'R'}, optional
-        Whether to add image_to_mix on left or right half.
+    direction : {'L', 'R', None}, optional
+        Whether to add image_to_mix on left or right half or whole image. If
+        None, we don't add the bar and do the whole image.
 
     Returns
     -------
@@ -143,7 +148,7 @@ def find_alpha(base_image, image_to_mix, alpha, target_err, learning_rate,
 
 
 def main(base_image, image_to_mix, target_err, learning_rate, max_iter=100,
-         direction='L', seed=None, save_path=None, bar_deg_size=2.,
+         direction=None, seed=None, save_path=None, bar_deg_size=2.,
          screen_size_deg=73.45, screen_size_pix=3840):
     """Determine alpha value for mixing two images.
 
@@ -162,8 +167,9 @@ def main(base_image, image_to_mix, target_err, learning_rate, max_iter=100,
         Learning rate for SGD.
     max_iter : int, optional
         Maximum number of iterations to perform.
-    direction : {'L', 'R'}, optional
-        Whether to add image_to_mix on left or right half.
+    direction : {'L', 'R', None}, optional
+        Whether to add image_to_mix on left or right half or whole image. If
+        None, we don't add the bar and do the whole image.
     seed : int or None, optional
         The number to use for initializing numpy and torch's random
         number generators. if None, we don't set the seed.
@@ -205,10 +211,11 @@ def main(base_image, image_to_mix, target_err, learning_rate, max_iter=100,
         image_to_mix = 255* image_to_mix
     else:
         image_to_mix = 255 * create_metamers.setup_image(image_to_mix)
-    bar_pix_size = int(bar_deg_size * (screen_size_pix / screen_size_deg))
-    bar = distances._create_bar_mask(base_image.shape[-2], bar_pix_size)
-    base_image = distances._add_bar(base_image, bar)
-    image_to_mix = distances._add_bar(image_to_mix, bar)
+    if direction is not None:
+        bar_pix_size = int(bar_deg_size * (screen_size_pix / screen_size_deg))
+        bar = distances._create_bar_mask(base_image.shape[-2], bar_pix_size)
+        base_image = distances._add_bar(base_image, bar)
+        image_to_mix = distances._add_bar(image_to_mix, bar)
     alpha = torch.rand(1).squeeze().requires_grad_()
     alphas, mses, objs = find_alpha(base_image, image_to_mix, alpha,
                                     target_err, learning_rate, max_iter,

@@ -2670,14 +2670,14 @@ rule mix_images_match_mse:
         init_image = get_init_image,
         mse = op.join(config["DATA_DIR"], 'distances', '{model_name}', 'expt_mse_comp-{comp}.csv'),
     output:
-        op.join(config['DATA_DIR'], 'synth_match_mse', '{model_name}_comp-{comp}', '{ref_image}_init-{init_type}_dir-{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}.png'),
-        op.join(config['DATA_DIR'], 'synth_match_mse', '{model_name}_comp-{comp}', '{ref_image}_init-{init_type}_dir-{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}_synth.svg'),
+        op.join(config['DATA_DIR'], 'synth_match_mse', '{model_name}_comp-{comp}', '{ref_image}_init-{init_type}_scaling-{scaling}_dir-{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}.png'),
+        op.join(config['DATA_DIR'], 'synth_match_mse', '{model_name}_comp-{comp}', '{ref_image}_init-{init_type}_scaling-{scaling}_dir-{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}_synth.svg'),
     log:
         op.join(config['DATA_DIR'], 'logs', 'synth_match_mse', '{model_name}_comp-{comp}',
-                '{ref_image}_{init_type}_{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}.log')
+                '{ref_image}_init-{init_type}_scaling-{scaling}_dir-{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}.log')
     benchmark:
         op.join(config['DATA_DIR'], 'logs', 'synth_match_mse', '{model_name}_comp-{comp}',
-                '{ref_image}_{init_type}_{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}_benchmark.txt')
+                '{ref_image}_init-{init_type}_scaling-{scaling}_dir-{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}_benchmark.txt')
     run:
         import foveated_metamers as fov
         import pandas as pd
@@ -2685,8 +2685,21 @@ rule mix_images_match_mse:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 mse = pd.read_csv(input.mse)
-                mse = mse.query(f"image_name=='{wildcards.ref_image}' & changed_side=='{wildcards.direction}'")
-                target_err = mse.experiment_mse.min()
+                # sometimes the values have floating point precision issues,
+                # e.g., 0.058 becoming 0.579999999999. this prevents that, so
+                # they match the string we're passing in
+                mse.scaling = np.round(mse.scaling, 3)
+                mse = mse.query(f"image_name=='{wildcards.ref_image}' & scaling=={wildcards.scaling}")
+                if wildcards.direction != 'None':
+                    mse = mse.query(f"changed_side=='{wildcards.direction}'")
+                    target_err = mse.experiment_mse.min()
+                    direction = wildcards.direction
+                else:
+                    direction = None
+                    target_err = mse.full_image_mse.min()
+                if mse.empty:
+                    raise Exception(f"No comparisons match image {wildcards.ref_image}, scaling {wildcards.scaling},"
+                                    f" and direction {wildcards.direction}")
                 # if the init_type corresponds to another image, we need its
                 # full path. else, just the string identifying the type of
                 # noise suffices
@@ -2697,7 +2710,7 @@ rule mix_images_match_mse:
                 fov.create_other_synth.main(input.ref_image, other_img,
                                             target_err, float(wildcards.lr),
                                             int(wildcards.max_iter),
-                                            wildcards.direction,
+                                            direction,
                                             int(wildcards.seed),
                                             output[0])
 
