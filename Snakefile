@@ -2568,8 +2568,9 @@ rule mse_plot:
                 g = fov.figures.mse_heatmap(df, wildcards.mse)
                 g.savefig(output[0])
                 df = fov.plotting._remap_image_names(df)
+                style = 'changed_side' if wildcards.mse == 'experiment_mse' else None
                 g = sns.relplot(data=df, x='scaling', y=wildcards.mse,
-                                hue='image_name', style='changed_side', kind='line',
+                                hue='image_name', style=style, kind='line',
                                 palette=fov.plotting.get_palette('image_name'),
                                 hue_order=fov.plotting.get_order('image_name'))
                 g.savefig(output[1])
