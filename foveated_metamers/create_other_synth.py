@@ -236,7 +236,8 @@ def main(base_image, image_to_mix, target_err, learning_rate, max_iter=100,
         # if we don't convert explicitly to np.uint8 before saving, it may do
         # funny things like saying the min value in the image should be
         # considered 0, even if it's much larger
-        mixed_image = po.to_numpy(mixed_image).squeeze().astype(np.uint8)
-        imageio.imwrite(save_path, mixed_image)
+        mixed_image = po.to_numpy(mixed_image).squeeze()
+        np.save(save_path.replace('.png', '.npy'), mixed_image)
+        imageio.imwrite(save_path, mixed_image.astype(np.uint8))
         fig.savefig(save_path.replace('.png', '_synth.svg'))
     return alphas[-1], fig

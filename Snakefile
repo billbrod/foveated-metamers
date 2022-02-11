@@ -58,7 +58,8 @@ wildcard_constraints:
     # don't capture experiment-mse for x, but capture anything else, because
     # experiment-mse is a different rule
     x="(?!experiment-mse)(.*)",
-    mse="experiment_mse|full_image_mse"
+    mse="experiment_mse|full_image_mse",
+    seed="[0-9]+",
 ruleorder:
     collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check > mcmc_compare_plot > mcmc_plots > embed_bitmaps_into_figure > compose_figures
 
@@ -2672,6 +2673,7 @@ rule mix_images_match_mse:
         mse = op.join(config["DATA_DIR"], 'distances', '{model_name}', 'expt_mse_comp-{comp}.csv'),
     output:
         op.join(config['DATA_DIR'], 'synth_match_mse', '{model_name}_comp-{comp}', '{ref_image}_init-{init_type}_scaling-{scaling}_dir-{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}.png'),
+        op.join(config['DATA_DIR'], 'synth_match_mse', '{model_name}_comp-{comp}', '{ref_image}_init-{init_type}_scaling-{scaling}_dir-{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}.npy'),
         op.join(config['DATA_DIR'], 'synth_match_mse', '{model_name}_comp-{comp}', '{ref_image}_init-{init_type}_scaling-{scaling}_dir-{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}_synth.svg'),
     log:
         op.join(config['DATA_DIR'], 'logs', 'synth_match_mse', '{model_name}_comp-{comp}',
@@ -2714,6 +2716,31 @@ rule mix_images_match_mse:
                                             direction,
                                             int(wildcards.seed),
                                             output[0])
+
+
+rule gamma_correct_match_mse:
+    input:
+        op.join(config['DATA_DIR'], 'synth_match_mse', '{model_name}_comp-{comp}', '{ref_image}_init-{init_type}_scaling-{scaling}_dir-{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}.npy'),
+    output:
+        op.join(config['DATA_DIR'], 'synth_match_mse', '{model_name}_comp-{comp}', '{ref_image}_init-{init_type}_scaling-{scaling}_dir-{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}_gamma-corrected.png'),
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'synth_match_mse', '{model_name}_comp-{comp}', '{ref_image}_init-{init_type}_scaling-{scaling}_dir-{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}_gamma-corrected.log'),
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'synth_match_mse', '{model_name}_comp-{comp}', '{ref_image}_init-{init_type}_scaling-{scaling}_dir-{direction}_lr-{lr}_max-iter-{max_iter}_seed-{seed}_gamma-corrected_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import contextlib
+        import numpy as np
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                    print(f"Saving gamma-corrected image {output[0]} as np.uint8")
+                    im = np.load(input[0])
+                    # we know this lies between 0 and 255. we make this 256 to allow for 255.001 and similar
+                    if im.max() < 1 or im.max() > 256:
+                        raise Exception(f"Expected image to lie within (0, 255), but found max {im.max()}!")
+                    im = (im / 255) ** (1/2.2)
+                    im = fov.utils.convert_im_to_int(im, np.uint8)
+                    imageio.imwrite(output[0], im)
 
 
 rule create_mad_images:
@@ -2788,6 +2815,30 @@ rule create_mad_images:
                                                float(wildcards.range_lambda),
                                                num_threads=resources.num_threads)
 
+
+rule gamma_correct_mad_images:
+    input:
+        MAD_TEMPLATE_PATH.replace('.png', '.npy'),
+    output:
+        MAD_TEMPLATE_PATH.replace('.png', '_gamma-corrected.png')
+    log:
+        MAD_LOG_PATH.replace('.log', '_gamma-corrected.log'),
+    benchmark:
+        MAD_LOG_PATH.replace('.log', '_gamma-corrected_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import contextlib
+        import numpy as np
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                    print(f"Saving gamma-corrected image {output[0]} as np.uint8")
+                    im = np.load(input[0])
+                    # we know this lies between 0 and 255. we make this 256 to allow for 255.001 and similar
+                    if im.max() < 1 or im.max() > 256:
+                        raise Exception(f"Expected image to lie within (0, 255), but found max {im.max()}!")
+                    im = (im / 255) ** (1/2.2)
+                    im = fov.utils.convert_im_to_int(im, np.uint8)
+                    imageio.imwrite(output[0], im)
 
 
 rule distance_vs_performance_plot:
@@ -3319,6 +3370,40 @@ rule metamer_comparison_figure:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'metamer_comparison_{image_name}_scaling-{scaling}_{cutout}.log')
     benchmark:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'metamer_comparison_{image_name}_scaling-{scaling}_{cutout}_benchmark.txt')
+    run:
+        import subprocess
+        import shutil
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                shutil.copy(input[0], output[0])
+                for i, im in enumerate(input[1:]):
+                    print(f"Copying {im} into IMAGE{i+1}")
+                    # we add the trailing " to make sure we only replace IMAGE1, not IMAGE10
+                    subprocess.call(['sed', '-i', f's|IMAGE{i+1}"|{im}"|', output[0]])
+
+
+rule mse_comparison_figure:
+    input:
+        op.join('reports', 'figures', 'mse_comparison_nocutout_with_target.svg'),
+        lambda wildcards: utils.generate_metamer_paths(image_name=f'{wildcards.image_name}_range-.05,.95_size-2048,2600',
+                                                       seed=0, scaling=float(wildcards.scaling), model_name='RGC',
+                                                       gamma_corrected=True)[0],
+        lambda wildcards: [op.join(config['DATA_DIR'], 'mad_images', 'ssim_{tgt}',
+                                  f'RGC_norm_gaussian_comp-ref_scaling-{wildcards.scaling}_ref-{wildcards.image_name}_range-.05,.95_size-2048,2600_synth-{synth}',
+                                  'opt-Adam_tradeoff-None_penalty-1e0_stop-iters-50', 'seed-0_lr-0.1_iter-10000_stop-crit-1e-9_gpu-1_mad_gamma-corrected.png').format(
+                                      synth=synth, tgt=tgt) for synth, tgt in zip(['white', 'white', 'ivy_range-.05,.95_size-2048,2600'],
+                                                                                  ['min', 'max', 'max'])],
+        lambda wildcards: [op.join(config['DATA_DIR'], 'synth_match_mse', 'RGC_norm_gaussian_comp-ref',
+                                  f'{wildcards.image_name}_range-.05,.95_size-2048,2600_init-{synth}_scaling-{wildcards.scaling}_dir-None_lr-1e-9_max-iter-200_seed-0_gamma-corrected.png').format(
+                                      synth=synth) for synth in ['white', 'ivy_range-.05,.95_size-2048,2600']],
+        lambda wildcards: op.join(config['DATA_DIR'], 'ref_images_preproc', '{image_name}_gamma-corrected_range-.05,.95_size-2048,2600.png'),
+    output:
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'mse_comparison_{image_name}_scaling-{scaling}_nocutout_with_target.svg')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'mse_comparison_{image_name}_scaling-{scaling}_nocutout_with_target.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'mse_comparison_{image_name}_scaling-{scaling}_nocutout_with_target_benchmark.txt')
     run:
         import subprocess
         import shutil
