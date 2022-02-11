@@ -155,7 +155,7 @@ def setup_metric(metric_name, image, gpu_id=None):
     return metric, model
 
 
-def plot_image_diff(mad, fix_model=None, synthesis_model=None):
+def plot_image_diff(mad, fix_model=None, synthesis_model=None, zoom=.25):
     """Create image difference figure.
 
     If either metric is based on a model, we will plot contours showing where
@@ -172,6 +172,8 @@ def plot_image_diff(mad, fix_model=None, synthesis_model=None):
     synthesis_model : torch.nn.Module or None, optional
         The model used to create the synthesis_metric. If metric is not based
         on a model, this is None.
+    zoom : float or int, optional
+        The zoom level for imshow
 
     Returns
     -------
@@ -203,8 +205,8 @@ def plot_image_diff(mad, fix_model=None, synthesis_model=None):
               max([im.max() for im in [*imgs[:2], imgs[3]]]))
     vranges = [vrange, vrange, 'indep0', vrange, vrange, 'indep0']
     ax_kwargs = {'frameon': False, 'xticks': [], 'yticks': []}
-    # add 1 so there's a bit of a buffer here
-    ax_size = [s+1 for s in initial_image.shape[-2:]]
+    # add 1 so there's a bit of a buffer here.
+    ax_size = [(s+1)*zoom for s in initial_image.shape[-2:]]
     # this way we have 10 pixels between axes in each direction
     wspace = 10 / ax_size[1]
     hspace = 10 / ax_size[0]
@@ -225,7 +227,7 @@ def plot_image_diff(mad, fix_model=None, synthesis_model=None):
         if im is None:
             continue
         if vr != 'indep0':
-            po.imshow(im, vrange=vr, title=title, ax=ax, zoom=.25, as_rgb=as_rgb)
+            po.imshow(im, vrange=vr, title=title, ax=ax, zoom=zoom, as_rgb=as_rgb)
         # then we're plotting the difference image
         else:
             if as_rgb:
@@ -236,7 +238,7 @@ def plot_image_diff(mad, fix_model=None, synthesis_model=None):
                 sub_axes = [ax]
             for i, ax in enumerate(sub_axes):
                 po.imshow(im, vrange=vr, title=title+ f'\n[channel {i}]', ax=ax, channel_idx=i,
-                          zoom=.25)
+                          zoom=zoom)
                 handles = []
                 labels = []
     # only need only plot of the synthesized image, so move the first one down.
