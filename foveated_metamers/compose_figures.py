@@ -207,8 +207,8 @@ def metamer_comparison(metamer_fig, labels, cutout_fig=False,
         txt_move = [[120, 240], [380, 240], [120, 485], [395, 485]]
     else:
         font_size = _convert_to_pix(f'{font_size*5/9}pt')
-        txt_move = [[100, 168], [380, 168], [100, 338], [380, 338],
-                    [100, 508], [380, 508]]
+        txt_move = [[100, 168], [375, 168], [100, 338], [375, 338],
+                    [100, 508], [375, 508]]
     # this has 6 subplots, and we want a label above each of them
     if natural_seed_fig:
         # want to shift the metamer figure down a little bit so there's room
@@ -220,7 +220,7 @@ def metamer_comparison(metamer_fig, labels, cutout_fig=False,
         txt_move = [[mv[0], mv[1]+20-170] for mv in txt_move]
         # change the x value because they're longer than the scaling labels
         txt_move = [[mv[0]-offset, mv[1]] for mv, offset
-                    in zip(txt_move, [10]+[53]*5)]
+                    in zip(txt_move, [10]+[63]*5)]
     return compose.Figure(
         figure_width, figure_height,
         metamer_fig.move(*metamer_move),
