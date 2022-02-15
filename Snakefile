@@ -2186,6 +2186,45 @@ rule mcmc_performance_comparison_figure:
                 fig.savefig(output[0], bbox_inches='tight')
 
 
+rule mcmc_parameter_correlation_figure:
+    input:
+        [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
+                 'task-split_comp-{comp}_mcmc_{{mcmc_model}}_step-1_prob-.8_depth-10'
+                 '_c-4_d-10000_w-10000_s-0.nc').format(comp=c, model_name=m)
+         for m in MODELS
+         for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'met-downsample-2', 'ref-natural'], 'RGC_norm_gaussian': ['ref', 'met']}[m]],
+    output:
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'mcmc_{mcmc_model}_param-correlation.{ext}'),
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'mcmc_{mcmc_model}_param-correlation_{ext}.log'),
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'mcmc_{mcmc_model}_param-correlation_{ext}_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import contextlib
+        import pandas as pd
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+        import arviz as az
+        import warnings
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                style, fig_width = fov.style.plotting_style(wildcards.context)
+                plt.style.use(style)
+                df_kind = 'psychophysical curve parameters'
+                query_str = "distribution=='posterior' & hdi==50"
+                df = []
+                for f in input:
+                    df.append(fov.mcmc.inf_data_to_df(az.from_netcdf(f), df_kind, query_str, hdi=.95))
+                df = pd.concat(df)
+                index_cols = [col for col in df.columns if col not in ['parameter', 'value']]
+                df = pd.pivot_table(df, 'value', index_cols, 'parameter').reset_index()
+                df = df.rename(columns={'a0': 'Gain', 's0': 'Critical scaling'})
+                g = sns.relplot(data=df, x='Critical scaling', y='Gain', col='model', row='trial_type',
+                                facet_kws={'sharex': 'col', 'sharey': 'col'})
+                g.savefig(output[0], bbox_inches='tight')
+
+
 rule performance_comparison_figure:
     input:
         [op.join(config["DATA_DIR"], 'behavioral', '{model_name}', 'task-split_comp-{comp}',
