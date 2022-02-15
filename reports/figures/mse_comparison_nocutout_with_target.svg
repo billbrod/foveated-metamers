@@ -24,9 +24,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="1.9024083"
-     inkscape:cx="356.27254"
-     inkscape:cy="344.14802"
+     inkscape:zoom="2.6904116"
+     inkscape:cx="269.47091"
+     inkscape:cy="277.846"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -70,12 +70,12 @@
          y="377.74628" />
       <image
          xlink:href="IMAGE6"
-         width="207.07634"
-         height="162.4733"
-         preserveAspectRatio="none"
-         id="image1608-6-7"
+         y="376.58109"
          x="281.20529"
-         y="376.58109" />
+         id="image1608-6-7"
+         preserveAspectRatio="none"
+         height="162.4733"
+         width="207.07634" />
     </g>
     <g
        id="g34961"
@@ -89,12 +89,12 @@
          y="194.84854" />
       <image
          xlink:href="IMAGE4"
-         width="207.07634"
-         height="162.4733"
-         preserveAspectRatio="none"
-         id="image1608-6-1"
+         y="193.68333"
          x="281.20529"
-         y="193.68333" />
+         id="image1608-6-1"
+         preserveAspectRatio="none"
+         height="162.4733"
+         width="207.07634" />
     </g>
     <g
        id="g34905"
@@ -108,12 +108,12 @@
          y="376.88409" />
       <image
          xlink:href="IMAGE5"
-         width="207.07634"
-         height="162.4733"
-         preserveAspectRatio="none"
-         id="image1608-6-6"
+         y="375.7189"
          x="55.891708"
-         y="375.7189" />
+         id="image1608-6-6"
+         preserveAspectRatio="none"
+         height="162.4733"
+         width="207.07634" />
     </g>
     <g
        id="g34824"
@@ -127,12 +127,12 @@
          y="194.84856" />
       <image
          xlink:href="IMAGE3"
-         width="207.07634"
-         height="162.4733"
-         preserveAspectRatio="none"
-         id="image1608-6-5"
+         y="193.68336"
          x="55.891708"
-         y="193.68336" />
+         id="image1608-6-5"
+         preserveAspectRatio="none"
+         height="162.4733"
+         width="207.07634" />
     </g>
     <g
        id="g35017">
@@ -145,12 +145,12 @@
          y="12.415187" />
       <image
          xlink:href="IMAGE1"
-         width="207.07634"
-         height="162.4733"
-         preserveAspectRatio="none"
-         id="image1608-6"
+         y="11.24998"
          x="55.891708"
-         y="11.24998" />
+         id="image1608-6"
+         preserveAspectRatio="none"
+         height="162.4733"
+         width="207.07634" />
     </g>
     <g
        id="g34989"
@@ -164,12 +164,12 @@
          y="11.83263" />
       <image
          xlink:href="IMAGE2"
-         y="11.24998"
-         x="281.20532"
-         id="image1608-6-75"
-         preserveAspectRatio="none"
+         width="207.07634"
          height="162.4733"
-         width="207.07634" />
+         preserveAspectRatio="none"
+         id="image1608-6-75"
+         x="281.20532"
+         y="11.24998" />
     </g>
     <g
        id="g34933-3"
@@ -183,12 +183,145 @@
          y="377.74628" />
       <image
          xlink:href="IMAGE7"
-         y="376.58109"
-         x="281.20529"
-         id="image1608-6-7-7"
-         preserveAspectRatio="none"
+         width="207.07634"
          height="162.4733"
-         width="207.07634" />
+         preserveAspectRatio="none"
+         id="image1608-6-7-7"
+         x="281.20529"
+         y="376.58109" />
+    </g>
+    <g
+       id="g18723"
+       transform="translate(170.33778,9.4587779)">
+      <rect
+         style="fill:#ff0000;stroke:#ff0000;stroke-width:0.385663;stroke-linejoin:round"
+         id="rect18630"
+         width="1.2897965"
+         height="11.463984"
+         x="196.909"
+         y="-99.096016" />
+      <rect
+         style="fill:#ff0000;stroke:#ff0000;stroke-width:0.385663;stroke-linejoin:round"
+         id="rect18630-3"
+         width="1.2897965"
+         height="11.463984"
+         x="-94.008919"
+         y="-203.28589"
+         transform="rotate(90)" />
+    </g>
+    <g
+       id="g18723-6"
+       transform="translate(-38.124031,185.85065)">
+      <rect
+         style="fill:#ff0000;stroke:#ff0000;stroke-width:0.385663;stroke-linejoin:round"
+         id="rect18630-7"
+         width="1.2897965"
+         height="11.463984"
+         x="196.909"
+         y="-99.096016" />
+      <rect
+         style="fill:#ff0000;stroke:#ff0000;stroke-width:0.385663;stroke-linejoin:round"
+         id="rect18630-3-5"
+         width="1.2897965"
+         height="11.463984"
+         x="-94.008919"
+         y="-203.28589"
+         transform="rotate(90)" />
+    </g>
+    <g
+       id="g18723-3"
+       transform="translate(-38.124045,350.28403)">
+      <rect
+         style="fill:#ff0000;stroke:#ff0000;stroke-width:0.385663;stroke-linejoin:round"
+         id="rect18630-5"
+         width="1.2897965"
+         height="11.463984"
+         x="196.909"
+         y="-99.096016" />
+      <rect
+         style="fill:#ff0000;stroke:#ff0000;stroke-width:0.385663;stroke-linejoin:round"
+         id="rect18630-3-6"
+         width="1.2897965"
+         height="11.463984"
+         x="-94.008919"
+         y="-203.28589"
+         transform="rotate(90)" />
+    </g>
+    <g
+       id="g18723-2"
+       transform="translate(169.07091,185.43185)">
+      <rect
+         style="fill:#ff0000;stroke:#ff0000;stroke-width:0.385663;stroke-linejoin:round"
+         id="rect18630-9"
+         width="1.2897965"
+         height="11.463984"
+         x="196.909"
+         y="-99.096016" />
+      <rect
+         style="fill:#ff0000;stroke:#ff0000;stroke-width:0.385663;stroke-linejoin:round"
+         id="rect18630-3-1"
+         width="1.2897965"
+         height="11.463984"
+         x="-94.008919"
+         y="-203.28589"
+         transform="rotate(90)" />
+    </g>
+    <g
+       id="g18723-27"
+       transform="translate(170.33778,350.28403)">
+      <rect
+         style="fill:#ff0000;stroke:#ff0000;stroke-width:0.385663;stroke-linejoin:round"
+         id="rect18630-0"
+         width="1.2897965"
+         height="11.463984"
+         x="196.909"
+         y="-99.096016" />
+      <rect
+         style="fill:#ff0000;stroke:#ff0000;stroke-width:0.385663;stroke-linejoin:round"
+         id="rect18630-3-9"
+         width="1.2897965"
+         height="11.463984"
+         x="-94.008919"
+         y="-203.28589"
+         transform="rotate(90)" />
+    </g>
+    <g
+       id="g18723-36"
+       transform="translate(378.79963,350.28403)">
+      <rect
+         style="fill:#ff0000;stroke:#ff0000;stroke-width:0.385663;stroke-linejoin:round"
+         id="rect18630-06"
+         width="1.2897965"
+         height="11.463984"
+         x="196.909"
+         y="-99.096016" />
+      <rect
+         style="fill:#ff0000;stroke:#ff0000;stroke-width:0.385663;stroke-linejoin:round"
+         id="rect18630-3-2"
+         width="1.2897965"
+         height="11.463984"
+         x="-94.008919"
+         y="-203.28589"
+         transform="rotate(90)" />
+    </g>
+    <g
+       id="g18723-61"
+       transform="translate(378.79958,184.68847)">
+      <rect
+         style="fill:#ff0000;stroke:#ff0000;stroke-width:0.385663;stroke-linejoin:round"
+         id="rect18630-8"
+         width="1.2897965"
+         height="11.463984"
+         x="196.909"
+         y="-99.096016" />
+      <rect
+         style="fill:#ff0000;stroke:#ff0000;stroke-width:0.385663;stroke-linejoin:round"
+         id="rect18630-3-7"
+         width="1.2897965"
+         height="11.463984"
+         x="-94.008919"
+         y="-203.28589"
+         transform="rotate(90)" />
     </g>
   </g>
 </svg>

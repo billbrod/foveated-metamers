@@ -3650,3 +3650,4 @@ rule paper_figures:
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'performance_metamer_comparison_nyc,llama_scaling-.063,.27_nocutout_small_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'all_comps_summary_partially-pooled_focus-subject_one-ax.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'all_comps_summary_partially-pooled_focus-outlier.svg'),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'mse_comparison_bike_scaling-.01_nocutout_with_target_dpi-300.svg'),
