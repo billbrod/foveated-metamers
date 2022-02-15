@@ -2059,8 +2059,23 @@ rule mcmc_performance_comparison_figure:
                 for f in input[:-1]:
                     tmp = az.from_netcdf(f)
                     if wildcards.focus.startswith('sub'):
+                        subject_name = wildcards.focus.split('_')[0]
+                        # each subject only sees 15 images, but we'll have
+                        # parameters for all 20 for the partially pooled model
+                        # because we modeled the image-level and subject-level
+                        # effects separately and thus have predictions for the
+                        # unseen (subject, image) pairs
+                        if 'RGC_norm_gaussian' in f and 'comp-met' in f:
+                            # this comparison only had one session
+                            images = np.concatenate([fov.stimuli.get_images_for_session(subject_name, i,
+                                                                                        'downsample' in f)
+                                                     for i in range(1)])
+                        else:
+                            images = np.concatenate([fov.stimuli.get_images_for_session(subject_name, i,
+                                                                                        'downsample' in f)
+                                                     for i in range(3)])
                         x_order = x_order.union(set(tmp.posterior.subject_name.values))
-                        tmp = tmp.sel(subject_name=wildcards.focus.split('_')[0])
+                        tmp = tmp.sel(subject_name=subject_name, image_name=images)
                         # need to have subject_name as a dimension still
                         tmp.posterior = tmp.posterior.expand_dims('subject_name')
                         tmp.prior = tmp.prior.expand_dims('subject_name')
@@ -2128,7 +2143,8 @@ rule mcmc_performance_comparison_figure:
                                                                       height=fig_width/4,
                                                                       mean_line=mean_line,
                                                                       x_order=x_order,
-                                                                      increase_size=False)
+                                                                      increase_size=False,
+                                                                      row_order=['s0', 'a0'])
                     for i, ax in enumerate(fig.axes):
                         if 'linear' in wildcards.mcmc_plot_type:
                             if 'a0' in ax.get_title():

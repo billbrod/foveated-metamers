@@ -357,7 +357,7 @@ def performance_comparison(performance_fig, param_fig, context='paper'):
         SVG(performance_fig).move(0, 25),
         SVG(param_fig).move(0, figure_width/2),
         compose.Text('A', 0, 25, **text_params),
-        compose.Text('B', 0, figure_width/2+25, **text_params),
+        compose.Text('B', 0, figure_width/2+15, **text_params),
     )
 
 
