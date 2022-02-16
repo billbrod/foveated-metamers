@@ -2164,7 +2164,7 @@ rule mcmc_performance_comparison_figure:
                                 elif 's0' in ax.get_title():
                                     ylim = (1e-2, 5e-1)
                             ax.set(yscale='log', ylim=ylim)
-                        title = ax.get_title().replace('a0', 'Gain').replace('s0', 'Critical Scaling')
+                        title = ax.get_title().replace('a0', "Max $d'$").replace('s0', 'Critical Scaling')
                         title = title.split('|')[0]
                         # remove title
                         ax.set_title('')
