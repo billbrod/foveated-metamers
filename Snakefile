@@ -3545,6 +3545,38 @@ rule cutout_figures:
                 periphery_fig.savefig(output[2])
 
 
+def get_all_windows(wildcards):
+    wildcards['size'] = '2048,2600'
+    windows = []
+    for model in ['RGC_norm_gaussian', 'V1_norm_s6_gaussian']:
+        wildcards['model_name'] = model
+        for sc in config[model.split('_')[0]]['scaling']:
+            wildcards['scaling'] = sc
+            windows.append(get_windows(wildcards))
+    return windows
+
+
+rule number_of_stats:
+    input:
+        get_all_windows,
+    output:
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'number_of_stats.svg'),
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'number_of_stats.txt'),
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'number_of_stats.log'),
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'number_of_stats_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import contextlib
+        import plenoptic as po
+        import matplotlib.pyplot as plt
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                print('hi')
+
+
+
 def get_all_metamers(wildcards):
     from foveated_metamers import stimuli
     mets = {}
