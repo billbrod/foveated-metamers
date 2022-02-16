@@ -3546,13 +3546,17 @@ rule cutout_figures:
 
 
 def get_all_windows(wildcards):
-    wildcards['size'] = '2048,2600'
+    wildcards.size = '2048,2600'
     windows = []
     for model in ['RGC_norm_gaussian', 'V1_norm_s6_gaussian']:
-        wildcards['model_name'] = model
+        wildcards.model_name = model
         for sc in config[model.split('_')[0]]['scaling']:
-            wildcards['scaling'] = sc
-            windows.append(get_windows(wildcards))
+            wildcards.scaling = sc
+            wdw = get_windows(wildcards)
+            if isinstance(wdw, list):
+                windows.extend(get_windows(wildcards))
+            else:
+                windows.append(get_windows(wildcards))
     return windows
 
 
@@ -3560,20 +3564,59 @@ rule number_of_stats:
     input:
         get_all_windows,
     output:
-        op.join(config['DATA_DIR'], 'figures', '{context}', 'number_of_stats.svg'),
-        op.join(config['DATA_DIR'], 'figures', '{context}', 'number_of_stats.txt'),
+        op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.svg'),
+        op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.csv'),
+        op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.txt'),
     log:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'number_of_stats.log'),
+        op.join(config['DATA_DIR'], 'logs', 'statistics', 'number_of_stats.log'),
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'number_of_stats_benchmark.txt'),
+        op.join(config['DATA_DIR'], 'logs', 'statistics', 'number_of_stats_benchmark.txt'),
+    params:
+        cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
     run:
         import foveated_metamers as fov
         import contextlib
-        import plenoptic as po
+        import seaborn as sns
+        import pandas as pd
+        import torch
         import matplotlib.pyplot as plt
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                print('hi')
+                df = []
+                min_ecc = config['DEFAULT_METAMERS']['min_ecc']
+                max_ecc = config['DEFAULT_METAMERS']['max_ecc']
+                img = torch.rand(1, 1, 2048, 2600)
+                n_pix = img.nelement()
+                # don't include "norm" in name, because we don't set the normalization dict
+                for model_name in ['RGC_gaussian', 'V1_s6_gaussian']:
+                    for sc in config[model_name.split('_')[0]]['scaling'][-1:]:
+                        model = fov.create_metamers.setup_model(model_name, sc, img, min_ecc, max_ecc, params.cache_dir)[0]
+                        rep = model(img)
+                        tmp = pd.DataFrame({'model': model_name, 'scaling': sc, 'num_stats': rep.shape[-1],
+                                            'num_pixels': n_pix}, [0])
+                        df.append(tmp)
+                df = pd.concat(df)
+                df.to_csv(output[1])
+                g = sns.relplot(data=df, x='scaling', y='num_stats', col='model',
+                                facet_kws=dict(sharex=False, sharey=False))
+                g.set(yscale='log')
+                for ax in g.axes.flatten():
+                    # there's the same number of pixels for all, by definition
+                    ax.axhline(n_pix, linestyle='--', c='k')
+                g.savefig(output[0], bbox_inches='tight')
+                rgc_df = df.query('model=="RGC_gaussian"')
+                v1_df = df.query('model=="V1_s6_gaussian"')
+                result = (
+                    f'RGC number of statistics go from {rgc_df.num_stats.max()} for scaling {rgc_df.scaling.min()}% '
+                    f'({100 *rgc_df.num_stats.max() / n_pix:.03f}%)\n'
+                    f'   to {rgc_df.num_stats.min()} for scaling {rgc_df.scaling.max()} ({100 * rgc_df.num_stats.min() / n_pix:.03f}%)\n'
+                    f'V1 number of statistics go from {v1_df.num_stats.max()} for scaling {v1_df.scaling.min()} '
+                    f'({100 * v1_df.num_stats.max() / n_pix:.03f}%)\n'
+                    f'   to {v1_df.num_stats.min()} for scaling {v1_df.scaling.max()} ({100 * v1_df.num_stats.min() / n_pix:.03f}%)'
+                    f'For {n_pix} pixels'
+                )
+                with open(output[-1], 'w') as f:
+                    f.writelines(result)
 
 
 
