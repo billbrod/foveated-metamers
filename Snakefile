@@ -3589,7 +3589,8 @@ rule number_of_stats:
                 n_pix = img.nelement()
                 # don't include "norm" in name, because we don't set the normalization dict
                 for model_name in ['RGC_gaussian', 'V1_s6_gaussian']:
-                    for sc in config[model_name.split('_')[0]]['scaling'][-1:]:
+                    scaling = config[model_name.split('_')[0]]['scaling'] + config[model_name.split('_')[0]]['met_v_met_scaling']
+                    for sc in scaling:
                         model = fov.create_metamers.setup_model(model_name, sc, img, min_ecc, max_ecc, params.cache_dir)[0]
                         rep = model(img)
                         tmp = pd.DataFrame({'model': model_name, 'scaling': sc, 'num_stats': rep.shape[-1],
