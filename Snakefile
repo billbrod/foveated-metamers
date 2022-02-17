@@ -3626,23 +3626,23 @@ rule number_of_stats:
 rule critical_scaling_txt:
     input:
         [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                 'task-split_comp-{comp}_mcmc_{{mcmc_model}}_step-1_prob-.8_depth-10'
+                 'task-split_comp-{comp}_mcmc_partially-pooled_step-1_prob-.8_depth-10'
                  '_c-4_d-10000_w-10000_s-0.nc').format(comp=c, model_name=m)
          for m in MODELS
          for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'ref-natural'], 'RGC_norm_gaussian': ['ref', 'met']}[m]],
         op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.csv'),
     output:
-        op.join(config['DATA_DIR'], 'statistic', 'critical_scaling.txt')
+        op.join(config['DATA_DIR'], 'statistics', 'critical_scaling.txt')
     log:
-        op.join(config['DATA_DIR'], 'logs', 'statistic', 'critical_scaling.log')
+        op.join(config['DATA_DIR'], 'logs', 'statistics', 'critical_scaling.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'statistic', 'critical_scaling_benchmark.txt')
+        op.join(config['DATA_DIR'], 'logs', 'statistics', 'critical_scaling_benchmark.txt')
     run:
         import foveated_metamers as fov
         import contextlib
         import pandas as pd
-        import matplotlib.pyplot as plt
         import arviz as az
+        from scipy import optimize
         import warnings
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
@@ -3650,12 +3650,12 @@ rule critical_scaling_txt:
                 crit_scaling = []
                 for f in input[:-1]:
                     tmp = az.from_netcdf(f)
-                    tmp = fov.mcmc.inf_data_to_df(inf_data, 'parameter grouplevel means',
+                    tmp = fov.mcmc.inf_data_to_df(tmp, 'parameter grouplevel means',
                                                   "distribution == 'posterior' & level == 'all' & hdi == 50",
                                                   hdi=.95)
                     crit_scaling.append(tmp.query('parameter=="s0"'))
-                df = pd.concat(df)
-                df['model'] = df['model'].map(fov.plotting.MODEL_PLOT)
+                crit_scaling = pd.concat(crit_scaling)
+                crit_scaling['model'] = crit_scaling['model'].map(fov.plotting.MODEL_PLOT)
                 def quadratic_dec(scaling, a2, a1):
                     return a2*scaling**-2 + a1*scaling**-1
                 out_str = ''
@@ -3666,8 +3666,10 @@ rule critical_scaling_txt:
                         assert(len(gb2)==1)
                         crit = gb2.value.iloc[0]
                         n_stat = quadratic_dec(crit, *popt)
+                        pct = 100 * n_stat / df.num_pixels.mean()
                         m = fov.plotting.TRIAL_TYPE_PLOT[m].replace('\n', ' ')
-                        out_str += f'For model {n} and comparison {m}, we have:\n   critical scaling: {crit}\n   n stats: {n_stat}\n\n'
+                        out_str += (f'For model {n} and comparison {m}, we have:\n   critical scaling: {crit:.04f}\n'
+                                    f'   n stats: {n_stat:.02f}\n   percentage of pixels: {pct:.02f}%\n')
                 with open(output[0], 'w') as f:
                     f.writelines(out_str)
 
