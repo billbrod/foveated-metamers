@@ -2071,7 +2071,8 @@ def amplitude_orientation(spectra, hue='scaling', style=None, col='image_name',
     return g
 
 
-def dacey_mcmc_plot(inf_data, df, aspect=1, logscale_axes=True, hdi=.95):
+def dacey_mcmc_plot(inf_data, df, aspect=1, logscale_axes=True, hdi=.95,
+                    **kwargs):
     """Plot data and predicted lines from Dacey 1992 data and our MCMC fit.
 
     We use MCMC to fit hinged line (with intercept) to Dacey 1992's dendritic
@@ -2092,6 +2093,8 @@ def dacey_mcmc_plot(inf_data, df, aspect=1, logscale_axes=True, hdi=.95):
     hdi : float, optional
         The width of the HDI to draw (in range (0, 1]). See docstring of
         fov.mcmc.inf_data_to_df for more details.
+    kwargs :
+        Passed to sns.relplot
 
     Returns
     -------
@@ -2126,9 +2129,11 @@ def dacey_mcmc_plot(inf_data, df, aspect=1, logscale_axes=True, hdi=.95):
     df['dendritic_field_diameter_deg'] = df.dendritic_field_diameter_min / 60
 
     pal = plotting.get_palette('cell_type', df.cell_type.unique())
+    df = df.rename(columns={'cell_type': 'Cell type'})
     g = sns.relplot(data=df, x='eccentricity_deg',
                     y='dendritic_field_diameter_deg',
-                    hue='cell_type', aspect=aspect, palette=pal)
+                    hue='Cell type', aspect=aspect, palette=pal,
+                    **kwargs)
     for n, gb in lines.groupby('cell_type'):
         plotting.scatter_ci_dist(data=gb, x='eccentricity', y='diameter',
                                  ci='hdi', join=True, ci_mode='fill',

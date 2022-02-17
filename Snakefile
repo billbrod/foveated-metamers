@@ -2027,7 +2027,7 @@ rule mcmc_performance_comparison_figure:
          for m in MODELS
          for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'met-downsample-2', 'ref-natural'], 'RGC_norm_gaussian': ['ref', 'met']}[m]],
         op.join(config['DATA_DIR'], 'dacey_data',
-                'Dacey1992_mcmc_step-.1_prob-.8_depth-10_c-4_d-1000_w-1000_s-10.nc'),
+                'Dacey1992_mcmc_line-nooffset_step-.1_prob-.8_depth-10_c-4_d-1000_w-1000_s-10.nc'),
     output:
         op.join(config['DATA_DIR'], 'figures', '{context}', 'mcmc_{mcmc_model}_{mcmc_plot_type}_{focus}.{ext}'),
     log:
@@ -2233,7 +2233,7 @@ rule performance_comparison_figure:
          for m in MODELS
          for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'met-downsample-2', 'ref-natural']}.get(m, ['met', 'ref'])],
         op.join(config['DATA_DIR'], 'dacey_data',
-                'Dacey1992_mcmc_step-.1_prob-.8_depth-10_c-4_d-1000_w-1000_s-10.nc'),
+                'Dacey1992_mcmc_line-offset_step-.1_prob-.8_depth-10_c-4_d-1000_w-1000_s-10.nc'),
     output:
         op.join(config['DATA_DIR'], 'figures', '{context}', 'performance_{focus}.svg')
     log:
@@ -3112,9 +3112,10 @@ rule dacey_mcmc_plot:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 df = pd.read_csv(input[0])
                 inf_data = az.from_netcdf(input[1])
-                style, fig_width = fov.style.plotting_style(wildcards.context)
+                style, fig_width = fov.style.plotting_style(wildcards.context, figsize='half')
                 plt.style.use(style)
-                fig = fov.figures.dacey_mcmc_plot(inf_data, df, logscale_axes='log' in wildcards.logscale)
+                fig = fov.figures.dacey_mcmc_plot(inf_data, df, logscale_axes='log' in wildcards.logscale,
+                                                  height=fig_width)
                 fig.savefig(output[0])
 
 
