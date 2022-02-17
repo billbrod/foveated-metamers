@@ -3611,7 +3611,7 @@ rule number_of_stats:
                     f'   this is fit with the equation {popts[0][0]:.02f} * scaling ^ -2 + {popts[0][1]:.02f} * scaling ^ -1\n'
                     f'Energy model number of statistics go from {v1_df.num_stats.max()} for scaling {v1_df.scaling.min()} '
                     f'({100 * v1_df.num_stats.max() / n_pix:.03f}%)\n'
-                    f'   to {v1_df.num_stats.min()} for scaling {v1_df.scaling.max()} ({100 * v1_df.num_stats.min() / n_pix:.03f}%)'
+                    f'   to {v1_df.num_stats.min()} for scaling {v1_df.scaling.max()} ({100 * v1_df.num_stats.min() / n_pix:.03f}%)\n'
                     f'   this is fit with the equation {popts[1][0]:.02f} * scaling ^ -2 + {popts[1][1]:.02f} * scaling ^ -1\n'
                     f'For {n_pix} pixels\n\n'
                     'The relationship between scaling and number of windows, and thus number of stats, should be exactly an '
