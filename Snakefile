@@ -3086,21 +3086,21 @@ rule dacey_mcmc:
                                                             int(wildcards.seed)+1)
                 inf_data.to_netcdf(output[0])
                 fig = fov.figures.mcmc_diagnostics_plot(inf_data)
-                fig.savefig(output[1])
+                fig.savefig(output[1], bbox_inches='tight')
 
 
 rule dacey_mcmc_plot:
     input:
         op.join('data/Dacey1992_RGC.csv'),
         op.join(config['DATA_DIR'], 'dacey_data',
-                'Dacey1992_mcmc_step-.1_prob-.8_depth-10_c-4_d-1000_w-1000_s-10.nc'),
+                'Dacey1992_mcmc_line-{line}_step-.1_prob-.8_depth-10_c-4_d-1000_w-1000_s-10.nc'),
     output:
-        op.join(config['DATA_DIR'], 'figures', '{context}', 'Dacey1992_mcmc_{logscale}.{ext}')
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'Dacey1992_mcmc_line-{line}_{logscale}.{ext}')
     log:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'Dacey1992_mcmc_{logscale}_{ext}.log')
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'Dacey1992_mcmc_line-{line}_{logscale}_{ext}.log')
     benchmark:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}',
-                'Dacey1992_mcmc_{logscale}_{ext}_benchmark.txt')
+                'Dacey1992_mcmc_line-{line}_{logscale}_{ext}_benchmark.txt')
     run:
         import contextlib
         import pandas as pd

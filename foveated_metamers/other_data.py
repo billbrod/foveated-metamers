@@ -195,7 +195,7 @@ def run_phys_scaling_inference(dataset, fit_offset=True, step_size=.1,
     return mcmc
 
 
-def assemble_inf_data(mcmc, dataset, seed=1):
+def assemble_inf_data(mcmc, dataset, seed=1, fit_offset=True):
     """Convert mcmc into properly-formatted inference data object.
 
     Parameters
@@ -207,6 +207,8 @@ def assemble_inf_data(mcmc, dataset, seed=1):
         coordinates trials and scaling (must be first two).
     seed : int, optional
         RNG seed.
+    fit_offset : bool, optional
+        Whether we fit the offset or forced it to be 0 (like in Jeremy's paper).
 
     Returns
     -------
@@ -261,6 +263,7 @@ def assemble_inf_data(mcmc, dataset, seed=1):
     # then there was missing data, so we imputed the responses
     if np.isnan(dataset.dendritic_field_diameter_deg).any():
         inf_data.observed_data = inf_data.observed_data.rename({'rgc_diameter': 'imputed_rgc_diameter'})
+    inf_data.add_groups({'metadata': {'mcmc_model_type': 'offset' if fit_offset else 'no-offset'}})
     return inf_data
 
 

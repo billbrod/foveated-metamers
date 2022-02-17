@@ -1074,12 +1074,14 @@ def mcmc_diagnostics_plot(inf_data):
         ax[1].set_title(ax[1].get_title()+
                         f', nanmean effective sample size={np.nanmean(ess[var].data):.02f}')
     fig = axes[0, 0].figure
+    rhat = rhat.to_dataframe()
+    ess = ess.to_dataframe()
     try:
         # this is for the behavioral mcmc. if it's something else (e.g., Dacey
         # data), just use default order
-        rhat = rhat.to_dataframe().reorder_levels(['model', 'trial_type', 'image_name', 'subject_name'])
-        ess = ess.to_dataframe().reorder_levels(['model', 'trial_type', 'image_name', 'subject_name'])
-    except ValueError:
+        rhat = rhat.reorder_levels(['model', 'trial_type', 'image_name', 'subject_name'])
+        ess = ess.reorder_levels(['model', 'trial_type', 'image_name', 'subject_name'])
+    except KeyError:
         pass
     # want monospace so table prints correctly
     fig.text(1, 1, "rhat\n"+rhat.sort_index().to_markdown(),
@@ -2103,9 +2105,14 @@ def dacey_mcmc_plot(inf_data, df, aspect=1, logscale_axes=True, hdi=.95):
     # helper function to get the predicted values
     def df_hinged_line(df, ecc=np.linspace(0, 80, 100)):
         df = df.set_index('variable')
+        try:
+            intercept = df.loc['diameter_intercept'].value
+        except KeyError:
+            # in this case, we didn't fit the intercept, so it's 0
+            intercept = 0
         return other_data.hinged_line(ecc, df.loc['diameter_slope'].value,
                                       df.loc['diameter_hinge_ecc'].value,
-                                      df.loc['diameter_intercept'].value)
+                                      intercept)
 
     ecc = np.linspace(0, 80, 100)
     lines = []
