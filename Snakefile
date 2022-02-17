@@ -2099,6 +2099,8 @@ rule mcmc_performance_comparison_figure:
                     focus = re.findall('(sub-[0-9]+)', wildcards.focus)[0]
                     if 'comp-natural' in wildcards.focus:
                         query_str = "trial_type in ['metamer_vs_metamer', 'metamer_vs_reference', 'metamer_vs_metamer-natural', 'metamer_vs_reference-natural']"
+                    elif 'comp-downsample' in wildcards.focus:
+                        query_str = "trial_type in ['metamer_vs_metamer', 'metamer_vs_reference', 'metamer_vs_metamer-downsample']"
                     perf_query_str = f"level=='subject_name' & dependent_var=='{focus}'"
                 elif wildcards.focus == 'comp-all':
                     perf_query_str = "level=='all'"
@@ -3828,6 +3830,7 @@ rule paper_figures:
     input:
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_partially-pooled_log-ci_comp-base.svg"),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_partially-pooled_log-ci_sub-00_comp-natural_line-scaling-0.27.svg"),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_partially-pooled_log-ci_sub-00_comp-downsample.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "ref_images_dpi-300.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', 'psychophys_expt2.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'model_schematic_halfwidth_ivy_dpi-300.svg'),

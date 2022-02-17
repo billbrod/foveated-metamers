@@ -25,7 +25,7 @@ TRIAL_TYPE_TO_LONG_LEGEND = {
 
 TRIAL_TYPE_PLOT = {
     'metamer_vs_metamer': 'Synth vs Synth:\nwhite noise',
-    'metamer_vs_metamer-downsample': 'Synth vs Synth:\nwhite noise (large pixels)',
+    'metamer_vs_metamer-downsample': 'Synth vs Synth:\nwhite noise\n(large pixels)',
     'metamer_vs_metamer-natural': 'Synth vs Synth:\nnatural image',
     'metamer_vs_reference': 'Original vs Synth:\nwhite noise',
     'metamer_vs_reference-natural': 'Original vs Synth:\nnatural image',
