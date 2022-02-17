@@ -1074,11 +1074,16 @@ def mcmc_diagnostics_plot(inf_data):
         ax[1].set_title(ax[1].get_title()+
                         f', nanmean effective sample size={np.nanmean(ess[var].data):.02f}')
     fig = axes[0, 0].figure
+    try:
+        # this is for the behavioral mcmc. if it's something else (e.g., Dacey
+        # data), just use default order
+        rhat = rhat.to_dataframe().reorder_levels(['model', 'trial_type', 'image_name', 'subject_name'])
+        ess = ess.to_dataframe().reorder_levels(['model', 'trial_type', 'image_name', 'subject_name'])
+    except ValueError:
+        pass
     # want monospace so table prints correctly
-    rhat = rhat.to_dataframe().reorder_levels(['model', 'trial_type', 'image_name', 'subject_name'])
     fig.text(1, 1, "rhat\n"+rhat.sort_index().to_markdown(),
              ha='left', va='top', family='monospace')
-    ess = ess.to_dataframe().reorder_levels(['model', 'trial_type', 'image_name', 'subject_name'])
     fig.text(1, .5, "effective sample size\n"+ess.sort_index().to_markdown(),
              ha='left', va='top', family='monospace')
     model_type = inf_data.metadata.mcmc_model_type.values
