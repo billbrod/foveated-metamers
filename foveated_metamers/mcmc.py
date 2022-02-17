@@ -904,7 +904,7 @@ def inf_data_to_df(inf_data, kind='predictive', query_str=None, hdi=False):
     ----------
     inf_data : arviz.InferenceData
         arviz InferenceData object (xarray-like) created by `assemble_inf_data`.
-    kind : {'predictive', 'parameters', 'psychophysical curve parameters'}, optional
+    kind : {'predictive', 'parameters', 'psychophysical curve parameters', 'parameter grouplevel 'means', 'predictive grouplevel means'}, optional
         Whether to create df containing predictive info (responses and
         probability_correct), model parameter info, or psychophysical curve
         parameters (where we've combined across the different effects and
