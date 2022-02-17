@@ -3401,6 +3401,18 @@ def get_metamer_comparison_figure_inputs(wildcards):
         # values. this makes sure they're in the proper order
         scaling = sorted(scaling)
         comps = ['ref'] * len(scaling)
+    elif 'downsample' in wildcards.cutout:
+        if len(scaling) != 4:
+            raise Exception(f"When generating {wildcards.cutout} metamer_comparison figure, need 4 scaling values!")
+        if len(image_name) != 1:
+            raise Exception(f"When generating {wildcards.cutout} metamer_comparison figure, need 1 image_name values!")
+        models = ['V1_norm_s6_gaussian'] * len(scaling)
+        image_name = image_name * len(scaling)
+        # when we increased the length of scaling above, it interleaved the
+        # values. this makes sure they're in the proper order
+        scaling = sorted(scaling)
+        comps = ['met-downsample-2'] * len(scaling)
+
     else:
         if len(scaling) != 4:
             raise Exception(f"When generating {wildcards.cutout} metamer_comparison figure, need 4 scaling values!")
