@@ -2140,7 +2140,7 @@ def dacey_mcmc_plot(inf_data, df, aspect=1, logscale_axes=True, hdi=.95,
                                  ax=g.ax, draw_ctr_pts=False, color=pal[n])
     if logscale_axes:
         g.set(xscale='log', yscale='log')
-    g.set(xlabel="Eccentrictiy (degrees)",
+    g.set(xlabel="Eccentricity (degrees)",
           ylabel="Dendritic field diameter (degrees)")
     return g
 

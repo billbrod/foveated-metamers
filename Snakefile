@@ -3838,3 +3838,4 @@ rule paper_figures:
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'all_comps_summary_partially-pooled_focus-subject_one-ax.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'all_comps_summary_partially-pooled_focus-outlier.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'mse_comparison_bike_scaling-.01_nocutout_with_target_dpi-300.svg'),
+        op.join(config['DATA_DIR'], 'figures', 'paper', 'Dacey1992_mcmc_line-nooffset_linear.svg'),
