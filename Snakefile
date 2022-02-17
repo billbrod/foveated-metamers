@@ -3597,24 +3597,27 @@ rule number_of_stats:
                                             'num_pixels': n_pix}, [0])
                         df.append(tmp)
                 df = pd.concat(df)
-                df.to_csv(output[1])
-                g = sns.relplot(data=df, x='scaling', y='num_stats', col='model',
-                                facet_kws=dict(sharex=False, sharey=False))
-                g.set(yscale='log')
-                for ax in g.axes.flatten():
-                    # there's the same number of pixels for all, by definition
-                    ax.axhline(n_pix, linestyle='--', c='k')
+                df.model = df.model.map({k.replace('_norm', ''): v for k, v in
+                                         fov.plotting.MODEL_PLOT.items()})
+                df.to_csv(output[1], index=False)
+                g, popts = fov.figures.number_of_stats(df)
                 g.savefig(output[0], bbox_inches='tight')
-                rgc_df = df.query('model=="RGC_gaussian"')
-                v1_df = df.query('model=="V1_s6_gaussian"')
+                rgc_df = df.query('model=="Luminance model"')
+                v1_df = df.query('model=="Energy model"')
                 result = (
-                    f'RGC number of statistics go from {rgc_df.num_stats.max()} for scaling {rgc_df.scaling.min()}% '
+                    f'Luminance model number of statistics go from {rgc_df.num_stats.max()} for scaling {rgc_df.scaling.min()}% '
                     f'({100 *rgc_df.num_stats.max() / n_pix:.03f}%)\n'
                     f'   to {rgc_df.num_stats.min()} for scaling {rgc_df.scaling.max()} ({100 * rgc_df.num_stats.min() / n_pix:.03f}%)\n'
-                    f'V1 number of statistics go from {v1_df.num_stats.max()} for scaling {v1_df.scaling.min()} '
+                    f'   this is fit with the equation {popts[0][0]:.02f} * scaling ^ -2 + {popts[0][1]:.02f} * scaling ^ -1\n'
+                    f'Energy model number of statistics go from {v1_df.num_stats.max()} for scaling {v1_df.scaling.min()} '
                     f'({100 * v1_df.num_stats.max() / n_pix:.03f}%)\n'
                     f'   to {v1_df.num_stats.min()} for scaling {v1_df.scaling.max()} ({100 * v1_df.num_stats.min() / n_pix:.03f}%)'
-                    f'For {n_pix} pixels'
+                    f'   this is fit with the equation {popts[1][0]:.02f} * scaling ^ -2 + {popts[1][1]:.02f} * scaling ^ -1\n'
+                    f'For {n_pix} pixels\n\n'
+                    'The relationship between scaling and number of windows, and thus number of stats, should be exactly an '
+                    'inverse quadratic, but at larger scaling we get a breakdown of that, requiring more windows than expected,'
+                    ' which is due to the fact that those windows are so large and so we need large windows that are barely on '
+                    'the image in order for them to still uniformly tile.'
                 )
                 with open(output[-1], 'w') as f:
                     f.writelines(result)

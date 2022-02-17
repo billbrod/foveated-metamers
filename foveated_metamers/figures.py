@@ -17,6 +17,7 @@ import os.path as op
 import arviz as az
 from . import utils, plotting, analysis, mcmc, other_data
 import sys
+from scipy import optimize
 from collections import OrderedDict
 import xmltodict
 import flatten_dict
@@ -2495,3 +2496,52 @@ def psychophysics_schematic_table(figsize=(5, 5)):
         else:
             cell.visible_edges = 'BLR'
     return fig
+
+
+def number_of_stats(df):
+    """Plot the number of statistics per model, compared against number of pixels in the image.
+
+    We also fit a function to this data, which is just $a2*scaling^{-2} +
+    a1*scaling^{-1}$ and return the parameters (a2, a1) for each model. the
+    relationship between scaling and number of windows, and thus number of
+    stats, should be exactly an inverse quadratic, but at larger scaling we get
+    a breakdown of that, requiring more windows than expected, which is due to
+    the fact that those windows are so large and so we need large windows that
+    are barely on the image in order for them to still uniformly tile.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Dataframe with number of stats, as created by Snakefile number_of_stats rule
+
+    Returns
+    -------
+    g : sns.FacetGrid
+        FacetGrid containing plot
+    popts : list
+        list of tuples containing the parameters that fit each model's number of
+        stats as function of scaling, in order given by df.groupby('model')
+
+    """
+    pal = plotting.get_palette('model', df.model.unique())
+    g = sns.relplot(data=df, x='scaling', y='num_stats', hue='model', palette=pal)
+    # makes it clear it follows a power law
+    g.set(yscale='log', xscale='log')
+
+    def quadratic_dec(scaling, a2, a1):
+        return a2*scaling**-2 + a1*scaling**-1
+    line = g.ax.axhline(df.num_pixels.mean(), linestyle='--', c='k')
+    popts = []
+    for n, gb in df.groupby('model'):
+        popt, _ = optimize.curve_fit(quadratic_dec, gb.scaling.values,
+                                     gb.num_stats.values)
+        g.ax.plot(gb.scaling.values, quadratic_dec(gb.scaling.values, *popt),
+                  c=pal[n])
+        popts.append(popt)
+    # add a legend specifiying what the dashed line means, right below the old
+    # legend
+    old_legend_bbox = g.fig.legends[0].get_window_extent().transformed(g.fig.transFigure.inverted())
+    g.fig.legend([line], ['Number of pixels'], frameon=False, loc='upper left',
+                 bbox_to_anchor=(old_legend_bbox.x0,
+                                 old_legend_bbox.y0-old_legend_bbox.height/3))
+    return g, popts
