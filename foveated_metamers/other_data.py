@@ -65,7 +65,7 @@ def hinged_line(ecc, slope, hinge_ecc, intercept=0):
     return diam.clip(intercept + hinge_ecc * slope)
 
 
-def model_physiological_scaling(eccentricity, observed_diameter=None):
+def model_physiological_scaling(eccentricity, observed_diameter=None, fit_offset=True):
     """Probabilistic model of dendritic field size, as function of eccentricity.
 
     Fits ``hinged_line`` to eccentricity in order to get the mean diameter at
@@ -86,6 +86,8 @@ def model_physiological_scaling(eccentricity, observed_diameter=None):
     observed_diameter : jnp.ndarray or None, optional
         Observed diameters to condition our results on. If None, don't
         condition.
+    fit_offset : bool, optional
+        Whether to fit the offset or force it to be 0 (like in Jeremy's paper).
 
     Returns
     -------
@@ -99,7 +101,10 @@ def model_physiological_scaling(eccentricity, observed_diameter=None):
     with cell_type_plate:
         # exponentiated to .018
         diam_slope = numpyro.sample('log_diameter_slope', dist.Normal(-4, 1))
-        diam_int = numpyro.sample('diameter_intercept', dist.HalfCauchy(.1))
+        if fit_offset:
+            diam_int = numpyro.sample('diameter_intercept', dist.HalfCauchy(.1))
+        else:
+            diam_int = 0
         diam_hinge = numpyro.sample('log_diameter_hinge_ecc', dist.Normal(0, 1))
         diam_scale = numpyro.sample('diameter_scale', dist.HalfCauchy(.1))
         # fill in missing eccentricity observations with random values in the
@@ -126,10 +131,10 @@ def model_physiological_scaling(eccentricity, observed_diameter=None):
                               obs=observed_diameter)
 
 
-def run_phys_scaling_inference(dataset, step_size=.1, num_draws=1000,
-                               num_chains=1, num_warmup=500, seed=0,
-                               target_accept_prob=.8, max_tree_depth=10,
-                               **nuts_kwargs):
+def run_phys_scaling_inference(dataset, fit_offset=True, step_size=.1,
+                               num_draws=1000, num_chains=1, num_warmup=500,
+                               seed=0, target_accept_prob=.8,
+                               max_tree_depth=10, **nuts_kwargs):
     """Run MCMC inference for physiological scaling, conditioned on data.
 
     Uses NUTS sampler.
@@ -145,6 +150,8 @@ def run_phys_scaling_inference(dataset, step_size=.1, num_draws=1000,
     dataset: xarray.Dataset
         Dataset containing eccentricity and dendritic_field_diameter_deg data
         variables.
+    fit_offset : bool, optional
+        Whether to fit the offset or force it to be 0 (like in Jeremy's paper).
     step_size : float, optional
         Size of a single step.
     num_draws : int, optional
@@ -184,7 +191,7 @@ def run_phys_scaling_inference(dataset, step_size=.1, num_draws=1000,
     mcmc = numpyro.infer.MCMC(mcmc_kernel, num_samples=num_draws,
                               num_chains=num_chains,
                               num_warmup=num_warmup, progress_bar=True)
-    mcmc.run(PRNGKey(seed), ecc, diams)
+    mcmc.run(PRNGKey(seed), ecc, diams, fit_offset=fit_offset)
     return mcmc
 
 

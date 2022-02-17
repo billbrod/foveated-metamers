@@ -60,6 +60,7 @@ wildcard_constraints:
     x="(?!experiment-mse)(.*)",
     mse="experiment_mse|full_image_mse",
     seed="[0-9]+",
+    line="offset|nooffset",
 ruleorder:
     collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check > mcmc_compare_plot > mcmc_plots > embed_bitmaps_into_figure > compose_figures
 
@@ -3049,18 +3050,18 @@ rule dacey_mcmc:
         op.join('data/Dacey1992_RGC.csv'),
     output:
         op.join(config['DATA_DIR'], 'dacey_data',
-                'Dacey1992_mcmc_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
+                'Dacey1992_mcmc_line-{line}_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
                 '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}.nc'),
         op.join(config['DATA_DIR'], 'dacey_data',
-                'Dacey1992_mcmc_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
+                'Dacey1992_mcmc_line-{line}_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
                 '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_diagnostics.png'),
     log:
         op.join(config['DATA_DIR'], 'logs', 'dacey_data',
-                'Dacey1992_mcmc_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
+                'Dacey1992_mcmc_line-{line}_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
                 '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}.log'),
     benchmark:
         op.join(config['DATA_DIR'], 'logs', 'dacey_data',
-                'Dacey1992_mcmc_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
+                'Dacey1992_mcmc_line-{line}_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
                 '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_benchmark.txt'),
     run:
         import contextlib
@@ -3071,6 +3072,7 @@ rule dacey_mcmc:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 dataset = fov.other_data.assemble_dacey_dataset(pd.read_csv(input[0]))
                 mcmc = fov.other_data.run_phys_scaling_inference(dataset,
+                                                                 wildcards.line == 'offset',
                                                                  float(wildcards.step_size),
                                                                  int(wildcards.num_draws),
                                                                  int(wildcards.num_chains),
@@ -3083,8 +3085,8 @@ rule dacey_mcmc:
                 inf_data = fov.other_data.assemble_inf_data(mcmc, dataset,
                                                             int(wildcards.seed)+1)
                 inf_data.to_netcdf(output[0])
-                axes = az.plot_trace(inf_data)
-                axes[0, 0].figure.savefig(output[1])
+                fig = fov.figures.mcmc_diagnostics_plot(inf_data)
+                fig.savefig(output[1])
 
 
 rule dacey_mcmc_plot:
