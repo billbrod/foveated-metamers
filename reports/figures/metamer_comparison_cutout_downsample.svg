@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="624"
+   height="548.80444"
+   viewBox="0 0 624 548.80444"
+   version="1.1"
+   id="svg8"
+   inkscape:version="1.0.2 (1.0.2+r75+1)"
+   sodipodi:docname="metamer_comparison_cutout_downsample.svg">
+  <defs
+     id="defs2" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="1.3452058"
+     inkscape:cx="307.50497"
+     inkscape:cy="442.22375"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     units="px"
+     inkscape:window-width="1898"
+     inkscape:window-height="2094"
+     inkscape:window-x="1932"
+     inkscape:window-y="50"
+     inkscape:window-maximized="1"
+     inkscape:document-rotation="0"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0" />
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-18.393351,-11.249964)">
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none"
+       x="-144.27179"
+       y="35.044613"
+       id="text6877"
+       transform="rotate(-90)"><tspan
+         sodipodi:role="line"
+         id="tspan6875"
+         x="-144.27179"
+         y="35.044613"
+         style="font-size:16px">Target image</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:1;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none"
+       x="-273.15829"
+       y="35.044613"
+       id="text6877-3"
+       transform="rotate(-90)"><tspan
+         sodipodi:role="line"
+         id="tspan6875-7"
+         x="-273.15829"
+         y="35.044613"
+         style="font-size:16px;text-align:center;text-anchor:middle">Energy model </tspan><tspan
+         sodipodi:role="line"
+         x="-273.15829"
+         y="51.044613"
+         style="font-size:16px;text-align:center;text-anchor:middle"
+         id="tspan15378">metamers</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:1;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none"
+       x="-455.19385"
+       y="35.044613"
+       id="text6877-3-5"
+       transform="rotate(-90)"><tspan
+         sodipodi:role="line"
+         x="-455.19385"
+         y="35.044613"
+         style="font-size:16px;text-align:center;text-anchor:middle"
+         id="tspan15380">Energy model metamers </tspan><tspan
+         sodipodi:role="line"
+         x="-455.19385"
+         y="51.044613"
+         style="font-size:16px;text-align:center;text-anchor:middle"
+         id="tspan15342">(large pixels)</tspan></text>
+    <rect
+       style="fill:none;stroke:#000000;stroke-width:1.1653;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect7-0-8"
+       width="204.74571"
+       height="160.1427"
+       x="349.7879"
+       y="377.74628" />
+    <image
+       xlink:href="IMAGE13"
+       y="376.58109"
+       x="349.20529"
+       id="image1608-6-7"
+       preserveAspectRatio="none"
+       height="162.4733"
+       width="207.07634" />
+    <rect
+       style="fill:none;stroke:#000000;stroke-width:0.501251;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect7-0-8-2-3"
+       width="77.282104"
+       height="78.501328"
+       x="559.95642"
+       y="377.15225" />
+    <image
+       xlink:href="IMAGE14"
+       width="78.161812"
+       height="79.643776"
+       preserveAspectRatio="none"
+       id="image1608-6-7-8-1"
+       x="559.73651"
+       y="376.58105" />
+    <rect
+       style="fill:none;stroke:#000000;stroke-width:0.501251;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect7-0-8-2-1-4"
+       width="77.282104"
+       height="78.501328"
+       x="559.95642"
+       y="459.98178" />
+    <image
+       xlink:href="IMAGE15"
+       width="78.161812"
+       height="79.643776"
+       preserveAspectRatio="none"
+       id="image1608-6-7-8-2-7"
+       x="559.73651"
+       y="459.41064" />
+    <rect
+       style="fill:none;stroke:#000000;stroke-width:1.1653;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect7-0-9"
+       width="204.74571"
+       height="160.1427"
+       x="349.7879"
+       y="194.84854" />
+    <image
+       xlink:href="IMAGE7"
+       y="193.68333"
+       x="349.20529"
+       id="image1608-6-1"
+       preserveAspectRatio="none"
+       height="162.4733"
+       width="207.07634" />
+    <g
+       id="g12260"
+       transform="matrix(0.27139522,0,0,0.35245842,489.75538,-89.68731)">
+      <rect
+         style="fill:none;stroke:#000000;stroke-width:1.62069;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
+         id="rect7-0-8-2"
+         width="284.75854"
+         height="222.72507"
+         x="258.55402"
+         y="804.47504" />
+      <image
+         xlink:href="IMAGE8"
+         width="287.99997"
+         height="225.96645"
+         preserveAspectRatio="none"
+         id="image1608-6-7-8"
+         x="257.74371"
+         y="802.85449" />
+    </g>
+    <g
+       id="g12260-6"
+       transform="matrix(0.27139522,0,0,0.35245842,489.75538,-6.857779)">
+      <rect
+         style="fill:none;stroke:#000000;stroke-width:1.62069;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
+         id="rect7-0-8-2-1"
+         width="284.75854"
+         height="222.72507"
+         x="258.55402"
+         y="804.47504" />
+      <image
+         xlink:href="IMAGE9"
+         width="287.99997"
+         height="225.96645"
+         preserveAspectRatio="none"
+         id="image1608-6-7-8-2"
+         x="257.74371"
+         y="802.85449" />
+    </g>
+    <rect
+       style="fill:none;stroke:#000000;stroke-width:1.1653;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect7-0-3"
+       width="204.74571"
+       height="160.1427"
+       x="56.474335"
+       y="376.88409" />
+    <image
+       xlink:href="IMAGE10"
+       y="375.7189"
+       x="55.891708"
+       id="image1608-6-6"
+       preserveAspectRatio="none"
+       height="162.4733"
+       width="207.07634" />
+    <g
+       id="g14924"
+       transform="matrix(0.85604275,0,0,0.85604275,21.4286,-10.380507)">
+      <rect
+         style="fill:none;stroke:#000000;stroke-width:0.585544;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
+         id="rect7-0-8-2-3-4"
+         width="90.278328"
+         height="91.702576"
+         x="286.45093"
+         y="451.6954" />
+      <image
+         xlink:href="IMAGE11"
+         width="91.305969"
+         height="93.037148"
+         preserveAspectRatio="none"
+         id="image1608-6-7-8-1-5"
+         x="286.19403"
+         y="451.02817" />
+    </g>
+    <g
+       id="g14896"
+       transform="matrix(0.85604275,0,0,0.85604275,21.4286,-10.380507)">
+      <rect
+         style="fill:none;stroke:#000000;stroke-width:0.585544;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
+         id="rect7-0-8-2-1-4-0"
+         width="90.278328"
+         height="91.702576"
+         x="286.45093"
+         y="548.45404" />
+      <image
+         xlink:href="IMAGE12"
+         width="91.305969"
+         height="93.037148"
+         preserveAspectRatio="none"
+         id="image1608-6-7-8-2-7-3"
+         x="286.19403"
+         y="547.78687" />
+    </g>
+    <rect
+       style="fill:none;stroke:#000000;stroke-width:1.1653;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect7-0-7"
+       width="204.74571"
+       height="160.1427"
+       x="56.474335"
+       y="194.84856" />
+    <image
+       xlink:href="IMAGE4"
+       y="193.68336"
+       x="55.891708"
+       id="image1608-6-5"
+       preserveAspectRatio="none"
+       height="162.4733"
+       width="207.07634" />
+    <g
+       id="g14598"
+       transform="matrix(0.85604275,0,0,0.85604275,21.4286,-4.181618)">
+      <rect
+         style="fill:none;stroke:#000000;stroke-width:0.585544;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
+         id="rect7-0-8-2-3-1"
+         width="90.278328"
+         height="91.702576"
+         x="286.45093"
+         y="231.8063" />
+      <image
+         xlink:href="IMAGE5"
+         width="91.305969"
+         height="93.037148"
+         preserveAspectRatio="none"
+         id="image1608-6-7-8-1-0"
+         x="286.19403"
+         y="231.13911" />
+    </g>
+    <g
+       id="g14570"
+       transform="matrix(0.85604275,0,0,0.85604275,21.4286,-4.181618)">
+      <rect
+         style="fill:none;stroke:#000000;stroke-width:0.585544;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
+         id="rect7-0-8-2-1-4-6"
+         width="90.278328"
+         height="91.702576"
+         x="286.45093"
+         y="328.56494" />
+      <image
+         xlink:href="IMAGE6"
+         width="91.305969"
+         height="93.037148"
+         preserveAspectRatio="none"
+         id="image1608-6-7-8-2-7-32"
+         x="286.19403"
+         y="327.89777" />
+    </g>
+    <rect
+       style="fill:none;stroke:#000000;stroke-width:1.1653;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect7-0"
+       width="204.74571"
+       height="160.1427"
+       x="56.474335"
+       y="12.415187" />
+    <image
+       xlink:href="IMAGE1"
+       y="11.24998"
+       x="55.891708"
+       id="image1608-6"
+       preserveAspectRatio="none"
+       height="162.4733"
+       width="207.07634" />
+    <image
+       xlink:href="IMAGE2"
+       width="78.161812"
+       height="79.643776"
+       preserveAspectRatio="none"
+       id="image1608-6-7-8-1-0-0"
+       x="266.39224"
+       y="11.249964" />
+    <image
+       xlink:href="IMAGE3"
+       width="78.161812"
+       height="79.643776"
+       preserveAspectRatio="none"
+       id="image1608-6-7-8-2-7-32-6"
+       x="266.39224"
+       y="94.079521" />
+  </g>
+</svg>
