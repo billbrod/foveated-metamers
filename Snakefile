@@ -1748,10 +1748,17 @@ rule window_area_figure:
                     fig.savefig(output[0], bbox_inches='tight')
 
 
+def _get_image_for_window_example(wildcards):
+    if wildcards.comp.startswith('met-downsample'):
+        # if we set image_name when calling generate_metamer_paths, it will
+        # ignore comp-met-downsample, so we need to manually update it
+        wildcards.image_name = wildcards.image_name.replace('_range', '_' + wildcards.comp.replace('met-', '') + '_range')
+    return utils.generate_metamer_paths(gamma_corrected=True, **wildcards)
+
+
 rule window_example_figure:
     input:
-        image = lambda wildcards: [m.replace('metamer.png', 'metamer_gamma-corrected.png') for m in
-                                   utils.generate_metamer_paths(**wildcards)],
+        image = _get_image_for_window_example,
     output:
         report(op.join(config['DATA_DIR'], 'figures', '{context}', '{model_name}',
                        '{image_name}_scaling-{scaling}_seed-{seed_n}_comp-{comp}_gpu-{gpu}_linewidth-{lw}_window.png'))
