@@ -52,7 +52,7 @@ wildcard_constraints:
     logscale="log|linear",
     mcmc_model="partially-pooled|unpooled",
     fixation_cross="cross|nocross",
-    cutout="cutout|nocutout|nocutout_natural-seed|cutout_natural-seed|nocutout_small",
+    cutout="cutout|nocutout|nocutout_natural-seed|cutout_natural-seed|nocutout_small|cutout_downsample",
     context="paper|poster",
     mcmc_plot_type="performance|params-(linear|log)-(none|lines|ci)",
     # don't capture experiment-mse for x, but capture anything else, because
@@ -3411,7 +3411,7 @@ def get_metamer_comparison_figure_inputs(wildcards):
         # when we increased the length of scaling above, it interleaved the
         # values. this makes sure they're in the proper order
         scaling = sorted(scaling)
-        comps = ['met-downsample-2'] * len(scaling)
+        comps = ['met'] * 2 +['met-downsample-2'] * 2
 
     else:
         if len(scaling) != 4:
