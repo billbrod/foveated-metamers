@@ -143,7 +143,7 @@ def get_image_cutout(images, window_size=400, periphery_offset=(-800, -1000)):
 
 
 def cutout_figure(images, window_size=400, periphery_offset=(-800, -1000), max_ecc=26.8,
-                  plot_fovea=True, plot_periphery=True, label=True):
+                  plot_fovea=True, plot_periphery=True, label=True, zoom=1):
     """create figure showing cutout views of different images
 
     if both `plot_fovea` and `plot_periphery` are False, this just
@@ -172,6 +172,8 @@ def cutout_figure(images, window_size=400, periphery_offset=(-800, -1000), max_e
         whether to plot peripheral cutout
     label : bool, optional
         whether to label the fovea and periphery with their approximate size
+    zoom : int, optional
+        Zoom level for these images, passed to pt.imshow
 
     Returns
     -------
@@ -196,7 +198,8 @@ def cutout_figure(images, window_size=400, periphery_offset=(-800, -1000), max_e
             periphery_ax_idx = len(fovea)
         else:
             periphery_ax_idx = 0
-    fig = pt.imshow(imgs_to_plot, vrange=(0, 1), title=None, col_wrap=len(fovea))
+    fig = pt.imshow(imgs_to_plot, vrange=(0, 1), title=None, col_wrap=len(fovea),
+                    zoom=zoom)
     if label:
         if plot_fovea:
             fig.axes[0].set(ylabel='Fovea\n($\pm$%.01f deg)' % window_extent_deg)

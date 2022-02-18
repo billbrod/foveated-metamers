@@ -1782,6 +1782,11 @@ rule window_example_figure:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 style, _ = fov.style.plotting_style(wildcards.context)
+                # change sizes of things so they look comparable to the regular
+                # version when put into the comparison plot
+                if 'downsample' in wildcards.image_name:
+                    downsample_n = float(re.findall('downsample-([0-9]+)_', wildcards.image_name)[0])
+                    style['lines.linewidth'] = int(style['lines.linewidth'] // downsample_n)
                 plt.style.use(style)
                 min_ecc = config['DEFAULT_METAMERS']['min_ecc']
                 max_ecc = config['DEFAULT_METAMERS']['max_ecc']
@@ -3524,6 +3529,7 @@ rule cutout_figures:
         import foveated_metamers as fov
         import plenoptic as po
         import matplotlib.pyplot as plt
+        import re
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 style, _ = fov.style.plotting_style(wildcards.context)
@@ -3531,6 +3537,19 @@ rule cutout_figures:
                 # the iamge in the cutout_figure calls below
                 style['lines.linewidth'] = int(15*style['lines.linewidth'])
                 window_size = 400
+                offset = [-800, -1000]
+                zoom = 1
+                cross_size = 150
+                # change sizes of things so they look comparable to the regular
+                # version when put into the comparison plot
+                if 'downsample' in wildcards.image_name:
+                    downsample_n = float(re.findall('downsample-([0-9]+)_', wildcards.image_name)[0])
+                    # these need to be ints
+                    window_size = int(window_size // downsample_n)
+                    offset = [int(o // downsample_n) for o in offset]
+                    style['lines.linewidth'] = int(style['lines.linewidth'] // downsample_n)
+                    zoom = int(downsample_n * zoom)
+                    cross_size = int(cross_size // downsample_n)
                 plt.style.use(style)
                 # if we're loading in the metamer with window, it will have a
                 # red oval on it, which we want to preserve
@@ -3546,24 +3565,30 @@ rule cutout_figures:
                 # we do the periphery and fovea separately, so we can plot them
                 # in separate colors
                 fov.figures.add_cutout_box(fig.axes[0], plot_periphery=False,
-                                           window_size=window_size)
+                                           window_size=window_size,
+                                           periphery_offset=offset)
                 fov.figures.add_cutout_box(fig.axes[0], plot_fovea=False, colors='b',
-                                           window_size=window_size)
+                                           window_size=window_size,
+                                           periphery_offset=offset)
                 if wildcards.fixation_cross == 'cross':
-                    fov.figures.add_fixation_cross(fig.axes[0], cross_size=150)
+                    fov.figures.add_fixation_cross(fig.axes[0], cross_size=cross_size)
                 # we add an extra bit to the window size here so that the
                 # addition of the cutout box doesn't cause the axes to resize
                 # (and the full width of the lines are visible)
+                print(zoom)
                 fovea_fig = fov.figures.cutout_figure(im[0, 0], plot_periphery=False, label=False,
-                                                      window_size=window_size+style['lines.linewidth'])
+                                                      window_size=window_size+style['lines.linewidth'],
+                                                      periphery_offset=offset, zoom=zoom)
                 periphery_fig = fov.figures.cutout_figure(im[0, 0], plot_fovea=False, label=False,
-                                                          window_size=window_size+style['lines.linewidth'])
-                fov.figures.add_cutout_box(fovea_fig.axes[0], plot_periphery=False)
+                                                          window_size=window_size+style['lines.linewidth'],
+                                                          periphery_offset=offset, zoom=zoom)
+                fov.figures.add_cutout_box(fovea_fig.axes[0], plot_periphery=False, periphery_offset=offset)
                 # note that plot_periphery=False here because the peripheral
                 # cutout is centered
-                fov.figures.add_cutout_box(periphery_fig.axes[0], plot_periphery=False, colors='b')
+                fov.figures.add_cutout_box(periphery_fig.axes[0], plot_periphery=False, colors='b',
+                                           periphery_offset=offset)
                 if wildcards.fixation_cross == 'cross':
-                    fov.figures.add_fixation_cross(fovea_fig.axes[0], cross_size=150)
+                    fov.figures.add_fixation_cross(fovea_fig.axes[0], cross_size=cross_size)
                 fig.savefig(output[0])
                 fovea_fig.savefig(output[1])
                 periphery_fig.savefig(output[2])
