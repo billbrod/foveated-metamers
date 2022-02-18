@@ -3535,10 +3535,9 @@ rule cutout_figures:
                 style, _ = fov.style.plotting_style(wildcards.context)
                 # needs to be an int so we can properly use it to slice into
                 # the iamge in the cutout_figure calls below
-                style['lines.linewidth'] = int(15*style['lines.linewidth'])
+                style['lines.linewidth'] = int(16*style['lines.linewidth'])
                 window_size = 400
                 offset = [-800, -1000]
-                zoom = 1
                 cross_size = 150
                 # change sizes of things so they look comparable to the regular
                 # version when put into the comparison plot
@@ -3548,8 +3547,7 @@ rule cutout_figures:
                     window_size = int(window_size // downsample_n)
                     offset = [int(o // downsample_n) for o in offset]
                     style['lines.linewidth'] = int(style['lines.linewidth'] // downsample_n)
-                    zoom = int(downsample_n * zoom)
-                    cross_size = int(cross_size // downsample_n)
+                    cross_size = cross_size / downsample_n
                 plt.style.use(style)
                 # if we're loading in the metamer with window, it will have a
                 # red oval on it, which we want to preserve
@@ -3575,18 +3573,18 @@ rule cutout_figures:
                 # we add an extra bit to the window size here so that the
                 # addition of the cutout box doesn't cause the axes to resize
                 # (and the full width of the lines are visible)
-                print(zoom)
                 fovea_fig = fov.figures.cutout_figure(im[0, 0], plot_periphery=False, label=False,
                                                       window_size=window_size+style['lines.linewidth'],
-                                                      periphery_offset=offset, zoom=zoom)
+                                                      periphery_offset=offset)
                 periphery_fig = fov.figures.cutout_figure(im[0, 0], plot_fovea=False, label=False,
                                                           window_size=window_size+style['lines.linewidth'],
-                                                          periphery_offset=offset, zoom=zoom)
-                fov.figures.add_cutout_box(fovea_fig.axes[0], plot_periphery=False, periphery_offset=offset)
+                                                          periphery_offset=offset)
+                fov.figures.add_cutout_box(fovea_fig.axes[0], plot_periphery=False, periphery_offset=offset,
+                                           window_size=window_size)
                 # note that plot_periphery=False here because the peripheral
                 # cutout is centered
                 fov.figures.add_cutout_box(periphery_fig.axes[0], plot_periphery=False, colors='b',
-                                           periphery_offset=offset)
+                                           periphery_offset=offset, window_size=window_size)
                 if wildcards.fixation_cross == 'cross':
                     fov.figures.add_fixation_cross(fovea_fig.axes[0], cross_size=cross_size)
                 fig.savefig(output[0])
