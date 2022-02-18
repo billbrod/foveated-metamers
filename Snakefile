@@ -1784,9 +1784,9 @@ rule window_example_figure:
                 style, _ = fov.style.plotting_style(wildcards.context)
                 # change sizes of things so they look comparable to the regular
                 # version when put into the comparison plot
-                if 'downsample' in wildcards.image_name:
-                    downsample_n = float(re.findall('downsample-([0-9]+)_', wildcards.image_name)[0])
-                    style['lines.linewidth'] = int(style['lines.linewidth'] // downsample_n)
+                if 'downsample' in wildcards.comp:
+                    downsample_n = float(re.findall('downsample-([0-9]+)', wildcards.comp)[0])
+                    style['lines.linewidth'] = style['lines.linewidth'] / downsample_n
                 plt.style.use(style)
                 min_ecc = config['DEFAULT_METAMERS']['min_ecc']
                 max_ecc = config['DEFAULT_METAMERS']['max_ecc']
