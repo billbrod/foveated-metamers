@@ -61,8 +61,6 @@ jobs:
         run: |
           sed -i 's|DATA_DIR:.*|DATA_DIR: "data/metamers"|g' config.yml
           sed -i 's|TEXTURE_DIR:.*|TEXTURE_DIR: "data/textures-subset-for-testing"|g' config.yml
-      - name: Setup upterm session
-        uses: lhotari/action-upterm@v1
       - name: run snakemake test
         run: |
           source activate metamers
