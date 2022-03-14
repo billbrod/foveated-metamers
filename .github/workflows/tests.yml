@@ -22,7 +22,6 @@ jobs:
       - name: Create environment
         run: |
           conda install mamba -n base -c conda-forge
-          mamba install pytorch torchvision cpuonly -c pytorch
           mamba env create -f environment.yml
           source activate metamers
           pip install pytest
@@ -48,7 +47,6 @@ jobs:
       - name: Create environment
         run: |
           conda install mamba -n base -c conda-forge
-          mamba install pytorch torchvision cpuonly -c pytorch
           mamba env create -f environment.yml
           source activate metamers
       - name: Setup FFmpeg
@@ -84,7 +82,6 @@ jobs:
       - name: Create environment
         run: |
           conda install mamba -n base -c conda-forge
-          conda install pytorch torchvision cpuonly -c pytorch
           mamba env create -f environment.yml
           source activate metamers
           mamba install jupyter nbconvert
