@@ -84,7 +84,7 @@ jobs:
       - name: Create environment
         run: |
           conda install mamba -n base -c conda-forge
-          mamba install pytorch torchvision cpuonly -c pytorch
+          conda install pytorch torchvision cpuonly -c pytorch
           mamba env create -f environment.yml
           source activate metamers
           mamba install jupyter nbconvert
