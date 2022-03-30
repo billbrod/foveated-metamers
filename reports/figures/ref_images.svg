@@ -31,7 +31,7 @@
      inkscape:current-layer="layer1"
      showgrid="false"
      units="in"
-     inkscape:window-width="1898"
+     inkscape:window-width="3812"
      inkscape:window-height="2094"
      inkscape:window-x="1932"
      inkscape:window-y="50"
@@ -49,7 +49,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -412,156 +412,156 @@
          id="tspan137" /></text>
     <image
        xlink:href="IMAGE2"
-       y="15.761241"
-       x="39.890427"
-       id="image1608-5"
-       preserveAspectRatio="none"
+       width="31.344563"
        height="24.593126"
-       width="31.344563" />
+       preserveAspectRatio="none"
+       id="image1608-5"
+       x="39.890427"
+       y="15.761241" />
     <image
        xlink:href="IMAGE3"
-       y="15.761241"
-       x="71.785873"
-       id="image1608-1"
-       preserveAspectRatio="none"
+       width="31.344563"
        height="24.593126"
-       width="31.344563" />
+       preserveAspectRatio="none"
+       id="image1608-1"
+       x="71.785873"
+       y="15.761241" />
     <image
        xlink:href="IMAGE4"
-       y="15.761241"
-       x="103.68132"
-       id="image1608-72"
-       preserveAspectRatio="none"
+       width="31.344563"
        height="24.593126"
-       width="31.344563" />
+       preserveAspectRatio="none"
+       id="image1608-72"
+       x="103.68132"
+       y="15.761241" />
     <image
        xlink:href="IMAGE5"
-       y="15.761241"
-       x="135.5768"
-       id="image1608-722"
-       preserveAspectRatio="none"
+       width="31.344563"
        height="24.593126"
-       width="31.344563" />
+       preserveAspectRatio="none"
+       id="image1608-722"
+       x="135.5768"
+       y="15.761241" />
     <image
        xlink:href="IMAGE6"
-       y="45.27998"
-       x="7.994976"
-       id="image1608-6"
-       preserveAspectRatio="none"
+       width="31.344563"
        height="24.593126"
-       width="31.344563" />
+       preserveAspectRatio="none"
+       id="image1608-6"
+       x="7.994976"
+       y="45.27998" />
     <image
        xlink:href="IMAGE7"
-       y="45.27998"
-       x="39.890427"
-       id="image1608-0"
-       preserveAspectRatio="none"
+       width="31.344563"
        height="24.593126"
-       width="31.344563" />
+       preserveAspectRatio="none"
+       id="image1608-0"
+       x="39.890427"
+       y="45.27998" />
     <image
        xlink:href="IMAGE8"
-       y="45.27998"
-       x="71.785873"
-       id="image1608-61"
-       preserveAspectRatio="none"
+       width="31.344563"
        height="24.593126"
-       width="31.344563" />
+       preserveAspectRatio="none"
+       id="image1608-61"
+       x="71.785873"
+       y="45.27998" />
     <image
        xlink:href="IMAGE9"
-       y="45.27998"
-       x="103.68132"
-       id="image1608-06"
-       preserveAspectRatio="none"
+       width="31.344563"
        height="24.593126"
-       width="31.344563" />
+       preserveAspectRatio="none"
+       id="image1608-06"
+       x="103.68132"
+       y="45.27998" />
     <image
        xlink:href="IMAGE10"
-       y="45.27998"
-       x="135.5768"
-       id="image1608-15"
-       preserveAspectRatio="none"
+       width="31.344563"
        height="24.593126"
-       width="31.344563" />
+       preserveAspectRatio="none"
+       id="image1608-15"
+       x="135.5768"
+       y="45.27998" />
     <image
        xlink:href="IMAGE11"
-       y="74.798706"
-       x="7.994976"
-       id="image1608-4"
-       preserveAspectRatio="none"
+       width="31.344563"
        height="24.593126"
-       width="31.344563" />
+       preserveAspectRatio="none"
+       id="image1608-4"
+       x="7.994976"
+       y="74.798706" />
     <image
        xlink:href="IMAGE12"
-       y="74.798706"
-       x="39.890427"
-       id="image1608-48"
-       preserveAspectRatio="none"
+       width="31.344563"
        height="24.593126"
-       width="31.344563" />
+       preserveAspectRatio="none"
+       id="image1608-48"
+       x="39.890427"
+       y="74.798706" />
     <image
        xlink:href="IMAGE13"
-       y="74.798706"
-       x="71.785866"
-       id="image1608-94"
-       preserveAspectRatio="none"
+       width="31.344563"
        height="24.593126"
-       width="31.344563" />
+       preserveAspectRatio="none"
+       id="image1608-94"
+       x="71.785866"
+       y="74.798706" />
     <image
        xlink:href="IMAGE14"
-       y="74.798706"
-       x="103.6813"
-       id="image1608-90"
-       preserveAspectRatio="none"
+       width="31.344563"
        height="24.593126"
-       width="31.344563" />
+       preserveAspectRatio="none"
+       id="image1608-90"
+       x="103.6813"
+       y="74.798706" />
     <image
        xlink:href="IMAGE15"
-       y="74.798706"
-       x="135.5768"
-       id="image1608-91"
-       preserveAspectRatio="none"
+       width="31.344563"
        height="24.593126"
-       width="31.344563" />
+       preserveAspectRatio="none"
+       id="image1608-91"
+       x="135.5768"
+       y="74.798706" />
     <image
        xlink:href="IMAGE16"
-       y="103.49684"
-       x="7.994976"
-       id="image1608-9"
-       preserveAspectRatio="none"
+       width="31.344563"
        height="24.593126"
-       width="31.344563" />
+       preserveAspectRatio="none"
+       id="image1608-9"
+       x="7.994976"
+       y="103.49684" />
     <image
        xlink:href="IMAGE17"
-       y="103.49684"
-       x="39.890427"
-       id="image1608-7"
-       preserveAspectRatio="none"
+       width="31.344563"
        height="24.593126"
-       width="31.344563" />
+       preserveAspectRatio="none"
+       id="image1608-7"
+       x="39.890427"
+       y="103.49684" />
     <image
        xlink:href="IMAGE18"
-       y="103.49684"
-       x="71.785873"
-       id="image1608-77"
-       preserveAspectRatio="none"
+       width="31.344563"
        height="24.593126"
-       width="31.344563" />
+       preserveAspectRatio="none"
+       id="image1608-77"
+       x="71.785873"
+       y="103.49684" />
     <image
        xlink:href="IMAGE19"
-       y="103.49684"
-       x="103.68132"
-       id="image1608-11"
-       preserveAspectRatio="none"
+       width="31.344563"
        height="24.593126"
-       width="31.344563" />
+       preserveAspectRatio="none"
+       id="image1608-11"
+       x="103.68132"
+       y="103.49684" />
     <image
        xlink:href="IMAGE20"
-       y="103.49684"
-       x="135.5768"
-       id="image1608-59"
-       preserveAspectRatio="none"
+       width="31.344563"
        height="24.593126"
-       width="31.344563" />
+       preserveAspectRatio="none"
+       id="image1608-59"
+       x="135.5768"
+       y="103.49684" />
     <g
        id="g2355"
        transform="translate(0.58664253,0.52916663)">
@@ -585,12 +585,12 @@
            style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">gnarled</tspan></text>
       <image
          xlink:href="IMAGE1"
-         width="31.344563"
-         height="24.593126"
-         preserveAspectRatio="none"
-         id="image1608"
+         y="10.469574"
          x="6.3499999"
-         y="10.469574" />
+         id="image1608"
+         preserveAspectRatio="none"
+         height="24.593126"
+         width="31.344563" />
       <g
          id="g2250"
          transform="translate(0.52286353,-5.2916667)">
@@ -641,7 +641,7 @@
            id="tspan2305"
            x="22.033434"
            y="38.533009"
-           style="font-size:2.11667px;text-align:center;text-anchor:middle;stroke-width:0.264583">53.2°</tspan></text>
+           style="font-size:2.11667px;text-align:center;text-anchor:middle;stroke-width:0.264583">53.6°</tspan></text>
       <text
          xml:space="preserve"
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.11667px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
