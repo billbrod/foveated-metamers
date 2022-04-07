@@ -2173,6 +2173,11 @@ rule mcmc_performance_comparison_figure:
                                     ylim = (9e-1, 10)
                                 elif 's0' in ax.get_title():
                                     ylim = (1e-2, 5e-1)
+                            elif 'comp-ref' in wildcards.focus:
+                                if 'a0' in ax.get_title():
+                                    ylim = (8e-1, 10)
+                                elif 's0' in ax.get_title():
+                                    ylim = (1e-2, 2e-1)
                             else:
                                 if 'a0' in ax.get_title():
                                     ylim = (2e-1, 10)
