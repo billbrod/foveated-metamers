@@ -3223,7 +3223,16 @@ rule embed_bitmaps_into_figure:
                 fov.figures.write_create_bitmap_resolution(input[0], orig_dpi)
 
 
+def get_window_contour_figure_input(wildcards):
+    if wildcards.fill.startswith('random') or wildcards.fill == 'none':
+        return []
+    else:
+        return utils.get_ref_image_full_path(wildcards.fill)
+
+
 rule window_contours_figure:
+    input:
+        get_window_contour_figure_input,
     output:
         op.join(config['DATA_DIR'], 'figures', '{context}', 'window_contours_fill-{fill}_size-{size}_scaling-{scaling}_linewidth-{lw}_background-{bg}.svg'),
     log:
@@ -3235,6 +3244,7 @@ rule window_contours_figure:
         import sys
         import matplotlib.pyplot as plt
         import foveated_metamers as fov
+        import plenoptic as po
         sys.path.append(op.join(op.dirname(op.realpath(__file__)), 'extra_packages/pooling-windows'))
         import pooling
         with open(log[0], 'w', buffering=1) as log_file:
@@ -3262,7 +3272,8 @@ rule window_contours_figure:
                     np.random.seed(seed)
                     ax = pw.plot_window_values(subset=False)
                 elif wildcards.fill != 'none':
-                    raise Exception(f"Can only handle fill in {{'random-N', 'none'}} (where N is the seed), but got value {wildcards.fill}!")
+                    im = po.load_images(input[0])
+                    ax = pw.plot_window_values(im, subset=False)
                 # since this is being shrunk, we need to make the lines thicker
                 ax = pw.plot_windows(ax=ax, subset=False,
                                      linewidths=float(wildcards.lw)*style['lines.linewidth'])
