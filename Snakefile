@@ -61,6 +61,7 @@ wildcard_constraints:
     mse="experiment_mse|full_image_mse",
     seed="[0-9]+",
     line="offset|nooffset",
+    direction="forward|reverse"
 ruleorder:
     collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check > mcmc_compare_plot > mcmc_plots > embed_bitmaps_into_figure > compose_figures
 
@@ -2943,6 +2944,44 @@ rule distance_vs_performance_plot:
                 g = fov.figures.compare_distance_and_performance(expt_df, dist_df,
                                                                  logscale_xaxis=logscale_xaxis)
                 g.savefig(output[0])
+
+
+rule scaling_gif:
+    input:
+        lambda wildcards: [f for comp in ['met', 'ref'] for f in
+                           utils.generate_metamer_paths(wildcards.model_name, gamma_corrected=bool(wildcards.gammacorrected),
+                                                        image_name=wildcards.image_name, seed_n=int(wildcards.seed),
+                                                        comp=comp + {'natural': '-natural', 'white': ''}[wildcards.comp_type])]
+    output:
+        op.join(config['DATA_DIR'], 'scaling_gif', '{model_name}', '{image_name}_seed-{seed}_f-{fr}_{direction}{gammacorrected}_comp-{comp_type}.gif')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'scaling_gif', '{model_name}', '{image_name}_seed-{seed}_f-{fr}_{direction}{gammacorrected}_comp-{comp_type}.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'scaling_gif', '{model_name}', '{image_name}_seed-{seed}_f-{fr}_{direction}{gammacorrected}_comp-{comp_type}_benchmark.txt')
+    run:
+        import subprocess
+        import contextlib
+        import tempfile
+        import shutil
+        import os.path as op
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                # remove duplicate files
+                files = set(input)
+                # sort by scaling
+                if wildcards.direction == 'reverse':
+                    sort_files = list(reversed(sorted(files, key=lambda x: float(re.findall('scaling-([0-9.]+)', x)[0]))))
+                elif wildcards.direction == 'forward':
+                    sort_files = sorted(files, key=lambda x: float(re.findall('scaling-([0-9.]+)', x)[0]))
+                # assert that there's only one per scaling
+                scaling_vals = [float(re.findall('scaling-([0-9.]+)', f)[0]) for f in sort_files]
+                if len(scaling_vals) != len(set(scaling_vals)):
+                    raise Exception("Each scaling value should show up exactly once!")
+                tmpdir = tempfile.mkdtemp()
+                for i, f in enumerate(sort_files):
+                    shutil.copy(f, op.join(tmpdir, f'frame-{i:02d}.png'))
+                print('\n'.join(sort_files))
+                subprocess.call(['ffmpeg', '-f', 'image2', '-framerate', wildcards.fr, '-i', f'{tmpdir}/frame-%02d.png', output[0]])
 
 
 rule freeman_windows:
