@@ -61,7 +61,8 @@ wildcard_constraints:
     mse="experiment_mse|full_image_mse",
     seed="[0-9]+",
     line="offset|nooffset",
-    direction="forward|reverse"
+    direction="forward|reverse",
+    scaling_extended="|_scaling-extended",
 ruleorder:
     collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check > mcmc_compare_plot > mcmc_plots > embed_bitmaps_into_figure > compose_figures
 
@@ -1972,16 +1973,16 @@ rule mcmc_figure:
     input:
         op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                 'task-split_comp-{comp}_mcmc_{mcmc_model}_step-1_prob-.8_depth-10'
-                '_c-4_d-10000_w-10000_s-0.nc'),
+                '_c-4_d-10000_w-10000_s-0{scaling_extended}.nc'),
     output:
         op.join(config['DATA_DIR'], 'figures', '{context}', '{model_name}',
-                'task-split_comp-{comp}_mcmc_{mcmc_model}_{plot_type}.{ext}'),
+                'task-split_comp-{comp}_mcmc{scaling_extended}_{mcmc_model}_{plot_type}.{ext}'),
     log:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
-                'task-split_comp-{comp}_mcmc_{mcmc_model}_{plot_type}_{ext}.log'),
+                'task-split_comp-{comp}_mcmc{scaling_extended}_{mcmc_model}_{plot_type}_{ext}.log'),
     benchmark:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}',
-                'task-split_comp-{comp}_mcmc_{mcmc_model}_{plot_type}_{ext}_benchmark.txt'),
+                'task-split_comp-{comp}_mcmc{scaling_extended}_{mcmc_model}_{plot_type}_{ext}_benchmark.txt'),
     run:
         import foveated_metamers as fov
         import contextlib
