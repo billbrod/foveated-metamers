@@ -9,7 +9,7 @@
         "cpus_per_task": 1,
         "output": "{log}-%j",
         "error": "{log}-%j",
-	    "partition": "genx"
+        "partition": "genx"
     },
     "create_metamers":
     {
@@ -49,17 +49,17 @@
     "simulate_optimization":
     {
         "partition": "ccn",
-        "mem" : ""
+        "mem" : "0"
     },
     "simulate_num_trials":
     {
         "partition": "ccn",
-        "mem" : ""
+        "mem" : "0"
     },
     "mcmc":
     {
         "partition": "ccn",
-        "mem" : "",
+        "mem" : "0",
         "time": "12:00:00"
     },
     "mcmc_plots":
@@ -68,13 +68,19 @@
     },
     "compute_amplitude_spectra":
     {
-	"partition": "ccn",
-	"mem": ""
+        "partition": "ccn",
+        "mem": "0"
     },
     "plot_amplitude_spectra":
     {
         "time": "24:00:00",
-	"partition": "ccn",
-	"mem": ""
+        "partition": "ccn",
+        "mem": "0"
+    },
+    "mcmc_arviz_compare":
+    {
+        "partition": "ccn",
+        "mem" : "0",
+        "time": "12:00:00"
     }
 }
