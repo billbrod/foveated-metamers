@@ -1323,6 +1323,9 @@ rule mcmc:
         op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                 'task-split_comp-{comp}_mcmc_{mcmc_model}_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}_'
                 'c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}.nc'),
+        op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_mcmc_{mcmc_model}_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}_'
+                'c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_scaling-extended.nc'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                 'task-split_comp-{comp}_mcmc_{mcmc_model}_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}_'
@@ -1354,6 +1357,13 @@ rule mcmc:
                                                       wildcards.mcmc_model,
                                                       int(wildcards.seed)+1)
                 inf_data.to_netcdf(output[0])
+                # want to have a different seed for constructing the inference
+                # data object than we did for inference itself
+                inf_data_extended = fov.mcmc.assemble_inf_data(mcmc, dataset,
+                                                               wildcards.mcmc_model,
+                                                               int(wildcards.seed)+10,
+                                                               extend_scaling=True)
+                inf_data_extended.to_netcdf(output[1])
                 
 
 rule mcmc_plots:
