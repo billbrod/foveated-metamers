@@ -1473,8 +1473,8 @@ rule mcmc_arviz_compare:
                     models[name] = inf
                 comp_df = az.compare(models, ic=wildcards.ic)
                 comp_df.to_csv(output[0], index=False)
-                fig = az.plot_compare(comp_df)
-                fig.savefig(output[1], bbox_inches='tight')
+                ax = az.plot_compare(comp_df)
+                ax.figure.savefig(output[1], bbox_inches='tight')
 
 
 rule mcmc_compare_plot:
