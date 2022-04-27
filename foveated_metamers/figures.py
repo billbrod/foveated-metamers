@@ -1837,7 +1837,12 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
             ax.set_xticklabels(xticklabels,
                                rotation=rotate_xticklabels, ha='right')
             xlim = ax.get_xlim()
-            for name, mn in means.groupby([hue, style]):
+            # need a single list of values to groupby, not a list of lists
+            if isinstance(style, list):
+                gb = means.groupby([hue, *style])
+            else:
+                gb = means.groupby([hue, style])
+            for name, mn in gb:
                 # plot the average line and HDI for each hue, style separately.
                 # this can be overwhelming, which is why we allow user to turn
                 # it off / modify it.
