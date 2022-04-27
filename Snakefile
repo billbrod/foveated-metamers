@@ -1473,9 +1473,10 @@ rule mcmc_arviz_compare:
                     name = re.findall('mcmc_([a-z-]+)_step', i)[0]
                     models[name] = inf
                 comp_df = az.compare(models, ic=wildcards.ic)
-                comp_df.to_csv(output[0], index=False)
                 ax = az.plot_compare(comp_df)
                 ax.figure.savefig(output[1], bbox_inches='tight')
+                # model label is found in the index of the df, so need to grab it back
+                comp_df.reset_index().to_csv(output[0], index=False)
 
 
 rule mcmc_compare_plot:
