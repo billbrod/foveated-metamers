@@ -2621,6 +2621,84 @@ rule synthesis_distance_plot:
                 g.savefig(output[0], bbox_inches='tight')
 
 
+rule calculate_radial_squared_error:
+    input:
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_comp-{comp}.npy'),
+        op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_description_comp-{comp}.csv'),
+    output:
+        op.join(config["DATA_DIR"], 'distances', '{model_name}', 'radial_se_comp-{comp}.csv'),
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'distances', '{model_name}', 'radial_se_comp-{comp}.log'),
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'distances', '{model_name}', 'radial_se_comp-{comp}_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import pandas as pd
+        import numpy as np
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                stim = np.load(input[0])
+                stim_df = pd.read_csv(input[1])
+                if wildcards.model_name == 'RGC_norm_gaussian' and wildcards.comp == 'met':
+                    # for this model and comparison, we only had 5 images
+                    names = stim_df.image_name.unique()[:5].tolist()
+                    stim_df = stim_df.query("image_name in @names")
+                # create a dummy idx, which is not randomized (that's what setting seed=None does)
+                idx = fov.stimuli.generate_indices_split(stim_df, None,
+                                                         f'met_v_{wildcards.comp.split("-")[0]}',
+                                                         12)
+                # this contains all the relevant metadata we want for this comparison
+                dist_df = fov.analysis.create_experiment_df_split(stim_df, idx)
+                # remove duplicates, so we only have a single row for each
+                # (target image, scaling, seed). this means we're throwing out
+                # 3/4 of our rows
+                if wildcards.comp.startswith('ref'):
+                    dist_df = dist_df.drop_duplicates(['image_name', 'scaling', 'unique_seed'])
+                elif wildcards.comp.startswith('met'):
+                    # slightly more complicated to do this for the metamer comparisons
+                    tmp = dist_df.apply(lambda x: sorted(set([x.image_left_1, x.image_left_2, x.image_right_1, x.image_right_2])), 1)
+                    dist_df['seeds'] = tmp.apply(lambda x: f'{int(x[0])},{int(x[1])}')
+                    dist_df = dist_df.drop_duplicates(['image_name', 'scaling', 'seeds'])
+                    dist_df = dist_df.drop(columns=['seeds'])
+                # initialize the images we'll use to compute radial means,
+                # modified from fov.statistics.amplitude_spectra
+                rbin = pt.synthetic_images.polar_radius(stim.shape[-2:]).astype(np.int)
+                # only look at the circle that can fit in the image (i.e.,
+                # throw away the corners, because there are fewer pixels out
+                # there and so the averages won't be comparable)
+                disk = pt.synthetic_images.polar_radius(stim.shape[-2:])
+                thresh = min(stim.shape[-2:])//2
+                disk = disk < thresh
+                rbin[~disk] = rbin.max()+1
+                # now iterate through all trials and compute the mse on each of
+                # them
+                df = []
+                for _, row in dist_df.iterrows():
+                    # unpack this to get the index of the stimulus on left and right, for first
+                    # and second image
+                    i = row.trial_number
+                    [[l1, l2], [r1, r2]] = idx[:, i]
+                    # need to cast these as floats else the MSE will be *way*
+                    # off (like 100 instead of 8600). don't do the whole stim
+                    # array at once because that would *drastically* increase
+                    # memory use.
+                    img1 = stim[l1].astype(float)
+                    if l1 == l2:
+                        img2 = stim[r2].astype(float)
+                    else:
+                        img2 = stim[l2].astype(float)
+                    diff = np.square(img1-img2)
+                    diff = scipy.ndimage.mean(diff, labels=rbin, index=np.arange(thresh-1))
+                    row = row.to_dict()
+                    row.update({'mse': diff, 'distance_pixels': np.arange(len(diff))})
+                    tmp = pd.DataFrame(row)
+                    tmp['distance_degrees'] = tmp.distance_pixels * ((2*tmp.max_ecc) / max(img1.shape[-2:]))
+                    df.append(tmp)
+                df = pd.concat(df)
+                df.to_csv(output[0], index=False)
+
+
 rule calculate_mse:
     input:
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_comp-{comp}.npy'),
