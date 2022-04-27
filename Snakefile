@@ -2635,6 +2635,8 @@ rule calculate_radial_squared_error:
         import foveated_metamers as fov
         import pandas as pd
         import numpy as np
+        import scipy
+        import pyrtools as pt
         import contextlib
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
