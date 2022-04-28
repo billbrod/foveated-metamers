@@ -2718,6 +2718,9 @@ rule radial_squared_error_figure:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 df = pd.read_csv(input[0])
+                # sometimes the values have floating point precision issues,
+                # e.g., 0.058 becoming 0.579999999999. this prevents that, so the legend is prettier
+                df.scaling = np.round(df.scaling, 3)
                 style, fig_width = fov.style.plotting_style(wildcards.context)
                 plt.style.use(style)
                 if wildcards.ecc == 'None':
@@ -2725,7 +2728,14 @@ rule radial_squared_error_figure:
                 else:
                     ecc_range = [float(e) for e in wildcards.ecc.split(',')]
                 g = fov.figures.radial_mse(df, height=fig_width/6, ecc_range=ecc_range)
-                g.savefig(output[0])
+                for i, ax in enumerate(g.axes.flatten()):
+                    # still running into this issue
+                    # https://github.com/mwaskom/seaborn/issues/2293 with
+                    # things about this size, so we manually set the
+                    # xticklabels invisible
+                    if col == 'image_name' and i <= 14:
+                        [xticklab.set_visible(False) for xticklab in ax.get_xticklabels()]
+                g.savefig(output[0], bbox_inches='tight')
 
 
 rule calculate_mse:

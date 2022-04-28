@@ -2609,5 +2609,5 @@ def radial_mse(df, x='distance_degrees', y='mse', hue='scaling',
     if col == 'image_name' and kwargs.get('col_wrap', 5) == 5:
         g.set_axis_labels('', '')
         g.axes.flatten()[17].set_xlabel('Eccentricity (deg)')
-        g.axes.flatten()[5].set_ylabel('Mean squared error', y=0, ha='center')
+        g.axes.flatten()[5].set_ylabel('Mean squared error', y=-.2, ha='center')
     return g
