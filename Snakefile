@@ -3520,11 +3520,14 @@ def get_compose_figures_input(wildcards):
                  path_template.format('window_contours_fill-random-4_size-2048,2600_scaling-2_linewidth-36_background-white'),
                  path_template.format('window_contours_fill-random-5_size-2048,2600_scaling-2_linewidth-36_background-white')]
     if 'metamer_comparison' in wildcards.fig_name:
-        paths = [path_template.format(wildcards.fig_name.replace('performance_', ''))]
+        paths = [path_template.format(wildcards.fig_name.replace('performance_', '').replace('scaling-extended_', ''))]
         if 'performance' in wildcards.fig_name:
-            paths.append(path_template.format('V1_norm_s6_gaussian/task-split_comp-ref_mcmc_partially-pooled_performance_focus-outlier'))
+            if 'scaling-extended' in wildcards.fig_name:
+                paths.append(path_template.format('V1_norm_s6_gaussian/task-split_comp-ref_mcmc_scaling-extended_partially-pooled_performance_focus-outlier'))
+            else:
+                paths.append(path_template.format('V1_norm_s6_gaussian/task-split_comp-ref_mcmc_partially-pooled_performance_focus-outlier'))
     if 'all_comps_summary' in wildcards.fig_name:
-        mcmc_model, focus = re.findall('all_comps_summary_([a-z-]+)_focus-([a-z-_]+)', wildcards.fig_name)[0]
+        mcmc_model, focus = re.findall('all_comps_summary_([a-z-_]+)_focus-([a-z-_]+)', wildcards.fig_name)[0]
         paths = [
             path_template.format('{model}/task-split_comp-{comp}_mcmc_{mcmc_model}_performance_focus-{focus}').format(
                 mcmc_model=mcmc_model, focus=focus, model=model, comp=comp)
