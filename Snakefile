@@ -2701,6 +2701,23 @@ rule calculate_radial_squared_error:
                 df.to_csv(output[0], index=False)
 
 
+rule figure_radial_squared_error:
+    input:
+        op.join(config["DATA_DIR"], 'distances', '{model_name}', 'radial_se_comp-{comp}.csv'),
+    output:
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'radial_se_comp-{comp}.svg'),
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'radial_se_comp-{comp}.log'),
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'radial_se_comp-{comp}_benchmark.txt'),
+    run:
+        df = pd.read_csv(input[0])
+        style, fig_width = fov.style.plotting_style(wildcards.context)
+        plt.style.use(style)
+        g = fov.figures.radial_mse(df, height=fig_width/5)
+        g.savefig(output[0])
+
+
 rule calculate_mse:
     input:
         op.join(config["DATA_DIR"], 'stimuli', '{model_name}', 'stimuli_comp-{comp}.npy'),

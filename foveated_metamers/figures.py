@@ -2570,3 +2570,33 @@ def number_of_stats(df):
                  bbox_to_anchor=(old_legend_bbox.x0,
                                  old_legend_bbox.y0-old_legend_bbox.height/3))
     return g, popts
+
+
+def radial_mse(df, x='distance_degrees', y='mse', hue='scaling',
+               col='image_name', kind='line', **kwargs):
+    """Plot MSE as function of distance from fixation.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Dataframe containing the radial MSE information.
+    x, y, hue, col : str, optional
+        Columns to map along the given dimension
+    kind : {'scatter', 'line'}, optional
+        The kind of plot to make
+    kwargs :
+        Passed to sns.relplot
+
+    Returns
+    -------
+    g : sns.FacetGrid
+        FacetGrid containing the plot
+
+    """
+    if col == 'image_name':
+        img_order = plotting.get_order('image_name')
+        kwargs.setdefault('col_order', img_order)
+    pal = plotting.get_palette(hue, df[hue].unique())
+    g = sns.relplot(data=df, x=x, y=y, hue=hue, kind=kind, col=col,
+                    palette=pal, **kwargs)
+    return g
