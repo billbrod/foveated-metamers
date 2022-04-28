@@ -95,7 +95,7 @@ def get_palette(col, col_unique=None, as_dict=True):
         pal = sns.color_palette('Reds_r', len(scaling_vals))
         pal = dict(zip(scaling_vals, pal))
         pal['ref_image'] = 'k'
-        all_vals = sorted(all_vals)
+        all_vals = sorted(col_unique)
     elif col == 'cell_type':
         all_vals = ['midget', 'parasol']
         if len(col_unique) == 1 and col_unique[0] in all_vals:

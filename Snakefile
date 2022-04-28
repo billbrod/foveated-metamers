@@ -2701,21 +2701,31 @@ rule calculate_radial_squared_error:
                 df.to_csv(output[0], index=False)
 
 
-rule figure_radial_squared_error:
+rule radial_squared_error_figure:
     input:
         op.join(config["DATA_DIR"], 'distances', '{model_name}', 'radial_se_comp-{comp}.csv'),
     output:
-        op.join(config['DATA_DIR'], 'figures', '{context}', 'radial_se_comp-{comp}.svg'),
+        op.join(config['DATA_DIR'], 'figures', '{context}', '{model_name}', 'radial_se_comp-{comp}_ecc-{ecc}.svg'),
     log:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'radial_se_comp-{comp}.log'),
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}', 'radial_se_comp-{comp}_ecc-{ecc}.log'),
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'radial_se_comp-{comp}_benchmark.txt'),
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{model_name}', 'radial_se_comp-{comp}_ecc-{ecc}_benchmark.txt'),
     run:
-        df = pd.read_csv(input[0])
-        style, fig_width = fov.style.plotting_style(wildcards.context)
-        plt.style.use(style)
-        g = fov.figures.radial_mse(df, height=fig_width/5)
-        g.savefig(output[0])
+        import foveated_metamers as fov
+        import pandas as pd
+        import matplotlib.pyplot as plt
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                df = pd.read_csv(input[0])
+                style, fig_width = fov.style.plotting_style(wildcards.context)
+                plt.style.use(style)
+                if wildcards.ecc == 'None':
+                    ecc_range = None
+                else:
+                    ecc_range = [float(e) for e in wildcards.ecc.split(',')]
+                g = fov.figures.radial_mse(df, height=fig_width/6, ecc_range=ecc_range)
+                g.savefig(output[0])
 
 
 rule calculate_mse:

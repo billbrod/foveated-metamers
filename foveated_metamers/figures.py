@@ -2573,7 +2573,7 @@ def number_of_stats(df):
 
 
 def radial_mse(df, x='distance_degrees', y='mse', hue='scaling',
-               col='image_name', kind='line', **kwargs):
+               col='image_name', kind='line', ecc_range=None, **kwargs):
     """Plot MSE as function of distance from fixation.
 
     Parameters
@@ -2584,6 +2584,8 @@ def radial_mse(df, x='distance_degrees', y='mse', hue='scaling',
         Columns to map along the given dimension
     kind : {'scatter', 'line'}, optional
         The kind of plot to make
+    ecc_range : tuple or None, optional
+        If not None, only plot eccentricities between these values (in degrees)
     kwargs :
         Passed to sns.relplot
 
@@ -2593,10 +2595,19 @@ def radial_mse(df, x='distance_degrees', y='mse', hue='scaling',
         FacetGrid containing the plot
 
     """
+    df = plotting._remap_image_names(df)
     if col == 'image_name':
         img_order = plotting.get_order('image_name')
         kwargs.setdefault('col_order', img_order)
+        kwargs.setdefault('col_wrap', 5)
     pal = plotting.get_palette(hue, df[hue].unique())
+    if ecc_range is not None:
+        df = df.query(f"distance_degrees > {ecc_range[0]} & distance_degrees < {ecc_range[1]}")
     g = sns.relplot(data=df, x=x, y=y, hue=hue, kind=kind, col=col,
                     palette=pal, **kwargs)
+    g.set_titles('{col_name}')
+    if col == 'image_name' and kwargs.get('col_wrap', 5) == 5:
+        g.set_axis_labels('', '')
+        g.axes.flatten()[17].set_xlabel('Eccentricity (deg)')
+        g.axes.flatten()[5].set_ylabel('Mean squared error', y=0, ha='center')
     return g
