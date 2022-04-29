@@ -4119,3 +4119,15 @@ rule paper_figures:
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'all_comps_summary_unpooled_focus-subject_one-ax.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'all_comps_summary_unpooled_focus-outlier.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_unpooled_log-ci_sub-00_comp-downsample.svg"),
+
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_scaling-extended_unpooled_log-ci_comp-base.svg"),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_scaling-extended_unpooled_log-ci_sub-00_comp-natural_line-scaling-0.27.svg"),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'all_comps_summary_scaling-extended_unpooled_focus-subject_one-ax.svg'),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'all_comps_summary_scaling-extended_unpooled_focus-outlier.svg'),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_scaling-extended_unpooled_log-ci_sub-00_comp-downsample.svg"),
+
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_scaling-extended_partially-pooled_log-ci_comp-base.svg"),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_scaling-extended_partially-pooled_log-ci_sub-00_comp-natural_line-scaling-0.27.svg"),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_scaling-extended_partially-pooled_log-ci_sub-00_comp-downsample.svg"),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'all_comps_summary_scaling-extended_partially-pooled_focus-subject_one-ax.svg'),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'all_comps_summary_scaling-extended_partially-pooled_focus-outlier.svg'),
