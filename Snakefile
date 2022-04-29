@@ -2085,13 +2085,62 @@ rule mcmc_figure:
                 fig.savefig(output[0], bbox_inches='tight')
 
 
+rule mcmc_arviz_compare_figure:
+    input:
+        [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
+                'task-split_comp-{comp}_mcmc_compare_step-1_prob-.8_depth-10'
+                '_c-4_d-10000_w-10000_s-0_ic-{{ic}}.csv').format(comp=c, model_name=m)
+         for m in MODELS
+         for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'met-downsample-2', 'ref-natural'], 'RGC_norm_gaussian': ['ref', 'met']}[m]]
+    output:
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'mcmc_compare_ic-{ic}.{ext}'),
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'mcmc_compare_ic-{ic}_{ext}.log'),
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'mcmc_compare_ic-{ic}_{ext}_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import arviz as az
+        import pandas as pd
+        import seaborn as sns
+        import matplotlib.pyplot as plt
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                style, fig_width = fov.style.plotting_style(wildcards.context)
+                comp_df = []
+                for p in input:
+                    model, comp, ic = re.findall('mcmc/([A-Za-z0-9_]+)/task-split_comp-([a-z-0-9]+)/task.*_ic-([a-z]+).csv', p)[0]
+                    tmp = pd.read_csv(p)
+                    tmp['model'] = model
+                    tmp['trial_type'] = f"metamer_vs_{comp.replace('ref', 'reference').replace('met', 'metamer').replace('-2', '')}"
+                    comp_df.append(tmp)
+                comp_df = pd.concat(comp_df)
+                comp_df = comp_df.rename(columns={'index': 'mcmc_model'})
+                comp_df.model = comp_df.model.map(fov.plotting.MODEL_PLOT)
+                comp_df.trial_type = comp_df.trial_type.map(fov.plotting.TRIAL_TYPE_PLOT)
+                # the downsample title has an extra newline, which we'll remove here
+                comp_df.trial_type = comp_df.trial_type.map(lambda x: x.replace('\n(', ' ('))
+                aspect = 2
+
+                def facet_compare(data, **kwargs):
+                    kwargs.pop('color', None)
+                    az.plot_compare(data.set_index('mcmc_model').sort_index(), ax=plt.gca(), order_by_rank=False, **kwargs)
+
+                g = sns.FacetGrid(comp_df, row='trial_type', col='model', aspect=aspect,
+                                  height=(fig_width/comp_df.model.nunique()) / aspect, sharex=False)
+                g.map_dataframe(facet_compare)
+                g.set_titles('{col_name} \n {row_name}')
+                g.savefig(output[0], bbox_inches='tight')
+
+
 rule mcmc_performance_comparison_figure:
     input:
         [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                  'task-split_comp-{comp}_mcmc_{{mcmc_model}}_step-1_prob-.8_depth-10'
                  '_c-4_d-10000_w-10000_s-0{{scaling_extended}}.nc').format(comp=c, model_name=m)
          for m in MODELS
-         for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'met-downsample-2', 'ref-natural'], 'RGC_norm_gaussian': ['ref', 'met']}[m]],
+         for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'ref-natural'], 'RGC_norm_gaussian': ['ref', 'met']}[m]],
         op.join(config['DATA_DIR'], 'dacey_data',
                 'Dacey1992_mcmc_line-nooffset_step-.1_prob-.8_depth-10_c-4_d-1000_w-1000_s-10.nc'),
     output:
