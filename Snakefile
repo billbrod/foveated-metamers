@@ -2733,7 +2733,7 @@ rule radial_squared_error_figure:
                     # https://github.com/mwaskom/seaborn/issues/2293 with
                     # things about this size, so we manually set the
                     # xticklabels invisible
-                    if col == 'image_name' and i <= 14:
+                    if i <= 14:
                         [xticklab.set_visible(False) for xticklab in ax.get_xticklabels()]
                 g.savefig(output[0], bbox_inches='tight')
 
