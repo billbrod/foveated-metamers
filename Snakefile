@@ -2226,7 +2226,7 @@ rule mcmc_performance_comparison_figure:
                                 if 'a0' in ax.get_title():
                                     ylim = (9e-1, 10)
                                 elif 's0' in ax.get_title():
-                                    ylim = (1e-2, 5e-1)
+                                    ylim = (1e-2, 1e0)
                             elif 'comp-ref' in wildcards.focus:
                                 if 'a0' in ax.get_title():
                                     ylim = (8e-1, 10)
@@ -2236,7 +2236,7 @@ rule mcmc_performance_comparison_figure:
                                 if 'a0' in ax.get_title():
                                     ylim = (2e-1, 10)
                                 elif 's0' in ax.get_title():
-                                    ylim = (1e-2, 5e-1)
+                                    ylim = (1e-2, 1e0)
                             ax.set(yscale='log', ylim=ylim)
                         title = ax.get_title().replace('a0', "Max $d'$").replace('s0', 'Critical Scaling')
                         title = title.split('|')[0]
