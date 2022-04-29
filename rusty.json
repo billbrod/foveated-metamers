@@ -82,5 +82,9 @@
         "partition": "ccn",
         "mem" : "0",
         "time": "12:00:00"
+    },
+    "radial_squared_error_figure":
+    {
+        "time": "2:00:00"
     }
 }
