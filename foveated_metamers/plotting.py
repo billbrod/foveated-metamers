@@ -480,6 +480,8 @@ def _psychophysical_curve_ticks(df, axes, logscale_xaxis=False, height=5,
     # reasonable number of ticks in reasonable locations, reducing the number
     # if the axis is small or the font is large
     xmin = np.round(df.scaling.min() - .004, 2)
+    if xmin <= 0:
+        xmin = .005
     xmax = np.round(df.scaling.max(), 2)
     nticks = 12
     if height < 6:
