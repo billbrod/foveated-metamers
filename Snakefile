@@ -2089,19 +2089,19 @@ rule mcmc_performance_comparison_figure:
     input:
         [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                  'task-split_comp-{comp}_mcmc_{{mcmc_model}}_step-1_prob-.8_depth-10'
-                 '_c-4_d-10000_w-10000_s-0.nc').format(comp=c, model_name=m)
+                 '_c-4_d-10000_w-10000_s-0{{scaling_extended}}.nc').format(comp=c, model_name=m)
          for m in MODELS
          for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'met-downsample-2', 'ref-natural'], 'RGC_norm_gaussian': ['ref', 'met']}[m]],
         op.join(config['DATA_DIR'], 'dacey_data',
                 'Dacey1992_mcmc_line-nooffset_step-.1_prob-.8_depth-10_c-4_d-1000_w-1000_s-10.nc'),
     output:
-        op.join(config['DATA_DIR'], 'figures', '{context}', 'mcmc_{mcmc_model}_{mcmc_plot_type}_{focus}.{ext}'),
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'mcmc{scaling_extended}_{mcmc_model}_{mcmc_plot_type}_{focus}.{ext}'),
     log:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}',
-                'mcmc_{mcmc_model}_{mcmc_plot_type}_{focus}_{ext}.log')
+                'mcmc{scaling_extended}_{mcmc_model}_{mcmc_plot_type}_{focus}_{ext}.log')
     benchmark:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}',
-                'mcmc_{mcmc_model}_{mcmc_plot_type}_{focus}_{ext}_benchmark.txt')
+                'mcmc{scaling_extended}_{mcmc_model}_{mcmc_plot_type}_{focus}_{ext}_benchmark.txt')
     run:
         import foveated_metamers as fov
         import contextlib
@@ -3534,7 +3534,7 @@ def get_compose_figures_input(wildcards):
             for model in ['RGC_norm_gaussian', 'V1_norm_s6_gaussian'] for comp in ['ref', 'met']
         ]
     if 'performance_comparison' in wildcards.fig_name:
-        mcmc_model, details, comp, extra = re.findall('performance_comparison_([a-z-]+)_([a-z-]+)_((?:sub-[0-9]+_)?comp-[a-z-]+)([_a-z0-9.-]+)?', wildcards.fig_name)[0]
+        mcmc_model, details, comp, extra = re.findall('performance_comparison_([a-z-_]+)_([a-z-]+)_((?:sub-[0-9]+_)?comp-[a-z-]+)([_a-z0-9.-]+)?', wildcards.fig_name)[0]
         paths = [path_template.format(f'mcmc_{mcmc_model}_performance_{comp}{extra}'),
                  path_template.format(f'mcmc_{mcmc_model}_params-{details}_{comp}')]
     return paths
