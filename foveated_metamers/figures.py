@@ -1798,15 +1798,15 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
     for i, c in enumerate(cols):
         for j, r in enumerate(rows):
             ax = axes[j, i]
-            query_str = f"{col}=='{c}' & {row}=='{r}'"
-            d = df.query(query_str)
             # want to use img_order if relevant
             if x == 'dependent_var' and 'image' in c:
-                x_ord = [i for i in img_order if i in d[x].unique()]
                 if x_order is not None:
-                    warnings.warn(f"Using built in img_order {x_ord} instead of user-set x_order {x_order}")
+                    warnings.warn(f"Using built in img_order instead of user-set x_order {x_order}")
+                x_ord = img_order
             else:
                 x_ord = x_order
+            query_str = f"{col}=='{c}' & {row}=='{r}'"
+            d = df.query(query_str)
             xlabel, ylabel = '', ''
             if i == 0:
                 ylabel = f'{y} with {int(hdi*100)}% HDI'
