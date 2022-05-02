@@ -2131,7 +2131,7 @@ rule mcmc_performance_comparison_figure:
                  'task-split_comp-{comp}_mcmc_{{mcmc_model}}_step-1_prob-.8_depth-10'
                  '_c-4_d-10000_w-10000_s-0{{scaling_extended}}.nc').format(comp=c, model_name=m)
          for m in MODELS
-         for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'ref-natural'], 'RGC_norm_gaussian': ['ref', 'met']}[m]],
+         for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'ref-natural', 'met-downsample-2'], 'RGC_norm_gaussian': ['ref', 'met']}[m]],
         op.join(config['DATA_DIR'], 'dacey_data',
                 'Dacey1992_mcmc_line-nooffset_step-.1_prob-.8_depth-10_c-4_d-1000_w-1000_s-10.nc'),
     output:
