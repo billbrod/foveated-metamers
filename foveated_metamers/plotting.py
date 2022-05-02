@@ -481,11 +481,12 @@ def _psychophysical_curve_ticks(df, axes, logscale_xaxis=False, height=5,
     # if the axis is small or the font is large
     xmin = np.round(df.scaling.min() - .004, 2)
     if xmin <= 0:
-        xmin = .005
+        # not much informative happens below .01
+        xmin = .01
     xmax = np.round(df.scaling.max(), 2)
     nticks = 12
     if height < 6:
-        nticks /= 2
+        nticks *= (2/3)
     if mpl.rcParams['font.size'] > 15 or height < 2:
         nticks /= 2
         # don't want to overlap the labels on adjacent columns
