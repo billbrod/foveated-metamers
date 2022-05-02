@@ -2611,3 +2611,66 @@ def radial_mse(df, x='distance_degrees', y='mse', hue='scaling',
         g.axes.flatten()[17].set_xlabel('Eccentricity (deg)')
         g.axes.flatten()[5].set_ylabel('Mean squared error', y=-.2, ha='center')
     return g
+
+
+def mcmc_arviz_compare(df, row='trial_type', col='model', aspect=2, height=2,
+                       **kwargs):
+    """Make facetgrid of arviz's compare plot.
+
+    To show the results for multiple models and trial types at once.
+
+    Note that we do not plot either the minimum IC linenor the insample
+    deviance points.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        df containing the outputs of arviz.compare, for multiple models and
+        trial types.
+    row, col : str, optional
+        which columns of df to facet along the rows and columns
+    aspect, height : float, optional
+        The aspect and height of the facets
+    kwargs :
+        Passed to sns.FacetGrid and az.plot_compare (in that order)
+
+    Returns
+    -------
+    g : sns.FacetGrid
+        FacetGrid containing the plot.
+
+    """
+    df = df.rename(columns={'index': 'mcmc_model'})
+    aspect = 2
+
+    def facet_compare(data, **kwargs):
+        kwargs.pop('color', None)
+        az.plot_compare(data.set_index('mcmc_model').sort_index(), ax=plt.gca(),
+                        order_by_rank=False, insample_dev=False,
+                        # this plots the min IC line invisibly (by
+                        # setting alpha=0), since we don't want to
+                        # see it. in particular, this line is
+                        # incorrect when order_by_rank=False
+                        plot_kwargs={'color_ls_min_ic': (0,0,0,0)},
+                        **kwargs)
+
+    g = sns.FacetGrid(df, row=row, col=col, aspect=aspect, height=height,
+                      **kwargs)
+    g.map_dataframe(facet_compare)
+    g.set_titles('{col_name} \n {row_name}')
+    ic = None
+    if 'loo' in df.columns and 'waic' not in df.columns:
+        ic = 'loo'
+    elif 'waic' in df.columns:
+        ic = 'waic'
+    else:
+        raise Exception("Unsure which IC is being plotted here!")
+    xlabel = {'loo': 'PSIS leave-one-out', 'waic': 'WAIC'}[ic]
+    for (i,j,k), d in g.facet_data():
+        ax = g.axes[i, j]
+        ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(5))
+        if d.empty:
+            ax.set_xticks([])
+        if i == df['trial_type'].nunique() - 1 and j == 1:
+            ax.set_xlabel(f'log {xlabel}', x=-.1, ha='center')
+    return g

@@ -2100,10 +2100,7 @@ rule mcmc_arviz_compare_figure:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'mcmc_compare_ic-{ic}_{ext}_benchmark.txt'),
     run:
         import foveated_metamers as fov
-        import arviz as az
         import pandas as pd
-        import seaborn as sns
-        import matplotlib.pyplot as plt
         import contextlib
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
@@ -2116,21 +2113,15 @@ rule mcmc_arviz_compare_figure:
                     tmp['trial_type'] = f"metamer_vs_{comp.replace('ref', 'reference').replace('met', 'metamer').replace('-2', '')}"
                     comp_df.append(tmp)
                 comp_df = pd.concat(comp_df)
-                comp_df = comp_df.rename(columns={'index': 'mcmc_model'})
                 comp_df.model = comp_df.model.map(fov.plotting.MODEL_PLOT)
                 comp_df.trial_type = comp_df.trial_type.map(fov.plotting.TRIAL_TYPE_PLOT)
                 # the downsample title has an extra newline, which we'll remove here
                 comp_df.trial_type = comp_df.trial_type.map(lambda x: x.replace('\n(', ' ('))
                 aspect = 2
-
-                def facet_compare(data, **kwargs):
-                    kwargs.pop('color', None)
-                    az.plot_compare(data.set_index('mcmc_model').sort_index(), ax=plt.gca(), order_by_rank=False, **kwargs)
-
-                g = sns.FacetGrid(comp_df, row='trial_type', col='model', aspect=aspect,
-                                  height=(fig_width/comp_df.model.nunique()) / aspect, sharex=False)
-                g.map_dataframe(facet_compare)
-                g.set_titles('{col_name} \n {row_name}')
+                height = (fig_width/comp_df.model.nunique()) / aspect
+                g = fov.figures.mcmc_arviz_compare(comp_df, row='trial_type',
+                                                   col='model', aspect=aspect,
+                                                   height=height, sharex=False)
                 g.savefig(output[0], bbox_inches='tight')
 
 
