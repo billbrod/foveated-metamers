@@ -3587,6 +3587,10 @@ def get_compose_figures_input(wildcards):
         mcmc_model, details, comp, extra = re.findall('performance_comparison_([a-z-_]+)_([a-z-]+)_((?:sub-[0-9]+_)?comp-[a-z-]+)([_a-z0-9.-]+)?', wildcards.fig_name)[0]
         paths = [path_template.format(f'mcmc_{mcmc_model}_performance_{comp}{extra}'),
                  path_template.format(f'mcmc_{mcmc_model}_params-{details}_{comp}')]
+    if 'radial_se' in wildcards.fig_name:
+        comp, ecc = re.findall('radial_se_comp-([a-z-]+)_ecc-([A-Za-z0-9,]+)', wildcards.fig_name)[0]
+        paths = [path_template.format(f'RGC_norm_gaussian/radial_se_comp-{comp}_ecc-{ecc}'),
+                 path_template.format(f'V1_norm_s6_gaussian/radial_se_comp-{comp}_ecc-{ecc}')]
     return paths
 
 
@@ -3640,6 +3644,8 @@ rule compose_figures:
                     fig = fov.compose_figures.combine_one_ax_figs(input, wildcards.context)
                 elif "performance_comparison" in wildcards.fig_name:
                     fig = fov.compose_figures.performance_comparison(*input, wildcards.context)
+                elif "radial_se" in wildcards.fig_name:
+                    fig = fov.compose_figures.radial_squared_error(*input, wildcards.context)
                 fig.save(output[0])
 
 
