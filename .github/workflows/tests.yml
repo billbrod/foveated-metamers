@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "0 0 * * 0" # weekly
 
+# see https://github.com/mamba-org/provision-with-micromamba#important
+defaults:
+  run:
+    shell: bash -l {0}
+
 jobs:
   test_models:
     runs-on: ubuntu-latest
@@ -13,21 +18,12 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-      - name: Setup conda
-        uses: s-weigand/setup-conda@v1.1.1
+      - name: Install conda environment with Micromamba
+        uses: mamba-org/provision-with-micromamba@main
         with:
-          update-conda: true
-          python-version: 3.7.1
-          conda-channels: anaconda, conda-forge, bioconda
-      - name: Create environment
-        run: |
-          conda install mamba -n base -c conda-forge
-          mamba env create -f environment.yml
-          source activate metamers
-          pip install pytest
+          extra-specs: python=3.7.1
       - name: Run tests with pytest
         run: |
-          source activate metamers
           pytest tests/test_models.py
 
   test_snakefile:
@@ -38,17 +34,10 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-      - name: Setup conda
-        uses: s-weigand/setup-conda@v1.1.1
+      - name: Install conda environment with Micromamba
+        uses: mamba-org/provision-with-micromamba@main
         with:
-          update-conda: true
-          python-version: 3.7.1
-          conda-channels: anaconda, conda-forge, bioconda
-      - name: Create environment
-        run: |
-          conda install mamba -n base -c conda-forge
-          mamba env create -f environment.yml
-          source activate metamers
+          extra-specs: python=3.7.1
       - name: Setup FFmpeg
         uses: FedericoCarboni/setup-ffmpeg@v1
       - name: Download data
@@ -61,9 +50,8 @@ jobs:
         run: |
           sed -i 's|DATA_DIR:.*|DATA_DIR: "data/metamers"|g' config.yml
           sed -i 's|TEXTURE_DIR:.*|TEXTURE_DIR: "data/textures-subset-for-testing"|g' config.yml
-      - name: run snakemake test
+      - name: Run snakemake test
         run: |
-          source activate metamers
           cp extra_packages/data/einstein.pgm data/metamers/ref_images/einstein_size-256,256.png
           snakemake -j 5 -prk data/metamers/test_setup/RGC_norm_gaussian_gpu-0/einstein data/metamers/test_setup/V1_norm_s6_gaussian_gpu-0/einstein
 
@@ -73,17 +61,12 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-      - name: Setup conda
-        uses: s-weigand/setup-conda@v1.1.1
+      - name: Install conda environment with Micromamba
+        uses: mamba-org/provision-with-micromamba@main
         with:
-          update-conda: true
-          python-version: 3.7.1
-          conda-channels: anaconda, conda-forge, bioconda
-      - name: Create environment
+          extra-specs: python=3.7.1
+      - name: Install extra requirements
         run: |
-          conda install mamba -n base -c conda-forge
-          mamba env create -f environment.yml
-          source activate metamers
           mamba install jupyter nbconvert
       - name: modify config.yml
         run: |
