@@ -17,11 +17,12 @@ jobs:
         uses: s-weigand/setup-conda@v1.1.1
         with:
           update-conda: true
-          python-version: 3.7.1
+          python-version: 3.7
           conda-channels: anaconda, conda-forge, bioconda
       - name: Create environment
         run: |
-          conda env create -f environment.yml
+          conda install mamba -n base -c conda-forge
+          mamba env create -f environment.yml
           source activate metamers
           pip install pytest
       - name: Run tests with pytest
@@ -41,11 +42,12 @@ jobs:
         uses: s-weigand/setup-conda@v1.1.1
         with:
           update-conda: true
-          python-version: 3.7.1
+          python-version: 3.7
           conda-channels: anaconda, conda-forge, bioconda
       - name: Create environment
         run: |
-          conda env create -f environment.yml
+          conda install mamba -n base -c conda-forge
+          mamba env create -f environment.yml
           source activate metamers
       - name: Setup FFmpeg
         uses: FedericoCarboni/setup-ffmpeg@v1
@@ -75,13 +77,14 @@ jobs:
         uses: s-weigand/setup-conda@v1.1.1
         with:
           update-conda: true
-          python-version: 3.7.1
+          python-version: 3.7
           conda-channels: anaconda, conda-forge, bioconda
       - name: Create environment
         run: |
-          conda env create -f environment.yml
+          conda install mamba -n base -c conda-forge
+          mamba env create -f environment.yml
           source activate metamers
-          conda install jupyter nbconvert
+          mamba install jupyter nbconvert
       - name: modify config.yml
         run: |
           sed -i 's|DATA_DIR:.*|DATA_DIR: "data/metamers"|g' config.yml
