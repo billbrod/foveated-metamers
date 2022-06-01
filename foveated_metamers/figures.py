@@ -1067,7 +1067,7 @@ def mcmc_diagnostics_plot(inf_data):
         matplotlib figure containing the plots.
 
     """
-    axes = az.plot_trace(inf_data)
+    axes = az.plot_trace(inf_data, kind='rank_bars')
     rhat = az.rhat(inf_data.posterior)
     ess = az.ess(inf_data.posterior)
     for ax in axes:
