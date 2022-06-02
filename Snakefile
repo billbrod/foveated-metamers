@@ -2130,11 +2130,11 @@ rule mcmc_arviz_compare_figure:
 
 rule mcmc_performance_comparison_figure:
     input:
-        [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                 'task-split_comp-{comp}_mcmc_{{mcmc_model}}_{hyper}{{scaling_extended}}.nc').format(comp=c, model_name=m,
-                                                                                                     hyper=get_mcmc_hyperparams(wildcards, mcmc_model=m, comp=c))
-         for m in MODELS
-         for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'ref-natural', 'met-downsample-2'], 'RGC_norm_gaussian': ['ref', 'met']}[m]],
+        lambda wildcards: [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
+                                   'task-split_comp-{comp}_mcmc_{{mcmc_model}}_{hyper}{{scaling_extended}}.nc').format(comp=c, model_name=m,
+                                                                                                                       hyper=get_mcmc_hyperparams(wildcards, mcmc_model=m, comp=c))
+                           for m in MODELS
+                           for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'ref-natural', 'met-downsample-2'], 'RGC_norm_gaussian': ['ref', 'met']}[m]],
         op.join(config['DATA_DIR'], 'dacey_data',
                 'Dacey1992_mcmc_line-nooffset_step-.1_prob-.8_depth-10_c-4_d-1000_w-1000_s-10.nc'),
     output:
@@ -2305,11 +2305,11 @@ rule mcmc_performance_comparison_figure:
 
 rule mcmc_parameter_correlation_figure:
     input:
-        [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                 'task-split_comp-{comp}_mcmc_{{mcmc_model}}_{hyper}.nc').format(comp=c, model_name=m,
-                                                                                 hyper=get_mcmc_hyperparams(wildcards, mcmc_model=m, comp=c))
-         for m in MODELS
-         for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'met-downsample-2', 'ref-natural'], 'RGC_norm_gaussian': ['ref', 'met']}[m]],
+        lambda wildcards: [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
+                                   'task-split_comp-{comp}_mcmc_{{mcmc_model}}_{hyper}.nc').format(comp=c, model_name=m,
+                                                                                                   hyper=get_mcmc_hyperparams(wildcards, mcmc_model=m, comp=c))
+                           for m in MODELS
+                           for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'met-downsample-2', 'ref-natural'], 'RGC_norm_gaussian': ['ref', 'met']}[m]],
     output:
         op.join(config['DATA_DIR'], 'figures', '{context}', 'mcmc_{mcmc_model}_param-correlation.{ext}'),
     log:
@@ -3949,12 +3949,12 @@ rule number_of_stats:
 
 rule critical_scaling_txt:
     input:
-        [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                 'task-split_comp-{comp}_mcmc_partially-pooled_{hyper}.nc').format(comp=c, model_name=m,
-                                                                                   hyper=get_mcmc_hyperparams(wildcards, comp=c, model_name=m,
-                                                                                                              mcmc_model='partially-pooled'))
-         for m in MODELS
-         for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'ref-natural'], 'RGC_norm_gaussian': ['ref', 'met']}[m]],
+        lambda wildcards: [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
+                                   'task-split_comp-{comp}_mcmc_partially-pooled_{hyper}.nc').format(comp=c, model_name=m,
+                                                                                                     hyper=get_mcmc_hyperparams(wildcards, comp=c, model_name=m,
+                                                                                                                                mcmc_model='partially-pooled'))
+                           for m in MODELS
+                           for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'ref-natural'], 'RGC_norm_gaussian': ['ref', 'met']}[m]],
         op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.csv'),
     output:
         op.join(config['DATA_DIR'], 'statistics', 'critical_scaling.txt')
