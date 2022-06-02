@@ -139,6 +139,18 @@ BEHAVIORAL_DATA_DATES = {
     }
 }
 
+def get_mcmc_hyperparams(wildcards, **kwargs):
+    hyper_str = 'step-{}_prob-{}_depth-{}_c-{}_d-{}_w-{}_s-{}'
+    kwargs.update(wildcards)
+    if kwargs['mcmc_model'] == 'partially-pooled':
+        if kwargs['model_name'] == 'V1_norm_s6_gaussian':
+            if kwargs['comp'] == 'met':
+                return hyper_str.format(1, '.8', 15, 4, 10000, 10000, 0)
+        elif kwargs['model_name'] == 'RGC_norm_gaussian':
+            if kwargs['comp'] == 'met':
+                return hyper_str.format('.5', '.9', 20, 4, 15000, 15000, 0)
+    return hyper_str.format(1, '.8', 10, 4, 10000, 10000, 0)
+
 
 # quick rule to check that there are GPUs available and the environment
 # has been set up correctly.
@@ -1441,25 +1453,21 @@ rule mcmc_arviz_compare:
     # unlike the rule after this one, this uses arviz's built-in compare
     # functionality
     input:
-        [op.join(config["DATA_DIR"], 'mcmc', '{{model_name}}', 'task-split_comp-{{comp}}',
-                'task-split_comp-{{comp}}_mcmc_{mcmc_model}_step-{{step_size}}_prob-{{accept_prob}}_depth-{{tree_depth}}'
-                '_c-{{num_chains}}_d-{{num_draws}}_w-{{num_warmup}}_s-{{seed}}.nc').format(mcmc_model=m)
-         for m in ['unpooled', 'partially-pooled']]
+        lambda wildcards: [op.join(config["DATA_DIR"], 'mcmc', '{{model_name}}', 'task-split_comp-{{comp}}',
+                                   'task-split_comp-{{comp}}_mcmc_{mcmc_model}_{hyper}.nc').format(mcmc_model=m,
+                                                                                                   hyper=get_mcmc_hyperparams(wildcards, mcmc_model=m))
+                           for m in ['unpooled', 'partially-pooled']]
     output:
         op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_compare_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
-                '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_ic-{ic}.csv'),
+                'task-split_comp-{comp}_mcmc_compare_ic-{ic}.csv'),
         op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_compare_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
-                '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_ic-{ic}_arviz.png')
+                'task-split_comp-{comp}_mcmc_compare_ic-{ic}_arviz.png')
     log:
         op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_compare_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
-                '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_ic-{ic}_arviz.log')
+                'task-split_comp-{comp}_mcmc_compare_ic-{ic}_arviz.log')
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_compare_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
-                '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_ic-{ic}_arviz_benchmark.txt')
+                'task-split_comp-{comp}_mcmc_compare_ic-{ic}_arviz_benchmark.txt')
     run:
         import foveated_metamers as fov
         import arviz as az
@@ -1481,22 +1489,19 @@ rule mcmc_arviz_compare:
 
 rule mcmc_compare_plot:
     input:
-        [op.join(config["DATA_DIR"], 'mcmc', '{{model_name}}', 'task-split_comp-{{comp}}',
-                'task-split_comp-{{comp}}_mcmc_{mcmc_model}_step-{{step_size}}_prob-{{accept_prob}}_depth-{{tree_depth}}'
-                '_c-{{num_chains}}_d-{{num_draws}}_w-{{num_warmup}}_s-{{seed}}.nc').format(mcmc_model=m)
-         for m in ['unpooled', 'partially-pooled']]
+        lambda wildcards: [op.join(config["DATA_DIR"], 'mcmc', '{{model_name}}', 'task-split_comp-{{comp}}',
+                                   'task-split_comp-{{comp}}_mcmc_{mcmc_model}_{hyper}.nc').format(mcmc_model=m,
+                                                                                                   hyper=get_mcmc_hyperparams(wildcards, mcmc_model=m))
+                           for m in ['unpooled', 'partially-pooled']]
     output:
         op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_compare_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
-                '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_{plot_type}.png'),
+                'task-split_comp-{comp}_mcmc_compare_{plot_type}.png'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_compare_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
-                '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_{plot_type}.log'),
+                'task-split_comp-{comp}_mcmc_compare_{plot_type}.log'),
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_compare_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
-                '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_{plot_type}_benchmark.txt'),
+                'task-split_comp-{comp}_mcmc_compare_{plot_type}_benchmark.txt'),
     run:
         import foveated_metamers as fov
         import arviz as az
@@ -1972,9 +1977,8 @@ rule performance_figure:
 
 rule mcmc_figure:
     input:
-        op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_{mcmc_model}_step-1_prob-.8_depth-10'
-                '_c-4_d-10000_w-10000_s-0{scaling_extended}.nc'),
+        lambda wildcards: op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
+                                  f'task-split_comp-{{comp}}_mcmc_{{mcmc_model}}_{get_mcmc_hyperparams(wildcards)}{{scaling_extended}}.nc'),
     output:
         op.join(config['DATA_DIR'], 'figures', '{context}', '{model_name}',
                 'task-split_comp-{comp}_mcmc{scaling_extended}_{mcmc_model}_{plot_type}.{ext}'),
@@ -2088,8 +2092,7 @@ rule mcmc_figure:
 rule mcmc_arviz_compare_figure:
     input:
         [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                'task-split_comp-{comp}_mcmc_compare_step-1_prob-.8_depth-10'
-                '_c-4_d-10000_w-10000_s-0_ic-{{ic}}.csv').format(comp=c, model_name=m)
+                'task-split_comp-{comp}_mcmc_compare_ic-{{ic}}.csv').format(comp=c, model_name=m)
          for m in MODELS
          for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'met-downsample-2', 'ref-natural'], 'RGC_norm_gaussian': ['ref', 'met']}[m]]
     output:
@@ -2128,8 +2131,8 @@ rule mcmc_arviz_compare_figure:
 rule mcmc_performance_comparison_figure:
     input:
         [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                 'task-split_comp-{comp}_mcmc_{{mcmc_model}}_step-1_prob-.8_depth-10'
-                 '_c-4_d-10000_w-10000_s-0{{scaling_extended}}.nc').format(comp=c, model_name=m)
+                 'task-split_comp-{comp}_mcmc_{{mcmc_model}}_{hyper}{{scaling_extended}}.nc').format(comp=c, model_name=m,
+                                                                                                     hyper=get_mcmc_hyperparams(wildcards, mcmc_model=m, comp=c))
          for m in MODELS
          for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'ref-natural', 'met-downsample-2'], 'RGC_norm_gaussian': ['ref', 'met']}[m]],
         op.join(config['DATA_DIR'], 'dacey_data',
@@ -2303,8 +2306,8 @@ rule mcmc_performance_comparison_figure:
 rule mcmc_parameter_correlation_figure:
     input:
         [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                 'task-split_comp-{comp}_mcmc_{{mcmc_model}}_step-1_prob-.8_depth-10'
-                 '_c-4_d-10000_w-10000_s-0.nc').format(comp=c, model_name=m)
+                 'task-split_comp-{comp}_mcmc_{{mcmc_model}}_{hyper}.nc').format(comp=c, model_name=m,
+                                                                                 hyper=get_mcmc_hyperparams(wildcards, mcmc_model=m, comp=c))
          for m in MODELS
          for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'met-downsample-2', 'ref-natural'], 'RGC_norm_gaussian': ['ref', 'met']}[m]],
     output:
@@ -3947,8 +3950,9 @@ rule number_of_stats:
 rule critical_scaling_txt:
     input:
         [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                 'task-split_comp-{comp}_mcmc_partially-pooled_step-1_prob-.8_depth-10'
-                 '_c-4_d-10000_w-10000_s-0.nc').format(comp=c, model_name=m)
+                 'task-split_comp-{comp}_mcmc_partially-pooled_{hyper}.nc').format(comp=c, model_name=m,
+                                                                                   hyper=get_mcmc_hyperparams(wildcards, comp=c, model_name=m,
+                                                                                                              mcmc_model='partially-pooled'))
          for m in MODELS
          for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'ref-natural'], 'RGC_norm_gaussian': ['ref', 'met']}[m]],
         op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.csv'),
