@@ -2132,7 +2132,7 @@ rule mcmc_performance_comparison_figure:
     input:
         lambda wildcards: [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                                    'task-split_comp-{comp}_mcmc_{{mcmc_model}}_{hyper}{{scaling_extended}}.nc').format(comp=c, model_name=m,
-                                                                                                                       hyper=get_mcmc_hyperparams(wildcards, mcmc_model=m, comp=c))
+                                                                                                                       hyper=get_mcmc_hyperparams(wildcards, model_name=m, comp=c))
                            for m in MODELS
                            for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'ref-natural', 'met-downsample-2'], 'RGC_norm_gaussian': ['ref', 'met']}[m]],
         op.join(config['DATA_DIR'], 'dacey_data',
@@ -2307,7 +2307,7 @@ rule mcmc_parameter_correlation_figure:
     input:
         lambda wildcards: [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                                    'task-split_comp-{comp}_mcmc_{{mcmc_model}}_{hyper}.nc').format(comp=c, model_name=m,
-                                                                                                   hyper=get_mcmc_hyperparams(wildcards, mcmc_model=m, comp=c))
+                                                                                                   hyper=get_mcmc_hyperparams(wildcards, model_name=m, comp=c))
                            for m in MODELS
                            for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'met-downsample-2', 'ref-natural'], 'RGC_norm_gaussian': ['ref', 'met']}[m]],
     output:
