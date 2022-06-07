@@ -25,12 +25,10 @@ jobs:
           # sudo env "PATH=$PATH" mamba env create -f environment.yml
           sudo env "PATH=$PATH" conda install -n base conda-libmamba-solver
           sudo env "PATH=$PATH" conda env create --experimental-solver=libmamba -f environment.yml
-          source activate metamers
-          pip install pytest
       - name: Run tests with pytest
         run: |
           source activate metamers
-          pytest tests/test_models.py
+          sudo env "PATH=$PATH" pytest tests/test_models.py
 
   test_snakefile:
     runs-on: ubuntu-latest
