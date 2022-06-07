@@ -21,8 +21,9 @@ jobs:
           conda-channels: anaconda, conda-forge, bioconda
       - name: Create environment
         run: |
-          conda install mamba -n base -c conda-forge
-          sudo env "PATH=$PATH" mamba env create -f environment.yml
+          # conda install mamba -n base -c conda-forge
+          # sudo env "PATH=$PATH" mamba env create -f environment.yml
+          conda env create --experimental-solver=libmamba -f environment.yml
           source activate metamers
           pip install pytest
       - name: Run tests with pytest
