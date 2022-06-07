@@ -26,7 +26,6 @@ dependencies:
   - pytest>=5.0.1
   - gputil>=1.4.0
   - opt_einsum>=3.3
-  - libnetcdf
   - pip:
       - torchcontrib==0.0.2
       - pyrtools>=1.0
