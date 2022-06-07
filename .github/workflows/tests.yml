@@ -23,6 +23,7 @@ jobs:
         run: |
           # conda install mamba -n base -c conda-forge
           # sudo env "PATH=$PATH" mamba env create -f environment.yml
+          conda install -n base conda-libmamba-solver
           conda env create --experimental-solver=libmamba -f environment.yml
           source activate metamers
           pip install pytest
