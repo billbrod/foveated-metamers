@@ -1,10 +1,10 @@
 name: metamers
 channels:
-  - anaconda
-  - conda-forge
-  - defaults
   - bioconda
   - pytorch
+  - conda-forge
+  - anaconda
+  - defaults
 dependencies:
   - python>=3.7
   - pip
@@ -27,7 +27,7 @@ dependencies:
   - gputil>=1.4.0
   - opt_einsum>=3.3
   - libnetcdf==4.6.1
-  - jaxlib==0.3.10
+  - jaxlib==0.3.7
   - pip:
       - torchcontrib==0.0.2
       - pyrtools>=1.0
