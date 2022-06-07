@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: "0 0 * * 0" # weekly
 
+env:
+  CONDA_PKGS_DIRS: /home/runner/pkgs
+
 jobs:
   test_models:
     runs-on: ubuntu-latest
