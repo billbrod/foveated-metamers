@@ -415,3 +415,33 @@ def radial_squared_error(error_1, error_2, context='paper'):
         SVG(error_2).move(0, figure_height/2),
         compose.Text('B', 0, figure_height/2+25, **text_params),
     )
+
+
+def discussion_fig(crit_scaling, sensitivities, context='paper'):
+    """Combine sensitivity schematic and critical scaling figure.
+
+    Parameters
+    ----------
+    crit_scaling, sensitivities : str
+        Paths to the sensitivities schematic and crit_scaling figures,
+        respectively.
+    context : {'paper', 'poster'}, optional
+        plotting context that's being used for this figure (as in
+        seaborn's set_context function). if poster, will scale things up. Note
+        that, for this figure, only paper has really been checked
+
+    Returns
+    -------
+    fig : svgutils.compose.Figure
+        Figure containing composed plots
+    """
+    text_params, figure_width = style.plotting_style(context, 'svgutils', 'full')
+    figure_width = _convert_to_pix(figure_width)
+    figure_height = 1/2*figure_width
+    return compose.Figure(
+        figure_width, figure_height,
+        SVG(crit_scaling),
+        compose.Text('A', 0, 25, **text_params),
+        SVG(sensitivities, 'inkscape').move(figure_width/2, figure_height/8),
+        compose.Text('B', figure_width/2, 25, **text_params),
+    )

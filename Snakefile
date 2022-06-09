@@ -3594,6 +3594,10 @@ def get_compose_figures_input(wildcards):
         comp, ecc = re.findall('radial_se_comp-([a-z-]+)_ecc-([A-Za-z0-9,]+)', wildcards.fig_name)[0]
         paths = [path_template.format(f'RGC_norm_gaussian/radial_se_comp-{comp}_ecc-{ecc}'),
                  path_template.format(f'V1_norm_s6_gaussian/radial_se_comp-{comp}_ecc-{ecc}')]
+    if 'discussion' in wildcards.fig_name:
+        norm = re.findall('discussion_norm-([A-Za-z]+)', wildcards.fig_name)[0]
+        paths = [path_template.format(f'critical_scaling_norm-{norm}'),
+                 op.join('reports', 'figures', 'sensitivities.svg')]
     return paths
 
 
@@ -3649,6 +3653,8 @@ rule compose_figures:
                     fig = fov.compose_figures.performance_comparison(*input, wildcards.context)
                 elif "radial_se" in wildcards.fig_name:
                     fig = fov.compose_figures.radial_squared_error(*input, wildcards.context)
+                elif 'discussion' in wildcards.fig_name:
+                    fig = fov.compose_figures.discussion_fig(*input, wildcards.context)
                 fig.save(output[0])
 
 
@@ -4230,6 +4236,7 @@ rule paper_figures:
         op.join(config['DATA_DIR'], 'figures', 'paper', 'Dacey1992_mcmc_line-nooffset_linear.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_tiles_scaling-1.5,1.5,1.5,1.5_cutout_downsample_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_partially-pooled_log-ci_sub-00_comp-downsample.svg"),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "discussion_norm-False.svg"),
 
         # these are just to check against the partially-pooled versions
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_unpooled_log-ci_comp-base.svg"),
