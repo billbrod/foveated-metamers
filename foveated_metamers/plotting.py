@@ -2087,7 +2087,7 @@ def tabular_legend(fig, legend, labels, title='trial_type',
     return table
 
 
-def vertical_pointplot(data, x, y, **kwargs):
+def vertical_pointplot(data, x, y, norm_y=False, **kwargs):
     """Like pointplot, but vertical. For use with `.map_dataframe`
 
     sns.pointplot wants to connect across categorical variables, not numeric
@@ -2115,6 +2115,8 @@ def vertical_pointplot(data, x, y, **kwargs):
     x, y : str
         Names of the columns to plot on x (should be categorical) and y (should
         be numeric)
+    norm_y : bool, optional
+        If True, we normalize the y values by dividing by the minimum value.
     kwargs :
         Passed to plt.scatter and plt.plot
 
@@ -2134,7 +2136,9 @@ def vertical_pointplot(data, x, y, **kwargs):
     if len(data) > 2:
         # collapse across the other differences (i.e., the image type from the Wallis paper)
         data = data.groupby(['model', 'trial_type']).mean().reset_index()
-    # want the line to be under the points
+    if norm_y:
+        data[y] = data[y] / data[y].min()
+    # want the line to be under the points, so set zorder=0
     ax.plot(data[x].values, data[y].values, linewidth=lw, zorder=0, **kwargs)
     if kwargs['label'] == 'Luminance':
         marker = {'metamer_vs_reference': 'o', 'metamer_vs_metamer': r'$\bigwedge$'}

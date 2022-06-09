@@ -4008,17 +4008,18 @@ rule critical_scaling_pointplot:
                            for m in MODELS
                            for c in {'V1_norm_s6_gaussian': ['met', 'ref'], 'RGC_norm_gaussian': ['ref']}[m]],
     output:
-        op.join(config['DATA_DIR'], 'figures', '{context}', 'critical_scaling.svg'),
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'critical_scaling_norm-{norm}.svg'),
     log:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'critical_scaling.log'),
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'critical_scaling_norm-{norm}.log'),
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'critical_scaling_benchmark.txt'),
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'critical_scaling_norm-{norm}_benchmark.txt'),
     run:
         import foveated_metamers as fov
         import contextlib
         import pandas as pd
         import arviz as az
         import seaborn as sns
+        import matplotlib as mpl
         import warnings
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
@@ -4043,13 +4044,25 @@ rule critical_scaling_pointplot:
                 pal['Texture'] = (165/255, 109/255, 189/255)
                 # put dummy data in for this Luminance met vs met, since we
                 # can't actually fit
-                tmp = crit_scaling.query("model=='Energy' & trial_type == 'metamer_vs_metamer'")
-                tmp['model']  = 'Luminance'
-                tmp['critical_scaling'] += tmp.critical_scaling
+                tmp = crit_scaling.query("model=='Luminance' & trial_type == 'metamer_vs_reference'")
+                tmp['trial_type']  = 'metamer_vs_metamer'
+                if wildcards.norm == 'True':
+                    tmp['critical_scaling'] = 8*tmp.critical_scaling
+                else:
+                    tmp['critical_scaling'] = 24*tmp.critical_scaling
                 crit_scaling = pd.concat([crit_scaling, tmp])
                 g = sns.FacetGrid(crit_scaling, hue='model', palette=pal, height=fig_width)
-                g.map_dataframe(fov.plotting.vertical_pointplot, x='model', y='critical_scaling')
-                g.set(xlabel='Pooling model', ylabel='Critical scaling')
+                g.map_dataframe(fov.plotting.vertical_pointplot, x='model', y='critical_scaling',
+                                norm_y=wildcards.norm=='True')
+                ylabel = 'Critical scaling'
+                # bool('False') == True, so we do this to avoid that
+                # situation
+                if wildcards.norm == 'True':
+                    ylabel += '\n(proportion of Original vs. Synth)'
+                    g.ax.set_yscale('log', base=2)
+                    g.ax.yaxis.set_minor_locator(mpl.ticker.LogLocator(2, subs=(.5, )))
+                    g.ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:.0f}'))
+                g.set(xlabel='Pooling model', ylabel=ylabel, xlim=[-.5, 2.5])
                 g.savefig(output[0])
 
 
