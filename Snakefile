@@ -3999,6 +3999,60 @@ rule critical_scaling_txt:
                     f.writelines(out_str)
 
 
+rule critical_scaling_pointplot:
+    input:
+        lambda wildcards: [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
+                                   'task-split_comp-{comp}_mcmc_partially-pooled_{hyper}.nc').format(comp=c, model_name=m,
+                                                                                                     hyper=get_mcmc_hyperparams(wildcards, comp=c, model_name=m,
+                                                                                                                                mcmc_model='partially-pooled'))
+                           for m in MODELS
+                           for c in {'V1_norm_s6_gaussian': ['met', 'ref'], 'RGC_norm_gaussian': ['ref']}[m]],
+    output:
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'critical_scaling.svg'),
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'critical_scaling.log'),
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'critical_scaling_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import contextlib
+        import pandas as pd
+        import arviz as az
+        import seaborn as sns
+        import warnings
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                style, fig_width = fov.style.plotting_style(wildcards.context, figsize='half')
+                crit_scaling = []
+                for f in input:
+                    tmp = az.from_netcdf(f)
+                    tmp = fov.mcmc.inf_data_to_df(tmp, 'parameter grouplevel means',
+                                                  "distribution == 'posterior' & level == 'all' & hdi == 50",
+                                                  hdi=.95).query("parameter=='s0'")
+                    tmp = tmp.drop(columns=['distribution', 'hdi', 'parameter', 'level', 'dependent_var',
+                                            'mcmc_model_type'])
+                    tmp = tmp.rename(columns={'value': 'critical_scaling'}).reset_index(drop=True)
+                    crit_scaling.append(tmp)
+                crit_scaling = pd.concat(crit_scaling)
+                crit_scaling['model'] = crit_scaling['model'].map(fov.plotting.MODEL_PLOT)
+                crit_scaling = pd.concat([crit_scaling, fov.figures.wallis_critical_scaling()])
+                pal = fov.plotting.get_palette('model', fov.plotting.MODEL_PLOT.values())
+                crit_scaling.model = crit_scaling.model.apply(lambda x: x.replace(' model', ''))
+                pal = {k.replace(' model', ''): v for k, v in pal.items()}
+                # color copied from Freeman and Simoncelli, 2011's V2 purple
+                pal['Texture'] = (165/255, 109/255, 189/255)
+                # put dummy data in for this Luminance met vs met, since we
+                # can't actually fit
+                tmp = crit_scaling.query("model=='Energy' & trial_type == 'metamer_vs_metamer'")
+                tmp['model']  = 'Luminance'
+                tmp['critical_scaling'] += tmp.critical_scaling
+                crit_scaling = pd.concat([crit_scaling, tmp])
+                g = sns.FacetGrid(crit_scaling, hue='model', palette=pal, height=fig_width)
+                g.map_dataframe(fov.plotting.vertical_pointplot, x='model', y='critical_scaling')
+                g.set(xlabel='Pooling model', ylabel='Critical scaling')
+                g.savefig(output[0])
+
+
 def get_all_metamers(wildcards):
     from foveated_metamers import stimuli
     mets = {}

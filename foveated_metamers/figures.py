@@ -2674,3 +2674,30 @@ def mcmc_arviz_compare(df, row='trial_type', col='model', aspect=2, height=2,
         if i == df['trial_type'].nunique() - 1 and j == 1:
             ax.set_xlabel(f'log {xlabel}', x=-.1, ha='center')
     return g
+
+
+def wallis_critical_scaling():
+    """Return df with critical scaling values from Wallis et al., 2019.
+
+    These are all for the texture model from the Freeman and Simoncelli, 2011
+    paper, with separate values for the two comparison types
+    (metamer_vs_reference and metamer_vs_metamer) and two image types (texture
+    and scene).
+
+    Numbers come from Wallis et al., 2019, figure 1G, extracted with
+    WebPlotDigitizer.
+
+    Returns
+    -------
+    df : pd.DataFrame
+        df with critical scaling values.
+
+    """
+    crit_scaling = [0.3522788203753351, 0.22037533512064347,
+                    0.36514745308310986, 0.27506702412868633]
+    comp = ['metamer_vs_reference', 'metamer_vs_reference',
+            'metamer_vs_metamer', 'metamer_vs_metamer']
+    images = ['texture', 'scene', 'texture', 'scene']
+    return pd.DataFrame({'critical_scaling': crit_scaling,
+                         'model': 'Texture model',
+                         'trial_type': comp, 'image_type': images})

@@ -142,7 +142,7 @@ def get_style(col, col_unique, as_dict=True):
     Parameters
     ----------
     col : {'trial_type', 'mcmc_model_type', list containing both elements}
-        The column to return the palette for. If we don't have a particular
+        The column to return the style for. If we don't have a particular
         style picked out, we raise an exception. If it's a list containing both
         elements, we will combine the two style mappings.
     col_unique : list, optional
@@ -2085,3 +2085,63 @@ def tabular_legend(fig, legend, labels, title='trial_type',
                                      transform=fig.transFigure)
         fig.add_artist(rect)
     return table
+
+
+def vertical_pointplot(data, x, y, **kwargs):
+    """Like pointplot, but vertical. For use with `.map_dataframe`
+
+    sns.pointplot wants to connect across categorical variables, not numeric
+    ones, but we want a plot that connects across numeric variables, so needed
+    to create this.
+
+    This was really made for the one figure, so it makes some extra assumptions
+    / does some extra stuff:
+
+    - If there's more than two points contained in data, we groupby model and
+      trial_type and take the mean.
+
+    - If the label == 'Luminance', we'll plot the point corresponding to
+      'metamer_vs_reference' as 'o' and the one corresponding to
+      'metamer_vs_metamer' as '^'. For all others, both points will be plotted
+      as 'o'.
+
+    - For all labels, the metamer_vs_reference point will be solid, while the
+      metamer_vs_metamer one will be hollow
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        df containing the data to plot
+    x, y : str
+        Names of the columns to plot on x (should be categorical) and y (should
+        be numeric)
+    kwargs :
+        Passed to plt.scatter and plt.plot
+
+    """
+    # the following tweaks are copied from my `lineplot_like_pointplot`
+    # function to get some nicer-looking aescetics
+    lw = mpl.rcParams["lines.linewidth"]
+    # copying from how seaborn.pointplot handles this, because they look nicer
+    lw *= 1.8
+    # annoyingly, scatter and plot interpret size / markersize differently: for
+    # plot, it's roughly the area, whereas for scatter it's the diameter. so
+    # the following (which uses scatter), should use the same value that gets
+    # used in pointplot (which also uses scatter). I also added an extra factor of
+    # 2 (by changing the 2 to a 4 below), which looks necessary
+    ms = np.pi * np.square(lw) * 4
+    ax = plt.gca()
+    if len(data) > 2:
+        # collapse across the other differences (i.e., the image type from the Wallis paper)
+        data = data.groupby(['model', 'trial_type']).mean().reset_index()
+    # want the line to be under the points
+    ax.plot(data[x].values, data[y].values, linewidth=lw, zorder=0, **kwargs)
+    if kwargs['label'] == 'Luminance':
+        marker = {'metamer_vs_reference': 'o', 'metamer_vs_metamer': '^'}
+    else:
+        marker = {'metamer_vs_reference': 'o', 'metamer_vs_metamer': 'o'}
+    c = kwargs.pop('color')
+    color = {'metamer_vs_reference': c, 'metamer_vs_metamer': 'w'}
+    for n, g in data.groupby('trial_type'):
+        ax.scatter(g[x].values, g[y].values, s=ms, marker=marker[n],
+                   color=color[n], edgecolors=c, linewidths=lw, **kwargs)
