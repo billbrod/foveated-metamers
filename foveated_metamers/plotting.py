@@ -2102,8 +2102,8 @@ def vertical_pointplot(data, x, y, **kwargs):
 
     - If the label == 'Luminance', we'll plot the point corresponding to
       'metamer_vs_reference' as 'o' and the one corresponding to
-      'metamer_vs_metamer' as '^'. For all others, both points will be plotted
-      as 'o'.
+      'metamer_vs_metamer' as '$\bigwedge$' (which looks like an up arrow) For
+      all others, both points will be plotted as 'o'.
 
     - For all labels, the metamer_vs_reference point will be solid, while the
       metamer_vs_metamer one will be hollow
@@ -2137,7 +2137,7 @@ def vertical_pointplot(data, x, y, **kwargs):
     # want the line to be under the points
     ax.plot(data[x].values, data[y].values, linewidth=lw, zorder=0, **kwargs)
     if kwargs['label'] == 'Luminance':
-        marker = {'metamer_vs_reference': 'o', 'metamer_vs_metamer': '^'}
+        marker = {'metamer_vs_reference': 'o', 'metamer_vs_metamer': r'$\bigwedge$'}
     else:
         marker = {'metamer_vs_reference': 'o', 'metamer_vs_metamer': 'o'}
     c = kwargs.pop('color')
