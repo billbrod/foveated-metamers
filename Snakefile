@@ -52,7 +52,7 @@ wildcard_constraints:
     logscale="log|linear",
     mcmc_model="partially-pooled|unpooled",
     fixation_cross="cross|nocross",
-    cutout="cutout|nocutout|nocutout_natural-seed|cutout_natural-seed|nocutout_small|cutout_downsample",
+    cutout="cutout|nocutout|cutout_V1_natural-seed|cutout_RGC_natural-seed|nocutout_small|cutout_downsample",
     context="paper|poster",
     mcmc_plot_type="performance|params-(linear|log)-(none|lines|ci)",
     # don't capture experiment-mse for x, but capture anything else, because
@@ -3671,7 +3671,10 @@ def get_metamer_comparison_figure_inputs(wildcards):
     if 'natural-seed' in wildcards.cutout:
         if len(scaling) != 5:
             raise Exception(f"When generating {wildcards.cutout} metamer_comparison figure, need 5 scaling values!")
-        models = ['V1_norm_s6_gaussian'] * len(scaling)
+        if 'V1' in wildcards.cutout:
+            models = ['V1_norm_s6_gaussian'] * len(scaling)
+        elif 'RGC' in wildcards.cutout:
+            models = ['RGC_norm_gaussian'] * len(scaling)
         seeds = [0, 1, 2, 0, 1]
         image_name = image_name * len(scaling)
         comps = ['ref-natural', 'ref-natural', 'ref-natural', 'ref', 'ref']
@@ -4222,7 +4225,7 @@ rule paper_figures:
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'model_schematic_halfwidth_ivy_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_ivy_scaling-.01,.058,.063,.27_cutout_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_gnarled_scaling-1.5,1.5,1.5,1.5_cutout_dpi-300.svg'),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_portrait_symmetric_scaling-.27,.27,.27,.27,.27_cutout_natural-seed_dpi-300.svg'),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_portrait_symmetric_scaling-.27,.27,.27,.27,.27_cutout_V1_natural-seed_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'performance_metamer_comparison_nyc,llama_scaling-.063,.27_nocutout_small_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'all_comps_summary_partially-pooled_focus-subject_one-ax.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'all_comps_summary_partially-pooled_focus-outlier.svg'),
