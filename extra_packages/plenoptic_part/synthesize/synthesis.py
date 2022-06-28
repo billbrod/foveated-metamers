@@ -6,10 +6,7 @@ import torch
 from torch import optim
 import numpy as np
 import warnings
-try:
-    import torchcontrib
-except ModuleNotFoundError:
-    warnings.warn("Unable to import torchcontrib, will be unable to use SWA!")
+from torch.optim.swa_utils import AveragedModel, SWALR
 import plenoptic as po
 from plenoptic.simulate.models.naive import Identity
 from ..tools.optim import l2_norm
@@ -19,6 +16,14 @@ from matplotlib import animation
 from tqdm import tqdm
 import dill
 from ..tools.clamps import RangeClamper
+
+
+class DummyModel(torch.nn.Module):
+    """Dummy model to wrap synthesized image, for SWA."""
+    def __init__(self, synthesized_signal):
+        super().__init__()
+        # this is already a parameter
+        self.synthesized_signal = synthesized_signal
 
 
 class Synthesis(metaclass=abc.ABCMeta):
@@ -494,8 +499,8 @@ class Synthesis(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def synthesize(self, seed=0, max_iter=100, learning_rate=1, scheduler=True, optimizer='Adam',
-                   optimizer_kwargs={}, swa=False, swa_kwargs={}, clamper=RangeClamper((0, 1)),
-                   clamp_each_iter=True, store_progress=False,
+                   optimizer_kwargs={}, swa=False, swa_start=10, swa_freq=1, swa_lr=.5,
+                   clamper=RangeClamper((0, 1)), clamp_each_iter=True, store_progress=False,
                    save_progress=False, save_path='synthesis.pt', loss_thresh=1e-4,
                    loss_change_iter=50, fraction_removed=0., loss_change_thresh=1e-2,
                    loss_change_fraction=1., coarse_to_fine=False, clip_grad_norm=False):
@@ -534,10 +539,14 @@ class Synthesis(metaclass=abc.ABCMeta):
             addition to learning_rate). What these should be depend on
             the specific optimizer you're using
         swa : bool, optional
-            whether to use stochastic weight averaging or not
-        swa_kwargs : dict, optional
-            Dictionary of keyword arguments to pass to the SWA object. See
-            torchcontrib.optim.SWA docs for more info.
+            whether to use stochastic weight averaging or not, see
+            https://pytorch.org/blog/pytorch-1.6-now-includes-stochastic-weight-averaging/
+        swa_start : int, optional
+            the iteration to start using stochastic weight iteration
+        swa_freq : int, optional
+            how frequently to update the parameters of the averaged model
+        swa_lr : float, optional
+            learning rate of the SWA
         clamper : plenoptic.Clamper or None, optional
             Clamper makes a change to the image in order to ensure that
             it stays reasonable. The classic example (and default
@@ -618,7 +627,7 @@ class Synthesis(metaclass=abc.ABCMeta):
                                       loss_change_fraction, loss_change_thresh, loss_change_iter)
         # initialize the optimizer
         self._init_optimizer(optimizer, learning_rate, scheduler, clip_grad_norm,
-                             optimizer_kwargs, swa, swa_kwargs)
+                             optimizer_kwargs, swa, swa_start, swa_freq, swa_lr)
         # get ready to store progress
         self._init_store_progress(store_progress, save_progress)
 
@@ -752,7 +761,8 @@ class Synthesis(metaclass=abc.ABCMeta):
         return rep_error
 
     def _init_optimizer(self, optimizer, lr, scheduler=True, clip_grad_norm=False,
-                        optimizer_kwargs={}, swa=False, swa_kwargs={}):
+                        optimizer_kwargs={}, swa=False, swa_start=10, swa_freq=1,
+                        swa_lr=.5):
         """Initialize the optimzer and learning rate scheduler
 
         This gets called at the beginning of synthesize() and can also
@@ -806,15 +816,18 @@ class Synthesis(metaclass=abc.ABCMeta):
             passed to the optimizer's initializer
         swa : bool, optional
             whether to use stochastic weight averaging or not
-        swa_kwargs : dict, optional
-            Dictionary of keyword arguments to pass to the SWA object.
+        swa_start : int, optional
+            the iteration to start using stochastic weight iteration
+        swa_freq : int, optional
+            how frequently to update the parameters of the averaged model
+        swa_lr : float, optional
+            learning rate of the SWA
 
         """
         # there's a weird scoping issue that happens if we don't copy the
         # dictionary, where it can accidentally persist across instances of the
         # object, which messes all sorts of things up
         optimizer_kwargs = optimizer_kwargs.copy()
-        swa_kwargs = swa_kwargs.copy()
         # if lr is None, we're resuming synthesis from earlier, and we
         # want to start with the last learning rate. however, we also
         # want to keep track of the initial learning rate, since we use
@@ -854,8 +867,12 @@ class Synthesis(metaclass=abc.ABCMeta):
         else:
             raise Exception("Don't know how to handle optimizer %s!" % optimizer)
         self._swa = swa
+        self._swa_counter = 0
         if swa:
-            self._optimizer = torchcontrib.optim.SWA(self._optimizer, **swa_kwargs)
+            self._swa_start = swa_start
+            self._swa_freq = swa_freq
+            self._swa_model = None
+            self._scheduler = SWALR(self._optimizer, swa_lr=swa_lr)
             warnings.warn("When using SWA, can't also use LR scheduler")
         else:
             if scheduler:
@@ -871,8 +888,8 @@ class Synthesis(metaclass=abc.ABCMeta):
             # initial_lr here
             init_optimizer_kwargs = {'optimizer': optimizer, 'lr': initial_lr,
                                      'scheduler': scheduler, 'swa': swa,
-                                     'swa_kwargs': swa_kwargs,
-                                     'optimizer_kwargs': optimizer_kwargs}
+                                     'swa_start': swa_start, 'swa_freq': swa_freq,
+                                     'swa_lr': swa_lr, 'optimizer_kwargs': optimizer_kwargs}
             self._init_optimizer_kwargs = init_optimizer_kwargs
         if clip_grad_norm is True:
             self.clip_grad_norm = 1
@@ -1000,7 +1017,16 @@ class Synthesis(metaclass=abc.ABCMeta):
         g = self.synthesized_signal.grad.detach()
         # optionally step the scheduler
         if self._scheduler is not None:
-            self._scheduler.step(loss.item())
+            if self._swa:
+                if self._swa_counter > self._swa_start:
+                    if self._swa_model is None:
+                        self._dummy_model = DummyModel(self.synthesized_signal)
+                        self._swa_model = AveragedModel(self._dummy_model)
+                    elif self._swa_counter % self._swa_freq == 0:
+                        self._swa_model.update_parameters(self._dummy_model)
+                    self._scheduler.step()
+            else:
+                self._scheduler.step(loss.item())
 
         if self.coarse_to_fine and self.scales[0] != 'all':
             with torch.no_grad():
@@ -1017,10 +1043,13 @@ class Synthesis(metaclass=abc.ABCMeta):
         postfix_dict.update(dict(loss="%.4e" % abs(loss.item()),
                                  gradient_norm="%.4e" % g.norm().item(),
                                  learning_rate=self._optimizer.param_groups[0]['lr'],
-                                 pixel_change=f"{pixel_change:.04e}", **kwargs))
+                                 pixel_change=f"{pixel_change:.04e}",
+                                 swa_counter=self._swa_counter,
+                                 **kwargs))
         # add extra info here if you want it to show up in progress bar
         if pbar is not None:
             pbar.set_postfix(**postfix_dict)
+        self._swa_counter += 1
         return loss, g.norm(), self._optimizer.param_groups[0]['lr'], pixel_change
 
     @abc.abstractmethod
