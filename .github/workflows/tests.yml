@@ -24,7 +24,7 @@ jobs:
           conda-channels: anaconda, conda-forge, bioconda
       - name: Create environment
         run: |
-          conda install -n base conda-libmamba-solver
+          conda install -n base conda-libmamba-solver -c conda-forge
           conda clean --all -y
           conda env create --experimental-solver=libmamba -f environment.yml
       - name: Run tests with pytest
