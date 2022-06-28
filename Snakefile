@@ -563,8 +563,8 @@ def get_mem_estimate(wildcards, partition=None):
         if int(wildcards.gpu) == 0:
             # in this case, we *do not* want to specify memory (we'll get the
             # whole node allocated but slurm could still kill the job if we go
-            # over requested memory)
-            mem = ''
+            # over requested memory). setting mem=0 requests all memory on node
+            mem = '0'
         else:
             # we'll be plugging this right into the mem request to slurm, so it
             # needs to be exactly correct
