@@ -24,10 +24,9 @@ jobs:
           conda-channels: anaconda, conda-forge, bioconda
       - name: Create environment
         run: |
-          conda install -n base conda-libmamba-solver -c conda-forge
+          conda install -n base mamba -c conda-forge
           conda clean --all -y
-          conda install libarchive=3.5.2=hb890918_2 -y
-          conda env create --experimental-solver=libmamba -f environment.yml
+          mamba env create -f environment.yml
       - name: Run tests with pytest
         run: |
           source activate metamers
