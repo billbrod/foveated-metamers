@@ -229,12 +229,31 @@ paper does.
     - `distances.py`: finds distance in model space between images in an
       efficient way.
     - `experiment.py`: runs experiment.
-    - `analysis.py`: basic analyses of behavioral data.
-    - `curve_fit.py`: fits psychophysical curves to real or simulated data.
+    - `analysis.py`: basic analyses of behavioral data (gets raw behavioral data
+      into format that can fit by psychophysical curves).
+    - `curve_fit.py`: fits psychophysical curves to real or simulated data using
+      `pytorch`. We didn't end up using this method of fitting the curves.
     - `simulate.py`: simulate behavioral data, for checking `curve_fit.py`
       performance, as well as how many trials are required.
+    - `mcmc.py`: use Markov Chain Monte Carlo (MCMC) to fit a probabilistic
+      model of psychophysical curves with `numpyro`. This is how the curves
+      presented in the paper were fit.
+    - `statistics.py`: compute some other image statistics (heterogeneity,
+      Fourier amplitude spectra, etc).
+    - `plotting.py`: plotting functions.
     - `figures.py`: creates various figures.
+    - `compose_figures.py`: combines plots (as created by functions in
+      `figures.py`) into multi-panel figures.
+    - `create_mad_images.py`: synthesize Maximally-Differentiating images (as in
+      Wang and Simoncelli, 2008), to highlight mean-squared error remaining in
+      human metamers.
+    - `create_other_synth.py`: other ways to synthesize images to highlight
+      mean-squared error remaining in human metamers.
+    - `observer_model.py`: first steps towards an observer model to predict
+      human performance when images are *not* metamers. Did not end up making
+      much progress, so this is not present in the paper.
     - `utils.py`: various utility functions.
+    - `stype.py`: code for styling the figures.
   - `extra_packages/`: additional python code used by this repo. The bits that
     live here were originally part of
     [plenoptic](https://github.com/LabForComputationalVision/plenoptic/), but
@@ -827,10 +846,52 @@ python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/{model}/stimul
    adding the `--vfs-cache-mode writes` flag to the `rclone mount` command
    worked (though I also had to give myself full permissions on the rclone cache
    folder: `sudo chmod -R 777 ~/.cache/rclone`).
+   
+# Notes on reproducibility
 
+The intention of sharing this code is to allow for the reproduction of the
+figures in the resulting paper. This is the code I used to synthesize the
+metamers used in the experiment, and you can use it to do so, but there are a
+couple things you should be aware of:
+
+- Results will not be identical on CPUs and GPUs. See PyTorch's
+  [notes](https://pytorch.org/docs/stable/notes/randomness.html) on this.
+- I used stochastic weight averaging (SWA) for the energy model metamers. SWA
+  seems to reduce the final loss by averaging pixel values as we get near
+  convergence (see
+  [here](https://pytorch.org/blog/pytorch-1.6-now-includes-stochastic-weight-averaging/)
+  for more details). However, the version of SWA I used to generated the
+  metamers for the experiment was from `torchcontrib`, which was archived in
+  2020 and is no longer maintained ([github
+  repo](https://github.com/pytorch/contrib)). In May 2022, I noticed that the
+  torchcontrib SWA implementation no longer worked on my tests with the most
+  recent versions of python (3.10) and pytorch (1.12), so I [updated my
+  code](https://github.com/billbrod/foveated-metamers/pull/3) to work with the
+  pytorch SWA implementation. The resulting metamers are not identical to the
+  ones produced before, but they are similar in both visual quality and loss,
+  and I believe they would be indistinguishable in a 2AFC task.
+- The metamer synthesis code found here (in `extra_packages/plenoptic_part`) was
+  very much a work in progress throughout this whole project and ended up
+  becoming a tangled rats nest, as is the case for most research code.
+  
+For all the above reasons, I am sharing the synthesized metamers used in this
+experiment and recommend you use them directly if you need the exact images I
+used (to replicate my results, for example). If you wish to synthesize new
+metamers, whether using your own model or even using the ones from this paper, I
+strongly recommend you use the metamer synthesis code found in
+[plenoptic](https://github.com/LabForComputationalVision/plenoptic/), which is
+actively maintained and tested, though it is not identical to the procedure used
+here. Most important, it does not include a SWA implementation and probably will
+never include one, but I would be happy to help come up with how to add it in an
+extension or a fork.
+   
 # References
 
 - Freeman, J., & Simoncelli, E. P. (2011). Metamers of the ventral
   stream. Nature Neuroscience, 14(9),
   1195–1201. http://dx.doi.org/10.1038/nn.2889
 
+- Wang, Z., & Simoncelli, E. P. (2008). Maximum differentiation (MAD)
+  competition: A methodology for comparing computational models of perceptual
+  discriminability. Journal of Vision, 8(12), 1–13.
+  http://dx.doi.org/10.1167/8.12.8
