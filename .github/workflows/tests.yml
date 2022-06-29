@@ -24,9 +24,9 @@ jobs:
           conda-channels: anaconda, conda-forge, bioconda
       - name: Create environment
         run: |
-          conda install -n base conda-libmamba-solver
+          conda install -n base mamba -c conda-forge
           conda clean --all -y
-          conda env create --experimental-solver=libmamba -f environment.yml
+          mamba env create -f environment.yml
       - name: Run tests with pytest
         run: |
           source activate metamers
@@ -48,9 +48,9 @@ jobs:
           conda-channels: anaconda, conda-forge, bioconda
       - name: Create environment
         run: |
-          conda install -n base conda-libmamba-solver
+          conda install -n base mamba
           conda clean --all -y
-          conda env create --experimental-solver=libmamba -f environment.yml
+          mamba env create -f environment.yml
       - name: Setup FFmpeg
         uses: FedericoCarboni/setup-ffmpeg@v1
       - name: Download data
@@ -83,11 +83,11 @@ jobs:
           conda-channels: anaconda, conda-forge, bioconda
       - name: Create environment
         run: |
-          conda install -n base conda-libmamba-solver
+          conda install -n base mamba
           conda clean --all -y
-          conda env create --experimental-solver=libmamba -f environment.yml
+          mamba env create -f environment.yml
           source activate metamers
-          conda install --experimental-solver=libmamba jupyter nbconvert
+          mamba install jupyter nbconvert
       - name: modify config.yml
         run: |
           sed -i 's|DATA_DIR:.*|DATA_DIR: "data/metamers"|g' config.yml

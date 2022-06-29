@@ -148,7 +148,7 @@ class Metamer(Synthesis):
 
     def synthesize(self, initial_image=None, seed=0, max_iter=100, learning_rate=.01,
                    scheduler=True, optimizer='SGD', optimizer_kwargs={}, swa=False,
-                   swa_kwargs={}, clamper=RangeClamper((0, 1)),
+                   swa_start=10, swa_freq=1, swa_lr=.005, clamper=RangeClamper((0, 1)),
                    clamp_each_iter=True, store_progress=False, save_progress=False,
                    save_path='metamer.pt', loss_thresh=1e-4, loss_change_iter=50,
                    fraction_removed=0., loss_change_thresh=1e-2, loss_change_fraction=1.,
@@ -191,9 +191,12 @@ class Metamer(Synthesis):
             the specific optimizer you're using
         swa : bool, optional
             whether to use stochastic weight averaging or not
-        swa_kwargs : dict, optional
-            Dictionary of keyword arguments to pass to the SWA object. See
-            torchcontrib.optim.SWA docs for more info.
+        swa_start : int, optional
+            the iteration to start using stochastic weight iteration
+        swa_freq : int, optional
+            how frequently to update the parameters of the averaged model
+        swa_lr : float, optional
+            learning rate of the SWA
         clamper : plenoptic.Clamper or None, optional
             Clamper makes a change to the image in order to ensure that
             it stays reasonable. The classic example (and default
@@ -276,7 +279,7 @@ class Metamer(Synthesis):
 
         # initialize the optimizer
         self._init_optimizer(optimizer, learning_rate, scheduler, clip_grad_norm,
-                             optimizer_kwargs, swa, swa_kwargs)
+                             optimizer_kwargs, swa, swa_start, swa_freq, swa_lr)
 
         # get ready to store progress
         self._init_store_progress(store_progress, save_progress, save_path)
@@ -302,7 +305,7 @@ class Metamer(Synthesis):
         pbar.close()
 
         if self._swa:
-            self._optimizer.swap_swa_sgd()
+            self.synthesized_signal = self._swa_model.module.synthesized_signal
 
         # finally, stack the saved_* attributes
         self._finalize_stored_progress()

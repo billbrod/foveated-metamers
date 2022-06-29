@@ -1121,12 +1121,13 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                                                  clamp_each_iter=clamp_each_iter,
                                                  save_progress=save_progress,
                                                  optimizer=optimizer,
-                                                 swa=swa, swa_kwargs=swa_kwargs,
+                                                 swa=swa,
                                                  fraction_removed=fraction_removed,
                                                  loss_change_fraction=loss_change_fraction,
                                                  loss_change_thresh=loss_change_thresh,
                                                  coarse_to_fine=coarse_to_fine,
-                                                 save_path=inprogress_path)
+                                                 save_path=inprogress_path,
+                                                 **swa_kwargs)
     duration = time.time() - start_time
     # make sure everything's on the cpu for saving
     metamer = metamer.to('cpu')
