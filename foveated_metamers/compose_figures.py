@@ -415,3 +415,32 @@ def radial_squared_error(error_1, error_2, context='paper'):
         SVG(error_2).move(0, figure_height/2),
         compose.Text('B', 0, figure_height/2+25, **text_params),
     )
+
+
+def sensitivities(sensitivities_1, sensitivities_2, context='paper'):
+    """Combine the two sensitivities figures.
+
+    Parameters
+    ----------
+    sensitivities_1, sensitivities_2 : str
+        Paths to the two sensitivities figures.
+    context : {'paper', 'poster'}, optional
+        plotting context that's being used for this figure (as in
+        seaborn's set_context function). if poster, will scale things up. Note
+        that, for this figure, only paper has really been checked
+
+    Returns
+    -------
+    fig : svgutils.compose.Figure
+        Figure containing composed plots
+    """
+    text_params, figure_width = style.plotting_style(context, 'svgutils', 'full')
+    figure_width = _convert_to_pix(figure_width) - 45
+    figure_height = 1.53 * figure_width
+    return compose.Figure(
+        figure_width, figure_height,
+        SVG(sensitivities_1, 'inkscape').move(25, 0),
+        compose.Text('A', 0, 25, **text_params),
+        SVG(sensitivities_2, 'inkscape').move(25, figure_height/2),
+        compose.Text('B', 0, figure_height/2+25, **text_params),
+    )

@@ -13,6 +13,8 @@ import scipy
 import copy
 import itertools
 from collections import OrderedDict
+import torch
+import plenoptic as po
 
 
 TRIAL_TYPE_TO_LONG_LEGEND = {
@@ -2149,3 +2151,57 @@ def vertical_pointplot(data, x, y, norm_y=False, **kwargs):
     for n, g in data.groupby('trial_type'):
         ax.scatter(g[x].values, g[y].values, s=ms, marker=marker[n],
                    color=color[n], edgecolors=c, linewidths=lw, **kwargs)
+
+
+def image_heatmap_schematic(seed=4, n_gaussians=4):
+    """Fake "image statistic" heatmaps for sensitivities figure.
+
+    Parameters
+    ----------
+    seed : int, optional
+       RNG seed to use (for randomly picking gaussian centers and sigmas).
+       Default value gives some reasonably good ones (none really overlap).
+    n_gaussians : int, optional
+       How many Gaussians to create. Each image will contain n_gaussians-1 of
+       them (so that they differ by 2).
+
+    Returns
+    -------
+    figs :
+       Three figures, containing the heatmaps for two images and the absolute
+       value of their difference
+
+    """
+    def gauss_2d(dims, ctr, sigma):
+        # returns tensor of shape (1, N, dims[0], dims[1]), where N is
+        # ctr.shape[0], number of gaussians
+        X, Y = torch.meshgrid(torch.arange(dims[1]), torch.arange(dims[0]))
+        x = ctr[..., 0]
+        y = ctr[..., 1]
+        while x.ndim < 3:
+            x = x.unsqueeze(-1)
+            y = y.unsqueeze(-1)
+            sigma = sigma.unsqueeze(-1)
+        gauss = torch.exp(-((X.unsqueeze(0)-x)**2 + (Y.unsqueeze(0)-y)**2) / (2*sigma**2))
+        while gauss.ndim < 4:
+            gauss = gauss.unsqueeze(0)
+        return gauss / gauss.sum()
+
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    dims = [270, 215]
+    gauss_ctrs = torch.from_numpy(np.vstack([np.random.randint(0, dims[0], n_gaussians),
+                                             np.random.randint(0, dims[1], n_gaussians)]).T)
+    gauss_sigmas = 50*torch.rand(n_gaussians)+10
+
+    img1 = gauss_2d(dims, gauss_ctrs[:-1], gauss_sigmas[:-1]).sum(1, True)
+    img1 = img1 / img1.max()
+    figs = [po.imshow(img1, vrange='auto0', title=None)]
+
+    img2 = gauss_2d(dims, gauss_ctrs[1:], gauss_sigmas[1:]).sum(1, True)
+    img2 = img2 / img2.max()
+    figs.append(po.imshow(img2, vrange='auto0', cmap='RdBu', title=None))
+
+    figs.append(po.imshow(abs(img1-img2), cmap='gray_r', vrange=(0, 1.5),
+                          title=None))
+    return figs

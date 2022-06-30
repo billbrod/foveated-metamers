@@ -3598,6 +3598,10 @@ def get_compose_figures_input(wildcards):
         comp, ecc = re.findall('radial_se_comp-([a-z-]+)_ecc-([A-Za-z0-9,]+)', wildcards.fig_name)[0]
         paths = [path_template.format(f'RGC_norm_gaussian/radial_se_comp-{comp}_ecc-{ecc}'),
                  path_template.format(f'V1_norm_s6_gaussian/radial_se_comp-{comp}_ecc-{ecc}')]
+    if 'sensitivities' in wildcards.fig_name:
+        seed = re.findall('sensitivities_combined_s-([0-9]+)', wildcards.fig_name)[0]
+        paths = [path_template.format(f'sensitivities_with_heatmaps_s-{seed}'),
+                 path_template.format(f'sensitivities')]
     return paths
 
 
@@ -3661,6 +3665,8 @@ rule compose_figures:
                     fig = fov.compose_figures.performance_comparison(*input, wildcards.context)
                 elif "radial_se" in wildcards.fig_name:
                     fig = fov.compose_figures.radial_squared_error(*input, wildcards.context)
+                elif 'sensitivities' in wildcards.fig_name:
+                    fig = fov.compose_figures.sensitivities(*input, wildcards.context)
                 fig.save(output[0])
 
 
@@ -4081,6 +4087,31 @@ rule critical_scaling_pointplot:
                 g.savefig(output[0])
 
 
+rule sensitivies_figure_with_heatmaps:
+    input:
+        op.join('reports', 'figures', 'sensitivities_with_heatmaps.svg')
+    output:
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'sensitivities_with_heatmaps_s-{seed}.svg'),
+        [op.join(config['DATA_DIR'], 'figures', '{context}', f'heatmaps-{i}_s-{{seed}}.svg') for i in range(3)]
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'sensitivities_with_heatmaps_s-{seed}.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'sensitivities_with_heatmaps_benchmark_s-{seed}.txt')
+    run:
+        import subprocess
+        import shutil
+        import foveated_metamers as fov
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                shutil.copy(input[0], output[0])
+                figs = fov.plotting.image_heatmap_schematic(seed=int(wildcards.seed))
+                for i, (im, fig) in enumerate(zip(output[1:], figs)):
+                    fig.savefig(im)
+                    # we add the trailing " to make sure we only replace IMAGE1, not IMAGE10
+                    subprocess.call(['sed', '-i', f's|IMAGE{i+1}"|{im}"|', output[0]])
+
+
 def get_all_metamers(wildcards):
     from foveated_metamers import stimuli
     mets = {}
@@ -4246,7 +4277,7 @@ rule paper_figures:
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_tiles_scaling-1.5,1.5,1.5,1.5_cutout_downsample_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_partially-pooled_log-ci_sub-00_comp-downsample.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "critical_scaling_norm-False.svg"),
-        op.join(config['DATA_DIR'], 'figures', 'paper', "sensitivities.svg"),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "sensitivities_combined_s-4_dpi-300.svg"),
 
         # these are just to check against the partially-pooled versions
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_unpooled_log-ci_comp-base.svg"),

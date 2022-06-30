@@ -14,7 +14,7 @@
    version="1.1"
    id="svg8"
    inkscape:version="1.0.2 (1.0.2+r75+1)"
-   sodipodi:docname="sensitivities.svg">
+   sodipodi:docname="sensitivities_with_heatmaps.svg">
   <defs
      id="defs2">
     <g
@@ -183,18 +183,6 @@
          style="fill:#ff0000;fill-opacity:0.5;stroke:none;stroke-width:4.78427;stroke-linecap:round;stop-color:#000000"
          d="m 184.62033,-94.399277 c -0.99426,-0.0318 -2.00223,0.0918 -2.93555,0.31055 -0.37083,0.0836 -0.73917,0.175701 -1.10938,0.26172 a 81.310051,81.284081 0 0 1 -59.47265,66.43359 c 3.0136,1.008995 5.82419,2.609247 7.93359,5.019531 3.46982,3.48235 6.91396,7.313507 11.61328,9.123047 5.62645,2.03654 12.00603,1.29553 17.3086,-1.33789 3.57406,-1.57418 7.55784,-2.905139 11.49414,-2.048829 8.21216,1.82951 16.1981,4.88101 24.65039,5.46875 3.06094,0.18789 6.42414,0.146289 9.02539,-1.701171 3.69911,-2.741361 5.39112,-7.492799 5.34765,-11.980469 0.14592,-6.07114 -0.4936,-12.191687 0.44336,-18.222657 0.4429,-2.985379 2.20491,-5.563463 4.26368,-7.689453 1.21114,-1.11707 2.19474,-2.489962 2.68359,-4.076171 0.82015,-2.527418 0.87693,-5.227978 0.83398,-7.861328 -0.0931,-1.44035 -0.63474,-2.97574 -1.93164,-3.75391 -3.83804,-2.88107 -8.89499,-3.84454 -12.28711,-7.36718 -2.14447,-2.202 -3.66843,-4.90264 -5.46875,-7.375 -2.62134,-3.83057 -5.20476,-7.6883 -7.93164,-11.44532 -1.1839,-1.21655 -2.80384,-1.70479 -4.46093,-1.75781 z" />
     </clipPath>
-    <mask
-       maskUnits="userSpaceOnUse"
-       id="mask3243">
-      <ellipse
-         style="fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
-         id="ellipse3245"
-         cx="104.06673"
-         cy="372.81522"
-         clip-path="none"
-         rx="81.310051"
-         ry="81.284081" />
-    </mask>
   </defs>
   <sodipodi:namedview
      id="base"
@@ -203,9 +191,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="2.0000001"
-     inkscape:cx="220.26657"
-     inkscape:cy="34.524892"
+     inkscape:zoom="1.4142137"
+     inkscape:cx="288.56496"
+     inkscape:cy="101.6467"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -213,7 +201,7 @@
      inkscape:window-width="1898"
      inkscape:window-height="1039"
      inkscape:window-x="3846"
-     inkscape:window-y="1105"
+     inkscape:window-y="50"
      inkscape:window-maximized="1"
      inkscape:document-rotation="0" />
   <metadata
@@ -233,126 +221,43 @@
      inkscape:groupmode="layer"
      id="layer1"
      transform="translate(-1.6252427,-39.118953)">
-    <rect
-       style="fill:#808080;stroke:#000000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stop-color:#000000"
-       id="rect883-6-2"
-       width="267.93924"
-       height="212.68973"
-       x="3.2200077"
-       y="40.713718" />
-    <ellipse
-       style="fill:#808080;fill-opacity:1;stroke:#000000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
-       id="circle1003-7-66"
-       cx="439.99066"
-       cy="358.64633"
-       rx="81.310051"
-       ry="81.284081" />
-    <ellipse
-       style="fill:#ffffff;fill-opacity:1;stroke:#ff0000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
-       id="path966-2-2"
-       cx="380.25314"
-       cy="358.64633"
-       clip-path="none"
-       rx="81.310051"
-       ry="81.284081" />
-    <ellipse
-       style="fill:#808080;fill-opacity:1;stroke:#ff0000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
-       id="path966-2-7-2"
-       cx="107.32086"
-       cy="358.64633"
-       clip-path="none"
-       rx="81.310051"
-       ry="81.284081" />
-    <rect
-       style="fill:#808080;stroke:#000000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stop-color:#000000"
-       id="rect883-6-1"
-       width="267.93924"
-       height="212.68973"
-       x="276.15228"
-       y="40.713718" />
-    <ellipse
-       style="fill:none;fill-opacity:0.7;stroke:#000000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
-       id="circle1003-7-65-7"
-       cx="167.05838"
-       cy="358.64633"
-       rx="81.310051"
-       ry="81.284081" />
-    <g
-       inkscape:label=""
-       transform="matrix(1.7511259,0,0,1.7505666,-104.39241,168.6076)"
-       id="g941-9-9-9"
-       style="fill:#ff0000;stroke-width:0.910854">
-      <g
-         id="g4408-3-3-3"
-         style="fill:#ff0000;stroke-width:0.910854">
-        <g
-           style="fill:#ff0000;fill-opacity:1;stroke-width:0.910854"
-           id="g5997-6-7-6">
-          <use
-             xlink:href="#symbol7372"
-             x="91.925003"
-             y="81.962997"
-             id="use6284-0-4-0"
-             width="100%"
-             height="100%"
-             style="fill:#ff0000;stroke-width:0.910854" />
-        </g>
-      </g>
-    </g>
-    <g
-       inkscape:label=""
-       transform="matrix(1.7511259,0,0,1.7505666,21.845981,160.21269)"
-       id="g1001-6-5-6"
-       style="stroke-width:0.910854">
-      <g
-         id="g7375-2-2-2"
-         style="stroke-width:0.910854">
-        <g
-           style="fill:#000000;fill-opacity:1;stroke-width:0.910854"
-           id="g305-6-5-6">
-          <use
-             xlink:href="#symbol6589"
-             x="91.925003"
-             y="81.962997"
-             id="use8378-1-4-1"
-             width="100%"
-             height="100%"
-             style="stroke-width:0.910854" />
-        </g>
-        <g
-           style="fill:#000000;fill-opacity:1;stroke-width:0.910854"
-           id="g6412-8-7-8">
-          <use
-             xlink:href="#symbol3429"
-             x="98.469002"
-             y="83.457001"
-             id="use2646-7-4-7"
-             width="100%"
-             height="100%"
-             style="stroke-width:0.910854" />
-        </g>
-      </g>
-    </g>
-    <ellipse
-       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:12.7581, 12.7581;stroke-dashoffset:0;stop-color:#000000"
-       id="path966-3-0-6-0"
-       cx="166.97453"
-       cy="358.75052"
-       rx="45.928253"
-       ry="45.914871" />
-    <ellipse
-       style="fill:none;fill-opacity:0.7;stroke:#000000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
-       id="circle1003-7-1"
-       cx="439.99066"
-       cy="140.85492"
-       rx="81.310051"
-       ry="81.284081" />
+    <image
+       xlink:href="IMAGE3"
+       width="270"
+       height="215"
+       preserveAspectRatio="none"
+       id="image2044-3-6"
+       x="138.65576"
+       y="257.34998" />
+    <image
+       xlink:href="IMAGE2"
+       width="270"
+       height="215"
+       preserveAspectRatio="none"
+       id="image2044-3"
+       x="275.12189"
+       y="39.558582" />
+    <image
+       xlink:href="IMAGE1"
+       y="39.558582"
+       x="2.1896274"
+       id="image2044"
+       preserveAspectRatio="none"
+       height="215"
+       width="270" />
     <ellipse
        style="fill:none;fill-opacity:0.7;stroke:#ff0000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
        id="path966-2-6"
        cx="380.25314"
        cy="140.85492"
        clip-path="none"
+       rx="81.310051"
+       ry="81.284081" />
+    <ellipse
+       style="fill:none;fill-opacity:0.7;stroke:#000000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
+       id="circle1003-7-1"
+       cx="439.99066"
+       cy="140.85492"
        rx="81.310051"
        ry="81.284081" />
     <g
@@ -476,19 +381,26 @@
         </g>
       </g>
     </g>
+    <rect
+       style="fill:none;stroke:#000000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stop-color:#000000"
+       id="rect883-6-2"
+       width="267.93924"
+       height="212.68973"
+       x="3.2200077"
+       y="40.713718" />
     <ellipse
-       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
-       id="circle1003-7-6"
-       cx="167.05838"
-       cy="140.85492"
-       rx="81.310051"
-       ry="81.284081" />
-    <ellipse
-       style="fill:#ffffff;fill-opacity:0.987492;stroke:#ff0000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
+       style="fill:none;fill-opacity:0.7;stroke:#ff0000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
        id="path966-2-3"
        cx="107.32086"
        cy="140.85492"
        clip-path="none"
+       rx="81.310051"
+       ry="81.284081" />
+    <ellipse
+       style="fill:none;fill-opacity:0.7;stroke:#000000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
+       id="circle1003-7-6"
+       cx="167.05838"
+       cy="140.85492"
        rx="81.310051"
        ry="81.284081" />
     <g
@@ -614,52 +526,11 @@
     </g>
     <rect
        style="fill:none;stroke:#000000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stop-color:#000000"
-       id="rect883-6"
-       width="267.93924"
-       height="212.68973"
-       x="3.2200077"
-       y="258.50513" />
-    <rect
-       style="fill:none;stroke:#000000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stop-color:#000000"
-       id="rect883-6-20"
+       id="rect883-6-1"
        width="267.93924"
        height="212.68973"
        x="276.15228"
-       y="258.50513" />
-    <g
-       inkscape:label=""
-       transform="matrix(1.7511259,0,0,1.7511259,168.53989,168.56567)"
-       id="g1144"
-       style="fill:#ff0000;stroke-width:0.571061">
-      <g
-         id="g5799"
-         style="fill:#ff0000;stroke-width:0.571061">
-        <g
-           style="fill:#ff0000;fill-opacity:1;stroke-width:0.571061"
-           id="g2123">
-          <use
-             xlink:href="#symbol647"
-             x="91.925003"
-             y="81.962997"
-             id="use9737"
-             width="100%"
-             height="100%"
-             style="fill:#ff0000;stroke-width:0.571061" />
-        </g>
-        <g
-           style="fill:#ff0000;fill-opacity:1;stroke-width:0.571061"
-           id="g7888">
-          <use
-             xlink:href="#symbol380"
-             x="103.889"
-             y="83.457001"
-             id="use4707"
-             width="100%"
-             height="100%"
-             style="fill:#ff0000;stroke-width:0.571061" />
-        </g>
-      </g>
-    </g>
+       y="40.713718" />
     <g
        inkscape:label=""
        transform="matrix(1.7511259,0,0,1.7505666,168.53989,168.60758)"
@@ -674,133 +545,174 @@
       </g>
     </g>
     <g
-       inkscape:label=""
-       transform="matrix(1.7511259,0,0,1.7505666,294.77828,160.21267)"
-       id="g1001-6-7"
-       style="stroke-width:0.910854">
-      <g
-         id="g7375-2-1"
-         style="stroke-width:0.910854">
-        <g
-           style="fill:#000000;fill-opacity:1;stroke-width:0.910854"
-           id="g305-6-72">
-          <use
-             xlink:href="#symbol6589"
-             x="91.925003"
-             y="81.962997"
-             id="use8378-1-7"
-             width="100%"
-             height="100%"
-             style="stroke-width:0.910854" />
-        </g>
-        <g
-           style="fill:#000000;fill-opacity:1;stroke-width:0.910854"
-           id="g6412-8-2">
-          <use
-             xlink:href="#symbol3429"
-             x="98.469002"
-             y="83.457001"
-             id="use2646-7-2"
-             width="100%"
-             height="100%"
-             style="stroke-width:0.910854" />
-        </g>
-      </g>
-    </g>
-    <g
-       id="g1236"
-       transform="translate(3.2541294,-14.16885)">
+       id="g2645"
+       transform="translate(136.46613)">
       <ellipse
-         style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:12.7581, 12.7581;stroke-dashoffset:0;stop-color:#000000"
-         id="path966-3-0-4"
-         cx="436.65268"
-         cy="372.91937"
-         rx="45.928253"
-         ry="45.914871" />
+         style="fill:none;fill-opacity:0.7;stroke:#ff0000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
+         id="path966-2-7-2"
+         cx="107.32086"
+         cy="358.64633"
+         clip-path="none"
+         rx="81.310051"
+         ry="81.284081" />
+      <ellipse
+         style="fill:none;fill-opacity:0.7;stroke:#000000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
+         id="circle1003-7-65-7"
+         cx="167.05838"
+         cy="358.64633"
+         rx="81.310051"
+         ry="81.284081" />
       <g
          inkscape:label=""
-         transform="matrix(1.7511259,0,0,1.7505666,255.4557,225.62714)"
-         id="g1080-9-6"
+         transform="matrix(1.7511259,0,0,1.7505666,-104.39241,168.6076)"
+         id="g941-9-9-9"
+         style="fill:#ff0000;stroke-width:0.910854">
+        <g
+           id="g4408-3-3-3"
+           style="fill:#ff0000;stroke-width:0.910854">
+          <g
+             style="fill:#ff0000;fill-opacity:1;stroke-width:0.910854"
+             id="g5997-6-7-6">
+            <use
+               xlink:href="#symbol7372"
+               x="91.925003"
+               y="81.962997"
+               id="use6284-0-4-0"
+               width="100%"
+               height="100%"
+               style="fill:#ff0000;stroke-width:0.910854" />
+          </g>
+        </g>
+      </g>
+      <g
+         inkscape:label=""
+         transform="matrix(1.7511259,0,0,1.7505666,21.845981,160.21269)"
+         id="g1001-6-5-6"
          style="stroke-width:0.910854">
         <g
-           id="g5185-2-1"
+           id="g7375-2-2-2"
            style="stroke-width:0.910854">
           <g
              style="fill:#000000;fill-opacity:1;stroke-width:0.910854"
-             id="g3670-0-0">
+             id="g305-6-5-6">
             <use
-               xlink:href="#symbol1798"
+               xlink:href="#symbol6589"
                x="91.925003"
                y="81.962997"
-               id="use1314-2-6"
+               id="use8378-1-4-1"
                width="100%"
                height="100%"
                style="stroke-width:0.910854" />
           </g>
           <g
              style="fill:#000000;fill-opacity:1;stroke-width:0.910854"
-             id="g4674-3-1">
+             id="g6412-8-7-8">
             <use
-               xlink:href="#symbol3328"
+               xlink:href="#symbol3429"
                x="98.469002"
                y="83.457001"
-               id="use6532-7-5"
-               width="100%"
-               height="100%"
-               style="stroke-width:0.910854" />
-          </g>
-          <g
-             style="fill:#000000;fill-opacity:1;stroke-width:0.910854"
-             id="g3792-5-9">
-            <use
-               xlink:href="#symbol3804"
-               x="101.288"
-               y="83.457001"
-               id="use8261-9-49"
-               width="100%"
-               height="100%"
-               style="stroke-width:0.910854" />
-            <use
-               xlink:href="#symbol1849"
-               x="107.40402"
-               y="83.457001"
-               id="use6023-2-09"
+               id="use2646-7-4-7"
                width="100%"
                height="100%"
                style="stroke-width:0.910854" />
           </g>
         </g>
       </g>
-    </g>
-    <ellipse
-       style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
-       id="circle1003-7-66-6"
-       cx="439.99066"
-       cy="358.64633"
-       rx="81.310051"
-       ry="81.284081" />
-    <g
-       inkscape:label=""
-       transform="matrix(1.7511259,0,0,1.7511259,-104.39241,168.56568)"
-       id="g1144-3"
-       style="fill:#ff0000;stroke-width:0.571061">
       <g
-         id="g5799-6"
+         id="g1248"
+         transform="translate(3.2541294,-14.16888)">
+        <ellipse
+           style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:12.7581, 12.7581;stroke-dashoffset:0;stop-color:#000000"
+           id="path966-3-0-6-0"
+           cx="163.7204"
+           cy="372.9194"
+           rx="45.928253"
+           ry="45.914871" />
+        <g
+           inkscape:label=""
+           transform="matrix(1.7511259,0,0,1.7505666,-17.476596,225.62716)"
+           id="g1080-9-4-9"
+           style="stroke-width:0.910854">
+          <g
+             id="g5185-2-30-2"
+             style="stroke-width:0.910854">
+            <g
+               style="fill:#000000;fill-opacity:1;stroke-width:0.910854"
+               id="g3670-0-7-0">
+              <use
+                 xlink:href="#symbol1798"
+                 x="91.925003"
+                 y="81.962997"
+                 id="use1314-2-8-2"
+                 width="100%"
+                 height="100%"
+                 style="stroke-width:0.910854" />
+            </g>
+            <g
+               style="fill:#000000;fill-opacity:1;stroke-width:0.910854"
+               id="g4674-3-6-3">
+              <use
+                 xlink:href="#symbol3328"
+                 x="98.469002"
+                 y="83.457001"
+                 id="use6532-7-8-7"
+                 width="100%"
+                 height="100%"
+                 style="stroke-width:0.910854" />
+            </g>
+            <g
+               style="fill:#000000;fill-opacity:1;stroke-width:0.910854"
+               id="g3792-5-8-5">
+              <use
+                 xlink:href="#symbol3804"
+                 x="101.288"
+                 y="83.457001"
+                 id="use8261-9-4-9"
+                 width="100%"
+                 height="100%"
+                 style="stroke-width:0.910854" />
+              <use
+                 xlink:href="#symbol1849"
+                 x="107.40402"
+                 y="83.457001"
+                 id="use6023-2-3-2"
+                 width="100%"
+                 height="100%"
+                 style="stroke-width:0.910854" />
+            </g>
+          </g>
+        </g>
+      </g>
+      <rect
+         style="fill:none;stroke:#000000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stop-color:#000000"
+         id="rect883-6"
+         width="267.93924"
+         height="212.68973"
+         x="3.2200077"
+         y="258.50513" />
+      <g
+         inkscape:label=""
+         transform="matrix(1.7511259,0,0,1.7511259,-104.39241,168.56568)"
+         id="g1144-3"
          style="fill:#ff0000;stroke-width:0.571061">
         <g
-           style="fill:#ff0000;fill-opacity:1;stroke-width:0.571061"
-           id="g2123-7" />
-        <g
-           style="fill:#ff0000;fill-opacity:1;stroke-width:0.571061"
-           id="g7888-3">
-          <use
-             xlink:href="#symbol380"
-             x="103.889"
-             y="83.457001"
-             id="use4707-5"
-             width="100%"
-             height="100%"
-             style="fill:#ff0000;stroke-width:0.571061" />
+           id="g5799-6"
+           style="fill:#ff0000;stroke-width:0.571061">
+          <g
+             style="fill:#ff0000;fill-opacity:1;stroke-width:0.571061"
+             id="g2123-7" />
+          <g
+             style="fill:#ff0000;fill-opacity:1;stroke-width:0.571061"
+             id="g7888-3">
+            <use
+               xlink:href="#symbol380"
+               x="103.889"
+               y="83.457001"
+               id="use4707-5"
+               width="100%"
+               height="100%"
+               style="fill:#ff0000;stroke-width:0.571061" />
+          </g>
         </g>
       </g>
     </g>
@@ -854,90 +766,5 @@
         </g>
       </g>
     </g>
-    <g
-       inkscape:label=""
-       transform="matrix(1.7511259,0,0,1.7505666,-14.222467,211.45828)"
-       id="g1080-9-4-9"
-       style="stroke-width:0.910854">
-      <g
-         id="g5185-2-30-2"
-         style="stroke-width:0.910854">
-        <g
-           style="fill:#000000;fill-opacity:1;stroke-width:0.910854"
-           id="g3670-0-7-0">
-          <use
-             xlink:href="#symbol1798"
-             x="91.925003"
-             y="81.962997"
-             id="use1314-2-8-2"
-             width="100%"
-             height="100%"
-             style="stroke-width:0.910854" />
-        </g>
-        <g
-           style="fill:#000000;fill-opacity:1;stroke-width:0.910854"
-           id="g4674-3-6-3">
-          <use
-             xlink:href="#symbol3328"
-             x="98.469002"
-             y="83.457001"
-             id="use6532-7-8-7"
-             width="100%"
-             height="100%"
-             style="stroke-width:0.910854" />
-        </g>
-        <g
-           style="fill:#000000;fill-opacity:1;stroke-width:0.910854"
-           id="g3792-5-8-5">
-          <use
-             xlink:href="#symbol3804"
-             x="101.288"
-             y="83.457001"
-             id="use8261-9-4-9"
-             width="100%"
-             height="100%"
-             style="stroke-width:0.910854" />
-          <use
-             xlink:href="#symbol1849"
-             x="107.40402"
-             y="83.457001"
-             id="use6023-2-3-2"
-             width="100%"
-             height="100%"
-             style="stroke-width:0.910854" />
-        </g>
-      </g>
-    </g>
-    <ellipse
-       style="fill:none;fill-opacity:1;stroke:#ff0000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
-       id="path966-2-7-2-3"
-       cx="107.32086"
-       cy="358.64633"
-       clip-path="none"
-       rx="81.310051"
-       ry="81.284081" />
-    <ellipse
-       style="fill:none;fill-opacity:1;stroke:#ff0000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
-       id="path966-2-2-0"
-       cx="380.25314"
-       cy="358.64633"
-       clip-path="none"
-       rx="81.310051"
-       ry="81.284081" />
-    <ellipse
-       style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
-       id="circle1003-7-6-6"
-       cx="167.05838"
-       cy="140.85492"
-       rx="81.310051"
-       ry="81.284081" />
-    <ellipse
-       style="fill:none;fill-opacity:0.987492;stroke:#ff0000;stroke-width:3.18953;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
-       id="path966-2-3-2"
-       cx="107.32086"
-       cy="140.85492"
-       clip-path="none"
-       rx="81.310051"
-       ry="81.284081" />
   </g>
 </svg>
