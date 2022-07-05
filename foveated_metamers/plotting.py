@@ -2188,7 +2188,7 @@ def image_heatmap_schematic():
     # adjust these locations slightly, so they don't overlap with the human
     # circle at all
     gauss_ctrs[2, 1] += 100
-    gauss_ctrs[3, 0] -= 10
+    gauss_ctrs[3, 0] -= 50
     gauss_sigmas = 50*torch.rand(n_gaussians)+10
 
     img1 = gauss_2d(dims, gauss_ctrs[:-1], gauss_sigmas[:-1]).sum(1, True)
