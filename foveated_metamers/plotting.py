@@ -2153,17 +2153,8 @@ def vertical_pointplot(data, x, y, norm_y=False, **kwargs):
                    color=color[n], edgecolors=c, linewidths=lw, **kwargs)
 
 
-def image_heatmap_schematic(seed=4, n_gaussians=4):
+def image_heatmap_schematic():
     """Fake "image statistic" heatmaps for sensitivities figure.
-
-    Parameters
-    ----------
-    seed : int, optional
-       RNG seed to use (for randomly picking gaussian centers and sigmas).
-       Default value gives some reasonably good ones (none really overlap).
-    n_gaussians : int, optional
-       How many Gaussians to create. Each image will contain n_gaussians-1 of
-       them (so that they differ by 2).
 
     Returns
     -------
@@ -2187,18 +2178,24 @@ def image_heatmap_schematic(seed=4, n_gaussians=4):
             gauss = gauss.unsqueeze(0)
         return gauss / gauss.sum()
 
+    seed = 4
+    n_gaussians = 4
     torch.manual_seed(seed)
     np.random.seed(seed)
     dims = [270, 215]
     gauss_ctrs = torch.from_numpy(np.vstack([np.random.randint(0, dims[0], n_gaussians),
                                              np.random.randint(0, dims[1], n_gaussians)]).T)
+    # adjust these locations slightly, so they don't overlap with the human
+    # circle at all
+    gauss_ctrs[2, 1] += 100
+    gauss_ctrs[3, 0] -= 10
     gauss_sigmas = 50*torch.rand(n_gaussians)+10
 
     img1 = gauss_2d(dims, gauss_ctrs[:-1], gauss_sigmas[:-1]).sum(1, True)
     img1 = img1 / img1.max()
     figs = [po.imshow(img1, vrange='auto0', title=None)]
 
-    img2 = gauss_2d(dims, gauss_ctrs[1:], gauss_sigmas[1:]).sum(1, True)
+    img2 = gauss_2d(dims, gauss_ctrs[[0, 1, 3]], gauss_sigmas[[0, 1, 3]]).sum(1, True)
     img2 = img2 / img2.max()
     figs.append(po.imshow(img2, vrange='auto0', cmap='RdBu', title=None))
 

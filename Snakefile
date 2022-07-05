@@ -64,7 +64,7 @@ wildcard_constraints:
     direction="forward|reverse",
     scaling_extended="|_scaling-extended",
 ruleorder:
-    collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check > mcmc_compare_plot > mcmc_plots > embed_bitmaps_into_figure > compose_figures
+    collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check > mcmc_compare_plot > mcmc_plots > sensitivities_figure_with_heatmaps > embed_bitmaps_into_figure > compose_figures > copy_schematic
 
 LINEAR_IMAGES = config['IMAGE_NAME']['ref_image']
 MODELS = [config[i]['model_name'] for i in ['RGC', 'V1']]
@@ -3598,10 +3598,6 @@ def get_compose_figures_input(wildcards):
         comp, ecc = re.findall('radial_se_comp-([a-z-]+)_ecc-([A-Za-z0-9,]+)', wildcards.fig_name)[0]
         paths = [path_template.format(f'RGC_norm_gaussian/radial_se_comp-{comp}_ecc-{ecc}'),
                  path_template.format(f'V1_norm_s6_gaussian/radial_se_comp-{comp}_ecc-{ecc}')]
-    if 'sensitivities' in wildcards.fig_name:
-        seed = re.findall('sensitivities_combined_s-([0-9]+)', wildcards.fig_name)[0]
-        paths = [path_template.format(f'sensitivities_with_heatmaps_s-{seed}'),
-                 path_template.format(f'sensitivities')]
     return paths
 
 
@@ -3665,8 +3661,6 @@ rule compose_figures:
                     fig = fov.compose_figures.performance_comparison(*input, wildcards.context)
                 elif "radial_se" in wildcards.fig_name:
                     fig = fov.compose_figures.radial_squared_error(*input, wildcards.context)
-                elif 'sensitivities' in wildcards.fig_name:
-                    fig = fov.compose_figures.sensitivities(*input, wildcards.context)
                 fig.save(output[0])
 
 
@@ -4087,16 +4081,16 @@ rule critical_scaling_pointplot:
                 g.savefig(output[0])
 
 
-rule sensitivies_figure_with_heatmaps:
+rule sensitivities_figure_with_heatmaps:
     input:
-        op.join('reports', 'figures', 'sensitivities_with_heatmaps.svg')
+        op.join('reports', 'figures', 'sensitivities_1.svg')
     output:
-        op.join(config['DATA_DIR'], 'figures', '{context}', 'sensitivities_with_heatmaps_s-{seed}.svg'),
-        [op.join(config['DATA_DIR'], 'figures', '{context}', f'heatmaps-{i}_s-{{seed}}.svg') for i in range(3)]
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'sensitivities_1.svg'),
+        [op.join(config['DATA_DIR'], 'figures', '{context}', f'heatmaps-{i}.svg') for i in range(3)]
     log:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'sensitivities_with_heatmaps_s-{seed}.log')
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'sensitivities_with_heatmaps.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'sensitivities_with_heatmaps_benchmark_s-{seed}.txt')
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'sensitivities_with_heatmaps_benchmark.txt')
     run:
         import subprocess
         import shutil
@@ -4105,7 +4099,7 @@ rule sensitivies_figure_with_heatmaps:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 shutil.copy(input[0], output[0])
-                figs = fov.plotting.image_heatmap_schematic(seed=int(wildcards.seed))
+                figs = fov.plotting.image_heatmap_schematic()
                 for i, (im, fig) in enumerate(zip(output[1:], figs)):
                     fig.savefig(im)
                     # we add the trailing " to make sure we only replace IMAGE1, not IMAGE10
@@ -4269,6 +4263,8 @@ rule paper_figures:
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_ivy_scaling-.01,.058,.063,.27_cutout_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_gnarled_scaling-1.5,1.5,1.5,1.5_cutout_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_portrait_symmetric_scaling-.27,.27,.27,.27,.27_cutout_V1_natural-seed_dpi-300.svg'),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_portrait_symmetric_scaling-.092,.092,.092,.092,.092_cutout_RGC_natural-seed_dpi-300.svg'),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_portrait_symmetric_scaling-1.5,1.5,1.5,1.5,1.5_cutout_RGC_natural-seed_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'performance_metamer_comparison_nyc,llama_scaling-.063,.27_nocutout_small_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'all_comps_summary_partially-pooled_focus-subject_one-ax.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'all_comps_summary_partially-pooled_focus-outlier.svg'),
@@ -4277,7 +4273,7 @@ rule paper_figures:
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_tiles_scaling-1.5,1.5,1.5,1.5_cutout_downsample_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_partially-pooled_log-ci_sub-00_comp-downsample.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "critical_scaling_norm-False.svg"),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "sensitivities_combined_s-4_dpi-300.svg"),
+        op.join(config['DATA_DIR'], 'figures', 'paper', "sensitivities_1_dpi-300.svg"),
 
         # these are just to check against the partially-pooled versions
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_unpooled_log-ci_comp-base.svg"),
