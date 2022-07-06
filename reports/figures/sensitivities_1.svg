@@ -8,9 +8,9 @@
    xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="566.80005"
+   width="551.73834"
    height="292.56946"
-   viewBox="0 0 566.80002 292.56943"
+   viewBox="0 0 551.73831 292.56943"
    version="1.1"
    id="svg8"
    inkscape:version="1.0.2 (1.0.2+r75+1)"
@@ -192,8 +192,8 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="1.4142137"
-     inkscape:cx="199.4379"
-     inkscape:cy="153.93601"
+     inkscape:cx="256.41507"
+     inkscape:cy="318.21215"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -212,7 +212,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -221,6 +221,45 @@
      inkscape:groupmode="layer"
      id="layer1"
      transform="translate(21.11377,-40.244995)">
+    <g
+       id="g1675"
+       transform="translate(27.540109,11.13372)">
+      <image
+         xlink:href="IMAGE2"
+         width="156.02818"
+         height="124.1859"
+         preserveAspectRatio="none"
+         id="image2044-3"
+         x="159.71466"
+         y="39.41362"
+         style="stroke-width:1.14131" />
+      <ellipse
+         style="fill:none;fill-opacity:0.7;stroke:#000000;stroke-width:2.10314;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
+         id="circle1003-7-1"
+         cx="254.98936"
+         cy="97.923286"
+         rx="46.987629"
+         ry="46.950405" />
+      <rect
+         style="fill:none;stroke:#000000;stroke-width:2.10314;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stop-color:#000000"
+         id="rect883-6-1"
+         width="154.8373"
+         height="122.85146"
+         x="160.3101"
+         y="40.080833" />
+      <text
+         xml:space="preserve"
+         style="font-size:136.936px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;stroke-width:1"
+         x="25.29907"
+         y="-1254.3955"
+         id="text1536-9"
+         transform="matrix(0,4.0175738,-0.24890644,0,0,0)"><tspan
+           sodipodi:role="line"
+           id="tspan1534-1"
+           x="25.29907"
+           y="-1254.3955"
+           style="stroke-width:1">-</tspan></text>
+    </g>
     <g
        inkscape:label=""
        transform="matrix(1.1546714,0,0,1.1543026,111.68676,124.5022)"
@@ -235,139 +274,96 @@
       </g>
     </g>
     <g
-       id="g3419"
-       transform="translate(0,1.1260424)">
-      <g
-         id="g1589"
-         transform="translate(71.147577,10.007673)">
-        <image
-           xlink:href="IMAGE3"
-           style="stroke-width:1.14131"
-           y="39.41362"
-           x="318.05438"
-           id="image2044-3-6"
-           preserveAspectRatio="none"
-           height="124.1859"
-           width="156.02818" />
-        <ellipse
-           style="fill:none;fill-opacity:0.7;stroke:#000000;stroke-width:2.10314;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
-           id="circle1003-7-65-7"
-           cx="413.32907"
-           cy="97.923286"
-           rx="46.987629"
-           ry="46.950401" />
-        <rect
-           style="fill:none;stroke:#000000;stroke-width:2.10314;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stop-color:#000000"
-           id="rect883-6"
-           width="154.8373"
-           height="122.85146"
-           x="318.64981"
-           y="40.080841" />
-      </g>
-      <text
-         xml:space="preserve"
-         style="font-size:46.2352px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;stroke-width:0.999998"
+       id="g1589"
+       transform="translate(56.085927,11.133715)">
+      <image
+         xlink:href="IMAGE3"
+         width="156.02818"
+         height="124.1859"
+         preserveAspectRatio="none"
+         id="image2044-3-6"
+         x="318.05438"
+         y="39.41362"
+         style="stroke-width:1.14131" />
+      <ellipse
+         style="fill:none;fill-opacity:0.7;stroke:#000000;stroke-width:2.10314;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
+         id="circle1003-7-65-7"
+         cx="413.32907"
+         cy="97.923286"
+         rx="46.987629"
+         ry="46.950401" />
+      <rect
+         style="fill:none;stroke:#000000;stroke-width:2.10314;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stop-color:#000000"
+         id="rect883-6"
+         width="154.8373"
+         height="122.85146"
+         x="318.64978"
+         y="40.080841" />
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-size:46.2352px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;stroke-width:0.999998"
+       x="176.05815"
+       y="125.30531"
+       id="text1536"><tspan
+         sodipodi:role="line"
+         id="tspan1534"
          x="176.05815"
-         y="124.17926"
-         id="text1536"><tspan
-           sodipodi:role="line"
-           id="tspan1534"
-           x="176.05815"
-           y="124.17926"
-           style="stroke-width:0.999998">-</tspan></text>
+         y="125.30531"
+         style="stroke-width:0.999998">-</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:25.0606px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;stroke-width:1"
+       x="362.07632"
+       y="120.48397"
+       id="text1536-6"><tspan
+         sodipodi:role="line"
+         id="tspan1534-2"
+         x="362.07632"
+         y="120.48397"
+         style="stroke-width:1">=</tspan></text>
+    <g
+       id="g1644"
+       transform="translate(6.8187972,11.13372)">
+      <image
+         xlink:href="IMAGE1"
+         y="39.41362"
+         x="1.9919804"
+         id="image2044"
+         preserveAspectRatio="none"
+         height="124.1859"
+         width="156.02818"
+         style="stroke-width:1.14131" />
+      <rect
+         style="fill:none;stroke:#000000;stroke-width:2.10314;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stop-color:#000000"
+         id="rect883-6-2"
+         width="154.8373"
+         height="122.85146"
+         x="2.587419"
+         y="40.080833" />
+      <ellipse
+         style="fill:none;fill-opacity:0.7;stroke:#000000;stroke-width:2.10314;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
+         id="circle1003-7-6"
+         cx="97.266685"
+         cy="97.923286"
+         rx="46.987629"
+         ry="46.950405" />
       <text
          xml:space="preserve"
-         style="font-size:46.2352px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;stroke-width:0.999998"
-         x="369.60715"
-         y="125.98532"
-         id="text1536-6"><tspan
+         style="font-size:136.936px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;stroke-width:1"
+         x="25.29907"
+         y="52.893002"
+         id="text1536-9-2"
+         transform="matrix(0,4.0175738,-0.24890644,0,0,0)"><tspan
            sodipodi:role="line"
-           id="tspan1534-2"
-           x="369.60715"
-           y="125.98532"
-           style="stroke-width:0.999998">=</tspan></text>
-      <g
-         id="g1675"
-         transform="translate(27.540109,10.007678)">
-        <image
-           xlink:href="IMAGE2"
-           style="stroke-width:1.14131"
-           y="39.41362"
-           x="159.71466"
-           id="image2044-3"
-           preserveAspectRatio="none"
-           height="124.1859"
-           width="156.02818" />
-        <ellipse
-           style="fill:none;fill-opacity:0.7;stroke:#000000;stroke-width:2.10314;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
-           id="circle1003-7-1"
-           cx="254.98936"
-           cy="97.923286"
-           rx="46.987629"
-           ry="46.950405" />
-        <rect
-           style="fill:none;stroke:#000000;stroke-width:2.10314;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stop-color:#000000"
-           id="rect883-6-1"
-           width="154.8373"
-           height="122.85146"
-           x="160.3101"
-           y="40.080833" />
-        <text
-           xml:space="preserve"
-           style="font-size:136.936px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;stroke-width:1"
-           x="25.29907"
-           y="-1254.3955"
-           id="text1536-9"
-           transform="matrix(0,4.0175738,-0.24890644,0,0,0)"><tspan
-             sodipodi:role="line"
-             id="tspan1534-1"
-             x="25.29907"
-             y="-1254.3955"
-             style="stroke-width:1">-</tspan></text>
-      </g>
-      <g
-         id="g1644"
-         transform="translate(6.8187972,10.007678)">
-        <image
-           xlink:href="IMAGE1"
-           style="stroke-width:1.14131"
-           width="156.02818"
-           height="124.1859"
-           preserveAspectRatio="none"
-           id="image2044"
-           x="1.9919804"
-           y="39.41362" />
-        <rect
-           style="fill:none;stroke:#000000;stroke-width:2.10314;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stop-color:#000000"
-           id="rect883-6-2"
-           width="154.8373"
-           height="122.85146"
-           x="2.587419"
-           y="40.080833" />
-        <ellipse
-           style="fill:none;fill-opacity:0.7;stroke:#000000;stroke-width:2.10314;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
-           id="circle1003-7-6"
-           cx="97.266685"
-           cy="97.923286"
-           rx="46.987629"
-           ry="46.950405" />
-        <text
-           xml:space="preserve"
-           style="font-size:136.936px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;stroke-width:1"
+           id="tspan1534-1-7"
            x="25.29907"
            y="52.893002"
-           id="text1536-9-2"
-           transform="matrix(0,4.0175738,-0.24890644,0,0,0)"><tspan
-             sodipodi:role="line"
-             id="tspan1534-1-7"
-             x="25.29907"
-             y="52.893002"
-             style="stroke-width:1">-</tspan></text>
-      </g>
+           style="stroke-width:1">-</tspan></text>
     </g>
     <g
        id="g2936-3"
-       transform="translate(-26.135592,-40.784359)">
+       transform="translate(-23.135586,-40.784359)">
       <rect
          style="fill:#808080;stroke:#000000;stroke-width:1.84623;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stop-color:#000000"
          id="rect883-6-2-0-6"
@@ -615,7 +611,7 @@
     </g>
     <g
        id="g3241"
-       transform="translate(-6.9782274,-28.580684)">
+       transform="translate(-0.97825264,-28.580684)">
       <rect
          style="fill:#808080;stroke:#000000;stroke-width:1.84623;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stop-color:#000000"
          id="rect883-6-2-0-6-3"
