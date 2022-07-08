@@ -3289,6 +3289,56 @@ rule freeman_check:
                                      gpu=1,
                                      seed=0),
 
+rule freeman_compare_windows_figure:
+    input:
+        op.join(config['DATA_DIR'], 'freeman_check', 'windows', 'scaling-0.5', 'masks.mat'),
+        op.join(config['DATA_DIR'], 'freeman_check', 'windows', 'scaling-0.25', 'masks.mat'),
+    output:
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'freeman_windows_comparison.svg'),
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'freeman_windows_comparison.log'),
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'freeman_windows_comparison_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import h5py
+        import contextlib
+        import plenoptic as po
+        import pyrtools as pt
+        import sys
+        sys.path.append('extra_packages/pooling-windows/')
+        import pooling
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                to_plot = []
+                titles = []
+                for inp, sc in zip(input, [.5, .25]):
+                    mat_idx = {.5: -85, .25: -355}[sc]
+                    with h5py.File(inp, 'r') as f:
+                        freeman_win = f[f['scale'][1, 0]]['maskMat'][:][..., mat_idx]
+                    gauss_idx = {.25: (25, 25), .5: (11, 12)}[sc]
+                    gauss_pw = pooling.PoolingWindows(sc, (512, 512),
+                                                      max_eccentricity=13,
+                                                      num_scales=5,
+                                                      window_type='gaussian',
+                                                      std_dev=1)
+                    gauss_win = po.to_numpy(gauss_pw.ecc_windows[1][gauss_idx[0]]) * po.to_numpy(gauss_pw.angle_windows[1][gauss_idx[1]])
+                    # normalize so that max value is 1, to match matlab implementation
+                    gauss_win /= gauss_win.max()
+                    to_plot.extend([freeman_win, gauss_win, freeman_win - gauss_win])
+                    titles.extend([f'{paper}, scaling {sc}' for paper in ['Freeman 2011', 'This paper', 'Difference']])
+                fig = pt.imshow(to_plot, vrange='auto0', col_wrap=3)
+                for ax, title in zip(fig.axes, titles):
+                    ax.set_title(title)
+                    # adjust the position to get rid of extra spacing where
+                    # subtitle used to be.
+                    bb = ax.get_position()
+                    if bb.y0 != 0:
+                        bb.y0 = bb.y0 - bb.y0/4
+                        ax.set_position(bb)
+                fig.savefig(output[0], bbox_inches='tight')
+
+
 rule dacey_figure:
     input:
         op.join('data/Dacey1992_RGC.csv'),
@@ -4276,6 +4326,7 @@ rule paper_figures:
         op.join(config['DATA_DIR'], 'figures', 'paper', "sensitivities_1.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "sensitivities_2.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "sensitivities.svg"),
+        op.join(config['DATA_DIR'], 'figures', 'paper', "freeman_windows_comparison.svg")
 
         # these are just to check against the partially-pooled versions
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_unpooled_log-ci_comp-base.svg"),
