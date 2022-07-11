@@ -9,8 +9,8 @@
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    width="551.73834"
-   height="292.56946"
-   viewBox="0 0 551.73831 292.56943"
+   height="329.13974"
+   viewBox="0 0 551.73831 329.13971"
    version="1.1"
    id="svg8"
    inkscape:version="1.0.2 (1.0.2+r75+1)"
@@ -192,8 +192,8 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="1.4142137"
-     inkscape:cx="256.41507"
-     inkscape:cy="318.21215"
+     inkscape:cx="261.75164"
+     inkscape:cy="221.94555"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -220,19 +220,19 @@
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1"
-     transform="translate(21.11377,-40.244995)">
+     transform="translate(21.11377,-29.702313)">
     <g
        id="g1675"
        transform="translate(27.540109,11.13372)">
       <image
          xlink:href="IMAGE2"
-         width="156.02818"
-         height="124.1859"
-         preserveAspectRatio="none"
-         id="image2044-3"
-         x="159.71466"
+         style="stroke-width:1.14131"
          y="39.41362"
-         style="stroke-width:1.14131" />
+         x="159.71466"
+         id="image2044-3"
+         preserveAspectRatio="none"
+         height="124.1859"
+         width="156.02818" />
       <ellipse
          style="fill:none;fill-opacity:0.7;stroke:#000000;stroke-width:2.10314;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
          id="circle1003-7-1"
@@ -278,13 +278,13 @@
        transform="translate(56.085927,11.133715)">
       <image
          xlink:href="IMAGE3"
-         width="156.02818"
-         height="124.1859"
-         preserveAspectRatio="none"
-         id="image2044-3-6"
-         x="318.05438"
+         style="stroke-width:1.14131"
          y="39.41362"
-         style="stroke-width:1.14131" />
+         x="318.05438"
+         id="image2044-3-6"
+         preserveAspectRatio="none"
+         height="124.1859"
+         width="156.02818" />
       <ellipse
          style="fill:none;fill-opacity:0.7;stroke:#000000;stroke-width:2.10314;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
          id="circle1003-7-65-7"
@@ -327,13 +327,13 @@
        transform="translate(6.8187972,11.13372)">
       <image
          xlink:href="IMAGE1"
-         y="39.41362"
-         x="1.9919804"
-         id="image2044"
-         preserveAspectRatio="none"
-         height="124.1859"
+         style="stroke-width:1.14131"
          width="156.02818"
-         style="stroke-width:1.14131" />
+         height="124.1859"
+         preserveAspectRatio="none"
+         id="image2044"
+         x="1.9919804"
+         y="39.41362" />
       <rect
          style="fill:none;stroke:#000000;stroke-width:2.10314;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stop-color:#000000"
          id="rect883-6-2"
@@ -756,5 +756,107 @@
          id="tspan3243-6"
          x="-15.242676"
          y="225.35078">B</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:13.3333px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle"
+       x="86.789055"
+       y="39.510231"
+       id="text1729"><tspan
+         sodipodi:role="line"
+         id="tspan1727"
+         x="86.789055"
+         y="39.510231">Image 1</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:13.3333px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle"
+       x="265.28513"
+       y="39.598122"
+       id="text1729-3"><tspan
+         sodipodi:role="line"
+         id="tspan1727-6"
+         x="265.28513"
+         y="39.598122">Image 2</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:13.3333px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle"
+       x="451.85489"
+       y="41.007622"
+       id="text1729-7"><tspan
+         sodipodi:role="line"
+         id="tspan1727-5"
+         x="451.85489"
+         y="41.007622">Difference</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:13.3333px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle"
+       x="86.177078"
+       y="200.39594"
+       id="text1729-35"><tspan
+         sodipodi:role="line"
+         id="tspan1727-62"
+         x="86.177078"
+         y="200.39594">Metamer</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:13.3333px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle"
+       x="268.84186"
+       y="200.48383"
+       id="text1729-3-9"><tspan
+         sodipodi:role="line"
+         id="tspan1727-6-1"
+         x="268.84186"
+         y="200.48383">Metamer</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:13.3333px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle"
+       x="451.50659"
+       y="201.89333"
+       id="text1729-7-2"><tspan
+         sodipodi:role="line"
+         id="tspan1727-5-7"
+         x="451.50659"
+         y="201.89333">Not metamer</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10.6667px;line-height:1;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;white-space:pre;inline-size:156.572"
+       x="86.785805"
+       y="349.9566"
+       id="text1823"
+       transform="translate(0,-4)"><tspan
+         x="86.785805"
+         y="349.9566"><tspan
+           style="font-size:10.6667px">Image stats match from first</tspan><tspan
+           y="349.9566"> </tspan></tspan><tspan
+         x="86.785805"
+         y="360.6233"><tspan
+           style="font-size:10.6667px">stage of processing</tspan></tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10.6667px;line-height:1;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;white-space:pre;inline-size:156.572"
+       x="86.785805"
+       y="349.9566"
+       id="text1823-0"
+       transform="translate(182.18005,-4)"><tspan
+         x="86.785805"
+         y="349.9566"><tspan
+           style="font-size:10.6667px">Image stats match at later</tspan><tspan></tspan><tspan
+           y="349.9566"> </tspan></tspan><tspan
+         x="86.785805"
+         y="360.6233"><tspan
+           style="font-size:10.6667px">stage of processing</tspan></tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10.6667px;line-height:1;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;white-space:pre;inline-size:156.572"
+       x="86.785805"
+       y="349.9566"
+       id="text1823-0-9"
+       transform="translate(364.84479,-4)"><tspan
+         x="86.785805"
+         y="349.9566"><tspan
+           style="font-size:10.6667px">Image stats differ at later</tspan><tspan></tspan><tspan
+           y="349.9566"> </tspan></tspan><tspan
+         x="86.785805"
+         y="360.6233"><tspan
+           style="font-size:10.6667px">stage of processing</tspan></tspan></text>
   </g>
 </svg>
