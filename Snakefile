@@ -2079,6 +2079,12 @@ rule mcmc_figure:
                     # don't need the legend here, it's not doing much
                     warnings.warn("Removing legend, because it's not doing much.")
                     fig.legends[0].remove()
+                    if 'V1' in wildcards.model_name:
+                        warnings.warn("Removing ylabel so we don't have redundant labels when composing figure")
+                        fig.axes[0].set_ylabel('')
+                    if wildcards.comp == 'ref':
+                        warnings.warn("Removing xlabel so we don't have redundant labels when composing figure")
+                        fig.axes[0].set_xlabel('')
                 if wildcards.context == 'paper':
                     fig.suptitle('')
                     for i, ax in enumerate(fig.axes):
@@ -2090,7 +2096,7 @@ rule mcmc_figure:
                         # xticklabels invisible
                         if col == 'image_name' and i <= 14:
                             [xticklab.set_visible(False) for xticklab in ax.get_xticklabels()]
-                fig.savefig(output[0], bbox_inches='tight')
+                fig.savefig(output[0], bbox_inches='tight', transparent=True)
 
 
 rule mcmc_arviz_compare_figure:
@@ -2304,7 +2310,7 @@ rule mcmc_performance_comparison_figure:
                         leg = fig.legends[0]
                         leg.texts = [t.set_text(t.get_text().replace('Trial type', 'Comparison'))
                                      for t in leg.texts]
-                fig.savefig(output[0], bbox_inches='tight')
+                fig.savefig(output[0], bbox_inches='tight', transparent=True)
 
 
 rule mcmc_parameter_correlation_figure:
@@ -2782,7 +2788,7 @@ rule radial_squared_error_figure:
                     # xticklabels invisible
                     if i <= 14:
                         [xticklab.set_visible(False) for xticklab in ax.get_xticklabels()]
-                g.savefig(output[0], bbox_inches='tight')
+                g.savefig(output[0], bbox_inches='tight', transparent=True)
 
 
 rule calculate_mse:
@@ -3336,7 +3342,8 @@ rule freeman_compare_windows_figure:
                     if bb.y0 != 0:
                         bb.y0 = bb.y0 - bb.y0/4
                         ax.set_position(bb)
-                fig.savefig(output[0], bbox_inches='tight')
+                    fov.figures.add_fixation_cross(ax, cross_size=25)
+                fig.savefig(output[0], bbox_inches='tight', transparent=True)
 
 
 rule dacey_figure:
@@ -3441,7 +3448,7 @@ rule dacey_mcmc_plot:
                 plt.style.use(style)
                 fig = fov.figures.dacey_mcmc_plot(inf_data, df, logscale_axes='log' in wildcards.logscale,
                                                   height=fig_width)
-                fig.savefig(output[0])
+                fig.savefig(output[0], transparent=True)
 
 
 rule copy_schematic:

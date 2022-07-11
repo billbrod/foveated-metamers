@@ -305,11 +305,6 @@ def combine_one_ax_figs(figs, context='paper'):
     text_params, figure_width = style.plotting_style(context, 'svgutils', 'full')
     figure_width = _convert_to_pix(figure_width)
     figs = [SVG(fig, 'matplotlib') for fig in figs]
-    # create rectangles to block out the labels we don't want to see
-    ylabel_rect = SVG(_create_tmp_rectangle(figure_width+20, .1, fc='w', ec='none'),
-                      'matplotlib')
-    xlabel_rect = SVG(_create_tmp_rectangle(.2, figure_width, fc='w', ec='none'),
-                      'matplotlib')
     # font_size is for panel labels and so too large for the titles
     font_size = float(text_params.pop('size').replace('pt', ''))
     return compose.Figure(
@@ -318,8 +313,6 @@ def combine_one_ax_figs(figs, context='paper'):
         # want to go through this backwards so the first figures are on top
         *[fig.move(9 + i // 2 * (figure_width/2 - 10), 15 + i % 2 * figure_width/2)
           for i, fig in enumerate(figs)][::-1],
-        ylabel_rect.move(9+figure_width/2+5, 15),
-        xlabel_rect.move(9, figure_width/2+15),
         compose.Text('Luminance model', 109, 15, size=font_size,
                      **text_params),
         compose.Text('Energy model', 109+figure_width/2+10+10, 15,
