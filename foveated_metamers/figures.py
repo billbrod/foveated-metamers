@@ -1072,6 +1072,19 @@ def mcmc_diagnostics_plot(inf_data):
     ess = az.ess(inf_data.posterior)
     for ax in axes:
         var = ax[0].get_title()
+        # the prior is often much wider, so let's make sure we're setting xlim
+        # based on the posterior
+        xlim = ax[0].get_xlim()
+        vals = inf_data.prior[var].values.flatten()
+        # some of our priors are HalfCauchy(.1). the vast majority of its mass
+        # is on the same scale as the posterior, but a small number extends to
+        # some incredibly high numbers. This results in a really weird KDE
+        # plot, so we restrict which values to use for calculating KDE to those
+        # that will show up on the plot.
+        vals = vals[vals < max(xlim)]
+        vals = vals[vals > min(xlim)]
+        az.plot_dist(vals, color='k', ax=ax[0])
+        ax[0].set_xlim(xlim)
         ax[0].set_title(ax[0].get_title()+
                         f', nanmean r_hat={np.nanmean(rhat[var].data):.05f}')
         ax[1].set_title(ax[1].get_title()+
