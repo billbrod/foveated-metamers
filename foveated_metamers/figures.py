@@ -2714,3 +2714,55 @@ def wallis_critical_scaling():
     return pd.DataFrame({'critical_scaling': crit_scaling,
                          'model': 'Texture model',
                          'trial_type': comp, 'image_type': images})
+
+
+def parameter_correlation(inf_data, corr_type):
+    """Plot parameter correlations.
+
+    Warning, these plots are *huge*. As in, "resulting png will be ~10MB" huge.
+
+    Parameters
+    ----------
+    inf_data : arviz.InferenceData
+        arviz InferenceData object (xarray-like) created by `run_inference`
+    corr_type : {'a0', 's0', 'subject', 'image'}
+        which plot to create. how exactly we do this depends on the mcmc model
+        type.
+
+    Returns
+    -------
+    fig : matplotlib.Figure
+        The figure containing this plot
+
+    """
+    # set this so we can create the plots we want
+    az.rcParams['plot.max_subplots'] = 1000
+    combine_dims = {'trial_type', 'model'}
+    if inf_data.metadata.mcmc_model_type == 'unpooled':
+        if corr_type in ['a0', 's0']:
+            var_names = [corr_type]
+        elif corr_type == 'subject':
+            var_names = ['a0', 's0']
+            combine_dims = combine_dims.union({'image_name'})
+        elif corr_type == 'image':
+            var_names = ['a0', 's0']
+            combine_dims = combine_dims.union({'subject_name'})
+    elif inf_data.metadata.mcmc_model_type == 'partially-pooled':
+        if corr_type in ['a0', 's0']:
+            var_names = [f'log_{corr_type}_global_mean',
+                         f'{corr_type}_image_sd', f'{corr_type}_subject_sd',
+                         f'log_{corr_type}_image', f'log_{corr_type}_subject']
+        elif corr_type == 'subject':
+            var_names = ['pi_l', 'log_a0_subject', 'log_s0_subject']
+            combine_dims = combine_dims.union({'image_name'})
+        elif corr_type == 'image':
+            var_names = ['log_a0_image', 'log_s0_image']
+            combine_dims = combine_dims.union({'subject_name'})
+    else:
+        raise Exception("Don't know how to handle mcmc model type "
+                        f"{inf_data.metadata.mcmc_model_type}!")
+    axes = az.plot_pair(inf_data, var_names=var_names, kind='hexbin',
+                        combine_dims=combine_dims)
+    # this returns an array of axes, so we want to grab the actual figure from
+    # it
+    return axes[0, 0].figure

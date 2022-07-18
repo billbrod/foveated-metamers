@@ -1424,6 +1424,9 @@ rule mcmc_plots:
                 elif wildcards.plot_type == 'diagnostics':
                     print("Creating MCMC diagnostics plot.")
                     fig = fov.figures.mcmc_diagnostics_plot(inf_data)
+                elif 'param-corr' in wildcards.plot_type:
+                    print("Creating MCMC parameter correlations plot.")
+                    fig = fov.figures.mcmc_parameter_correlation(inf_data, wildcards.split('_')[1])
                 elif wildcards.plot_type == 'psychophysical-params':
                     print("Creating psychophysical parameters plot.")
                     fig = fov.figures.psychophysical_curve_parameters(inf_data,
