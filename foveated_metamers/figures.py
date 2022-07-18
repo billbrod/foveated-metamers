@@ -2716,7 +2716,7 @@ def wallis_critical_scaling():
                          'trial_type': comp, 'image_type': images})
 
 
-def parameter_correlation(inf_data, corr_type):
+def mcmc_parameter_correlation(inf_data, corr_type):
     """Plot parameter correlations.
 
     Warning, these plots are *huge*. As in, "resulting png will be ~10MB" huge.
@@ -2740,9 +2740,9 @@ def parameter_correlation(inf_data, corr_type):
     combine_dims = {'trial_type', 'model'}
     if inf_data.metadata.mcmc_model_type == 'unpooled':
         if corr_type in ['a0', 's0']:
-            var_names = [corr_type]
+            raise Exception(f"Unable to make plot {corr_type} for unpooled models!")
         elif corr_type == 'subject':
-            var_names = ['a0', 's0']
+            var_names = ['pi_l', 'a0', 's0']
             combine_dims = combine_dims.union({'image_name'})
         elif corr_type == 'image':
             var_names = ['a0', 's0']

@@ -1401,7 +1401,7 @@ rule mcmc_plots:
                 'task-split_comp-{comp}_mcmc_{mcmc_model}_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}'
                 '_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}_{plot_type}_benchmark.txt'),
     resources:
-        mem = lambda wildcards: {'post-pred-check': 15}.get(wildcards.plot_type, 5)
+        mem = lambda wildcards: {'post-pred-check': 15, 'param-corr': 10}.get(wildcards.plot_type.split('_')[0], 5)
     run:
         import foveated_metamers as fov
         import arviz as az
@@ -1426,7 +1426,8 @@ rule mcmc_plots:
                     fig = fov.figures.mcmc_diagnostics_plot(inf_data)
                 elif 'param-corr' in wildcards.plot_type:
                     print("Creating MCMC parameter correlations plot.")
-                    fig = fov.figures.mcmc_parameter_correlation(inf_data, wildcards.split('_')[1])
+                    fig = fov.figures.mcmc_parameter_correlation(inf_data,
+                                                                 wildcards.plot_type.split('_')[1])
                 elif wildcards.plot_type == 'psychophysical-params':
                     print("Creating psychophysical parameters plot.")
                     fig = fov.figures.psychophysical_curve_parameters(inf_data,
