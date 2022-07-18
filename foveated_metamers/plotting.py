@@ -249,9 +249,15 @@ def get_style(col, col_unique, as_dict=True):
                              zip(all_vals, [.5, 1])}
             dashes_dict = dict(zip(all_vals, len(all_vals)*['']))
             markers = dict(zip(all_vals, len(all_vals)*['o']))
+        elif col_val == 'avg_method':
+            all_vals = ['individual curves + avg', 'overall effects + combine']
+            marker_adjust = {c: {'alpha': m} for c, m in
+                             zip(all_vals, [.5, 1])}
+            dashes_dict = dict(zip(all_vals, len(all_vals)*['']))
+            markers = dict(zip(all_vals, len(all_vals)*['o']))
         else:
-            raise Exception(f"Currently only support col='trial_type' or "
-                            "'mcmc_model_type' but got {col_val}")
+            raise Exception(f"Currently only support col='trial_type', "
+                            "'mcmc_model_type', or 'avg_method', but got {col_val}")
         style_dict[col_val] = {'dashes_dict': dashes_dict,
                                'marker_adjust': marker_adjust,
                                'markers': markers}

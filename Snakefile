@@ -1405,6 +1405,7 @@ rule mcmc_plots:
     run:
         import foveated_metamers as fov
         import arviz as az
+        import pandas as pd
         import contextlib
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
@@ -1428,6 +1429,16 @@ rule mcmc_plots:
                     print("Creating MCMC parameter correlations plot.")
                     fig = fov.figures.mcmc_parameter_correlation(inf_data,
                                                                  wildcards.plot_type.split('_')[1])
+                elif wildcards.plot_type == "param-avg-method":
+                    print("Creating MCMC parameter average comparison plot.")
+                    df = fov.mcmc.inf_data_to_df(inf_data, 'parameter grouplevel means',
+                                                 query_str="distribution=='posterior'", hdi=.95)
+                    df['avg_method'] = 'individual curves + avg'
+                    tmp = fov.mcmc.inf_data_to_df(inf_data, 'parameter grouplevel means Heiko method',
+                                                  query_str="distribution=='posterior'", hdi=.95)
+                    tmp['avg_method'] = 'overall effects + combine'
+                    df = pd.concat([df, tmp]).reset_index(drop=True)
+                    fig = fov.figures.psychophysical_grouplevel_means(df, style=['avg_method', 'trial_type'])
                 elif wildcards.plot_type == 'psychophysical-params':
                     print("Creating psychophysical parameters plot.")
                     fig = fov.figures.psychophysical_curve_parameters(inf_data,

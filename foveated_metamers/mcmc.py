@@ -939,7 +939,7 @@ def inf_data_to_df(inf_data, kind='predictive', query_str=None, hdi=False):
     ----------
     inf_data : arviz.InferenceData
         arviz InferenceData object (xarray-like) created by `assemble_inf_data`.
-    kind : {'predictive', 'parameters', 'psychophysical curve parameters', 'parameter grouplevel 'means', 'predictive grouplevel means'}, optional
+    kind : {'predictive', 'parameters', 'psychophysical curve parameters', 'parameter grouplevel 'means', 'predictive grouplevel means', 'parameter grouplevel means Heiko method'}, optional
         Whether to create df containing predictive info (responses and
         probability_correct), model parameter info, or psychophysical curve
         parameters (where we've combined across the different effects and
@@ -1056,6 +1056,37 @@ def inf_data_to_df(inf_data, kind='predictive', query_str=None, hdi=False):
                         dep_var = tmp[other_m]
                         tmp = tmp.drop(columns=[other_m])
                     tmp['dependent_var'] = dep_var
+                    df.append(tmp)
+        df = pd.concat(df).reset_index(drop=True)
+        df.dependent_var = df.dependent_var.map(lambda x: x.split('_')[0])
+    elif kind == 'parameter grouplevel means Heiko method':
+        # following Heiko's advice for how to do this, we compute the HDI of
+        # each parameter separately, then combine across images / subjects
+        dists = ['prior', 'posterior']
+        params = ['a0', 's0']
+        level = ['global_mean', 'subject', 'image']
+        df = []
+        if not hdi:
+            raise Exception(f"Can only get {kind} df if hdi is also set!")
+        for d in dists:
+            for p in params:
+                for lvl in level:
+                    try:
+                        tmp = np.exp(inf_data[d][f'log_{p}_global_mean'])
+                        if lvl != 'global_mean':
+                            tmp = tmp * np.exp(inf_data[d][f'log_{p}_{lvl}'])
+                    except KeyError:
+                        # then this is the unpooled version, and so this doesn't make sense
+                        raise Exception(f"Doesn't make sense to get {kind} df with unpooled mcmc model!")
+                    tmp = _compute_hdi(tmp, hdi)
+                    tmp = tmp.to_dataframe('value').reset_index()
+                    tmp['distribution'] = d
+                    tmp['parameter'] = p
+                    tmp['level'] = {'global_mean': 'all'}.get(lvl, lvl + '_name')
+                    if lvl == 'global_mean':
+                        tmp['dependent_var'] = 'all subjects, all images'
+                    else:
+                        tmp = tmp.rename(columns={lvl+'_name': 'dependent_var'})
                     df.append(tmp)
         df = pd.concat(df).reset_index(drop=True)
         df.dependent_var = df.dependent_var.map(lambda x: x.split('_')[0])
