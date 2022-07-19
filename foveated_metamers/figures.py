@@ -1477,7 +1477,7 @@ def partially_pooled_metaparameters(inf_data, hue='model', style='trial_type',
         figure containing the figure.
 
     """
-    mcmc_model_type = inf_data.metadata.mcmc_model_type[0, 0]
+    mcmc_model_type = inf_data.metadata.mcmc_model_type.values[0, 0]
     if mcmc_model_type not in ['partially-pooled', 'partially-pooled-interactions']:
         raise Exception("Can only create this plot with partially-pooled or "
                         "partially-pooled-interactions mcmc model but got "
@@ -1602,7 +1602,7 @@ def partially_pooled_parameters(inf_data, hue='model', style='trial_type',
         figure containing the figure.
 
     """
-    mcmc_model_type = inf_data.metadata.mcmc_model_type[0, 0]
+    mcmc_model_type = inf_data.metadata.mcmc_model_type.values[0, 0]
     if mcmc_model_type not in ['partially-pooled', 'partially-pooled-interactions']:
         raise Exception("Can only create this plot with partially-pooled or "
                         "partially-pooled-interactions mcmc model but got "
@@ -1693,6 +1693,140 @@ def partially_pooled_parameters(inf_data, hue='model', style='trial_type',
     plotting._add_legend(params, fig, hue, style, palette,
                          final_markers, {k: '' for k in marker_adjust.keys()})
     fig.suptitle(f"Parameter values 2 for {mcmc_model_type} MCMC\n", y=.95, va='bottom')
+    return fig
+
+
+def interaction_parameters(inf_data, hue='subject_name', style='trial_type',
+                           distribution='posterior', hdi=.95, height=4,
+                           aspect=6, rotate_xticklabels=True,
+                           x_dodge=.1, **kwargs):
+    """Plot the subject/image interaction parameters of mcmc model.
+
+    These are log_a0/s0_interaction.
+
+    Parameters
+    ----------
+    inf_data : arviz.InferenceData
+        arviz InferenceData object (xarray-like) created by `run_inference`
+    hue, style : str, optional
+        variables to facet along.
+    distribution : str, optional
+        what distribution to grab from inf_data
+    hdi : float, optional
+        The width of the HDI to draw (in range (0, 1]). See docstring of
+        fov.mcmc.inf_data_to_df for more details.
+    height : float, optional
+        Height of the axes
+    aspect : float, optional
+        Aspect of the axes
+    rotate_xticklabels : bool or int, optional
+        whether to rotate the x-axis labels or not. if True, we rotate
+        by 25 degrees. if an int, we rotate by that many degrees. if
+        False, we don't rotate.
+    x_dodge : float, None, or bool, optional
+        to improve visibility with many points that have the same x-values (or
+        are categorical), we can dodge the data along the x-axis,
+        deterministically shifting it. If a float, x_dodge is the amount we
+        shift each level of hue by; if None, we don't dodge at all; if True, we
+        dodge as if x_dodge=.01
+    kwargs :
+        Passed to plt.subplots
+
+    Returns
+    -------
+    fig : plt.Figure
+        figure containing the figure.
+
+    """
+    mcmc_model_type = inf_data.metadata.mcmc_model_type.values[0, 0]
+    if mcmc_model_type not in ['partially-pooled-interactions']:
+        raise Exception("Can only create this plot with "
+                        "partially-pooled-interactions mcmc model but got "
+                        f"{mcmc_model_type}!")
+    # we will use this to mask out the parameters for unobserved conditions
+    scal = inf_data.observed_data.scaling[0]
+    mask = inf_data.observed_data.responses.sel(trials=0, scaling=scal).isnull()
+    mask = mask.squeeze().to_dataframe()
+    mask = mask.drop(columns=['trials', 'scaling', 'trial_type', 'model']).rename(columns={'responses': 'value'})
+
+    img_order = np.array(plotting.get_order('image_name'))
+    inf_data = mcmc._compute_hdi(inf_data[distribution], hdi)
+    keys_to_include = [f'log_{p}_interact' for p in ['a0', 's0']]
+
+    params = inf_data[keys_to_include].to_dataframe()
+    params = params.reset_index().melt(params.index.names)
+
+    # drop parameters corresponding to unobserved conditions
+    params = params.set_index(['subject_name', 'image_name'])
+    # this hacky nonsense puts a nan everywhere mask has a true value
+    params['mask'] = mask.mask(mask)
+    params = params.reset_index().dropna()
+
+    params['var_type'] = 'interaction'
+    params['x_var'] = params.image_name
+    params = params.drop(columns=['image_name', 'mask'])
+    params.x_var = params.x_var.map(lambda x: x.split('_')[0])
+    params.variable = params.variable.map(lambda x: '_'.join(x.split('_')[:-1]))
+
+    # set defaults based on hue and style args
+    if hue is not None:
+        palette = kwargs.pop('palette', plotting.get_palette(hue,
+                                                             params[hue].unique()))
+    else:
+        palette = {None: kwargs.pop('color', 'C0')}
+    if style is not None:
+        try:
+            col_unique = params[style].unique()
+            style = style
+        except AttributeError:
+            # then there are multiple values in style
+            col_unique = [params[s].unique().tolist() for s in style]
+        style_dict = plotting.get_style(style, col_unique)
+        marker_adjust = style_dict.pop('marker_adjust', {})
+    else:
+        marker_adjust = {}
+    fig, axes, cols, rows = plotting._setup_facet_figure(params, 'var_type',
+                                                         'variable',
+                                                         height=height,
+                                                         aspect=aspect,
+                                                         rotate_xticklabels=rotate_xticklabels,
+                                                         sharex='col',
+                                                         sharey='row',
+                                                         **kwargs)
+    final_markers = {}
+    label, all_labels = plotting._prep_labels(params, hue, style, 'var_type', 'variable')
+    for i, c in enumerate(cols):
+        for j, r in enumerate(rows):
+            ax = axes[j, i]
+            d = params.query(f"var_type=='{c}' & variable=='{r}'")
+            xlabel, ylabel = '', ''
+            if i == 0:
+                ylabel = f'value with {int(hdi*100)}% HDI'
+            if j == len(rows)-1:
+                if i == 0:
+                    xlabel = 'image_name'
+                elif i == 1:
+                    xlabel = 'subject_name'
+            title_ = f"{r} | {c}"
+            markers_tmp = plotting._facetted_scatter_ci_dist(d, 'x_var',
+                                                             'value', hue,
+                                                             style, img_order,
+                                                             label, all_labels,
+                                                             x_dodge,
+                                                             marker_adjust,
+                                                             palette,
+                                                             rotate_xticklabels,
+                                                             xlabel, ylabel,
+                                                             title_, ax=ax)
+            final_markers.update(markers_tmp)
+            xlim = ax.get_xlim()
+            ax.axhline(xmin=xlim[0], xmax=xlim[1], linestyle='--', c='k')
+            ax.set_xlim(xlim)
+
+    # create the legend
+    plotting._add_legend(params, fig, hue, style, palette,
+                         final_markers, {k: '' for k in marker_adjust.keys()})
+    fig.suptitle(f"Parameter values 3 for {mcmc_model_type} MCMC\n", y=.95, va='bottom')
     return fig
 
 

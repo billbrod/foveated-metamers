@@ -1450,11 +1450,12 @@ rule mcmc_plots:
                     print("Creating parameter pairplot.")
                     fig = fov.figures.parameter_pairplot(inf_data, hue='subject_name')
                 elif wildcards.plot_type == 'params':
-                    if wildcards.mcmc_model != 'partially-pooled':
-                        raise Exception("Only know how to create params plot for partially-pooled mcmc")
                     print("Creating parameter distribution plot.")
                     fig = fov.figures.partially_pooled_parameters(inf_data, height=4, aspect=2.5,
                                                                   rotate_xticklabels=True)
+                elif wildcards.plot_type == 'interaction-params':
+                    print("Creating interaction parameter distribution plot.")
+                    fig = fov.figures.interaction_parameters(inf_data)
                 elif wildcards.plot_type == 'metaparams':
                     print("Creating metaparameter distribution plot.")
                     fig = fov.figures.partially_pooled_metaparameters(inf_data, height=5)
