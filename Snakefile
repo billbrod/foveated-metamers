@@ -2077,8 +2077,21 @@ rule mcmc_figure:
                             inf_data = inf_data.query("level=='subject_name'").rename(
                                 columns={'dependent_var': 'subject_name'})
                             inf_data['image_name'] = 'all images'
-                        inf_data['model'] = inf_data['model'].map(fov.plotting.MODEL_PLOT)
-                        inf_data['trial_type'] = inf_data['trial_type'].map(fov.plotting.TRIAL_TYPE_PLOT)
+                    elif 'all' in wildcards.plot_type:
+                        kwargs['col_wrap'] = 5
+                        # get rid of those lines that we don't have observations for
+                        scal = inf_data.observed_data.scaling[0]
+                        mask = inf_data.observed_data.responses.sel(trials=0, scaling=scal).isnull()
+                        mask = mask.squeeze().to_dataframe()
+                        mask = mask.drop(columns=['trials', 'scaling', 'trial_type', 'model']).rename(columns={'responses': 'value'})
+                        inf_data = fov.mcmc.inf_data_to_df(inf_data, 'predictive', hdi=0)
+                        inf_data = inf_data.set_index(['subject_name', 'image_name'])
+                        # this hacky nonsense puts a nan everywhere mask has a true value
+                        inf_data['mask'] = mask.mask(mask)
+                        inf_data = inf_data.reset_index().dropna()
+
+                    inf_data['model'] = inf_data['model'].map(fov.plotting.MODEL_PLOT)
+                    inf_data['trial_type'] = inf_data['trial_type'].map(fov.plotting.TRIAL_TYPE_PLOT)
                     g = fov.figures.posterior_predictive_check(inf_data,
                                                                col=col,
                                                                hue=hue,

@@ -1149,15 +1149,18 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
 def _compute_hdi(tmp, hdi):
     """Compute the HDI of a variable.
 
-    hdi must lie in [0, 1]
+    hdi must lie in [0, 1]. if 0, we just compute the median
     """
-    hdi_xr = az.hdi(tmp, hdi)
-    hdi_xr['hdi'] = 100 * np.array([.5-hdi/2, .5+hdi/2])
-    tmp = tmp.assign_coords({'hdi': 50})
+    if hdi != 0:
+        hdi_xr = az.hdi(tmp, hdi)
+        hdi_xr['hdi'] = 100 * np.array([.5-hdi/2, .5+hdi/2])
+    tmp = tmp.assign_coords({'hdi': 50.})
     tmp = tmp.median(['chain', 'draw']).expand_dims('hdi')
-    if isinstance(tmp, xarray.DataArray):
-        hdi_xr = hdi_xr[tmp.name]
-    return xarray.concat([hdi_xr, tmp], 'hdi')
+    if hdi != 0:
+        if isinstance(tmp, xarray.DataArray):
+            hdi_xr = hdi_xr[tmp.name]
+            tmp = xarray.concat([hdi_xr, tmp], 'hdi')
+    return tmp
 
 
 def inf_data_to_df(inf_data, kind='predictive', query_str=None, hdi=False):
@@ -1183,14 +1186,14 @@ def inf_data_to_df(inf_data, kind='predictive', query_str=None, hdi=False):
     hdi : bool or float, optional
         Whether to compute the HDI (highest density interval) on the parameters
         or return the full distributions. If True, we compute the 95% HDI, if a
-        float, must lie in (0, 1] and give the percentage HDI (we also include
-        the median). The HDI is one way of constructing a summary credible
-        interval, the other common way is to use the equal-tailed interval
-        (ETI), where a 95% ETI has 2.5% of the distribution on either side of
-        its limits (so it goes from the 2.5th to 97.5th percentile). The 95%
-        HDI, on the other hand, contains the central 95% with the highest
-        probability density; with symmetric distirbutions, this will be the
-        same as ETI. See
+        float, must lie in [0, 1] and give the percentage HDI (we also include
+        the median). If 0, we just compute the median. Else, we compute the
+        HDI. The HDI is one way of constructing a summary credible interval,
+        the other common way is to use the equal-tailed interval (ETI), where a
+        95% ETI has 2.5% of the distribution on either side of its limits (so
+        it goes from the 2.5th to 97.5th percentile). The 95% HDI, on the other
+        hand, contains the central 95% with the highest probability density;
+        with symmetric distirbutions, this will be the same as ETI. See
         https://www.sciencedirect.com/topics/mathematics/highest-density-interval
         for some more discussion, excerpted from [2]_
 
@@ -1214,7 +1217,7 @@ def inf_data_to_df(inf_data, kind='predictive', query_str=None, hdi=False):
         for d in dists:
             tmp = inf_data[d]
             # doesn't make sense to compute the HDI for observed data.
-            if hdi and d != 'observed_data':
+            if hdi is not False and d != 'observed_data':
                 tmp = _compute_hdi(tmp, hdi)
             tmp = tmp.to_dataframe().reset_index()
             tmp['distribution'] = d
@@ -1225,7 +1228,7 @@ def inf_data_to_df(inf_data, kind='predictive', query_str=None, hdi=False):
         df = []
         for d in dists:
             tmp = inf_data[d]
-            if hdi:
+            if hdi is not False:
                 tmp = _compute_hdi(tmp, hdi)
             tmp = tmp.to_dataframe()
             for c in tmp.columns:
@@ -1257,7 +1260,7 @@ def inf_data_to_df(inf_data, kind='predictive', query_str=None, hdi=False):
                         # then this must be the unpooled version, and so we can directly
                         # grab the parameter
                         tmp = np.exp(inf_data[d][p])
-                if hdi:
+                if hdi is not False:
                     tmp = _compute_hdi(tmp, hdi)
                 tmp = tmp.to_dataframe('value').reset_index()
                 tmp['distribution'] = d
@@ -1287,7 +1290,7 @@ def inf_data_to_df(inf_data, kind='predictive', query_str=None, hdi=False):
                             # grab the parameter
                             tmp = np.exp(inf_data[d][p])
                     tmp = tmp.mean(m)
-                    if hdi:
+                    if hdi is not False:
                         tmp = _compute_hdi(tmp, hdi)
                     tmp = tmp.to_dataframe('value').reset_index()
                     tmp['distribution'] = d
@@ -1312,7 +1315,7 @@ def inf_data_to_df(inf_data, kind='predictive', query_str=None, hdi=False):
         params = ['a0', 's0']
         level = ['global_mean', 'subject', 'image']
         df = []
-        if not hdi:
+        if hdi is False:
             raise Exception(f"Can only get {kind} df if hdi is also set!")
         if inf_data.metadata.mcmc_model_type != 'partially-pooled-interactions':
             raise Exception(f"Can't get {kind} df with mcmc_model_type {inf_data.metadata.mcmc_model_type}! "
@@ -1344,7 +1347,7 @@ def inf_data_to_df(inf_data, kind='predictive', query_str=None, hdi=False):
                                   mean_level[::-1]+['all']):
                 tmp = inf_data[d].mean(m)
                 # doesn't make sense to compute the HDI for observed data.
-                if hdi and d != 'observed_data':
+                if hdi is not False and d != 'observed_data':
                     tmp = _compute_hdi(tmp, hdi)
                 tmp = tmp.to_dataframe().reset_index()
                 tmp['distribution'] = d
