@@ -751,9 +751,14 @@ def _map_dataframe_prep(data, x, y, estimator, x_jitter, x_dodge, x_order,
         plot_data = data.query("hdi==50").groupby(x)[y].agg(estimator)
         # remove np.nan and 50
         ci_vals = [v for v in data.hdi.unique() if not np.isnan(v) and v !=50]
-        assert len(ci_vals) == 2, "should only have median and two endpoints for HDI!"
-        plot_cis = [data.query("hdi==@val").groupby(x)[y].agg(estimator)
-                    for val in ci_vals]
+        # then we're just doing the median
+        if len(ci_vals) == 0:
+            plot_cis = [data.query("hdi==@val").groupby(x)[y].agg(estimator)
+                        for val in [50, 50]]
+        else:
+            assert len(ci_vals) == 2, "should only have median and two endpoints for HDI!"
+            plot_cis = [data.query("hdi==@val").groupby(x)[y].agg(estimator)
+                        for val in ci_vals]
     else:
         plot_data = data.groupby(x)[y].agg(estimator)
         ci_vals = [50 - ci/2, 50 + ci/2]
