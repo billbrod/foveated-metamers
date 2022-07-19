@@ -1477,10 +1477,11 @@ def partially_pooled_metaparameters(inf_data, hue='model', style='trial_type',
         figure containing the figure.
 
     """
-    if inf_data.metadata.mcmc_model_type[0, 0] != 'partially-pooled':
-        raise Exception("Can only create this plot with partially-pooled mcmc"
-                        " model but got "
-                        f"{inf_data.metadata.mcmc_model_type.values[0, 0]}!")
+    mcmc_model_type = inf_data.metadata.mcmc_model_type[0, 0]
+    if mcmc_model_type not in ['partially-pooled', 'partially-pooled-interactions']:
+        raise Exception("Can only create this plot with partially-pooled or "
+                        "partially-pooled-interactions mcmc model but got "
+                        f"{mcmc_model_type}!")
     inf_data = mcmc._compute_hdi(inf_data[distribution], hdi)
     keys_to_exclude = [f'log_{p}_{t}' for p, t in
                        itertools.product(['a0', 's0'], ['image', 'subject'])]
@@ -1490,14 +1491,13 @@ def partially_pooled_metaparameters(inf_data, hue='model', style='trial_type',
     inf1 = inf1.reset_index().melt(inf1.index.names)
     inf2 = inf_data[['pi_l']].to_dataframe()
     inf2 = inf2.reset_index().melt(inf2.index.names)
-    inf1['var_type'] = inf1.variable.map(lambda x: x.replace('image_', '').replace('subject_', ''))
+    inf1['var_type'] = inf1.variable.map(lambda x: x.replace('image_', '').replace('subject_', '').replace('interact_', ''))
     inf1['variable'] = inf1.variable.map(lambda x: x.replace('a0_', '').replace('s0_', ''))
     inf2['var_type'] = 'Lapse rate'
     inf2['variable'] = inf2.subject_name
     inf2 = inf2.drop(columns=['subject_name'])
 
     metaparams = pd.concat([inf1, inf2])
-    metaparam_order = ['log_global_mean', 'image_sd', 'subject_sd']
     # set defaults based on hue and style args
     if hue is not None:
         palette = kwargs.pop('palette', plotting.get_palette(hue,
@@ -1556,7 +1556,7 @@ def partially_pooled_metaparameters(inf_data, hue='model', style='trial_type',
             ax.set_ylim((0, ax.get_ylim()[1]))
     plotting._add_legend(metaparams, fig, hue, style, palette,
                          final_markers, {k: '' for k in marker_adjust.keys()})
-    fig.suptitle("Parameter values 1 for partially-pooled MCMC\n", y=.95, va='bottom')
+    fig.suptitle(f"Parameter values 1 for {mcmc_model_type} MCMC\n", y=.95, va='bottom')
     return fig
 
 
@@ -1602,10 +1602,11 @@ def partially_pooled_parameters(inf_data, hue='model', style='trial_type',
         figure containing the figure.
 
     """
-    if inf_data.metadata.mcmc_model_type[0, 0] != 'partially-pooled':
-        raise Exception("Can only create this plot with partially-pooled mcmc"
-                        " model but got "
-                        f"{inf_data.metadata.mcmc_model_type.values[0, 0]}!")
+    mcmc_model_type = inf_data.metadata.mcmc_model_type[0, 0]
+    if mcmc_model_type not in ['partially-pooled', 'partially-pooled-interactions']:
+        raise Exception("Can only create this plot with partially-pooled or "
+                        "partially-pooled-interactions mcmc model but got "
+                        f"{mcmc_model_type}!")
     img_order = np.array(plotting.get_order('image_name'))
     inf_data = mcmc._compute_hdi(inf_data[distribution], hdi)
     keys_to_include = [f'log_{p}_{t}' for p, t in
@@ -1691,7 +1692,7 @@ def partially_pooled_parameters(inf_data, hue='model', style='trial_type',
     # create the legend
     plotting._add_legend(params, fig, hue, style, palette,
                          final_markers, {k: '' for k in marker_adjust.keys()})
-    fig.suptitle("Parameter values 2 for partially-pooled MCMC", y=.95)
+    fig.suptitle(f"Parameter values 2 for {mcmc_model_type} MCMC\n", y=.95, va='bottom')
     return fig
 
 

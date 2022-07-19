@@ -244,9 +244,10 @@ def get_style(col, col_unique, as_dict=True):
             markers = dict(zip(all_vals, ['o', 'v', '<', '>', '^']))
             markers = {k: v for k, v in markers.items() if k in uniq}
         elif col_val == 'mcmc_model_type':
-            all_vals = ['unpooled', 'partially-pooled']
+            all_vals = ['unpooled', 'partially-pooled',
+                        'partially-pooled-interactions']
             marker_adjust = {c: {'alpha': m} for c, m in
-                             zip(all_vals, [.5, 1])}
+                             zip(all_vals, [.5, 1, .75])}
             dashes_dict = dict(zip(all_vals, len(all_vals)*['']))
             markers = dict(zip(all_vals, len(all_vals)*['o']))
         elif col_val == 'avg_method':

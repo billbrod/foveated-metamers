@@ -1456,8 +1456,6 @@ rule mcmc_plots:
                     fig = fov.figures.partially_pooled_parameters(inf_data, height=4, aspect=2.5,
                                                                   rotate_xticklabels=True)
                 elif wildcards.plot_type == 'metaparams':
-                    if wildcards.mcmc_model != 'partially-pooled':
-                        raise Exception("Only know how to create metaparams plot for partially-pooled mcmc")
                     print("Creating metaparameter distribution plot.")
                     fig = fov.figures.partially_pooled_metaparameters(inf_data, height=5)
                 elif wildcards.plot_type == 'grouplevel':
@@ -1511,7 +1509,7 @@ rule mcmc_compare_plot:
         lambda wildcards: [op.join(config["DATA_DIR"], 'mcmc', '{{model_name}}', 'task-split_comp-{{comp}}',
                                    'task-split_comp-{{comp}}_mcmc_{mcmc_model}_{hyper}.nc').format(mcmc_model=m,
                                                                                                    hyper=get_mcmc_hyperparams(wildcards, mcmc_model=m))
-                           for m in ['unpooled', 'partially-pooled']]
+                           for m in ['unpooled', 'partially-pooled', 'partially-pooled-interactions']]
     output:
         op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                 'task-split_comp-{comp}_mcmc_compare_{plot_type}.png'),
