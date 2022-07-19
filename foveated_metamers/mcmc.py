@@ -90,6 +90,232 @@ def proportion_correct_curve(scaling, proportionality_factor, critical_scaling):
     return norm_cdf_sqrt_2 * norm_cdf_2 + (1-norm_cdf_sqrt_2) * (1-norm_cdf_2)
 
 
+def partially_pooled_interactions_response_model(scaling, model='V1', observed_responses=None):
+    r"""Partially pooled probabilistic model of responses, with lapse rate.
+
+    This is "partially pooled" because of how we handle the image and subject
+    level effects on the two parameters of interest, as well as the interaction
+    terms between the image and subject.
+
+    - Critical scaling ($s_0$) and proportionality factor / gain ($\alpha_0$)
+      are both modeled on a natural log-scale, where they're the sum of
+      trial_type, image_name (crossed with trial_type), and subject_name
+      (crossed with trial_type) effects. Inspired by Wallis et al, 2019.
+
+    - Lapse rate is modeled as a completely unpooled manner, independently for
+      each (trial_type, subject) (shared across images)
+
+    Additionally, we add interaction terms for critical scaling and gain
+    between subjects and images. This overall model then is similar to the
+    unpooled model (which fits all psychophysical curves independently), except
+    we're building in the correlations across images and subjects
+
+    Model Parameters:
+
+    - log_a0_global_mean, log_s0_global_mean: independent for each trial_type,
+      this is the high-level mean for the gain and critical scaling.
+
+    - a0_subject_sd, s0_subject_sd: independent for each trial type,
+      this is the noise for the subject-level effects for the gain and critical
+      scaling.
+
+    - a0_image_sd, s0_image_sd: independent for each trial type,
+      this is the noise for the image-level effects for the gain and critical
+      scaling.
+
+    - a0_interact_sd, s0_interact_sd: independent for each trial type, this is
+      the noise for the interaction effects for the gain and critical scaling.
+
+    - log_a0_image, log_s0_image: partially pooled within trial_type across
+      images, this is the image-level effect.
+
+    - log_a0_subject, log_s0_subject: partially pooled within trial_type across
+      subjects, this is the subject-level effect.
+
+    - log_a0_interact, log_s0_interact: partially pooled within trial_type
+      across subjects and images, this is the interaction effect.
+
+    - pi_l: lapse rate, independent for each (trial_type, subject).
+
+    Thus, for an individual subject and image:
+
+    - a0 = exp(log_a0_global_mean + log_a0_subject + log_a0_image + log_a0_interact)
+
+    - s0 = exp(log_s0_global_mean + log_s0_subject + log_s0_image + log_s0_interact)
+  
+    Priors:
+
+    - pi_l: Beta(2, 50)
+
+    - log_a0_global_mean: Normal(1.6, 1), this gives expected value of 5 for
+      the exponentiated version.
+
+    - log_s0_global_mean: Normal(-1.38, 1) for V1 (expected value ~.25 of
+      exponentiated version, following from Freeman and Simoncelli, 2011);
+      Normal(-4, 1) for RGC (expected value ~.018 of exponentiated version,
+      from Dacey, 1992)
+
+    - a0_subject_sd, s0_subject_sd, a0_image_sd, s0_image_sd, a0_interact_sd,
+      s0_interact_sd: HalfCauchy(.1)
+
+    - log_a0_image: Normal(0, a0_image_sd)
+
+    - log_s0_image: Normal(0, s0_image_sd)
+
+    - log_a0_subject: Normal(0, a0_subject_sd)
+
+    - log_s0_subject: Normal(0, s0_subject_sd)
+
+    - log_a0_interact: Normal(0, a0_interact_sd)
+
+    - log_s0_interact: Normal(0, s0_interact_sd)
+
+    Parameters
+    ----------
+    scaling : jnp.ndarray
+        scaling value(s) to calculate discriminability for. Must be 5d:
+        (scaling, subject_name, image_name, trial_type, model), though
+        currently we only work with a singleton model dimension.
+    model : {'V1', 'RGC'}
+        Whether we should use V1 or RGC prior for log_s0_global_mean.
+    observed_responses : jnp.ndarray or None
+        observed responses to condition our pulls on. If None, don't condition.
+
+    Returns
+    -------
+    responses : numpyro.sample
+        Samples of responses
+
+    """
+    # because this is a 2AFC task
+    chance_correct = .5
+    # first get rid of model dim, since we're not using it here.
+    if scaling.shape[-1] > 1:
+        raise Exception("Currently, response model can only handle 1 model"
+                        " at a time!")
+    scaling = scaling.squeeze(-1)
+    if observed_responses is not None:
+        observed_responses = observed_responses.squeeze(-1)
+    # we have to do a weird hacky workaround if we only have one trial_type:
+    # for some reason, we can't plate over it (we get a really strange error
+    # when calling mcmc.run, which I think is a numpyro bug, though this
+    # function itself can be called without a problem). So, instead, we squeeze
+    # out trial_types (and add it back in later when we construct the
+    # InferenceData object)
+    dim_offset = 0
+    if scaling.shape[-1] == 1:
+        scaling = scaling.squeeze(-1)
+        if observed_responses is not None:
+            observed_responses = observed_responses.squeeze(-1)
+        dim_offset += 1
+        trial_type_plate = None
+    else:
+        trial_type_plate = numpyro.plate('trial_type', scaling.shape[-1], dim=-1)
+    image_name_plate = numpyro.plate('image_name', scaling.shape[-(2-dim_offset)],
+                                     dim=-(2-dim_offset))
+    # similarly for subjects
+    if scaling.shape[1] == 1:
+        scaling = scaling.squeeze(1)
+        if observed_responses is not None:
+            # first dim of observed_responses is trials (which scaling doesn't
+            # have), so subject is third, rather than second
+            observed_responses = observed_responses.squeeze(2)
+        dim_offset += 1
+        subject_name_plate = None
+    else:
+        subject_name_plate = numpyro.plate('subject_name', scaling.shape[-(3-dim_offset)],
+                                           dim=-(3-dim_offset))
+    scaling_plate = numpyro.plate('scaling', scaling.shape[-(4-dim_offset)],
+                                  dim=-(4-dim_offset))
+    obs_nans = None
+    if observed_responses is not None:
+        # where's the missing data?
+        obs_nans = jnp.isnan(observed_responses)
+        trials_plate = numpyro.plate('trials', observed_responses.shape[0],
+                                     dim=-(5-dim_offset))
+    else:
+        trials_plate = numpyro.plate('trials', 1, dim=-(5-dim_offset))
+
+    # similar to trial_type_plate, we do this so we can sample with or without
+    # the subject_name_plate
+    def _sample_subj(scaling, observed_responses, obs_nans, a0_global_mean,
+                     s0_global_mean, s0_subject_sd, a0_subject_sd, a0_image,
+                     s0_image, s0_interact_sd, a0_interact_sd):
+        s0_subject = numpyro.sample('log_s0_subject', dist.Normal(0, s0_subject_sd))
+        a0_subject = numpyro.sample('log_a0_subject', dist.Normal(0, a0_subject_sd))
+        lapse_rate = numpyro.sample('pi_l', dist.Beta(2, 50))
+        with image_name_plate:
+            # interactions
+            s0_interact = numpyro.sample('log_s0_interact', dist.Normal(0, s0_interact_sd))
+            a0_interact = numpyro.sample('log_a0_interact', dist.Normal(0, a0_interact_sd))
+            # combine global, subject, and image effects
+            a0 = a0_global_mean + a0_subject + a0_image + a0_interact
+            s0 = s0_global_mean + s0_subject + s0_image + s0_interact
+            # this is the value without the lapse rate
+            prop_corr = proportion_correct_curve(scaling, jnp.exp(a0), jnp.exp(s0))
+            # now with the lapse rate
+            prob_corr = numpyro.deterministic('probability_correct',
+                                              ((1 - lapse_rate) * prop_corr +
+                                               lapse_rate * chance_correct))
+            with trials_plate, scaling_plate:
+                if obs_nans is not None:
+                    # expand this out, for broadcasting purposes
+                    prob_corr_nan = jnp.expand_dims(prob_corr, 0).tile((observed_responses.shape[0],
+                                                                        *([1]*prob_corr.ndim)))
+                    # sample the responses...
+                    imputed_responses = numpyro.sample(
+                        'responses_imputed',
+                        dist.Bernoulli(prob_corr_nan, validate_args=True).mask(False)
+                    )
+                    # ...and insert the imputed responses where there are
+                    # NaNs in the observed data.
+                    observed_responses = jnp.where(obs_nans,
+                                                   imputed_responses,
+                                                   observed_responses)
+                return numpyro.sample('responses', dist.Bernoulli(prob_corr,
+                                                                  validate_args=True),
+                                      obs=observed_responses)
+
+    def _sample(scaling, observed_responses, obs_nans):
+        # expected value of 5 for exponentiated version, which looks reasonable
+        a0_global_mean = numpyro.sample('log_a0_global_mean', dist.Normal(1.6, 1))
+        # different priors for the two models
+        if model == 'V1':
+            # expected value of .25 for exponentiated version, from Freeman and
+            # Simoncelli, 2011
+            s0_global_mean = numpyro.sample('log_s0_global_mean', dist.Normal(-1.38, 1))
+        elif model == 'RGC':
+            # expected value of .018 for exponentiated version, from Dacey, 1992
+            s0_global_mean = numpyro.sample('log_s0_global_mean', dist.Normal(-4, 1))
+        # something vague and positive
+        s0_subject_sd = numpyro.sample('s0_subject_sd', dist.HalfCauchy(.1))
+        a0_subject_sd = numpyro.sample('a0_subject_sd', dist.HalfCauchy(.1))
+        s0_image_sd = numpyro.sample('s0_image_sd', dist.HalfCauchy(.1))
+        a0_image_sd = numpyro.sample('a0_image_sd', dist.HalfCauchy(.1))
+        s0_interact_sd = numpyro.sample('s0_interact_sd', dist.HalfCauchy(.1))
+        a0_interact_sd = numpyro.sample('a0_interact_sd', dist.HalfCauchy(.1))
+        with image_name_plate:
+            s0_image = numpyro.sample('log_s0_image', dist.Normal(0, s0_image_sd))
+            a0_image = numpyro.sample('log_a0_image', dist.Normal(0, a0_image_sd))
+        if subject_name_plate is not None:
+            with subject_name_plate:
+                return _sample_subj(scaling, observed_responses, obs_nans,
+                                    a0_global_mean, s0_global_mean,
+                                    s0_subject_sd, a0_subject_sd, a0_image,
+                                    s0_image, s0_interact_sd, a0_interact_sd)
+        else:
+            return _sample_subj(scaling, observed_responses, obs_nans,
+                                a0_global_mean, s0_global_mean, s0_subject_sd,
+                                a0_subject_sd, a0_image, s0_image,
+                                s0_interact_sd, a0_interact_sd)
+
+    if trial_type_plate is not None:
+        with trial_type_plate:
+            return _sample(scaling, observed_responses, obs_nans)
+    else:
+        return _sample(scaling, observed_responses, obs_nans)
+
+
 def partially_pooled_response_model(scaling, model='V1', observed_responses=None):
     r"""Partially pooled probabilistic model of responses, with lapse rate.
 
@@ -132,7 +358,7 @@ def partially_pooled_response_model(scaling, model='V1', observed_responses=None
     - s0 = exp(log_s0_global_mean + log_s0_subject + log_s0_image)
 
     NOTE: no interaction between subject and image effects!
-   
+
     Priors:
 
     - pi_l: Beta(2, 50)
@@ -679,7 +905,7 @@ def run_inference(dataset, mcmc_model_type='partially-pooled', step_size=.1,
     dataset: xarray.Dataset
         Dataset containing observed_responses data variable and at least the
         coordinates trials and scaling (must be first two).
-    mcmc_model_type : {'partially-pooled', 'unpooled'}, optional
+    mcmc_model_type : {'partially-pooled', 'unpooled', 'partially-pooled-interactions'}, optional
         Which MCMC model type to use.
     step_size : float, optional
         Size of a single step.
@@ -715,6 +941,8 @@ def run_inference(dataset, mcmc_model_type='partially-pooled', step_size=.1,
         model = dataset.model.values[0].split('_')[1]
     if mcmc_model_type == 'partially-pooled':
         response_model = partially_pooled_response_model
+    elif mcmc_model_type == 'partially-pooled-interactions':
+        response_model = partially_pooled_interactions_response_model
     elif mcmc_model_type == 'unpooled':
         response_model = unpooled_response_model
     else:
@@ -743,7 +971,7 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
     ----------
     mcmc : numpyro.infer.MCMC
         The MCMC object returned by `run_inference`
-    mcmc_model_type : {'partially-pooled', 'unpooled'}, optional
+    mcmc_model_type : {'partially-pooled', 'unpooled', 'partially-pooled-interactions'}, optional
         Which MCMC model type to use.
     dataset: xarray.Dataset
         Dataset containing observed_responses data variable and at least the
@@ -773,6 +1001,8 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
                             " through how to handle the other case.")
     if mcmc_model_type == 'partially-pooled':
         response_model = partially_pooled_response_model
+    elif mcmc_model_type == 'partially-pooled-interactions':
+        response_model = partially_pooled_interactions_response_model
     elif mcmc_model_type == 'unpooled':
         response_model = unpooled_response_model
     else:
@@ -890,8 +1120,9 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
     if obs.shape[2] == 1:
         # then there was only one subject and it was squeezed out during
         # fitting -- add it in now. The list below contains all the variables
-        # for partially-pooled and unpooled models that need subject added
-        for k in ['log_a0_subject', 'log_s0_subject', 'pi_l', 'a0', 's0']:
+        # for all three models that need subject added
+        for k in ['log_a0_subject', 'log_s0_subject', 'pi_l', 'a0', 's0',
+                  'log_a0_interact', 'log_s0_interact']:
             # the posterior and prior have the same variables, so only need to
             # check one
             if k in inf_data.posterior:
@@ -1014,12 +1245,18 @@ def inf_data_to_df(inf_data, kind='predictive', query_str=None, hdi=False):
         for d in dists:
             for p in params:
                 try:
+                    # first try parameters for partially-pooled-interactions
                     tmp = np.exp(inf_data[d][f'log_{p}_global_mean'] + inf_data[d][f'log_{p}_image'] +
-                                 inf_data[d][f'log_{p}_subject'])
+                                 inf_data[d][f'log_{p}_subject'] + inf_data[d][f'log_{p}_interact'])
                 except KeyError:
-                    # then this is the unpooled version, and so we can directly
-                    # grab the parameter
-                    tmp = np.exp(inf_data[d][p])
+                    # then try partially-pooled
+                    try:
+                        tmp = np.exp(inf_data[d][f'log_{p}_global_mean'] + inf_data[d][f'log_{p}_image'] +
+                                     inf_data[d][f'log_{p}_subject'])
+                    except KeyError:
+                        # then this must be the unpooled version, and so we can directly
+                        # grab the parameter
+                        tmp = np.exp(inf_data[d][p])
                 if hdi:
                     tmp = _compute_hdi(tmp, hdi)
                 tmp = tmp.to_dataframe('value').reset_index()
@@ -1037,12 +1274,18 @@ def inf_data_to_df(inf_data, kind='predictive', query_str=None, hdi=False):
                 for m, other_m in zip(mean_level+[('subject_name', 'image_name')],
                                       mean_level[::-1]+['all']):
                     try:
+                        # first try parameters for partially-pooled-interactions
                         tmp = np.exp(inf_data[d][f'log_{p}_global_mean'] + inf_data[d][f'log_{p}_image'] +
-                                     inf_data[d][f'log_{p}_subject'])
+                                     inf_data[d][f'log_{p}_subject'] + inf_data[d][f'log_{p}_interact'])
                     except KeyError:
-                        # then this is the unpooled version, and so we can directly
-                        # grab the parameter
-                        tmp = np.exp(inf_data[d][p])
+                        # then try partially-pooled
+                        try:
+                            tmp = np.exp(inf_data[d][f'log_{p}_global_mean'] + inf_data[d][f'log_{p}_image'] +
+                                         inf_data[d][f'log_{p}_subject'])
+                        except KeyError:
+                            # then this must be the unpooled version, and so we can directly
+                            # grab the parameter
+                            tmp = np.exp(inf_data[d][p])
                     tmp = tmp.mean(m)
                     if hdi:
                         tmp = _compute_hdi(tmp, hdi)
@@ -1060,24 +1303,26 @@ def inf_data_to_df(inf_data, kind='predictive', query_str=None, hdi=False):
         df = pd.concat(df).reset_index(drop=True)
         df.dependent_var = df.dependent_var.map(lambda x: x.split('_')[0])
     elif kind == 'parameter grouplevel means Heiko method':
-        # following Heiko's advice for how to do this, we compute the HDI of
-        # each parameter separately, then combine across images / subjects
+        # following Heiko's advice for how to do this (which I think is how
+        # it's done in Wallis et al 2019), we get the e.g., image-level effect
+        # by combining the global mean and image level parameters directly
+        # (rather than also combining with the subject level and then averaging
+        # over it)
         dists = ['prior', 'posterior']
         params = ['a0', 's0']
         level = ['global_mean', 'subject', 'image']
         df = []
         if not hdi:
             raise Exception(f"Can only get {kind} df if hdi is also set!")
+        if inf_data.metadata.mcmc_model_type != 'partially-pooled-interactions':
+            raise Exception(f"Can't get {kind} df with mcmc_model_type {inf_data.metadata.mcmc_model_type}! "
+                            "Unsure how to handle it properly")
         for d in dists:
             for p in params:
                 for lvl in level:
-                    try:
-                        tmp = np.exp(inf_data[d][f'log_{p}_global_mean'])
-                        if lvl != 'global_mean':
-                            tmp = tmp * np.exp(inf_data[d][f'log_{p}_{lvl}'])
-                    except KeyError:
-                        # then this is the unpooled version, and so this doesn't make sense
-                        raise Exception(f"Doesn't make sense to get {kind} df with unpooled mcmc model!")
+                    tmp = np.exp(inf_data[d][f'log_{p}_global_mean'])
+                    if lvl != 'global_mean':
+                        tmp = tmp * np.exp(inf_data[d][f'log_{p}_{lvl}'])
                     tmp = _compute_hdi(tmp, hdi)
                     tmp = tmp.to_dataframe('value').reset_index()
                     tmp['distribution'] = d

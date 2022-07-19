@@ -50,7 +50,7 @@ wildcard_constraints:
     plot_focus='|_focus-subject|_focus-image',
     ecc_mask="|_eccmask-[0-9]+",
     logscale="log|linear",
-    mcmc_model="partially-pooled|unpooled",
+    mcmc_model="partially-pooled|unpooled|partially-pooled-interactions",
     fixation_cross="cross|nocross",
     cutout="cutout|nocutout|cutout_V1_natural-seed|cutout_RGC_natural-seed|nocutout_small|cutout_downsample",
     context="paper|poster",
