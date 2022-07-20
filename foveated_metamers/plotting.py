@@ -1197,9 +1197,12 @@ def _label_and_title_psychophysical_curve_plot(g, df, summary_text, ci=None, hdi
     
     """
     if ci is not None:
-        ci_txt = f"{ci}% CI"
+        ci_txt = f"(with {ci}% CI)"
     elif hdi is not None:
-        ci_txt = f"{hdi*100}% HDI"
+        if hdi == 0:
+            ci_txt = ''
+        else:
+            ci_txt = f"(with {hdi*100}% HDI)"
     g.set(ylim=(.4, 1.05))
     title_experiment_summary_plots(g, df, summary_text)
     g.set_titles('{col_name}')
@@ -1216,7 +1219,7 @@ def _label_and_title_psychophysical_curve_plot(g, df, summary_text, ci=None, hdi
         xval = 0
     else:
         xval = .5
-    ylabel = f'Proportion correct (with {ci_txt})'
+    ylabel = f'Proportion correct {ci_txt}'
     xlabel = 'Scaling'
     g.set(xlabel='', ylabel='')
     g.fig.subplots_adjust(hspace=.2, wspace=.1, top=1)
@@ -1362,7 +1365,7 @@ def lineplot_like_pointplot(data, x, y, col=None, row=None, hue=None, ci=95,
     # used in pointplot (which uses scatter). I also added an extra factor of
     # sqrt(2) (by changing the 2 to a 4 in the sqrt below), which looks
     # necessary
-    ms = np.sqrt(np.pi * np.square(lw) * 4)
+    ms = kwargs.pop('markersize', np.sqrt(np.pi * np.square(lw) * 4))
     if ax is None:
         if col is not None:
             col_order = kwargs.pop('col_order', sorted(data[col].unique()))

@@ -2079,6 +2079,8 @@ rule mcmc_figure:
                             inf_data['image_name'] = 'all images'
                     elif 'all' in wildcards.plot_type:
                         kwargs['col_wrap'] = 5
+                        kwargs['hdi'] = 0
+                        kwargs['markersize'] = .5 * plt.rcParams['lines.markersize']
                         # get rid of those lines that we don't have observations for
                         scal = inf_data.observed_data.scaling[0]
                         mask = inf_data.observed_data.responses.sel(trials=0, scaling=scal).isnull()
@@ -2114,11 +2116,20 @@ rule mcmc_figure:
                     if wildcards.comp == 'ref':
                         warnings.warn("Removing xlabel so we don't have redundant labels when composing figure")
                         fig.axes[0].set_xlabel('')
+                elif wildcards.plot_type == 'performance-all':
+                    fig.subplots_adjust(right=.95)
+                    # this only needs to be done on the first axis, because
+                    # their ticks are yoked together
+                    fig.axes[0].set_xticks(fig.axes[0].get_xticks()[::2])
                 if wildcards.context == 'paper':
                     fig.suptitle('')
                     for i, ax in enumerate(fig.axes):
                         # also need to move the titles down a bit
-                        ax.set_title(ax.get_title(), y=.85)
+                        if wildcards.plot_type == 'performance-all':
+                            # titles on this one need to be a bit higher than the rest
+                            ax.set_title(ax.get_title(), y=.91)
+                        else:
+                            ax.set_title(ax.get_title(), y=.85)
                         # still running into this issue
                         # https://github.com/mwaskom/seaborn/issues/2293 with
                         # things about this size, so we manually set the

@@ -908,7 +908,7 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
                                style=None, col_wrap=5, comparison='ref',
                                logscale_xaxis=False, hdi=.95, query_str=None,
                                tabular_trial_type_legend=False,
-                               increase_size=True, **kwargs):
+                               increase_size=True, markersize=None, **kwargs):
     """Plot posterior predictive check.
 
     In order to make sure that our MCMC gave us a reasonable fit, we plot the
@@ -943,6 +943,8 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
     increase_size : bool, optional
         If True, increase width of lines by factor of 1.8 in similar way to
         pointplot. Else, use lines.linewidth.
+    markersize : float or None, optional
+        size of data points.
     kwargs :
         passed to sns.FacetGrid
 
@@ -994,7 +996,8 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
     g.map_dataframe(plotting.lineplot_like_pointplot, x='scaling',
                     y='responses', ci=None, style=style, legend=False,
                     linestyle='', dashes=False, ax='map', markers=markers,
-                    color=color, increase_size=increase_size)
+                    color=color, increase_size=increase_size,
+                    markersize=markersize)
     if marker_adjust:
         labels = {v: k for k, v in markers.items()}
         final_markers = plotting._marker_adjust(g.axes.flatten(),
