@@ -1317,8 +1317,9 @@ def inf_data_to_df(inf_data, kind='predictive', query_str=None, hdi=False):
         df = []
         if hdi is False:
             raise Exception(f"Can only get {kind} df if hdi is also set!")
-        if inf_data.metadata.mcmc_model_type != 'partially-pooled-interactions':
-            raise Exception(f"Can't get {kind} df with mcmc_model_type {inf_data.metadata.mcmc_model_type}! "
+        mcmc_model_type = inf_data.metadata.mcmc_model_type.values[0, 0]
+        if 'partially-pooled' not in mcmc_model_type:
+            raise Exception(f"Can't get {kind} df with mcmc_model_type {mcmc_model_type}! "
                             "Unsure how to handle it properly")
         for d in dists:
             for p in params:
