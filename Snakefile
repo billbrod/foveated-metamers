@@ -153,6 +153,8 @@ def get_mcmc_hyperparams(wildcards, **kwargs):
         if kwargs['model_name'] == 'V1_norm_s6_gaussian':
             if kwargs['comp'] == 'met-natural':
                 return hyper_str.format(1, '.9', 10, 4, 10000, 10000, 0)
+            elif kwargs['comp'] == 'met':
+                return hyper_str.format('.5', '.9', 10, 4, 15000, 15000, 1)
             elif kwargs['comp'] == 'met-downsample-2':
                 return hyper_str.format('.5', '.8', 10, 4, 10000, 10000, 0)
             elif kwargs['comp'] == 'ref-natural':
@@ -161,6 +163,21 @@ def get_mcmc_hyperparams(wildcards, **kwargs):
             if kwargs['comp'] == 'met':
                 return hyper_str.format(1, '.95', 15, 4, 15000, 15000, 1)
     return hyper_str.format(1, '.8', 10, 4, 10000, 10000, 0)
+
+
+rule get_all_mcmc_plots:
+    input:
+        [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
+                 'task-split_comp-{comp}_mcmc_{mcmc_model}_{hyper}_{plot_name}.png').format(
+                     mcmc_model=mc, model_name=m, comp=c, plot_name = p,
+                     hyper=get_mcmc_hyperparams({}, mcmc_model=mc, model_name=m, comp=c))
+         for mc in ['unpooled', 'partially-pooled', 'partially-pooled-interactions']
+         for m in MODELS
+         for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'met-downsample-2', 'ref-natural']}.get(m, ['met', 'ref'])
+         for p in ['diagnostics', 'performance', 'post-pred-check', 'psychophysical-params', 'grouplevel', 'param-corr_image',
+                   'param-corr_subject'] + {'partially-pooled-interactions': ['metaparams', 'interaction-params', 'param-avg-method', 'params'],
+                                            'partially-pooled': ['metaparams', 'param-avg-method', 'param-corr_a0', 'param-corr_s0', 'params']}.get(mc, [])
+        ]
 
 
 # quick rule to check that there are GPUs available and the environment
@@ -1485,7 +1502,7 @@ rule mcmc_arviz_compare:
         lambda wildcards: [op.join(config["DATA_DIR"], 'mcmc', '{{model_name}}', 'task-split_comp-{{comp}}',
                                    'task-split_comp-{{comp}}_mcmc_{mcmc_model}_{hyper}.nc').format(mcmc_model=m,
                                                                                                    hyper=get_mcmc_hyperparams(wildcards, mcmc_model=m))
-                           for m in ['unpooled', 'partially-pooled']]
+                           for m in ['unpooled', 'partially-pooled', 'partially-pooled-interactions']]
     output:
         op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                 'task-split_comp-{comp}_mcmc_compare_ic-{ic}.csv'),
