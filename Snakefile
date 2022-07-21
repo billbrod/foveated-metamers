@@ -149,6 +149,17 @@ def get_mcmc_hyperparams(wildcards, **kwargs):
         elif kwargs['model_name'] == 'RGC_norm_gaussian':
             if kwargs['comp'] == 'met':
                 return hyper_str.format('.5', '.9', 20, 4, 15000, 15000, 0)
+    elif kwargs['mcmc_model'] == 'partially-pooled-interactions':
+        if kwargs['model_name'] == 'V1_norm_s6_gaussian':
+            if kwargs['comp'] == 'met-natural':
+                return hyper_str.format(1, '.9', 10, 4, 10000, 10000, 0)
+            elif kwargs['comp'] == 'met-downsample-2':
+                return hyper_str.format('.5', '.8', 10, 4, 10000, 10000, 0)
+            elif kwargs['comp'] == 'ref-natural':
+                return hyper_str.format(1, '.8', 20, 4, 10000, 10000, 0)
+        elif kwargs['model_name'] == 'RGC_norm_gaussian':
+            if kwargs['comp'] == 'met':
+                return hyper_str.format(1, '.95', 15, 4, 15000, 15000, 1)
     return hyper_str.format(1, '.8', 10, 4, 10000, 10000, 0)
 
 
