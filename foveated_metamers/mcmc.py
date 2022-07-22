@@ -1159,7 +1159,7 @@ def _compute_hdi(tmp, hdi):
     if hdi != 0:
         if isinstance(tmp, xarray.DataArray):
             hdi_xr = hdi_xr[tmp.name]
-            tmp = xarray.concat([hdi_xr, tmp], 'hdi')
+        tmp = xarray.concat([hdi_xr, tmp], 'hdi')
     return tmp
 
 
