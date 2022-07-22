@@ -1762,12 +1762,21 @@ def interaction_parameters(inf_data, hue='subject_name', style='trial_type',
     # drop parameters corresponding to unobserved conditions
     params = params.set_index(['subject_name', 'image_name'])
     # this hacky nonsense puts a nan everywhere mask has a true value
-    params['mask'] = mask.mask(mask)
-    params = params.reset_index().dropna()
+    try:
+        params['mask'] = mask.mask(mask)
+        params = params.reset_index().dropna()
+        params = params.drop(columns=['mask'])
+    except TypeError:
+        # this happens when we have all "False" in the column for mask, which
+        # means it doesn't mask anything. in this case, we don't have any fake
+        # values, and so we want to plot all of params
+        pass
+
+    params = params.reset_index()
 
     params['var_type'] = 'interaction'
     params['x_var'] = params.image_name
-    params = params.drop(columns=['image_name', 'mask'])
+    params = params.drop(columns=['image_name'])
     params.x_var = params.x_var.map(lambda x: x.split('_')[0])
     params.variable = params.variable.map(lambda x: '_'.join(x.split('_')[:-1]))
 
