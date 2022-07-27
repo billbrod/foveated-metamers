@@ -4211,7 +4211,7 @@ rule sensitivities_figure_with_heatmaps:
         op.join('reports', 'figures', 'sensitivities_1.svg')
     output:
         op.join(config['DATA_DIR'], 'figures', '{context}', 'sensitivities_1.svg'),
-        [op.join(config['DATA_DIR'], 'figures', '{context}', f'heatmaps-{i}.svg') for i in range(3)]
+        [op.join(config['DATA_DIR'], 'figures', '{context}', f'heatmaps-{i}.svg') for i in range(6)]
     log:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'sensitivities_with_heatmaps.log')
     benchmark:

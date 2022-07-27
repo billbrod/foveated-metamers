@@ -2174,8 +2174,9 @@ def image_heatmap_schematic():
     Returns
     -------
     figs :
-       Three figures, containing the heatmaps for two images and the absolute
-       value of their difference
+       Six figures, containing the heatmaps for two images and the absolute
+       value of their difference, plus three thresholded versions of the
+       difference figure with successively larger Gaussians
 
     """
     def gauss_2d(dims, ctr, sigma):
@@ -2212,8 +2213,33 @@ def image_heatmap_schematic():
 
     img2 = gauss_2d(dims, gauss_ctrs[[0, 1, 3]], gauss_sigmas[[0, 1, 3]]).sum(1, True)
     img2 = img2 / img2.max()
-    figs.append(po.imshow(img2, vrange='auto0', cmap='RdBu', title=None))
+    figs.append(po.imshow(img2, vrange='auto0', title=None))
 
-    figs.append(po.imshow(abs(img1-img2), cmap='gray_r', vrange=(0, 1.5),
+    diff = abs(img1-img2)
+    figs.append(po.imshow(diff, cmap='gray_r', vrange=(0, 1.5),
+                          title=None))
+
+    diff[diff > .2] = 1
+    diff[diff < .2] = 0
+    figs.append(po.imshow(diff, cmap='gray_r', vrange=(0, 1.5),
+                          title=None))
+    # now increase the sigma of one gaussian...
+    gauss_sigmas[3] *= 3
+    img2 = gauss_2d(dims, gauss_ctrs[[0, 1, 3]], gauss_sigmas[[0, 1, 3]]).sum(1, True)
+    img2 = img2 / img2.max()
+    diff = abs(img1-img2)
+    diff[diff > .2] = 1
+    diff[diff < .2] = 0
+    figs.append(po.imshow(diff, cmap='gray_r', vrange=(0, 1.5),
+                          title=None))
+
+    # and the other
+    gauss_sigmas[2] *= 4
+    img1 = gauss_2d(dims, gauss_ctrs[:-1], gauss_sigmas[:-1])
+    img1 = img1.sum(1, True) / img1.max()
+    diff = abs(img1-img2)
+    diff[diff > .2] = 1
+    diff[diff < .2] = 0
+    figs.append(po.imshow(diff, cmap='gray_r', vrange=(0, 1.5),
                           title=None))
     return figs
