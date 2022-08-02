@@ -4208,14 +4208,14 @@ rule critical_scaling_pointplot:
 
 rule sensitivities_figure_with_heatmaps:
     input:
-        op.join('reports', 'figures', 'sensitivities_1.svg')
+        op.join('reports', 'figures', 'sensitivities_{schem_type}.svg')
     output:
-        op.join(config['DATA_DIR'], 'figures', '{context}', 'sensitivities_1.svg'),
-        [op.join(config['DATA_DIR'], 'figures', '{context}', f'heatmaps-{i}.svg') for i in range(6)]
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'sensitivities_{schem_type}.svg'),
+        [op.join(config['DATA_DIR'], 'figures', '{context}', f'heatmaps-{i}_{{schem_type}}.svg') for i in range(3)]
     log:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'sensitivities_with_heatmaps.log')
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'sensitivities_{schem_type}_with_heatmaps.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'sensitivities_with_heatmaps_benchmark.txt')
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'sensitivities_{schem_type}_with_heatmaps_benchmark.txt')
     run:
         import subprocess
         import shutil
@@ -4224,8 +4224,17 @@ rule sensitivities_figure_with_heatmaps:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 shutil.copy(input[0], output[0])
-                figs = fov.plotting.image_heatmap_schematic()
-                for i, (im, fig) in enumerate(zip(output[1:], figs)):
+                if wildcards.schem_type == 'full':
+                    figs = fov.plotting.white_noise_heatmap_schematic()
+                else:
+                    figs = fov.plotting.image_heatmap_schematic()
+                # we do this hackily because snakemake doesn't let us use a
+                # function to determine anything about outputs. therefore we
+                # say we have the 3 heatmaps in our output, even though with
+                # schem_type=1, we have 6
+                im_template_path = output[1].replace('-0', '-{}')
+                for i, fig in enumerate(figs):
+                    im = im_template_path.format(i)
                     fig.savefig(im)
                     # we add the trailing " to make sure we only replace IMAGE1, not IMAGE10
                     subprocess.call(['sed', '-i', f's|IMAGE{i+1}"|{im}"|', output[0]])

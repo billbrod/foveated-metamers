@@ -2183,6 +2183,9 @@ def image_heatmap_schematic():
         # returns tensor of shape (1, N, dims[0], dims[1]), where N is
         # ctr.shape[0], number of gaussians
         X, Y = torch.meshgrid(torch.arange(dims[1]), torch.arange(dims[0]))
+        # this is backwards from what we actually want to do (note that x below
+        # uses 0 but X above uses 1), but gives us the outcome we want with the
+        # seed we chose for the paper figure so we'll stick with it
         x = ctr[..., 0]
         y = ctr[..., 1]
         while x.ndim < 3:
@@ -2242,4 +2245,125 @@ def image_heatmap_schematic():
     diff[diff < .2] = 0
     figs.append(po.imshow(diff, cmap='gray_r', vrange=(0, 1.5),
                           title=None))
+    return figs
+
+
+def white_noise_heatmap_schematic():
+    """Create figures showing image stat heatmaps for "white noise"
+
+    This is similar to image_heatmap_schematic, except we have gaussians,
+    constrain them to not get too close to each other, and control their
+    placement more carefully, with some present in both images in the annulus
+    where "unconstrained stats are matched" in the figure, and many not there
+
+    Returns
+    -------
+    figs :
+       Three figures, containing the heatmaps for two images and the absolute
+       value of their difference
+
+    """
+    def gauss_2d(dims, ctr, sigma):
+        # returns tensor of shape (1, N, dims[0], dims[1]), where N is
+        # ctr.shape[0], number of gaussians.
+        X, Y = torch.meshgrid(torch.arange(dims[1]), torch.arange(dims[0]))
+        # note that x and y are aligned with X and Y above, unlike the gauss_2d
+        # function in image_heatmap_schematic
+        x = ctr[..., 1]
+        y = ctr[..., 0]
+        while x.ndim < 3:
+            x = x.unsqueeze(-1)
+            y = y.unsqueeze(-1)
+            sigma = sigma.unsqueeze(-1)
+        gauss = torch.exp(-((X.unsqueeze(0)-x)**2 + (Y.unsqueeze(0)-y)**2) / (2*sigma**2))
+        while gauss.ndim < 4:
+            gauss = gauss.unsqueeze(0)
+        return gauss / gauss.sum()
+
+    seed = 5
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+
+    dims = (80, 101)
+    X, Y = np.meshgrid(np.arange(dims[1]), np.arange(dims[0]))
+    # these circles define the inner and outer radius for the annulus we use to
+    # represent the "unconstrained stats are matched" region
+    ctr = (61, 37)
+    rads = [20, 30]
+    circles = np.zeros((2, *dims))
+    circles[0][(X-ctr[0])**2 + (Y-ctr[1])**2 <= rads[0]**2] = 1
+    circles[1][(X-ctr[0])**2 + (Y-ctr[1])**2 <= rads[1]**2] = 1
+    # this is our "unconstrained stats are matched" region
+    annulus = torch.from_numpy(circles[1] - circles[0]).unsqueeze(0).unsqueeze(0)
+
+    levels = np.linspace(0, 1, 5)[1:]
+    # to allow for gaussians at the same location, which will sum to > 1
+    levels[-1] = 2
+
+    n_gaussians = 16
+    gauss_ctrs = torch.from_numpy(np.vstack([np.random.randint(0, dims[0], n_gaussians),
+                                             np.random.randint(0, dims[1], n_gaussians)]).T).to(torch.float32)
+    sigma = torch.tensor(n_gaussians//2*[5]+n_gaussians//2*[2.5], dtype=torch.float32)
+    sigma = sigma[torch.randperm(len(sigma))]
+
+    gaussians = gauss_2d(dims, gauss_ctrs, sigma)[0].transpose(2, 1)
+    gaussians /= gaussians.max()
+    comp_val = levels[0]
+    # we use this to ensure none of these gaussians are in the annulus
+    check_vals = torch.amax(gaussians.unsqueeze(0) * annulus, (-1, -2)).squeeze() > comp_val
+
+    # we use this to ensure none of the Gaussians are within 3 std dev of each
+    # other
+    distances = torch.zeros((n_gaussians, n_gaussians))
+    for i in range(n_gaussians):
+        distances[i] = torch.linalg.norm(gauss_ctrs[i] - gauss_ctrs, dim=1) / sigma[i]
+
+    # technically, this is overkill, because, for two gaussians of the same
+    # shape, if A is within 3 std dev of B, B is within 3 std dev of A. but
+    # they can be different shapes, so eh, this is easier than figuring that
+    # out
+    check_vals = check_vals.logical_or((distances<3).sum(1)>1)
+
+    # update the gaussian centers we need to
+    while (check_vals).any():
+        gauss_ctrs[check_vals] = torch.from_numpy(np.vstack([np.random.randint(0, dims[0], check_vals.sum().item()),
+                                                             np.random.randint(0, dims[1], check_vals.sum().item())]).T).to(torch.float32)
+        gaussians = gauss_2d(dims, gauss_ctrs, sigma)[0].transpose(2, 1)
+        gaussians /= gaussians.max()
+        check_vals = torch.amax(gaussians.unsqueeze(0) * annulus, (-1, -2)).squeeze() > comp_val
+        distances = torch.zeros((n_gaussians, n_gaussians))
+        for i in range(n_gaussians):
+            distances[i] = torch.linalg.norm(gauss_ctrs[i] - gauss_ctrs, dim=1) / sigma[i]
+
+        check_vals = check_vals.logical_or((distances<3).sum(1)>1)
+
+    n_annulus_gauss = 4
+    annulus_locs = np.argwhere(annulus.squeeze()).T.to(torch.float32)
+    gauss_ctrs = annulus_locs[np.random.choice(len(annulus_locs), n_annulus_gauss)]
+    annulus_gaussians = gauss_2d(dims, gauss_ctrs, sigma[:n_annulus_gauss])[0].transpose(2, 1).to(torch.float32)
+    annulus_gaussians /= annulus_gaussians.max()
+    distances = torch.zeros((n_annulus_gauss, n_annulus_gauss))
+    for i in range(n_annulus_gauss):
+        distances[i] = torch.linalg.norm(gauss_ctrs[i] - gauss_ctrs, dim=1) / sigma[i]
+    check_vals = (distances<3).sum(1)>1
+    while (check_vals).any():
+        gauss_ctrs[check_vals] = annulus_locs[np.random.choice(len(annulus_locs), check_vals.sum().item())]
+        annulus_gaussians = gauss_2d(dims, gauss_ctrs, sigma[:n_annulus_gauss])[0].transpose(2, 1).to(torch.float32)
+        annulus_gaussians /= annulus_gaussians.max()
+        distances = torch.zeros((n_annulus_gauss, n_annulus_gauss))
+        for i in range(n_annulus_gauss):
+            distances[i] = torch.linalg.norm(gauss_ctrs[i] - gauss_ctrs, dim=1) / sigma[i]
+        check_vals = (distances<3).sum(1)>1
+
+    # we do this to ensure we're creating the contour plot on an axis of the
+    # right dimension
+    figs = [po.imshow(torch.zeros((1, 1, *dims)), vrange=(0, 1), cmap='gray_r', title=None)
+            for i in range(3)]
+    img1 = torch.cat([gaussians[:n_gaussians//2], annulus_gaussians]).sum(0)
+    figs[0].axes[0].contourf(img1, levels, cmap='Reds')
+
+    img2 = torch.cat([gaussians[n_gaussians//2:], annulus_gaussians]).sum(0)
+    figs[1].axes[0].contourf(img2, levels, cmap='Reds')
+
+    figs[2].axes[0].contourf(abs(img1-img2), levels, cmap='gray_r')
     return figs
