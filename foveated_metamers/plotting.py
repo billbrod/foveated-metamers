@@ -2212,11 +2212,11 @@ def image_heatmap_schematic():
 
     img1 = gauss_2d(dims, gauss_ctrs[:-1], gauss_sigmas[:-1]).sum(1, True)
     img1 = img1 / img1.max()
-    figs = [po.imshow(img1, vrange='auto0', title=None)]
+    figs = [po.imshow(img1, title=None, cmap='Oranges', vrange=(0, 1.5))]
 
     img2 = gauss_2d(dims, gauss_ctrs[[0, 1, 3]], gauss_sigmas[[0, 1, 3]]).sum(1, True)
     img2 = img2 / img2.max()
-    figs.append(po.imshow(img2, vrange='auto0', title=None))
+    figs.append(po.imshow(img2,  title=None, cmap='Oranges', vrange=(0, 1.5)))
 
     diff = abs(img1-img2)
     figs.append(po.imshow(diff, cmap='gray_r', vrange=(0, 1.5),
@@ -2360,10 +2360,10 @@ def white_noise_heatmap_schematic():
     figs = [po.imshow(torch.zeros((1, 1, *dims)), vrange=(0, 1), cmap='gray_r', title=None)
             for i in range(3)]
     img1 = torch.cat([gaussians[:n_gaussians//2], annulus_gaussians]).sum(0)
-    figs[0].axes[0].contourf(img1, levels, cmap='Reds')
+    figs[0].axes[0].contourf(img1, levels, cmap='Oranges')
 
     img2 = torch.cat([gaussians[n_gaussians//2:], annulus_gaussians]).sum(0)
-    figs[1].axes[0].contourf(img2, levels, cmap='Reds')
+    figs[1].axes[0].contourf(img2, levels, cmap='Oranges')
 
     figs[2].axes[0].contourf(abs(img1-img2), levels, cmap='gray_r')
     return figs
