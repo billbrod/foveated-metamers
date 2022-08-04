@@ -13,6 +13,7 @@ from itertools import cycle, product
 import GPUtil
 import numpy as np
 from collections import OrderedDict
+from . import plotting
 
 
 def convert_im_to_float(im):
@@ -664,6 +665,72 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
                     p = p.replace('metamer.png', 'metamer_gamma-corrected.png')
                 paths.append(p)
     return paths
+
+
+def rearrange_metamers_for_sharing(file_dict, output_dir, ln_path_template):
+    """Rearrange metamer .png files into convenient layout for sharing
+
+    Currently, the metamer image files live within giant directories full of
+    other files. To share (both for web browser and for tarfiles shared on
+    OSF), we want just them, with some metadata. This file uses hardlinks
+    (rather than copying) to rearrange into a new user-specified structure
+
+    Parameters
+    ----------
+    file_dict : dict
+        dictionary whose keys are strings of the form
+        '{model}_{comparison}_{extra}', where model is one of {'energy',
+        'luminance'}, comparison is in {'ref', 'met', 'ref-nat', 'met-nat'},
+        and extra is in {'', '_downsample', '_gamma', '_downsample_gamma'}. the
+        values are lists of files to include.
+    output_dir : str
+        string giving the path to the output directory, under which everything
+        will be nested.
+    ln_path_template : str
+        python format str specifying the path for the new hardlinks. E.g.,
+        '{model_path_name}/{target_image}/downsample-{downsampled}/scaling-{scaling}/
+        seed-{random_seed}_init-{initialization_type}_gamma-{gamma_corrected}.png'.
+        Can only contain the format keys given above (model_path_name is e.g.,
+        "energy_model", rather than "Energy model").
+
+    Returns
+    -------
+    metadata : list
+        List of dictionaries giving metadata for each of these files (parsed
+        from their original path; one dict per file). Intended to be saved as a
+        metadata.json file.
+
+    """
+    comp_map = {'met': 'Synth vs. Synth: white noise', 'ref': 'Original vs. Synth: white noise',
+                'met-nat': 'Synth vs. Synth: natural image', 'ref-nat': 'Original vs. Synth: natural image'}
+    regex_str = ('metamers/metamers/([a-zA-z0-9_]+)/([a-z.0-9,-_]+?)/scaling-([0-9.]+)/.*?/.*?/'
+                 'seed-([0-9]+)_init-([a-z.0-9,-_]+?)_lr')
+    metadata = []
+    for comp, data in file_dict.items():
+        if 'downsample' in comp:
+            downsampled = True
+        else:
+            downsampled = False
+        if 'gamma' in comp:
+            gamma_corrected = True
+        else:
+            gamma_corrected = False
+        comp = comp_map[comp.split('_')[1]]
+        for f in data:
+            model, img, scaling, seed, init = re.findall(regex_str, f)[0]
+            md = {'model_name': plotting.MODEL_PLOT[model], 'downsampled': downsampled,
+                  'gamma_corrected': gamma_corrected, 'scaling': float(scaling),
+                  'target_image': img.split('_')[0], 'random_seed': int(seed),
+                  'initialization_type': init.split('_')[0], 'psychophysics_comparison': comp}
+            model_path_name = md['model_name'].lower().replace(' ', '_')
+            ln_path = ln_path_template.format(model_path_name=model_path_name, **md)
+            md['file'] = ln_path
+            # don't create hardlink if it's already there
+            if not op.exists(op.join(output_dir, ln_path)):
+                os.makedirs(op.join(output_dir, op.dirname(ln_path)), exist_ok=True)
+                os.link(f, op.join(output_dir, ln_path))
+            metadata.append(md)
+    return metadata
 
 
 if __name__ == '__main__':
