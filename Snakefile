@@ -4274,7 +4274,35 @@ def get_all_metamers(wildcards, comp=['energy_ref', 'energy_met', 'energy_ref-na
     return mets
 
 
-rule rearrange_metamers_for_sharing:
+rule rearrange_metamers_for_osf:
+    input:
+        # the first wildcards is just ignored, needed so we can call
+        # get_all_metamers in the style of rearrange_metamers_for_browser
+        unpack(lambda wildcards: get_all_metamers(wildcards, [wildcards.share_str], False))
+    output:
+        op.join(config['DATA_DIR'], 'to_share', 'metamers_{share_str}.tar.gz')
+    run:
+        import json
+        import shutil
+        import tarfile
+        import foveated_metamers as fov
+        ln_path_template = ('{model_path_name}/{target_image}/scaling-{scaling}/'
+                            'seed-{random_seed}_init-{initialization_type}.png')
+        # this is just a temporary directory that we'll delete once we've
+        # created the .tar.gz file
+        output_dir = output[0].replace('.tar.gz', '')
+        metadata = fov.utils.rearrange_metamers_for_sharing(input, output_dir, ln_path_template)
+        with open(op.join(output_dir, 'metadata.json'), 'w') as f:
+            json.dump(metadata, f)
+        with tarfile.open(output[0], 'w:gz') as tar:
+            # we use the arcname argument to get just the relative directory
+            # structure (e.g., 'metamers_energy_ref/' instead of
+            # 'mnt/ceph/users/wbroderick/metamers/to_share/metamers_energy_ref/')
+            tar.add(output_dir, arcname=op.split(output_dir)[-1])
+        shutil.rmtree(output_dir)
+
+
+rule rearrange_metamers_for_browser:
     input:
         unpack(get_all_metamers),
     output:
@@ -4282,9 +4310,7 @@ rule rearrange_metamers_for_sharing:
         '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/metamer_metadata.json'
     run:
         import json
-        import re
         import foveated_metamers as fov
-        import os
         ln_path_template = ('{model_path_name}/{target_image}/downsample-{downsampled}/scaling-{scaling}/'
                             'seed-{random_seed}_init-{initialization_type}_gamma-{gamma_corrected}.png')
         output_dir = op.dirname(output[0])
@@ -4293,7 +4319,7 @@ rule rearrange_metamers_for_sharing:
             json.dump(metadata, f)
 
 
-rule rearrange_natural_imgs_for_sharing:
+rule rearrange_natural_imgs_for_browser:
     input:
         lambda wildcards: [utils.get_ref_image_full_path(img) for img in IMAGES],
         lambda wildcards: [utils.get_ref_image_full_path(utils.get_gamma_corrected_ref_image(img))
@@ -4354,7 +4380,7 @@ rule rearrange_natural_imgs_for_sharing:
             json.dump(metadata, f)
 
 
-rule combine_sharing_metadata:
+rule combine_browser_metadata:
     input:
         '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/metamer_metadata.json',
         '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_metadata.json',
