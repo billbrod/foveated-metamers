@@ -4276,8 +4276,8 @@ def get_all_metamers(wildcards, comp=['energy_ref', 'energy_met', 'energy_ref-na
 
 rule rearrange_metamers_for_osf:
     input:
-        # the first wildcards is just ignored, needed so we can call
-        # get_all_metamers in the style of rearrange_metamers_for_browser
+        # the first wildcards is just ignored, needed so we can also call
+        # get_all_metamers the way rearrange_metamers_for_browser does it
         unpack(lambda wildcards: get_all_metamers(wildcards, [wildcards.share_str], False))
     output:
         op.join(config['DATA_DIR'], 'to_share', 'metamers_{share_str}.tar.gz')
@@ -4299,6 +4299,59 @@ rule rearrange_metamers_for_osf:
             # structure (e.g., 'metamers_energy_ref/' instead of
             # 'mnt/ceph/users/wbroderick/metamers/to_share/metamers_energy_ref/')
             tar.add(output_dir, arcname=op.split(output_dir)[-1])
+        shutil.rmtree(output_dir)
+
+
+rule rearrange_synthesis_inputs_for_osf:
+    input:
+        ref_images = lambda wildcards: [utils.get_ref_image_full_path(img) for img in IMAGES],
+        stats = op.join(config['DATA_DIR'], 'norm_stats', 'V1_texture_degamma_norm_stats.pt'),
+        # the full tiffs
+        tiffs = lambda wildcards: [utils.get_ref_image_full_path(img).replace('_symmetric', '').replace('.png', '.tiff')
+                                   for img in LINEAR_IMAGES],
+    output:
+        op.join(config['DATA_DIR'], 'to_share', 'synthesis_input.tar.gz'),
+        op.join(config['DATA_DIR'], 'to_share', 'tiff_images.tar.gz'),
+    run:
+        import tarfile
+        import json
+        import os
+        import shutil
+        tmp_dirs = [op.join(op.dirname(output[0]), *d) for d in [('synthesis_input', 'ref_images_preproc'),
+                                                                 ('synthesis_input', 'norm_stats'),
+                                                                 ('tiff_images', 'ref_images')]]
+        for d in tmp_dirs:
+            os.makedirs(d)
+        output_dir = op.join(op.dirname(output[0]), 'synthesis_input')
+        metadata = []
+        for inp in input.ref_images:
+            outp = op.join(tmp_dirs[0], op.split(inp)[-1])
+            metadata.append({'file': op.sep.join(outp.split(op.sep)[-2:]),
+                             'target_image': op.split(inp)[-1].split('_')[0],
+                             'gamma': False})
+            os.link(inp, outp)
+        with open(op.join(output_dir, 'metadata.json'), 'w') as f:
+            json.dump(metadata, f)
+        os.link(input.stats, op.join(tmp_dirs[1], op.split(input.stats)[-1]))
+        with tarfile.open(output[0], 'w:gz') as tar:
+            # we use the arcname argument to get just the relative directory
+            # structure (e.g., 'synthesis_input/' instead of
+            # 'mnt/ceph/users/wbroderick/metamers/to_share/synthesis_input/')
+            tar.add(output_dir, arcname='synthesis_input')
+
+        shutil.rmtree(output_dir)
+        output_dir = op.join(op.dirname(output[0]), 'tiff_images')
+        metadata = []
+        for inp in input.tiffs:
+            outp = op.join(tmp_dirs[-1], op.split(inp)[-1])
+            metadata.append({'file': op.sep.join(outp.split(op.sep)[-2:]),
+                             'target_image': op.split(inp)[-1].split('.')[0],
+                             'gamma': False})
+            os.link(inp, outp)
+        with open(op.join(output_dir, 'metadata.json'), 'w') as f:
+            json.dump(metadata, f)
+        with tarfile.open(output[-1], 'w:gz') as tar:
+            tar.add(output_dir, arcname='tiff_images')
         shutil.rmtree(output_dir)
 
 
