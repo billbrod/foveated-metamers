@@ -58,7 +58,7 @@ multiple jobs using the same GPU.
 TODO: ADD DOCKER IMAGES
 
 Other requirements:
-- inkscape, at least version 1.0.2
+- inkscape, at least version 1.0.2 (used for figure creation).
 
 ## Experiment environment
 
