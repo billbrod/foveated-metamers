@@ -4355,6 +4355,24 @@ rule rearrange_synthesis_inputs_for_osf:
         shutil.rmtree(output_dir)
 
 
+rule upload_to_osf:
+    input:
+        '.osfcli.config',
+        op.join(config['DATA_DIR'], 'to_share', '{to_share}'),
+    output:
+        op.join(config['DATA_DIR'], 'to_share', 'osf_upload', '{to_share}.txt'),
+    run:
+        import subprocess
+        from datetime import datetime
+        if wildcards.to_share.startswith('metamers_'):
+            upload_path = f'metamers/{wildcards.to_share}'
+        else:
+            upload_path = wildcards.to_share
+        subprocess.call(['osf', 'upload', '-Uf', input[0], f'osfstorage/{upload_path}'])
+        with open(output[0], 'w') as f:
+            f.write(f'Uploaded to {upload_path} at {datetime.now()}')
+
+
 rule rearrange_metamers_for_browser:
     input:
         unpack(get_all_metamers),
