@@ -63,6 +63,7 @@ wildcard_constraints:
     line="offset|nooffset",
     direction="forward|reverse",
     scaling_extended="|_scaling-extended",
+    model_name='energy|luminance',
 ruleorder:
     collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check > mcmc_compare_plot > mcmc_plots > sensitivities_figure_with_heatmaps > embed_bitmaps_into_figure > compose_figures > copy_schematic
 
@@ -4355,6 +4356,35 @@ rule rearrange_synthesis_inputs_for_osf:
         shutil.rmtree(output_dir)
 
 
+def get_osf_stimuli_names(wildcards):
+    model_name = {'energy': 'V1_norm_s6_gaussian', 'luminance': 'RGC_norm_gaussian'}[wildcards.model_name]
+    comp = wildcards.osf_comp.replace('-nat', '-natural').replace('_downsample', '-downsample-2')
+    return [op.join(config['DATA_DIR'], 'stimuli', model_name, fn) for fn in [f'stimuli_comp-{comp}.npy', f'stimuli_description_comp-{comp}.csv']]
+
+
+rule rearrange_stimuli_for_osf:
+    input:
+        get_osf_stimuli_names
+    output:
+        # use a different name for this wildcards, because comp has a limited set
+        # of values, that are different than the ones we use for upload
+        op.join(config['DATA_DIR'], 'to_share', 'stimuli_{model_name}_{osf_comp}.tar.gz')
+    run:
+        import shutil
+        import tarfile
+        import os
+        # this is just a temporary directory that we'll delete once we've
+        # created the .tar.gz file
+        output_dir = output[0].replace('.tar.gz', '')
+        os.makedirs(output_dir)
+        for inp in input:
+            outp = op.join(output_dir, op.split(inp)[-1])
+            os.link(inp, outp)
+        with tarfile.open(output[0], 'w:gz') as tar:
+            tar.add(output_dir, arcname=op.split(output_dir)[-1])
+        shutil.rmtree(output_dir)
+
+
 rule upload_to_osf:
     input:
         '.osfcli.config',
@@ -4366,6 +4396,8 @@ rule upload_to_osf:
         from datetime import datetime
         if wildcards.to_share.startswith('metamers_'):
             upload_path = f'metamers/{wildcards.to_share}'
+        elif wildcards.to_share.startswith('stimuli_'):
+            upload_path = f'stimuli/{wildcards.to_share}'
         else:
             upload_path = wildcards.to_share
         subprocess.call(['osf', 'upload', '-Uf', input[1], f'osfstorage/{upload_path}'])
