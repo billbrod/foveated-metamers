@@ -4368,7 +4368,7 @@ rule upload_to_osf:
             upload_path = f'metamers/{wildcards.to_share}'
         else:
             upload_path = wildcards.to_share
-        subprocess.call(['osf', 'upload', '-Uf', input[0], f'osfstorage/{upload_path}'])
+        subprocess.call(['osf', 'upload', '-Uf', input[1], f'osfstorage/{upload_path}'])
         with open(output[0], 'w') as f:
             f.write(f'Uploaded to {upload_path} at {datetime.now()}')
 
