@@ -8,9 +8,9 @@
    xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="552.90997"
-   height="518.78766"
-   viewBox="0 0 552.90995 518.7876"
+   width="554.453"
+   height="538.78766"
+   viewBox="0 0 554.45298 538.7876"
    version="1.1"
    id="svg8"
    inkscape:version="1.0.2 (1.0.2+r75+1)"
@@ -297,17 +297,17 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="1.0000001"
-     inkscape:cx="147.5766"
-     inkscape:cy="251.38411"
+     inkscape:zoom="1.4142137"
+     inkscape:cx="434.0565"
+     inkscape:cy="214.99733"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
      units="px"
-     inkscape:window-width="1920"
-     inkscape:window-height="1042"
-     inkscape:window-x="2560"
-     inkscape:window-y="38"
+     inkscape:window-width="1898"
+     inkscape:window-height="2094"
+     inkscape:window-x="3846"
+     inkscape:window-y="50"
      inkscape:window-maximized="1"
      inkscape:document-rotation="0"
      inkscape:lockguides="true" />
@@ -330,30 +330,30 @@
      transform="translate(-72.982674,-95.603911)">
     <image
        xlink:href="IMAGE3"
-       style="stroke-width:1.14131"
-       width="156.02818"
-       height="124.1859"
-       preserveAspectRatio="none"
-       id="image2044-36-0-3"
+       y="285.96732"
        x="103.62296"
-       y="285.96732" />
+       id="image2044-36-0-3"
+       preserveAspectRatio="none"
+       height="124.1859"
+       width="156.02818"
+       style="stroke-width:1.14131" />
     <rect
        style="fill:#808080;stroke:#000000;stroke-width:1.84623;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stop-color:#000000"
        id="rect883-6-2-43"
        width="155.09395"
        height="123.11332"
        x="104.54607"
-       y="469.20041" />
+       y="489.20044" />
     <ellipse
        style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:1.84623;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
        id="circle1003-7-6-0"
        cx="199.38228"
-       cy="527.16614"
+       cy="547.16614"
        rx="47.06551"
        ry="47.050476" />
     <g
        id="g10844"
-       transform="translate(-250.19788,477.74755)">
+       transform="translate(-250.19788,497.74755)">
       <ellipse
          style="fill:#ffffff;fill-opacity:0.987492;stroke:none;stroke-width:1.84599;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:11.076, 11.076;stroke-dashoffset:0;stroke-opacity:1;stop-color:#000000"
          id="path966-2-3-6-66-0"
@@ -375,7 +375,7 @@
        style="fill:#ffffff;fill-opacity:0.987492;stroke:#ff0000;stroke-width:1.846;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:11.076, 11.076;stroke-dashoffset:0;stroke-opacity:1;stop-color:#000000"
        id="path966-2-3-3"
        cx="199.32236"
-       cy="527.24908"
+       cy="547.24908"
        clip-path="none"
        rx="14.718124"
        ry="14.735499" />
@@ -383,12 +383,12 @@
        style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:1.846;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:1.846, 5.538;stroke-dashoffset:0;stop-color:#000000"
        id="path966-3-0-1-0"
        cx="221.71706"
-       cy="529.0719"
+       cy="549.0719"
        rx="24.73311"
        ry="24.725752" />
     <g
        id="g7738-9"
-       transform="translate(37.13932,365.54412)">
+       transform="translate(37.13932,385.54412)">
       <g
          inkscape:label=""
          transform="matrix(1.0136217,0,0,1.013298,54.826359,79.328144)"
@@ -441,12 +441,12 @@
        style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:1.84623;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
        id="circle1003-7-6-6-7"
        cx="199.38228"
-       cy="527.16614"
+       cy="547.16614"
        rx="47.06551"
        ry="47.050476" />
     <g
        inkscape:label=""
-       transform="translate(111.74294,412.97036)"
+       transform="translate(111.74294,432.97036)"
        id="g7340-5">
       <g
          id="g2946-4">
@@ -476,7 +476,7 @@
     </g>
     <g
        inkscape:label=""
-       transform="translate(128.9463,448.22368)"
+       transform="translate(128.9463,468.22368)"
        id="g7685-6">
       <g
          id="g762-8">
@@ -528,7 +528,7 @@
        x="-191.74661"
        y="103.99574"
        id="text7715-7-64"
-       transform="translate(373.5797,359.0911)"><tspan
+       transform="translate(373.5797,379.0911)"><tspan
          x="-191.74661"
          y="103.99574"><tspan>Not metamers</tspan></tspan></text>
     <rect
@@ -537,10 +537,10 @@
        width="155.09395"
        height="123.11332"
        x="262.53061"
-       y="469.20041" />
+       y="489.20044" />
     <g
        id="g10844-6"
-       transform="translate(-92.15958,477.21009)">
+       transform="translate(-92.15958,497.21009)">
       <ellipse
          style="fill:#ffffff;fill-opacity:0.987492;stroke:none;stroke-width:1.84599;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:11.076, 11.076;stroke-dashoffset:0;stroke-opacity:1;stop-color:#000000"
          id="path966-2-3-6-66-0-0"
@@ -554,12 +554,12 @@
        style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:1.84623;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
        id="circle1003-7-6-9-58"
        cx="357.36679"
-       cy="527.16614"
+       cy="547.16614"
        rx="47.06551"
        ry="47.050476" />
     <g
        id="g10899"
-       transform="matrix(0.82880725,0,0,0.82507703,-229.73529,371.07322)"
+       transform="matrix(0.82880725,0,0,0.82507703,-229.73529,391.07322)"
        style="stroke-width:1.20928">
       <ellipse
          style="fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:2.23262;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
@@ -581,12 +581,12 @@
        style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:1.846;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:1.846, 5.538;stroke-dashoffset:0;stop-color:#000000"
        id="path966-3-0-1-2-6"
        cx="379.70157"
-       cy="529.0719"
+       cy="549.0719"
        rx="24.73311"
        ry="24.725752" />
     <g
        id="g7738-8-2"
-       transform="translate(187.12384,365.54412)">
+       transform="translate(187.12384,385.54412)">
       <g
          inkscape:label=""
          transform="matrix(1.0136217,0,0,1.013298,54.826359,79.328144)"
@@ -637,7 +637,7 @@
     </g>
     <g
        inkscape:label=""
-       transform="translate(269.72746,412.97037)"
+       transform="translate(269.72746,432.97037)"
        id="g7340-4-9">
       <g
          id="g2946-7-08">
@@ -667,7 +667,7 @@
     </g>
     <g
        inkscape:label=""
-       transform="translate(286.93082,448.22368)"
+       transform="translate(286.93082,468.22368)"
        id="g7685-3-0">
       <g
          id="g762-6-3">
@@ -719,7 +719,7 @@
        x="-191.74661"
        y="103.99574"
        id="text7715-7-1-9"
-       transform="translate(531.56423,359.0911)"><tspan
+       transform="translate(531.56423,379.0911)"><tspan
          x="-191.74661"
          y="103.99574"><tspan>Metamers</tspan></tspan></text>
     <text
@@ -728,7 +728,7 @@
        x="-191.74661"
        y="103.99574"
        id="text7715-7-5-3"
-       transform="translate(452.30914,508.09372)"><tspan
+       transform="translate(452.30914,528.09372)"><tspan
          x="-191.74661"
          y="103.99574"><tspan>Model critical scaling </tspan><tspan
            style="font-weight:bold">larger than </tspan><tspan>neural scaling</tspan></tspan></text>
@@ -738,7 +738,7 @@
        x="-191.74661"
        y="103.99574"
        id="text7715-7-5-76-0"
-       transform="translate(452.30914,337.78535)"><tspan
+       transform="translate(452.30914,357.78535)"><tspan
          x="-191.74661"
          y="103.99574"><tspan
            style="font-size:13.3333px">Some unconstrained statistics </tspan><tspan
@@ -774,13 +774,13 @@
          transform="translate(-2.622647,15.653139)">
         <image
            xlink:href="IMAGE1"
-           style="stroke-width:1.14131"
-           width="156.02818"
-           height="124.1859"
-           preserveAspectRatio="none"
-           id="image2044-36"
+           y="106.60143"
            x="95.288376"
-           y="106.60143" />
+           id="image2044-36"
+           preserveAspectRatio="none"
+           height="124.1859"
+           width="156.02818"
+           style="stroke-width:1.14131" />
         <g
            id="g5017"
            transform="translate(-74.549177,-148.246)">
@@ -930,13 +930,13 @@
          transform="translate(5.812767,22.263507)">
         <image
            xlink:href="IMAGE2"
-           y="99.991066"
-           x="265.29697"
-           id="image2044-36-3"
-           preserveAspectRatio="none"
-           height="124.1859"
+           style="stroke-width:1.14131"
            width="156.02818"
-           style="stroke-width:1.14131" />
+           height="124.1859"
+           preserveAspectRatio="none"
+           id="image2044-36-3"
+           x="265.29697"
+           y="99.991066" />
         <g
            id="g5017-7"
            transform="translate(95.459413,-154.85637)">
@@ -1086,13 +1086,13 @@
          transform="translate(8.438257,20)">
         <image
            xlink:href="IMAGE3"
-           y="102.25457"
-           x="449.55695"
-           id="image2044-36-0"
-           preserveAspectRatio="none"
-           height="124.1859"
+           style="stroke-width:1.14131"
            width="156.02818"
-           style="stroke-width:1.14131" />
+           height="124.1859"
+           preserveAspectRatio="none"
+           id="image2044-36-0"
+           x="449.55695"
+           y="102.25457" />
         <g
            id="g5017-4"
            transform="translate(279.71941,-152.59286)">
@@ -1464,16 +1464,16 @@
          sodipodi:role="line"
          x="181.44539"
          y="277.84189"
-         id="tspan12121">Not metamers</tspan></text>
+         id="tspan12121" /></text>
     <image
        xlink:href="IMAGE3"
-       style="stroke-width:1.14131"
-       width="156.02818"
-       height="124.1859"
-       preserveAspectRatio="none"
-       id="image2044-36-0-3-9"
+       y="286.74097"
        x="289.70862"
-       y="286.74097" />
+       id="image2044-36-0-3-9"
+       preserveAspectRatio="none"
+       height="124.1859"
+       width="156.02818"
+       style="stroke-width:1.14131" />
     <rect
        style="fill:none;stroke:#000000;stroke-width:1.84623;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stop-color:#000000"
        id="rect883-6-2-43-9-3"
@@ -1491,40 +1491,14 @@
     <g
        id="g10844-8-3"
        transform="translate(-65.02421,295.43759)" />
-    <g
-       id="g11764"
-       transform="translate(-301.06293,-79.581557)">
-      <ellipse
-         style="fill:#ffffff;fill-opacity:0.987492;stroke:#ff0000;stroke-width:1.846;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:11.076, 11.076;stroke-dashoffset:0;stroke-opacity:1;stop-color:#000000"
-         id="path966-2-3-3-4"
-         cx="685.6189"
-         cy="424.4382"
-         clip-path="none"
-         rx="14.263144"
-         ry="14.258243" />
-      <g
-         id="g11758"
-         transform="translate(-63.12475,-130.12798)">
-        <use
-           xlink:href="#symbol7372"
-           x="91.925003"
-           y="81.962997"
-           id="use6284-0-1-0-0"
-           width="100%"
-           height="100%"
-           style="fill:#ff0000;fill-opacity:1;stroke:#ff0000;stroke-width:0.910854"
-           transform="matrix(1.0136217,0,0,1.013298,643.45342,474.56796)" />
-        <use
-           xlink:href="#symbol380"
-           x="103.889"
-           y="83.457001"
-           id="use4707-7-47-6"
-           width="100%"
-           height="100%"
-           style="fill:#ff0000;fill-opacity:1;stroke:#ff0000;stroke-width:0.571061"
-           transform="matrix(1.0136217,0,0,1.0136217,643.45342,474.5437)" />
-      </g>
-    </g>
+    <ellipse
+       style="fill:#ffffff;fill-opacity:0.987492;stroke:#ff0000;stroke-width:1.846;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:11.076, 11.076;stroke-dashoffset:0;stroke-opacity:1;stop-color:#000000"
+       id="path966-2-3-3-4"
+       cx="384.55597"
+       cy="344.85666"
+       clip-path="none"
+       rx="14.263144"
+       ry="14.258243" />
     <ellipse
        style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:1.846;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:1.846, 5.538;stroke-dashoffset:0;stop-color:#000000"
        id="path966-3-0-1-0-3-5"
@@ -1630,16 +1604,16 @@
          sodipodi:role="line"
          x="367.39719"
          y="277.84189"
-         id="tspan11427">Not metamers</tspan></text>
+         id="tspan11427">scaling &gt; critical scaling</tspan></text>
     <image
        xlink:href="IMAGE3"
-       style="stroke-width:1.14131"
-       width="156.02818"
-       height="124.1859"
-       preserveAspectRatio="none"
-       id="image2044-36-0-3-9-9"
+       y="286.74097"
        x="469.86444"
-       y="286.74097" />
+       id="image2044-36-0-3-9-9"
+       preserveAspectRatio="none"
+       height="124.1859"
+       width="156.02818"
+       style="stroke-width:1.14131" />
     <ellipse
        style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:1.84623;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
        id="circle1003-7-6-6-7-5-7-5"
@@ -1687,15 +1661,6 @@
            height="100%"
            style="fill:#ff0000;fill-opacity:1;stroke:#ff0000;stroke-width:0.910854"
            transform="matrix(1.0136217,0,0,1.013298,498.11621,441.53434)" />
-        <use
-           xlink:href="#symbol380"
-           x="103.889"
-           y="83.457001"
-           id="use4707-7-47-9"
-           width="100%"
-           height="100%"
-           style="fill:#ff0000;fill-opacity:1;stroke:#ff0000;stroke-width:0.571061"
-           transform="matrix(1.0136217,0,0,1.0136217,498.11621,441.51008)" />
       </g>
     </g>
     <ellipse
@@ -1796,16 +1761,59 @@
          sodipodi:role="line"
          x="547.55304"
          y="277.84189"
-         id="tspan11427-1">Metamers</tspan></text>
+         id="tspan11427-1">scaling = critical scaling</tspan></text>
     <text
        xml:space="preserve"
        style="font-size:24px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle"
        x="80.025642"
-       y="449.46341"
+       y="469.46338"
        id="text3245-0-5"><tspan
          sodipodi:role="line"
          id="tspan3243-6-3"
          x="80.025642"
-         y="449.46341">C</tspan></text>
+         y="469.46338">C</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:13.3333px;line-height:1;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle"
+       x="181.76753"
+       y="425.40793"
+       id="text1729-35-3"><tspan
+         sodipodi:role="line"
+         x="181.76753"
+         y="425.40793"
+         id="tspan12121-7">Not metamers</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:13.3333px;line-height:1;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle"
+       x="366.94122"
+       y="425.40793"
+       id="text1729-35-3-5"><tspan
+         sodipodi:role="line"
+         x="366.94122"
+         y="425.40793"
+         id="tspan12121-7-3">Not metamers</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:13.3333px;line-height:1;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle"
+       x="547.09698"
+       y="425.40793"
+       id="text1729-35-3-56"><tspan
+         sodipodi:role="line"
+         x="547.09698"
+         y="425.40793"
+         id="tspan12121-7-2">Metamers</tspan></text>
+    <g
+       id="g11758"
+       transform="translate(-366.18768,-209.70954)">
+      <use
+         xlink:href="#symbol7372"
+         x="91.925003"
+         y="81.962997"
+         id="use6284-0-1-0-0"
+         width="100%"
+         height="100%"
+         style="fill:#ff0000;fill-opacity:1;stroke:#ff0000;stroke-width:0.910854"
+         transform="matrix(1.0136217,0,0,1.013298,643.45342,474.56796)" />
+    </g>
   </g>
 </svg>
