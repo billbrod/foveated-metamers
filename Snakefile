@@ -63,7 +63,7 @@ wildcard_constraints:
     line="offset|nooffset",
     direction="forward|reverse",
     scaling_extended="|_scaling-extended",
-    model_name='energy|luminance',
+    osf_model_name='energy|luminance',
 ruleorder:
     collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check > mcmc_compare_plot > mcmc_plots > sensitivities_figure_with_heatmaps > embed_bitmaps_into_figure > compose_figures > copy_schematic
 
@@ -4357,7 +4357,7 @@ rule rearrange_synthesis_inputs_for_osf:
 
 
 def get_osf_stimuli_names(wildcards):
-    model_name = {'energy': 'V1_norm_s6_gaussian', 'luminance': 'RGC_norm_gaussian'}[wildcards.model_name]
+    model_name = {'energy': 'V1_norm_s6_gaussian', 'luminance': 'RGC_norm_gaussian'}[wildcards.osf_model_name]
     comp = wildcards.osf_comp.replace('-nat', '-natural').replace('_downsample', '-downsample-2')
     return [op.join(config['DATA_DIR'], 'stimuli', model_name, fn) for fn in [f'stimuli_comp-{comp}.npy', f'stimuli_description_comp-{comp}.csv']]
 
@@ -4368,7 +4368,7 @@ rule rearrange_stimuli_for_osf:
     output:
         # use a different name for this wildcards, because comp has a limited set
         # of values, that are different than the ones we use for upload
-        op.join(config['DATA_DIR'], 'to_share', 'stimuli_{model_name}_{osf_comp}.tar.gz')
+        op.join(config['DATA_DIR'], 'to_share', 'stimuli_{osf_model_name}_{osf_comp}.tar.gz')
     run:
         import shutil
         import tarfile
