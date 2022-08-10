@@ -4385,6 +4385,32 @@ rule rearrange_stimuli_for_osf:
         shutil.rmtree(output_dir)
 
 
+rule rearrange_behavioral_data_for_osf:
+    input:
+        [op.join(config['DATA_DIR'], 'behavioral', m, 'task-split_comp-{comp}', 'task-split_comp-{comp}_data.csv').format(comp=c)
+         for m in MODELS
+         for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'met-downsample-2', 'ref-natural']}.get(m, ['met', 'ref'])]
+    output:
+        op.join(config['DATA_DIR'], 'to_share', 'behavioral_data.tar.gz')
+    run:
+        import shutil
+        import tarfile
+        import os
+        # this is just a temporary directory that we'll delete once we've
+        # created the .tar.gz file
+        output_dir = output[0].replace('.tar.gz', '')
+        os.makedirs(output_dir)
+        for inp in input:
+            model, comp = re.findall('behavioral/([A-Z0-9]+)_norm.*_comp-([a-z-0-9]+)/task', inp)[0]
+            model = {'V1': 'energy', 'RGC': 'luminance'}[model]
+            comp = comp.replace('-natural', '-nat').replace('-downsample-2', '_downsample')
+            outp = op.join(output_dir, f'{model}_comp-{comp}_data.csv')
+            os.link(inp, outp)
+        with tarfile.open(output[0], 'w:gz') as tar:
+            tar.add(output_dir, arcname=op.split(output_dir)[-1])
+        shutil.rmtree(output_dir)
+
+
 rule upload_to_osf:
     input:
         '.osfcli.config',
