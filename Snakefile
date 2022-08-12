@@ -170,7 +170,7 @@ rule get_all_mcmc_plots:
     input:
         [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                  'task-split_comp-{comp}_mcmc_{mcmc_model}_{hyper}_{plot_name}.png').format(
-                     mcmc_model=mc, model_name=m, comp=c, plot_name = p,
+                     mcmc_model=mc, model_name=m, comp=c, plot_name=p,
                      hyper=get_mcmc_hyperparams({}, mcmc_model=mc, model_name=m, comp=c))
          for mc in ['unpooled', 'partially-pooled', 'partially-pooled-interactions']
          for m in MODELS
