@@ -4356,15 +4356,23 @@ rule rearrange_synthesis_inputs_for_osf:
         shutil.rmtree(output_dir)
 
 
-def get_osf_stimuli_names(wildcards):
+def get_osf_names(wildcards, to_upload):
     model_name = {'energy': 'V1_norm_s6_gaussian', 'luminance': 'RGC_norm_gaussian'}[wildcards.osf_model_name]
     comp = wildcards.osf_comp.replace('-nat', '-natural').replace('_downsample', '-downsample-2')
-    return [op.join(config['DATA_DIR'], 'stimuli', model_name, fn) for fn in [f'stimuli_comp-{comp}.npy', f'stimuli_description_comp-{comp}.csv']]
+    if to_upload == 'stimuli':
+        return [op.join(config['DATA_DIR'], 'stimuli', model_name, fn) for fn in [f'stimuli_comp-{comp}.npy', f'stimuli_description_comp-{comp}.csv']]
+    elif to_upload == 'mcmc':
+        return op.join(config["DATA_DIR"], 'mcmc', model_name, 'task-split_comp-{comp}',
+                       'task-split_comp-{comp}_mcmc_{mcmc_model}_{hyper}_scaling-extended.nc').format(mcmc_model=wildcards.mcmc_model,
+                                                                                                      comp=comp,
+                                                                                                      hyper=get_mcmc_hyperparams({'mcmc_model': wildcards.mcmc_model,
+                                                                                                                                  'model_name': model_name,
+                                                                                                                                  'comp': comp}))
 
 
 rule rearrange_stimuli_for_osf:
     input:
-        get_osf_stimuli_names
+        lambda wildcards: get_osf_names(wildcards, 'stimuli')
     output:
         # use a different name for this wildcards, because comp has a limited set
         # of values, that are different than the ones we use for upload
@@ -4411,6 +4419,16 @@ rule rearrange_behavioral_data_for_osf:
         shutil.rmtree(output_dir)
 
 
+rule rearrange_mcmc_model_fits_for_osf:
+    input:
+        lambda wildcards: get_osf_names(wildcards, 'mcmc')
+    output:
+        op.join(config['DATA_DIR'], 'to_share', 'mcmc_{osf_model_name}_{osf_comp}_{mcmc_model}.nc')
+    run:
+        import os
+        os.link(input[0], output[0])
+
+
 rule upload_to_osf:
     input:
         '.osfcli.config',
@@ -4424,6 +4442,8 @@ rule upload_to_osf:
             upload_path = f'metamers/{wildcards.to_share}'
         elif wildcards.to_share.startswith('stimuli_'):
             upload_path = f'stimuli/{wildcards.to_share}'
+        elif wildcards.to_share.startswith('mcmc_'):
+            upload_path = f'mcmc/{wildcards.to_share}'
         else:
             upload_path = wildcards.to_share
         subprocess.call(['osf', 'upload', '-Uf', input[1], f'osfstorage/{upload_path}'])
