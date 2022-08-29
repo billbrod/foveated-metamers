@@ -298,15 +298,15 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="1.4142137"
-     inkscape:cx="434.0565"
+     inkscape:cx="377.48796"
      inkscape:cy="214.99733"
      inkscape:document-units="px"
-     inkscape:current-layer="layer1"
+     inkscape:current-layer="g10639"
      showgrid="false"
      units="px"
      inkscape:window-width="1898"
      inkscape:window-height="2094"
-     inkscape:window-x="3846"
+     inkscape:window-x="1932"
      inkscape:window-y="50"
      inkscape:window-maximized="1"
      inkscape:document-rotation="0"
@@ -319,7 +319,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title />
+        <dc:title></dc:title>
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -330,13 +330,13 @@
      transform="translate(-72.982674,-95.603911)">
     <image
        xlink:href="IMAGE3"
-       y="285.96732"
-       x="103.62296"
-       id="image2044-36-0-3"
-       preserveAspectRatio="none"
-       height="124.1859"
+       style="stroke-width:1.14131"
        width="156.02818"
-       style="stroke-width:1.14131" />
+       height="124.1859"
+       preserveAspectRatio="none"
+       id="image2044-36-0-3"
+       x="103.62296"
+       y="285.96732" />
     <rect
        style="fill:#808080;stroke:#000000;stroke-width:1.84623;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stop-color:#000000"
        id="rect883-6-2-43"
@@ -774,13 +774,13 @@
          transform="translate(-2.622647,15.653139)">
         <image
            xlink:href="IMAGE1"
-           y="106.60143"
-           x="95.288376"
-           id="image2044-36"
-           preserveAspectRatio="none"
-           height="124.1859"
+           style="stroke-width:1.14131"
            width="156.02818"
-           style="stroke-width:1.14131" />
+           height="124.1859"
+           preserveAspectRatio="none"
+           id="image2044-36"
+           x="95.288376"
+           y="106.60143" />
         <g
            id="g5017"
            transform="translate(-74.549177,-148.246)">
@@ -930,13 +930,13 @@
          transform="translate(5.812767,22.263507)">
         <image
            xlink:href="IMAGE2"
-           style="stroke-width:1.14131"
-           width="156.02818"
-           height="124.1859"
-           preserveAspectRatio="none"
-           id="image2044-36-3"
+           y="99.991066"
            x="265.29697"
-           y="99.991066" />
+           id="image2044-36-3"
+           preserveAspectRatio="none"
+           height="124.1859"
+           width="156.02818"
+           style="stroke-width:1.14131" />
         <g
            id="g5017-7"
            transform="translate(95.459413,-154.85637)">
@@ -1086,13 +1086,13 @@
          transform="translate(8.438257,20)">
         <image
            xlink:href="IMAGE3"
-           style="stroke-width:1.14131"
-           width="156.02818"
-           height="124.1859"
-           preserveAspectRatio="none"
-           id="image2044-36-0"
+           y="102.25457"
            x="449.55695"
-           y="102.25457" />
+           id="image2044-36-0"
+           preserveAspectRatio="none"
+           height="124.1859"
+           width="156.02818"
+           style="stroke-width:1.14131" />
         <g
            id="g5017-4"
            transform="translate(279.71941,-152.59286)">
@@ -1296,7 +1296,7 @@
            sodipodi:role="line"
            id="tspan1727"
            x="170.18814"
-           y="112.61959">Image 1</tspan></text>
+           y="112.61959">Target image</tspan></text>
       <text
          xml:space="preserve"
          style="font-size:13.3333px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle"
@@ -1306,7 +1306,7 @@
            sodipodi:role="line"
            id="tspan1727-6"
            x="348.6842"
-           y="112.70748">Image 2</tspan></text>
+           y="112.70748">Synthetic seed image</tspan></text>
       <text
          xml:space="preserve"
          style="font-size:13.3333px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle"
@@ -1467,13 +1467,13 @@
          id="tspan12121" /></text>
     <image
        xlink:href="IMAGE3"
-       y="286.74097"
-       x="289.70862"
-       id="image2044-36-0-3-9"
-       preserveAspectRatio="none"
-       height="124.1859"
+       style="stroke-width:1.14131"
        width="156.02818"
-       style="stroke-width:1.14131" />
+       height="124.1859"
+       preserveAspectRatio="none"
+       id="image2044-36-0-3-9"
+       x="289.70862"
+       y="286.74097" />
     <rect
        style="fill:none;stroke:#000000;stroke-width:1.84623;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stop-color:#000000"
        id="rect883-6-2-43-9-3"
@@ -1607,13 +1607,13 @@
          id="tspan11427">scaling &gt; critical scaling</tspan></text>
     <image
        xlink:href="IMAGE3"
-       y="286.74097"
-       x="469.86444"
-       id="image2044-36-0-3-9-9"
-       preserveAspectRatio="none"
-       height="124.1859"
+       style="stroke-width:1.14131"
        width="156.02818"
-       style="stroke-width:1.14131" />
+       height="124.1859"
+       preserveAspectRatio="none"
+       id="image2044-36-0-3-9-9"
+       x="469.86444"
+       y="286.74097" />
     <ellipse
        style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:1.84623;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;stop-color:#000000"
        id="circle1003-7-6-6-7-5-7-5"
