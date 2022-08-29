@@ -221,7 +221,7 @@ paper does.
 # Code structure
 
  - `Snakefile`: used by snakemake to determine how to create the files for this
-   project. Handles everything except the experiment
+   project. Handles everything except the experiment.
  - `foveated_metamers/`: library of functions used in this project
     - `create_metamers.py`: creates metamers.
     - `stimuli.py`: assembles the various metamer images into format required
@@ -423,6 +423,9 @@ for 1, `base` for 2), then run `jupyter` and open up the notebook. If you
 followed the second method, you should be prompted to select your kernel the
 first time you open a notebook: select the one named "metamers".
 
+A portion of the results presented in this notebook are also found in one of the
+paper's appendices.
+
 ## Generate metamers
 
 Generating the metamers is very time consuming and requires a lot of
@@ -444,7 +447,7 @@ If you wanted to generate all of your metamers at once, this is very
 easy: simply running
 
 ```
-python foveated_metamers/utils.py RGC V1 -g --print | xargs snakemake -j n --resources gpu=n mem=m -prk --restart-times 3 --ri 
+python foveated_metamers/utils.py RGC V1 -g | xargs snakemake -j n --resources gpu=n mem=m -prk --restart-times 3 --ri
 ```
 
 will do this (where you should replace both `n` with the number of
@@ -504,16 +507,15 @@ If you don't have a cluster available and instead have several machines with
 GPUs so you can split up the jobs, making use of the
 `foveated_metamers/utils.py` script. See it's help string for details, but
 calling it from the command line with different arguments will generate the
-paths for the corresponding metamers. For example, to generate all RGC metamers
-with a given scaling value, you would run 
+paths for the corresponding metamers. For example, to print the path to all RGC
+metamers with a given scaling value, you would run
 
 ```
-python foveated_metamers/utils.py RGC -g --print --scaling 0.01
+python foveated_metamers/utils.py RGC -g --scaling 0.01
 ```
 
 The `-g` argument tells the script to include the gamma-correction step (for
-viewing on non-linear displays), `--print` tells it to print out the desired
-output (instead of saving it to file), and `RGC` and `--scaling 0.01` tell it to
+viewing on non-linear displays) and `RGC` and `--scaling 0.01` tell it to
 use that model and scaling value, respectively. While messing with this, pay
 attention to the `-j n` and `--resources gpu=n` flags, which tell snakemake how
 many jobs to run at once and how many GPUs you have available, respectively.
