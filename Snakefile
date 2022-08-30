@@ -140,38 +140,12 @@ BEHAVIORAL_DATA_DATES = {
     }
 }
 
-def get_mcmc_hyperparams(wildcards, **kwargs):
-    hyper_str = 'step-{}_prob-{}_depth-{}_c-{}_d-{}_w-{}_s-{}'
-    kwargs.update(wildcards)
-    if kwargs['mcmc_model'] == 'partially-pooled':
-        if kwargs['model_name'] == 'V1_norm_s6_gaussian':
-            if kwargs['comp'] == 'met':
-                return hyper_str.format(1, '.8', 15, 4, 10000, 10000, 0)
-        elif kwargs['model_name'] == 'RGC_norm_gaussian':
-            if kwargs['comp'] == 'met':
-                return hyper_str.format('.5', '.9', 20, 4, 15000, 15000, 0)
-    elif kwargs['mcmc_model'] == 'partially-pooled-interactions':
-        if kwargs['model_name'] == 'V1_norm_s6_gaussian':
-            if kwargs['comp'] == 'met-natural':
-                return hyper_str.format(1, '.9', 10, 4, 10000, 10000, 0)
-            elif kwargs['comp'] == 'met':
-                return hyper_str.format('.5', '.9', 10, 4, 15000, 15000, 1)
-            elif kwargs['comp'] == 'met-downsample-2':
-                return hyper_str.format('.5', '.8', 10, 4, 10000, 10000, 0)
-            elif kwargs['comp'] == 'ref-natural':
-                return hyper_str.format(1, '.8', 20, 4, 10000, 10000, 0)
-        elif kwargs['model_name'] == 'RGC_norm_gaussian':
-            if kwargs['comp'] == 'met':
-                return hyper_str.format(1, '.95', 15, 4, 15000, 15000, 1)
-    return hyper_str.format(1, '.8', 10, 4, 10000, 10000, 0)
-
-
 rule get_all_mcmc_plots:
     input:
         [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                  'task-split_comp-{comp}_mcmc_{mcmc_model}_{hyper}_{plot_name}.png').format(
                      mcmc_model=mc, model_name=m, comp=c, plot_name=p,
-                     hyper=get_mcmc_hyperparams({}, mcmc_model=mc, model_name=m, comp=c))
+                     hyper=utils.get_mcmc_hyperparams({}, mcmc_model=mc, model_name=m, comp=c))
          for mc in ['unpooled', 'partially-pooled', 'partially-pooled-interactions']
          for m in MODELS
          for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'met-downsample-2', 'ref-natural']}.get(m, ['met', 'ref'])
@@ -1502,7 +1476,7 @@ rule mcmc_arviz_compare:
     input:
         lambda wildcards: [op.join(config["DATA_DIR"], 'mcmc', '{{model_name}}', 'task-split_comp-{{comp}}',
                                    'task-split_comp-{{comp}}_mcmc_{mcmc_model}_{hyper}.nc').format(mcmc_model=m,
-                                                                                                   hyper=get_mcmc_hyperparams(wildcards, mcmc_model=m))
+                                                                                                   hyper=utils.get_mcmc_hyperparams(wildcards, mcmc_model=m))
                            for m in ['unpooled', 'partially-pooled', 'partially-pooled-interactions']]
     output:
         op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
@@ -1538,7 +1512,7 @@ rule mcmc_compare_plot:
     input:
         lambda wildcards: [op.join(config["DATA_DIR"], 'mcmc', '{{model_name}}', 'task-split_comp-{{comp}}',
                                    'task-split_comp-{{comp}}_mcmc_{mcmc_model}_{hyper}.nc').format(mcmc_model=m,
-                                                                                                   hyper=get_mcmc_hyperparams(wildcards, mcmc_model=m))
+                                                                                                   hyper=utils.get_mcmc_hyperparams(wildcards, mcmc_model=m))
                            for m in ['unpooled', 'partially-pooled', 'partially-pooled-interactions']]
     output:
         op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
@@ -2025,7 +1999,7 @@ rule performance_figure:
 rule mcmc_figure:
     input:
         lambda wildcards: op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                                  f'task-split_comp-{{comp}}_mcmc_{{mcmc_model}}_{get_mcmc_hyperparams(wildcards)}{{scaling_extended}}.nc'),
+                                  f'task-split_comp-{{comp}}_mcmc_{{mcmc_model}}_{utils.get_mcmc_hyperparams(wildcards)}{{scaling_extended}}.nc'),
     output:
         op.join(config['DATA_DIR'], 'figures', '{context}', '{model_name}',
                 'task-split_comp-{comp}_mcmc{scaling_extended}_{mcmc_model}_{plot_type}.{ext}'),
@@ -2211,7 +2185,7 @@ rule mcmc_performance_comparison_figure:
     input:
         lambda wildcards: [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                                    'task-split_comp-{comp}_mcmc_{{mcmc_model}}_{hyper}{{scaling_extended}}.nc').format(comp=c, model_name=m,
-                                                                                                                       hyper=get_mcmc_hyperparams(wildcards, model_name=m, comp=c))
+                                                                                                                       hyper=utils.get_mcmc_hyperparams(wildcards, model_name=m, comp=c))
                            for m in MODELS
                            for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'ref-natural', 'met-downsample-2'], 'RGC_norm_gaussian': ['ref', 'met']}[m]],
         op.join(config['DATA_DIR'], 'dacey_data',
@@ -2386,7 +2360,7 @@ rule mcmc_parameter_correlation_figure:
     input:
         lambda wildcards: [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                                    'task-split_comp-{comp}_mcmc_{{mcmc_model}}_{hyper}.nc').format(comp=c, model_name=m,
-                                                                                                   hyper=get_mcmc_hyperparams(wildcards, model_name=m, comp=c))
+                                                                                                   hyper=utils.get_mcmc_hyperparams(wildcards, model_name=m, comp=c))
                            for m in MODELS
                            for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'met-downsample-2', 'ref-natural'], 'RGC_norm_gaussian': ['ref', 'met']}[m]],
     output:
@@ -4092,8 +4066,8 @@ rule critical_scaling_txt:
     input:
         lambda wildcards: [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                                    'task-split_comp-{comp}_mcmc_partially-pooled_{hyper}.nc').format(comp=c, model_name=m,
-                                                                                                     hyper=get_mcmc_hyperparams(wildcards, comp=c, model_name=m,
-                                                                                                                                mcmc_model='partially-pooled'))
+                                                                                                     hyper=utils.get_mcmc_hyperparams(wildcards, comp=c, model_name=m,
+                                                                                                                                      mcmc_model='partially-pooled'))
                            for m in MODELS
                            for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'ref-natural'], 'RGC_norm_gaussian': ['ref', 'met']}[m]],
         op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.csv'),
@@ -4144,8 +4118,8 @@ rule critical_scaling_pointplot:
     input:
         lambda wildcards: [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                                    'task-split_comp-{comp}_mcmc_partially-pooled_{hyper}.nc').format(comp=c, model_name=m,
-                                                                                                     hyper=get_mcmc_hyperparams(wildcards, comp=c, model_name=m,
-                                                                                                                                mcmc_model='partially-pooled'))
+                                                                                                     hyper=utils.get_mcmc_hyperparams(wildcards, comp=c, model_name=m,
+                                                                                                                                      mcmc_model='partially-pooled'))
                            for m in MODELS
                            for c in {'V1_norm_s6_gaussian': ['met', 'ref'], 'RGC_norm_gaussian': ['ref']}[m]],
     output:
@@ -4365,8 +4339,8 @@ def get_osf_names(wildcards, to_upload):
         return op.join(config["DATA_DIR"], 'mcmc', model_name, 'task-split_comp-{comp}',
                        'task-split_comp-{comp}_mcmc_{mcmc_model}_{hyper}_scaling-extended.nc').format(mcmc_model=wildcards.mcmc_model,
                                                                                                       comp=comp,
-                                                                                                      hyper=get_mcmc_hyperparams({'mcmc_model': wildcards.mcmc_model,
-                                                                                                                                  'model_name': model_name,
+                                                                                                      hyper=utils.get_mcmc_hyperparams({'mcmc_model': wildcards.mcmc_model,
+                                                                                                                                        'model_name': model_name,
                                                                                                                                   'comp': comp}))
 
 

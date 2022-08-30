@@ -733,6 +733,50 @@ def rearrange_metamers_for_sharing(file_dict, output_dir, ln_path_template):
     return metadata
 
 
+def get_mcmc_hyperparams(wildcards, **kwargs):
+    """Get hyperparameters for mcmc path string.
+
+    Parameters
+    ----------
+    wildcards : dict
+        Dictionary of snakemake wildcards.
+    kwargs :
+        Additional keyword=value pairs to specify comparison. keys can be one
+        of: 'mcmc_model', 'model_name', 'comp'.
+
+    Return
+    ------
+    hyper_str : str
+        String of form 'step-{}_prob-{}_depth-{}_c-{}_d-{}_w-{}_s-{}'
+        specifying hyperparameters for this specific comparison.
+
+    """
+    hyper_str = 'step-{}_prob-{}_depth-{}_c-{}_d-{}_w-{}_s-{}'
+    kwargs.update(wildcards)
+    if kwargs['mcmc_model'] == 'partially-pooled':
+        if kwargs['model_name'] == 'V1_norm_s6_gaussian':
+            if kwargs['comp'] == 'met':
+                return hyper_str.format(1, '.8', 15, 4, 10000, 10000, 0)
+        elif kwargs['model_name'] == 'RGC_norm_gaussian':
+            if kwargs['comp'] == 'met':
+                return hyper_str.format('.5', '.9', 20, 4, 15000, 15000, 0)
+    elif kwargs['mcmc_model'] == 'partially-pooled-interactions':
+        if kwargs['model_name'] == 'V1_norm_s6_gaussian':
+            if kwargs['comp'] == 'met-natural':
+                return hyper_str.format(1, '.9', 10, 4, 10000, 10000, 0)
+            elif kwargs['comp'] == 'met':
+                return hyper_str.format('.5', '.9', 10, 4, 15000, 15000, 1)
+            elif kwargs['comp'] == 'met-downsample-2':
+                return hyper_str.format('.5', '.8', 10, 4, 10000, 10000, 0)
+            elif kwargs['comp'] == 'ref-natural':
+                return hyper_str.format(1, '.8', 20, 4, 10000, 10000, 0)
+        elif kwargs['model_name'] == 'RGC_norm_gaussian':
+            if kwargs['comp'] == 'met':
+                return hyper_str.format(1, '.95', 15, 4, 15000, 15000, 1)
+    return hyper_str.format(1, '.8', 10, 4, 10000, 10000, 0)
+
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description=("Generate metamer paths in a programmatic way, for passing to snakemake. "
