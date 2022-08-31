@@ -9,6 +9,7 @@ import re
 import imageio
 import time
 import os.path as op
+from glob import glob
 import numpy as np
 from foveated_metamers import utils
 import numpyro
@@ -61,9 +62,12 @@ wildcard_constraints:
     mse="experiment_mse|full_image_mse",
     seed="[0-9]+",
     line="offset|nooffset",
-    direction="forward|reverse",
+    gif_direction="forward|reverse",
     scaling_extended="|_scaling-extended",
     osf_model_name='energy|luminance',
+    # these are the only possible schematics
+    schematic_name='|'.join([f.replace(op.join('reports', 'figures', ''), '').replace('.svg', '')
+                             for f in glob(op.join('reports', 'figures', '*svg'))]),
 ruleorder:
     collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check > mcmc_compare_plot > mcmc_plots > sensitivities_figure_with_heatmaps > embed_bitmaps_into_figure > compose_figures > copy_schematic
 
@@ -3219,11 +3223,11 @@ rule scaling_gif:
                                                         image_name=wildcards.image_name, seed_n=int(wildcards.seed),
                                                         comp=comp + {'natural': '-natural', 'white': ''}[wildcards.comp_type])]
     output:
-        op.join(config['DATA_DIR'], 'scaling_gif', '{model_name}', '{image_name}_seed-{seed}_f-{fr}_{direction}{gammacorrected}_comp-{comp_type}.gif')
+        op.join(config['DATA_DIR'], 'scaling_gif', '{model_name}', '{image_name}_seed-{seed}_f-{fr}_{gif_direction}{gammacorrected}_comp-{comp_type}.gif')
     log:
-        op.join(config['DATA_DIR'], 'logs', 'scaling_gif', '{model_name}', '{image_name}_seed-{seed}_f-{fr}_{direction}{gammacorrected}_comp-{comp_type}.log')
+        op.join(config['DATA_DIR'], 'logs', 'scaling_gif', '{model_name}', '{image_name}_seed-{seed}_f-{fr}_{gif_direction}{gammacorrected}_comp-{comp_type}.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'scaling_gif', '{model_name}', '{image_name}_seed-{seed}_f-{fr}_{direction}{gammacorrected}_comp-{comp_type}_benchmark.txt')
+        op.join(config['DATA_DIR'], 'logs', 'scaling_gif', '{model_name}', '{image_name}_seed-{seed}_f-{fr}_{gif_direction}{gammacorrected}_comp-{comp_type}_benchmark.txt')
     run:
         import subprocess
         import contextlib
@@ -3235,9 +3239,9 @@ rule scaling_gif:
                 # remove duplicate files
                 files = set(input)
                 # sort by scaling
-                if wildcards.direction == 'reverse':
+                if wildcards.gif_direction == 'reverse':
                     sort_files = list(reversed(sorted(files, key=lambda x: float(re.findall('scaling-([0-9.]+)', x)[0]))))
-                elif wildcards.direction == 'forward':
+                elif wildcards.gif_direction == 'forward':
                     sort_files = sorted(files, key=lambda x: float(re.findall('scaling-([0-9.]+)', x)[0]))
                 # assert that there's only one per scaling
                 scaling_vals = [float(re.findall('scaling-([0-9.]+)', f)[0]) for f in sort_files]
@@ -3305,6 +3309,8 @@ rule download_freeman_check:
                                      seed=0),
         op.join(config['DATA_DIR'], 'freeman_check', 'windows', 'scaling-0.5', 'plotwindows.mat'),
         op.join(config['DATA_DIR'], 'freeman_check', 'windows', 'scaling-0.25', 'plotwindows.mat'),
+        op.join(config['DATA_DIR'], 'freeman_check', 'windows', 'scaling-0.5', 'masks.mat'),
+        op.join(config['DATA_DIR'], 'freeman_check', 'windows', 'scaling-0.25', 'masks.mat'),
     log:
         os.path.join(DATA_DIR, 'logs', 'freeman_check', 'download.log')
     benchmark:
@@ -3496,13 +3502,13 @@ rule dacey_mcmc_plot:
 
 rule copy_schematic:
     input:
-        op.join('reports/figures/{fig_name}.svg'),
+        op.join('reports/figures/{schematic_name}.svg'),
     output:
-        op.join(config['DATA_DIR'], 'figures', '{context}', '{fig_name}.svg')
+        op.join(config['DATA_DIR'], 'figures', '{context}', '{schematic_name}.svg')
     log:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{fig_name}.log')
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{schematic_name}.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{fig_name}_benchmark.txt')
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', '{schematic_name}_benchmark.txt')
     shell:
         "cp {input} {output}"
 
@@ -3816,7 +3822,6 @@ def get_metamer_comparison_figure_inputs(wildcards):
         # values. this makes sure they're in the proper order
         scaling = sorted(scaling)
         comps = ['met'] * 2 +['met-downsample-2'] * 2
-
     else:
         if len(scaling) != 4:
             raise Exception(f"When generating {wildcards.cutout} metamer_comparison figure, need 4 scaling values!")
@@ -4065,9 +4070,9 @@ rule number_of_stats:
 rule critical_scaling_txt:
     input:
         lambda wildcards: [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                                   'task-split_comp-{comp}_mcmc_partially-pooled_{hyper}.nc').format(comp=c, model_name=m,
-                                                                                                     hyper=utils.get_mcmc_hyperparams(wildcards, comp=c, model_name=m,
-                                                                                                                                      mcmc_model='partially-pooled'))
+                                   'task-split_comp-{comp}_mcmc_partially-pooled_{hyper}_scaling-extended.nc').format(comp=c, model_name=m,
+                                                                                                                      hyper=utils.get_mcmc_hyperparams(wildcards, comp=c, model_name=m,
+                                                                                                                                                       mcmc_model='partially-pooled'))
                            for m in MODELS
                            for c in {'V1_norm_s6_gaussian': ['met', 'ref', 'met-natural', 'ref-natural'], 'RGC_norm_gaussian': ['ref', 'met']}[m]],
         op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.csv'),
@@ -4117,7 +4122,7 @@ rule critical_scaling_txt:
 rule critical_scaling_pointplot:
     input:
         lambda wildcards: [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
-                                   'task-split_comp-{comp}_mcmc_partially-pooled_{hyper}.nc').format(comp=c, model_name=m,
+                                   'task-split_comp-{comp}_mcmc_partially-pooled_{hyper}_scaling-extended.nc').format(comp=c, model_name=m,
                                                                                                      hyper=utils.get_mcmc_hyperparams(wildcards, comp=c, model_name=m,
                                                                                                                                       mcmc_model='partially-pooled'))
                            for m in MODELS
@@ -4522,8 +4527,8 @@ rule combine_browser_metadata:
 
 rule paper_figures:
     input:
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_partially-pooled_log-ci_comp-base.svg"),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_partially-pooled_log-ci_sub-00_comp-natural_line-scaling-0.27.svg"),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_scaling-extended_partially-pooled_log-ci_comp-base.svg"),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_scaling-extended_partially-pooled_log-ci_sub-00_comp-natural_line-scaling-0.27.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "ref_images_dpi-300.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', 'psychophys_expt2_with_table.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'model_schematic_halfwidth_ivy_dpi-300.svg'),
@@ -4531,13 +4536,13 @@ rule paper_figures:
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_gnarled_scaling-1.5,1.5,1.5,1.5_cutout_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_portrait_symmetric_scaling-.27,.27,.27,.27,.27_cutout_V1_natural-seed_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_llama_scaling-.23,.23,.23,.23,.23_cutout_RGC_natural-seed_dpi-300.svg'),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'performance_metamer_comparison_nyc,llama_scaling-.063,.27_nocutout_small_dpi-300.svg'),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'all_comps_summary_partially-pooled_focus-subject_one-ax.svg'),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'all_comps_summary_partially-pooled_focus-outlier.svg'),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'performance_scaling-extended_metamer_comparison_nyc,llama_scaling-.063,.27_nocutout_small_dpi-300.svg'),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'all_comps_summary_scaling-extended_partially-pooled_focus-subject_one-ax.svg'),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'all_comps_summary_scaling-extended_partially-pooled_focus-outlier.svg'),
         op.join(config['DATA_DIR'], 'figures', 'paper', 'mse_comparison_bike_scaling-0.01_nocutout_with_target_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'figures', 'paper', 'Dacey1992_mcmc_line-nooffset_linear.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_tiles_scaling-1.5,1.5,1.5,1.5_cutout_downsample_dpi-300.svg'),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_partially-pooled_log-ci_sub-00_comp-downsample.svg"),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_scaling-extended_partially-pooled_log-ci_sub-00_comp-downsample.svg"),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "radial_se_comp-ref_ecc-None.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "critical_scaling_norm-False.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "sensitivities_1.svg"),
