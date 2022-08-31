@@ -99,18 +99,6 @@ conda env create -f environment.yml
 
 Then, to activate, run `conda activate metamers`.
 
-The [plenoptic
-library](https://github.com/LabForComputationalVision/plenoptic/) is
-not yet on `pip`, so you'll have to download it manually (at that
-link), then (in the `metamers` environment), navigate to that
-directory and install it:
-
-```
-git clone git@github.com:LabForComputationalVision/plenoptic.git
-cd plenoptic
-pip install -e .
-```
-
 This environment contains the packages necessary to generate the
 metamers, prepare for the experiment, and analyze the data, but it
 *does not* contain the packages necessary to run the experiment. Most
