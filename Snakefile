@@ -4538,11 +4538,14 @@ rule paper_figures:
         op.join(config['DATA_DIR'], 'figures', 'paper', 'Dacey1992_mcmc_line-nooffset_linear.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_tiles_scaling-1.5,1.5,1.5,1.5_cutout_downsample_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_partially-pooled_log-ci_sub-00_comp-downsample.svg"),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "radial_se_comp-ref_ecc-None.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "critical_scaling_norm-False.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "sensitivities_1.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "sensitivities_2.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "sensitivities.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "freeman_windows_comparison.svg"),
+        op.join(config['DATA_DIR'], 'statistics', 'critical_scaling.txt'),
+        op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.txt'),
 
         # these are just to check against the partially-pooled versions
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_unpooled_log-ci_comp-base.svg"),
