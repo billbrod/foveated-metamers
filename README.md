@@ -447,7 +447,7 @@ If you wanted to generate all of your metamers at once, this is very
 easy: simply running
 
 ```
-python foveated_metamers/utils.py RGC V1 -g | xargs snakemake -j n --resources gpu=n mem=m -prk --restart-times 3 --ri
+python -m foveated_metamers.utils RGC V1 -g | xargs snakemake -j n --resources gpu=n mem=m -prk --restart-times 3 --ri
 ```
 
 will do this (where you should replace both `n` with the number of
@@ -511,7 +511,7 @@ paths for the corresponding metamers. For example, to print the path to all RGC
 metamers with a given scaling value, you would run
 
 ```
-python foveated_metamers/utils.py RGC -g --scaling 0.01
+python -m foveated_metamers.utils RGC -g --scaling 0.01
 ```
 
 The `-g` argument tells the script to include the gamma-correction step (for
