@@ -3,8 +3,9 @@
 import argparse
 import subprocess
 import os
-import os.path as op
+import re
 import yaml
+import os.path as op
 from glob import glob
 from foveated_metamers import utils
 
@@ -75,20 +76,22 @@ def main(target_dataset):
         print("Downloading synthesis input.")
         subprocess.call(["curl", "-O", "-J", "-L", OSF_URL['synthesis_input']])
         subprocess.call(["tar", "xf", "synthesis_input.tar.gz"])
-        # this is unnecessary for the experiment
+        # this file is unnecessary for the experiment
         subprocess.call(['rm', op.join('synthesis_input', 'metadata.json')])
         subprocess.call(["rsync", "-avPLuz", "synthesis_input/", f"{data_dir}/"])
         subprocess.call(["rm", "-r", "synthesis_input/"])
         subprocess.call(["rm", "synthesis_input.tar.gz"])
     elif target_dataset == 'stimuli':
         print("Downloading stimuli for all comparisons.")
-        for name, url in OSF_URL['stimuli']:
+        for name, url in OSF_URL['stimuli'].items():
             print(f"Downloading {name}")
             download_model = re.findall('stimuli_([a-z]+)_', name)[0]
             output_model = model_name_map[download_model]
+            os.makedirs(op.join(data_dir, "stimuli", output_model), exist_ok=True)
             subprocess.call(["curl", "-O", "-J", "-L", url])
             subprocess.call(["tar", "xf", f"{name}.tar.gz"])
-            subprocess.call(["rsync", '-avPLUz', f'{name}/', f"{data_dir}/stimuli/{output_model}/"])
+            for f in glob(op.join(name, 'stimuli*')):
+                subprocess.call(["mv", f, op.join(data_dir, 'stimuli', output_model) + '/'])
             subprocess.call(["rm", '-r', name])
             subprocess.call(["rm", f"{name}.tar.gz"])
     elif target_dataset == 'behavioral_data':
@@ -105,7 +108,7 @@ def main(target_dataset):
         subprocess.call(["rm", "behavioral_data.tar.gz"])
     elif target_dataset == 'mcmc_fits':
         print("Downloading MCMC fits for all comparisons.")
-        for name, url in OSF_URL['mcmc_fits']:
+        for name, url in OSF_URL['mcmc_fits'].items():
             print(f"Downloading {name}")
             subprocess.call(["curl", "-O", "-J", "-L", url])
             download_model, download_comp = re.findall('mcmc_([a-z]+)_comp-([a-z-_]+)_partially-pooled.nc', name)[0]
