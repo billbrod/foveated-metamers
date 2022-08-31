@@ -27,9 +27,9 @@ OSF_URL = {
         'mcmc_luminance_ref_partially-pooled.nc': 'https://osf.io/a8fxz/download',
         'mcmc_luminance_met_partially-pooled.nc': 'https://osf.io/snjqb/download',
         'mcmc_energy_ref_partially-pooled.nc': 'https://osf.io/r324n/download',
-        'mcmc_energy_ref_partially-pooled.nc-nat': 'https://osf.io/4gtkh/download',
+        'mcmc_energy_ref-nat_partially-pooled.nc': 'https://osf.io/4gtkh/download',
         'mcmc_energy_met_partially-pooled.nc': 'https://osf.io/n7wc3/download',
-        'mcmc_energy_met_partially-pooled.nc-nat': 'https://osf.io/dx9ew/download',
+        'mcmc_energy_met-nat_partially-pooled.nc': 'https://osf.io/dx9ew/download',
         'mcmc_energy_met_downsample_partially-pooled.nc': 'https://osf.io/9wnvq/download',
     },
 }
@@ -110,16 +110,16 @@ def main(target_dataset):
         print("Downloading MCMC fits for all comparisons.")
         for name, url in OSF_URL['mcmc_fits'].items():
             print(f"Downloading {name}")
-            subprocess.call(["curl", "-O", "-J", "-L", url])
-            download_model, download_comp = re.findall('mcmc_([a-z]+)_comp-([a-z-_]+)_partially-pooled.nc', name)[0]
+            download_model, download_comp = re.findall('mcmc_([a-z]+)_([a-z-_]+)_partially-pooled.nc', name)[0]
             outp_model = model_name_map[download_model]
             outp_comp = comp_name_map(download_comp)
             hyper = utils.get_mcmc_hyperparams({'mcmc_model': 'partially-pooled',
                                                 'model_name': outp_model, 'comp': outp_comp})
             outp = op.join(data_dir, 'mcmc', outp_model, f'task-split_comp-{outp_comp}',
                            f'task-split_comp-{outp_comp}_mcmc_partially-pooled_{hyper}_scaling-extended.nc')
+            subprocess.call(["curl", "-O", "-J", "-L", url])
             os.makedirs(op.dirname(outp), exist_ok=True)
-            subprocess.call(["mv", f, outp])
+            subprocess.call(["mv", name, outp])
     subprocess.call(['chmod', '-R', '777', data_dir])
 
 
