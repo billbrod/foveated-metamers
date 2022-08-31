@@ -20,7 +20,7 @@ OSF_URL = {
         'stimuli_energy_met': 'https://osf.io/n9trc/download',
         'stimuli_energy_met-nat': 'https://osf.io/rt3wk/download',
         'stimuli_energy_met_downsample': 'https://osf.io/qxf6k/download',
-    }
+    },
     'behavioral_data': 'https://osf.io/hf72g/download',
     'mcmc_fits': {
         'mcmc_luminance_ref_partially-pooled.nc': 'https://osf.io/a8fxz/download',
@@ -30,7 +30,7 @@ OSF_URL = {
         'mcmc_energy_met_partially-pooled.nc': 'https://osf.io/n7wc3/download',
         'mcmc_energy_met_partially-pooled.nc-nat': 'https://osf.io/dx9ew/download',
         'mcmc_energy_met_downsample_partially-pooled.nc': 'https://osf.io/9wnvq/download',
-    }
+    },
 }
 
 
@@ -56,7 +56,7 @@ def main(target_dataset):
     yesno = 'y'
     for tar, check, size in zip(targets, check_dirs, ['176MB', '12GB', '2.6MB', '12GB']):
         if target_dataset == tar:
-            if op.exists(op.join(deriv_folder, check)):
+            if op.exists(op.join(data_dir, check)):
                 yesno = input("Previous data found, do you wish to download the data anyway? [y/n] ")
                 while yesno not in ['y', 'n']:
                     print("Please enter y or n")
@@ -75,10 +75,10 @@ def main(target_dataset):
         print("Downloading synthesis input.")
         subprocess.call(["curl", "-O", "-J", "-L", OSF_URL['synthesis_input']])
         subprocess.call(["tar", "xf", "synthesis_input.tar.gz"])
-        subprocess.call(["rsync", "-avPLuz", "ref_images_preproc", f"{data_dir}/"])
-        subprocess.call(["rsync", "-avPLuz", "norm_stats", f"{data_dir}/"])
-        subprocess.call(["rm", "-r", "ref_images_preproc/"])
-        subprocess.call(["rm", "-r", "norm_stats/"])
+        # this is unnecessary for the experiment
+        subprocess.call(['rm', op.join('synthesis_input', 'metadata.json')])
+        subprocess.call(["rsync", "-avPLuz", "synthesis_input/", f"{data_dir}/"])
+        subprocess.call(["rm", "-r", "synthesis_input/"])
         subprocess.call(["rm", "synthesis_input.tar.gz"])
     elif target_dataset == 'stimuli':
         print("Downloading stimuli for all comparisons.")
@@ -108,7 +108,7 @@ def main(target_dataset):
         for name, url in OSF_URL['mcmc_fits']:
             print(f"Downloading {name}")
             subprocess.call(["curl", "-O", "-J", "-L", url])
-            download_model, download_comp = re.findall('mcmc_([a-z]+)_comp-([a-z-_]+)_partially-pooled.nc'), name)[0]
+            download_model, download_comp = re.findall('mcmc_([a-z]+)_comp-([a-z-_]+)_partially-pooled.nc', name)[0]
             outp_model = model_name_map[download_model]
             outp_comp = comp_name_map(download_comp)
             hyper = utils.get_mcmc_hyperparams({'mcmc_model': 'partially-pooled',
