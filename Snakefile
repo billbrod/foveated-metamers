@@ -38,7 +38,7 @@ wildcard_constraints:
     period="[0-9]+",
     size="[0-9,]+",
     bits="[0-9]+",
-    img_preproc="full|degamma|gamma-corrected|gamma-corrected_full|range-[,.0-9]+|gamma-corrected_range-[,.0-9]+|downsample-[0-9.]+_range-[,.0-9]+",
+    img_preproc="full|degamma|range-[,.0-9]+|downsample-[0-9.]+_range-[,.0-9]+",
     # einstein for testing setup, fountain for comparing with Freeman and Simoncelli, 2011 metamers
     preproc_image_name="|".join([im+'_?[a-z]*' for im in config['IMAGE_NAME']['ref_image']])+"|einstein|fountain",
     preproc="|_degamma|degamma",
@@ -346,12 +346,38 @@ rule preproc_image:
                 else:
                     print("Image will *not* use full dynamic range")
                     im = im / np.iinfo(dtype).max
-                if 'gamma-corrected' in wildcards.img_preproc:
-                    print("Raising image to 1/2.2, to gamma correct it")
-                    im = im ** (1/2.2)
                 if 'downsample' in wildcards.img_preproc:
                     downscale = float(re.findall('downsample-([.0-9]+)_', wildcards.img_preproc)[0])
                     im = transform.pyramid_reduce(im, downscale)
+                # always save it as 16 bit
+                print("Saving as 16 bit")
+                im = fov.utils.convert_im_to_int(im, np.uint16)
+                imageio.imwrite(output[0], im)
+
+
+rule gamma_correct_ref_image:
+    input:
+        op.join(config['DATA_DIR'], 'ref_images{ref_suffix}', '{preproc_image_name}_{image_suffix}.png')
+    output:
+        op.join(config['DATA_DIR'], 'ref_images{ref_suffix}', '{preproc_image_name}_gamma-corrected_{image_suffix}.png')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'ref_images{ref_suffix}', '{preproc_image_name}_gamma-corrected_{image_suffix}.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'ref_images{ref_suffix}', '{preproc_image_name}_gamma-corrected_{image_suffix}_benchmark.txt')
+    run:
+        import imageio
+        import contextlib
+        import numpy as np
+        import foveated_metamers as fov
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                im = imageio.imread(input[0])
+                dtype = im.dtype
+                im = np.array(im, dtype=np.float32)
+                print("Original image has dtype %s" % dtype)
+                im = im / np.iinfo(dtype).max
+                print("Raising image to 1/2.2, to gamma correct it")
+                im = im ** (1/2.2)
                 # always save it as 16 bit
                 print("Saving as 16 bit")
                 im = fov.utils.convert_im_to_int(im, np.uint16)
