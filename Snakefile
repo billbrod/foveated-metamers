@@ -4034,9 +4034,7 @@ rule number_of_stats:
     input:
         get_all_windows,
     output:
-        op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.svg'),
         op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.csv'),
-        op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.txt'),
     log:
         op.join(config['DATA_DIR'], 'logs', 'statistics', 'number_of_stats.log'),
     benchmark:
@@ -4069,7 +4067,29 @@ rule number_of_stats:
                 df = pd.concat(df)
                 df.model = df.model.map({k.replace('_norm', ''): v for k, v in
                                          fov.plotting.MODEL_PLOT.items()})
-                df.to_csv(output[1], index=False)
+                df.to_csv(output[0], index=False)
+
+
+rule number_of_stats_txt:
+    input:
+        op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.csv'),
+    output:
+        op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.svg'),
+        op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.txt'),
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'statistics', 'number_of_stats_txt.log'),
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'statistics', 'number_of_stats_txt_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import contextlib
+        import pandas as pd
+        import torch
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                img = torch.rand(1, 1, 2048, 2600)
+                n_pix = img.nelement()
+                df = pd.read_csv(input[0])
                 g, popts = fov.figures.number_of_stats(df)
                 g.savefig(output[0], bbox_inches='tight')
                 rgc_df = df.query('model=="Luminance model"')
