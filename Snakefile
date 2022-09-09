@@ -1396,13 +1396,12 @@ rule mcmc:
                 mcmc_model = wildcards.mcmc_model
                 interact_sd = None
                 if 'interactions' in mcmc_model:
-                    mcmc_model = 'partially-pooled-interations'
                     try:
                         interact_sd = float(re.findall('partially-pooled-interactions-([.0-9]+)', mcmc_model)[0])
                     except IndexError:
                         interact_sd = .1
-                print(interact_sd)
-                mcmc = fov.mcmc.run_inference(dataset, wildcards.mcmc_model,
+                    mcmc_model = 'partially-pooled-interactions'
+                mcmc = fov.mcmc.run_inference(dataset, mcmc_model,
                                               float(wildcards.step_size),
                                               int(wildcards.num_draws),
                                               int(wildcards.num_chains),
@@ -1410,7 +1409,7 @@ rule mcmc:
                                               int(wildcards.seed),
                                               float(wildcards.accept_prob),
                                               int(wildcards.tree_depth),
-                                              interat_sd=interact_sd)
+                                              interact_sd=interact_sd)
                 # want to have a different seed for constructing the inference
                 # data object than we did for inference itself
                 inf_data = fov.mcmc.assemble_inf_data(mcmc, dataset,
