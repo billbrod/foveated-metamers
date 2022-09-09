@@ -2212,11 +2212,11 @@ def image_heatmap_schematic():
 
     img1 = gauss_2d(dims, gauss_ctrs[:-1], gauss_sigmas[:-1]).sum(1, True)
     img1 = img1 / img1.max()
-    figs = [po.imshow(img1, title=None, cmap='Oranges', vrange=(0, 1.5))]
+    figs = [po.imshow(img1, title=None, vrange='auto0')]
 
     img2 = gauss_2d(dims, gauss_ctrs[[0, 1, 3]], gauss_sigmas[[0, 1, 3]]).sum(1, True)
     img2 = img2 / img2.max()
-    figs.append(po.imshow(img2,  title=None, cmap='Oranges', vrange=(0, 1.5)))
+    figs.append(po.imshow(img2,  title=None, vrange='auto0'))
 
     diff = abs(img1-img2)
     figs.append(po.imshow(diff, cmap='gray_r', vrange=(0, 1.5),
