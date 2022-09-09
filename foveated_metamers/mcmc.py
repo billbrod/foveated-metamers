@@ -90,7 +90,8 @@ def proportion_correct_curve(scaling, proportionality_factor, critical_scaling):
     return norm_cdf_sqrt_2 * norm_cdf_2 + (1-norm_cdf_sqrt_2) * (1-norm_cdf_2)
 
 
-def partially_pooled_interactions_response_model(scaling, model='V1', observed_responses=None):
+def partially_pooled_interactions_response_model(scaling, model='V1', observed_responses=None,
+                                                 interact_sd=.1):
     r"""Partially pooled probabilistic model of responses, with lapse rate.
 
     This is "partially pooled" because of how we handle the image and subject
@@ -155,8 +156,10 @@ def partially_pooled_interactions_response_model(scaling, model='V1', observed_r
       Normal(-4, 1) for RGC (expected value ~.018 of exponentiated version,
       from Dacey, 1992)
 
-    - a0_subject_sd, s0_subject_sd, a0_image_sd, s0_image_sd, a0_interact_sd,
-      s0_interact_sd: HalfCauchy(.1)
+    - a0_subject_sd, s0_subject_sd, a0_image_sd, s0_image_sd: HalfCauchy(.1)
+
+    - a0_interact_sd, s0_interact_sd: HalfCauchy(interact_sd) (the input
+      parameter to this function)
 
     - log_a0_image: Normal(0, a0_image_sd)
 
@@ -180,6 +183,9 @@ def partially_pooled_interactions_response_model(scaling, model='V1', observed_r
         Whether we should use V1 or RGC prior for log_s0_global_mean.
     observed_responses : jnp.ndarray or None
         observed responses to condition our pulls on. If None, don't condition.
+    interact_sd : float
+        Value of the scale parameter for the priors of a0_interact_sd and
+        s0_interact_sd (see above)
 
     Returns
     -------
@@ -292,8 +298,8 @@ def partially_pooled_interactions_response_model(scaling, model='V1', observed_r
         a0_subject_sd = numpyro.sample('a0_subject_sd', dist.HalfCauchy(.1))
         s0_image_sd = numpyro.sample('s0_image_sd', dist.HalfCauchy(.1))
         a0_image_sd = numpyro.sample('a0_image_sd', dist.HalfCauchy(.1))
-        s0_interact_sd = numpyro.sample('s0_interact_sd', dist.HalfCauchy(.1))
-        a0_interact_sd = numpyro.sample('a0_interact_sd', dist.HalfCauchy(.1))
+        s0_interact_sd = numpyro.sample('s0_interact_sd', dist.HalfCauchy(interact_sd))
+        a0_interact_sd = numpyro.sample('a0_interact_sd', dist.HalfCauchy(interact_sd))
         with image_name_plate:
             s0_image = numpyro.sample('log_s0_image', dist.Normal(0, s0_image_sd))
             a0_image = numpyro.sample('log_a0_image', dist.Normal(0, a0_image_sd))
@@ -889,7 +895,8 @@ def _arrange_vars(dataset, extend_scaling=False):
 
 def run_inference(dataset, mcmc_model_type='partially-pooled', step_size=.1,
                   num_draws=1000, num_chains=1, num_warmup=500, seed=0,
-                  target_accept_prob=.8, max_tree_depth=10, **nuts_kwargs):
+                  target_accept_prob=.8, max_tree_depth=10, interact_sd=.1,
+                  **nuts_kwargs):
     """Run MCMC inference for our response_model, conditioned on data.
 
     Uses NUTS sampler.
@@ -924,6 +931,11 @@ def run_inference(dataset, mcmc_model_type='partially-pooled', step_size=.1,
         Target acceptance probability for NUTS.
     max_tree_depth : int, optional
         Max depth of the tree for NUTS.
+    interact_sd : float
+        Value of the scale parameter for the priors of a0_interact_sd and
+        s0_interact_sd parameters for the partially-pooled-interactions
+        mcmc_model_type (ignored for others, see docstring of
+        partially_pooled_interactions_response_model for details)
     nuts_kwargs :
         Passed to NUTS at initialization
 
@@ -939,10 +951,12 @@ def run_inference(dataset, mcmc_model_type='partially-pooled', step_size=.1,
     if model == 'simulated':
         # then it's simulate_{actual_model_name}
         model = dataset.model.values[0].split('_')[1]
+    model_kwargs = {}
     if mcmc_model_type == 'partially-pooled':
         response_model = partially_pooled_response_model
     elif mcmc_model_type == 'partially-pooled-interactions':
         response_model = partially_pooled_interactions_response_model
+        model_kwargs['interact_sd'] = interact_sd
     elif mcmc_model_type == 'unpooled':
         response_model = unpooled_response_model
     else:
@@ -959,12 +973,12 @@ def run_inference(dataset, mcmc_model_type='partially-pooled', step_size=.1,
     mcmc = numpyro.infer.MCMC(mcmc_kernel, num_samples=num_draws,
                               num_chains=num_chains,
                               num_warmup=num_warmup, progress_bar=True)
-    mcmc.run(PRNGKey(seed), scaling, model, observed_responses)
+    mcmc.run(PRNGKey(seed), scaling, model, observed_responses, **model_kwargs)
     return mcmc
 
 
 def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
-                      seed=1, extend_scaling=False):
+                      seed=1, extend_scaling=False, interact_sd=.1):
     """Convert mcmc into properly-formatted inference data object.
 
     Parameters
@@ -982,6 +996,11 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
         Whether to use the original scaling values (False) or extend the range
         in both directions and sample it more finely (True), which will lead to
         prettier plots
+    interact_sd : float
+        Value of the scale parameter for the priors of a0_interact_sd and
+        s0_interact_sd parameters for the partially-pooled-interactions
+        mcmc_model_type (ignored for others, see docstring of
+        partially_pooled_interactions_response_model for details)
 
     Returns
     -------
@@ -999,10 +1018,12 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
             raise Exception("If we only have one subject, we need to have "
                             "only one model and trial type -- haven't thought"
                             " through how to handle the other case.")
+    model_kwargs = {}
     if mcmc_model_type == 'partially-pooled':
         response_model = partially_pooled_response_model
     elif mcmc_model_type == 'partially-pooled-interactions':
         response_model = partially_pooled_interactions_response_model
+        model_kwargs['interact_sd'] = interact_sd
     elif mcmc_model_type == 'unpooled':
         response_model = unpooled_response_model
     else:
@@ -1030,14 +1051,14 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
                                               posterior_samples=mcmc.get_samples())
     # need to create each of these separately because they have different
     # coords
-    prior = prior(PRNGKey(seed), scaling, model)
+    prior = prior(PRNGKey(seed), scaling, model, **model_kwargs)
     # the subject-level variables have a dummy dimension at the same place as
     # the image_name dimension, in order to allow broadcasting. we allow it
     # here, and then drop it later
     prior_dims = _assign_inf_dims(prior, dataset, dummy_dim=dummy_dims[0],
                                   extend_scaling=extend_scaling)
     prior = az.from_numpyro(prior=prior, coords=coords, dims=prior_dims)
-    posterior_pred = posterior_pred(PRNGKey(seed+1), scaling, model)
+    posterior_pred = posterior_pred(PRNGKey(seed+1), scaling, model, **model_kwargs)
     post_dims = _assign_inf_dims(posterior_pred, dataset,
                                  dummy_dim=dummy_dims[1],
                                  extend_scaling=extend_scaling)
@@ -1144,6 +1165,11 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
         inf_data.posterior = inf_data.posterior.where(nan_mask)
         inf_data.posterior_predictive = inf_data.posterior_predictive.where(nan_mask)
     return inf_data
+
+
+def check_loo_warning(inf_data):
+    """
+    """
 
 
 def _compute_hdi(tmp, hdi):

@@ -51,7 +51,7 @@ wildcard_constraints:
     plot_focus='|_focus-subject|_focus-image',
     ecc_mask="|_eccmask-[0-9]+",
     logscale="log|linear",
-    mcmc_model="partially-pooled|unpooled|partially-pooled-interactions",
+    mcmc_model="partially-pooled|unpooled|partially-pooled-interactions-[.0-9]+|partially-pooled-interactions",
     fixation_cross="cross|nocross",
     cutout="cutout|nocutout|cutout_V1_natural-seed|cutout_RGC_natural-seed|nocutout_small|cutout_downsample",
     context="paper|poster",
@@ -1393,6 +1393,15 @@ rule mcmc:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 print(f"Running on {jax.lib.xla_bridge.device_count()} cpus!")
                 dataset = fov.mcmc.assemble_dataset_from_expt_df(pd.read_csv(input[0]))
+                mcmc_model = wildcards.mcmc_model
+                interact_sd = None
+                if 'interactions' in mcmc_model:
+                    mcmc_model = 'partially-pooled-interations'
+                    try:
+                        interact_sd = float(re.findall('partially-pooled-interactions-([.0-9]+)', mcmc_model)[0])
+                    except IndexError:
+                        interact_sd = .1
+                print(interact_sd)
                 mcmc = fov.mcmc.run_inference(dataset, wildcards.mcmc_model,
                                               float(wildcards.step_size),
                                               int(wildcards.num_draws),
@@ -1400,19 +1409,22 @@ rule mcmc:
                                               int(wildcards.num_warmup),
                                               int(wildcards.seed),
                                               float(wildcards.accept_prob),
-                                              int(wildcards.tree_depth))
+                                              int(wildcards.tree_depth),
+                                              interat_sd=interact_sd)
                 # want to have a different seed for constructing the inference
                 # data object than we did for inference itself
                 inf_data = fov.mcmc.assemble_inf_data(mcmc, dataset,
                                                       wildcards.mcmc_model,
-                                                      int(wildcards.seed)+1)
+                                                      int(wildcards.seed)+1,
+                                                      interact_sd=interact_sd)
                 inf_data.to_netcdf(output[0])
                 # want to have a different seed for constructing the inference
                 # data object than we did for inference itself
                 inf_data_extended = fov.mcmc.assemble_inf_data(mcmc, dataset,
                                                                wildcards.mcmc_model,
                                                                int(wildcards.seed)+10,
-                                                               extend_scaling=True)
+                                                               extend_scaling=True,
+                                                               interact_sd=interact_sd)
                 inf_data_extended.to_netcdf(output[1])
                 
 
