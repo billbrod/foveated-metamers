@@ -1413,14 +1413,14 @@ rule mcmc:
                 # want to have a different seed for constructing the inference
                 # data object than we did for inference itself
                 inf_data = fov.mcmc.assemble_inf_data(mcmc, dataset,
-                                                      wildcards.mcmc_model,
+                                                      mcmc_model,
                                                       int(wildcards.seed)+1,
                                                       interact_sd=interact_sd)
                 inf_data.to_netcdf(output[0])
                 # want to have a different seed for constructing the inference
                 # data object than we did for inference itself
                 inf_data_extended = fov.mcmc.assemble_inf_data(mcmc, dataset,
-                                                               wildcards.mcmc_model,
+                                                               mcmc_model,
                                                                int(wildcards.seed)+10,
                                                                extend_scaling=True,
                                                                interact_sd=interact_sd)
