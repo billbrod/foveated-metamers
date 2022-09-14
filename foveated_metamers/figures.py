@@ -2812,6 +2812,10 @@ def mcmc_arviz_compare(df, row='trial_type', col='model', aspect=2, height=2,
                         # see it. in particular, this line is
                         # incorrect when order_by_rank=False
                         plot_kwargs={'color_ls_min_ic': (0,0,0,0)},
+                        # for similar reasons, we don't want to plot the ic
+                        # diff (it ends up in the wrong place when
+                        # order_by_rank=False)
+                        plot_ic_diff=False,
                         **kwargs)
 
     g = sns.FacetGrid(df, row=row, col=col, aspect=aspect, height=height,
