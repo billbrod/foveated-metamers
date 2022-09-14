@@ -776,7 +776,6 @@ def get_mcmc_hyperparams(wildcards, **kwargs):
     return hyper_str.format(1, '.8', 10, 4, 10000, 10000, 0)
 
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description=("Generate metamer paths in a programmatic way, for passing to snakemake. "
