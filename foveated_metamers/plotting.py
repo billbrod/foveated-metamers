@@ -572,6 +572,8 @@ def _add_legend(df, fig=None, hue=None, style=None, palette={},
     if hue is not None:
         try:
             sorted_hue = get_order(hue, df[hue].unique())
+            # don't create artists for things not in the plot
+            sorted_hue = [h for h in sorted_hue if h in df[hue].unique()]
         except TypeError:
             sorted_hue = sorted(df[hue].unique(), key=lambda x: 1e32 if isinstance(x, str) else x)
         if legend_content == 'brief':
@@ -598,7 +600,7 @@ def _add_legend(df, fig=None, hue=None, style=None, palette={},
     if style is not None:
         if isinstance(style, str):
             style = [style]
-        for sty in style:
+        for i, sty in enumerate(style):
             artists[sty.capitalize().replace('_', ' ')] = ax.scatter([], [], s=0)
             sty_unique = [s for s in df[sty].unique() if isinstance(s, str) or
                           not np.isnan(s)]
@@ -629,6 +631,9 @@ def _add_legend(df, fig=None, hue=None, style=None, palette={},
                 artists[style_val] = ax.plot([], [], color=markers['mec'], lw=lw,
                                              dashes=dashes_dict.get(style_key, []),
                                              **markers)[0]
+            # add blanks so we have an extra line between categories
+            artists[(i+1) * ' '] = ax.scatter([], [], s=0)
+
     if artists:
         labels = list(artists.keys())
         trial_type_labels = []
