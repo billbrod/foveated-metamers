@@ -1554,7 +1554,8 @@ rule mcmc_compare_plot:
         lambda wildcards: [op.join(config["DATA_DIR"], 'mcmc', '{{model_name}}', 'task-split_comp-{{comp}}',
                                    'task-split_comp-{{comp}}_mcmc_{mcmc_model}_{hyper}.nc').format(mcmc_model=m,
                                                                                                    hyper=utils.get_mcmc_hyperparams(wildcards, mcmc_model=m))
-                           for m in ['unpooled', 'partially-pooled', 'partially-pooled-interactions']]
+                           for m in ['unpooled', 'partially-pooled', 'partially-pooled-interactions',
+                                     'partially-pooled-interactions-1']]
     output:
         op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
                 'task-split_comp-{comp}_mcmc_compare_{plot_type}.png'),
