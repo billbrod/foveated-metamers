@@ -2814,7 +2814,9 @@ def mcmc_arviz_compare(df, row='trial_type', col='model', aspect=2, height=2,
                         plot_kwargs={'color_ls_min_ic': (0,0,0,0)},
                         # for similar reasons, we don't want to plot the ic
                         # diff (it ends up in the wrong place when
-                        # order_by_rank=False)
+                        # order_by_rank=False). I submitted issue for both of
+                        # these:
+                        # https://github.com/arviz-devs/arviz/issues/2115
                         plot_ic_diff=False,
                         **kwargs)
 
