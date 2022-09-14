@@ -1170,11 +1170,6 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
     return inf_data
 
 
-def check_loo_warning(inf_data):
-    """
-    """
-
-
 def _compute_hdi(tmp, hdi):
     """Compute the HDI of a variable.
 
