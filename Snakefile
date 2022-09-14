@@ -2202,7 +2202,7 @@ rule mcmc_arviz_compare_figure:
         import contextlib
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                style, fig_width = fov.style.plotting_style(wildcards.context)
+                _, fig_width = fov.style.plotting_style(wildcards.context)
                 comp_df = []
                 for p in input:
                     model, comp, ic = re.findall('mcmc/([A-Za-z0-9_]+)/task-split_comp-([a-z-0-9]+)/task.*_ic-([a-z]+).csv', p)[0]
@@ -2217,8 +2217,11 @@ rule mcmc_arviz_compare_figure:
                 comp_df.trial_type = comp_df.trial_type.map(lambda x: x.replace('\n(', ' ('))
                 aspect = 2
                 height = (fig_width/comp_df.model.nunique()) / aspect
+                row_order = comp_df.trial_type.unique()
+                row_order = row_order[[0, 1, 4, 2, 3]]
                 g = fov.figures.mcmc_arviz_compare(comp_df, row='trial_type',
                                                    col='model', aspect=aspect,
+                                                   row_order=row_order,
                                                    height=height, sharex=False)
                 g.savefig(output[0], bbox_inches='tight')
 

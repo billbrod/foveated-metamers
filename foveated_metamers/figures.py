@@ -2828,11 +2828,18 @@ def mcmc_arviz_compare(df, row='trial_type', col='model', aspect=2, height=2,
     xlabel = {'loo': 'PSIS leave-one-out', 'waic': 'WAIC'}[ic]
     for (i,j,k), d in g.facet_data():
         ax = g.axes[i, j]
-        ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(5))
+        ax.xaxis.set_major_locator(mpl.ticker.MaxNLocator(2))
+        # for some reason, the default creates too many yticks, so we do this
+        # to trim them back
+        ax.yaxis.set_major_locator(mpl.ticker.MaxNLocator(df.mcmc_model.nunique()))
         if d.empty:
             ax.set_xticks([])
+            ax.set_title('')
         if i == df['trial_type'].nunique() - 1 and j == 1:
             ax.set_xlabel(f'log {xlabel}', x=-.1, ha='center')
+    # because the axes titles take up several lines, the axes are too close to
+    # each other
+    g.fig.subplots_adjust(hspace=1.5)
     return g
 
 
