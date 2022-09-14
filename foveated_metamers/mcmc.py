@@ -1155,7 +1155,10 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
         inf_data.prior_predictive = inf_data.prior_predictive.expand_dims('subject_name', 2).assign_coords({'subject_name': dataset.subject_name})
         inf_data.observed_data = inf_data.observed_data.expand_dims('subject_name', 2).assign_coords({'subject_name': dataset.subject_name})
         inf_data.log_likelihood = inf_data.log_likelihood.expand_dims('subject_name', 2).assign_coords({'subject_name': dataset.subject_name})
-    inf_data.add_groups({'metadata': {'mcmc_model_type': mcmc_model_type}})
+    if interact_sd != .1 and mcmc_model_type == 'partially-pooled-interactions':
+        inf_data.add_groups({'metadata': {'mcmc_model_type': f'{mcmc_model_type}-{interact_sd}'}})
+    else:
+        inf_data.add_groups({'metadata': {'mcmc_model_type': mcmc_model_type}})
     if mcmc_model_type == 'unpooled':
         # in this case, we want to drop all the values where we had no
         # information -- since the model is unpooled, the parameters we
