@@ -2184,6 +2184,65 @@ rule mcmc_figure:
                 fig.savefig(output[0], bbox_inches='tight', transparent=True)
 
 
+rule mcmc_compare_figure:
+    input:
+        lambda wildcards: [op.join(config["DATA_DIR"], 'mcmc', '{{model_name}}', 'task-split_comp-{{comp}}',
+                                   'task-split_comp-{{comp}}_mcmc_{mcmc_model}_{hyper}.nc').format(mcmc_model=m,
+                                                                                                   hyper=utils.get_mcmc_hyperparams(wildcards, mcmc_model=m))
+                           for m in ['unpooled', 'partially-pooled', 'partially-pooled-interactions']]
+    output:
+        op.join(config["DATA_DIR"], 'figures', '{context}', '{model_name}',
+                'task-split_comp-{comp}_mcmc_compare_psychophysical-grouplevel_{axis_scale}.svg')
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'figures', '{context}', '{model_name}',
+                'task-split_comp-{comp}_mcmc_compare_psychophysical-grouplevel_{axis_scale}.log')
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'figures', '{context}', '{model_name}',
+                'task-split_comp-{comp}_mcmc_compare_psychophysical-grouplevel_{axis_scale}_benchmark.txt')
+    run:
+        import foveated_metamers as fov
+        import contextlib
+        import pandas as pd
+        import matplotlib.pyplot as plt
+        import arviz as az
+        import warnings
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                style, fig_width = fov.style.plotting_style(wildcards.context)
+                plt.style.use(style)
+                df = []
+                for i in input:
+                    inf = az.from_netcdf(i)
+                    df.append(fov.mcmc.inf_data_to_df(inf, 'parameter grouplevel means',
+                                                      query_str="distribution=='posterior'", hdi=.95))
+                df = pd.concat(df)
+                df.model = df.model.map(fov.plotting.MODEL_PLOT)
+                df.trial_type = df.trial_type.map(fov.plotting.TRIAL_TYPE_PLOT)
+                fig = fov.figures.psychophysical_grouplevel_means(df, style=['mcmc_model_type', 'trial_type'],
+                                                                  height=fig_width/4, increase_size=False,
+                                                                  row_order=['s0', 'a0'])
+                for i, ax in enumerate(fig.axes):
+                    if 'linear' == wildcards.axis_scale:
+                        ax.set(yscale='linear')
+                    elif 'log' == wildcards.axis_scale:
+                        ax.set(yscale='log')
+                    title = ax.get_title().replace('a0', "Max $d'$").replace('s0', 'Critical Scaling')
+                    title = title.split('|')[0]
+                    # remove title
+                    ax.set_title('')
+                    ax.set_xlabel(ax.get_xlabel().split('_')[0].capitalize())
+                    if i % 2 == 0:
+                        ax.set_ylabel(title)
+                fig.suptitle('')
+                # change title of this to be clearer. this is an
+                # exceedingly hacky way of doing this.
+                leg = fig.legends[0]
+                leg.texts = [t.set_text(t.get_text().replace('Trial type', 'Comparison').replace('Mcmc', 'MCMC'))
+                             for t in leg.texts]
+                fig.savefig(output[0], bbox_inches='tight')
+
+
+
 rule mcmc_arviz_compare_figure:
     input:
         [op.join(config["DATA_DIR"], 'mcmc', '{model_name}', 'task-split_comp-{comp}',
