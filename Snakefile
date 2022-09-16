@@ -2239,7 +2239,8 @@ rule mcmc_compare_figure:
                 leg = fig.legends[0]
                 leg.texts = [t.set_text(t.get_text().replace('Trial type', 'Comparison').replace('Mcmc', 'MCMC'))
                              for t in leg.texts]
-                fig.savefig(output[0], bbox_inches='tight')
+                fig.savefig(output[0], bbox_inches='tight', transparent=True)
+
 
 
 
