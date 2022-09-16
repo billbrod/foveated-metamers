@@ -2926,3 +2926,161 @@ def mcmc_parameter_correlation(inf_data, corr_type):
     # this returns an array of axes, so we want to grab the actual figure from
     # it
     return axes[0, 0].figure
+
+
+def compare_mcmc_psychophysical_params(df, compare_models,
+                                       compare_method='difference',
+                                       hue='subject_name', style='trial_type',
+                                       col='image_name', height=3, aspect=1,
+                                       increase_size=False, **kwargs):
+    """Compare individual curve psychophysical parameters for different MCMC models.
+
+    Plot the difference or ratio between two MCMC models parameter values, with
+    max d' on the y-axis and critical scaling on the x.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        dataframe containing the psychophysical curve parameters for multiple
+        MCMC models. should only contain a single hdi value. so that probably
+        means it looks like multiple of these, concatenated:
+        `fov.mcmc.inf_data_to_df(inf_data, 'psychophysical curve parameters',
+        "distribution=='posterior", hdi=True).query("hdi==50")`
+    compare_models : tuple
+        2-tuple of mcmc model names giving the two values to compare. both of
+        these must be strings and must be found in the 'mcmc_model_type' column
+        of df.
+    compare_method : {'difference', 'ratio'}
+        Whether to plot the difference or ratio between the parameters. If
+        ratio, we logscale the axes and plot vertical and horizontal lines at
+        x=1, y=1. If difference, we keep the axes linear and plot vertical and
+        horizontal lines at the axes.
+    hue, style, col : str or None, optional
+        The variables in expt_df to facet along the hues, styles, and columns,
+        respectively.
+    height : float, optional
+        Height of the axes.
+    aspect : float, optional
+        Aspect of the axes
+    increase_size : bool, optional
+        whether to increase the size of the markers to make them look more like
+        pointplot
+    kwargs :
+        Passed to sns.FacetGrid
+
+    Returns
+    -------
+    g : sns.FacetGrid
+        FacetGrid containing the plot.
+
+    """
+    if len(compare_models) != 2:
+        raise Exception("Currently, can only compare two MCMC models!")
+    # set defaults based on hue and style args
+    if hue is not None:
+        kwargs.setdefault('palette', plotting.get_palette(hue, df[hue].unique()))
+    if style is not None:
+        style_dict = plotting.get_style(style, df[style].unique())
+        dashes_dict = style_dict.pop('dashes_dict', {})
+        marker_adjust = style_dict.pop('marker_adjust', {})
+        markers = style_dict.pop('markers', {})
+        kwargs.update(style_dict)
+    else:
+        dashes_dict = {}
+        marker_adjust = {}
+        markers = {}
+    # remap the image names to be better for plotting
+    df = plotting._remap_image_names(df)
+    img_order = plotting.get_order('image_name')
+    if col == 'image_name':
+        kwargs.setdefault('col_order', img_order)
+        col_wrap = kwargs.get('col_wrap', 5)
+    else:
+        col_wrap = kwargs.get('col_wrap', None)
+
+    if df.hdi.nunique() != 1:
+        raise Exception("Currently, this plot only makes sense for a single HDI value!")
+
+    # first, pivot df so that each row contains the parameter value from each
+    # MCMC model
+    pivoted = pd.pivot_table(df, 'value', ['model', 'trial_type', 'hdi',
+                                           'subject_name', 'image_name', 'parameter'],
+                             'mcmc_model_type').reset_index()
+
+    # then compute the difference between the relevant values
+    if compare_method == 'difference':
+        pivoted['difference'] = pivoted[compare_models[0]] - pivoted[compare_models[1]]
+        oper = '-'
+        axes_val = [0, 0]
+    elif compare_method == 'ratio':
+        pivoted['difference'] = pivoted[compare_models[0]] / pivoted[compare_models[1]]
+        oper = '/'
+        axes_val = [1, 1]
+
+    # finally, pivot so that each row contais the difference for both parameters
+    pivoted = pd.pivot_table(pivoted, 'difference', ['model', 'trial_type', 'hdi', 'subject_name',
+                                                     'image_name'],
+                             'parameter').reset_index()
+
+    # and plot the parameters against each other
+    g = sns.FacetGrid(data=pivoted, hue=hue, col=col, col_wrap=col_wrap,
+                      height=height, aspect=aspect, **kwargs)
+    g.map_dataframe(plotting.lineplot_like_pointplot, x='s0',
+                    y='a0', ci=None, style=style, legend=False,
+                    linestyle='', dashes=False, ax='map', markers=markers,
+                    color=None, increase_size=increase_size)
+
+    def plot_axes(**kwargs):
+        ax = plt.gca()
+        xlim, ylim = list(ax.get_xlim()), list(ax.get_ylim())
+        ax.plot(axes_val, ylim, 'k--', zorder=0)
+        ax.plot(xlim, axes_val, 'k--', zorder=0)
+        if compare_method == 'ratio':
+            ax.set_yscale('log', base=2)
+            ax.set_xscale('log', base=2)
+            if xlim[0] < 0:
+                xlim[0] = pivoted['s0'].min() / np.sqrt(2)
+            if ylim[0] < 0:
+                ylim[0] = pivoted['a0'].min() / np.sqrt(2)
+        ax.set(xlim=xlim, ylim=ylim)
+        if compare_method == 'ratio':
+            xticks = [2**i for i in np.arange(np.floor(np.log2(xlim[0])),
+                                              np.ceil(np.log2(xlim[1])))]
+            if len(xticks) > 5:
+                xticks = xticks[::2]
+            yticks = [2**i for i in np.arange(np.floor(np.log2(ylim[0])),
+                                              np.ceil(np.log2(ylim[1])))]
+            if len(yticks) > 5:
+                yticks = yticks[::2]
+            ax.set(yticks=yticks, xticks=xticks)
+    g.map(plot_axes)
+    g.set_titles('{col_name}')
+
+    if marker_adjust:
+        labels = {v: k for k, v in markers.items()}
+        final_markers = plotting._marker_adjust(g.axes.flatten(),
+                                                marker_adjust, labels)
+    else:
+        final_markers = {}
+    plotting._add_legend(df, g.fig, hue, style,
+                         kwargs.get('palette', {}), final_markers,
+                         dashes_dict)
+    # got this from https://stackoverflow.com/a/36369238/4659293
+    n_rows, n_cols = g.axes[0].get_subplotspec().get_gridspec().get_geometry()
+    y_idx = n_cols * ((n_rows-1)//2)
+    if n_rows % 2 == 0:
+        yval = 0
+    else:
+        yval = .5
+    x_idx = -((n_cols+1)//2)
+    if n_cols % 2 == 0:
+        xval = 0
+    else:
+        xval = .5
+    g.set(xlabel='', ylabel='')
+
+    label = f'{{p}} ({compare_models[0]} ${oper}$ {compare_models[1]})'
+    g.axes[y_idx].set_ylabel(label.format(p="Max $d'$"), y=yval, ha='center')
+    g.axes[x_idx].set_xlabel(label.format(p='Critical scaling'), x=xval, ha='center')
+
+    return g

@@ -2242,6 +2242,65 @@ rule mcmc_compare_figure:
                 fig.savefig(output[0], bbox_inches='tight', transparent=True)
 
 
+rule mcmc_compare_psychophysical_params_figure:
+    input:
+        lambda wildcards: [op.join(config["DATA_DIR"], 'mcmc', '{{model_name}}', 'task-split_comp-{{comp}}',
+                                   'task-split_comp-{{comp}}_mcmc_{mcmc_model}_{hyper}.nc').format(mcmc_model=m,
+                                                                                                   hyper=utils.get_mcmc_hyperparams(wildcards, mcmc_model=m))
+                           for m in ['unpooled', 'partially-pooled', 'partially-pooled-interactions']]
+    output:
+        op.join(config["DATA_DIR"], 'figures', '{context}', '{model_name}',
+                'task-split_comp-{comp}_mcmc_compare_unp-pp_psychophysical-params_{comp_method}.svg'),
+        op.join(config["DATA_DIR"], 'figures', '{context}', '{model_name}',
+                'task-split_comp-{comp}_mcmc_compare_unp-ppi_psychophysical-params_{comp_method}.svg'),
+        op.join(config["DATA_DIR"], 'figures', '{context}', '{model_name}',
+                'task-split_comp-{comp}_mcmc_compare_pp-ppi_psychophysical-params_{comp_method}.svg'),
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'figures', '{context}', '{model_name}',
+                'task-split_comp-{comp}_mcmc_compare_all_psychophysical-params_{comp_method}.log'),
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'figures', '{context}', '{model_name}',
+                'task-split_comp-{comp}_mcmc_compare_all_psychophysical-params_{comp_method}_benchmark.txt'),
+    run:
+        import foveated_metamers as fov
+        import pandas as pd
+        import contextlib
+        import arviz as az
+        import matplotlib.pyplot as plt
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                style, fig_width = fov.style.plotting_style(wildcards.context)
+                plt.style.use(style)
+                df = []
+                for i in input:
+                    inf = az.from_netcdf(i)
+                    df.append(fov.mcmc.inf_data_to_df(inf, 'psychophysical curve parameters',
+                                                      query_str="distribution=='posterior'",
+                                                      hdi=.95).query("hdi==50"))
+                df = pd.concat(df)
+                df.model = df.model.map(fov.plotting.MODEL_PLOT)
+                df.trial_type = df.trial_type.map(fov.plotting.TRIAL_TYPE_PLOT)
+                comps = [('unpooled', 'partially-pooled'), ('unpooled', 'partially-pooled-interactions'),
+                         ('partially-pooled', 'partially-pooled-interactions')]
+                for i, c in enumerate(comps):
+                    g = fov.figures.compare_mcmc_psychophysical_params(df, c, height=fig_width/6,
+                                                                       compare_method=wildcards.comp_method)
+                    g.fig.subplots_adjust(right=.95, hspace=.27)
+                    # change title of this to be clearer. this is an
+                    # exceedingly hacky way of doing this.
+                    leg = g.fig.legends[0]
+                    leg.texts = [t.set_text(t.get_text().replace('Trial type', 'Comparison'))
+                                 for t in leg.texts]
+                    if wildcards.context == 'paper':
+                        for j, ax in enumerate(g.fig.axes):
+                            # still running into this issue
+                            # https://github.com/mwaskom/seaborn/issues/2293 with
+                            # things about this size, so we manually set the
+                            # xticklabels invisible
+                            if j <= 14:
+                                [xticklab.set_visible(False) for xticklab in ax.get_xticklabels()]
+                            ax.set_title(ax.get_title(), y=.91)
+                    g.savefig(output[i], bbox_inches='tight', transparent=True)
 
 
 rule mcmc_arviz_compare_figure:
