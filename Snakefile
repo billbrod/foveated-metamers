@@ -69,7 +69,7 @@ wildcard_constraints:
     schematic_name='|'.join([f.replace(op.join('reports', 'figures', ''), '').replace('.svg', '')
                              for f in glob(op.join('reports', 'figures', '*svg'))]),
 ruleorder:
-    collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check > mcmc_compare_plot > mcmc_plots > sensitivities_figure_with_heatmaps > embed_bitmaps_into_figure > compose_figures > copy_schematic
+    collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check > mcmc_compare_plot > mcmc_plots > embed_bitmaps_into_figure > compose_figures > copy_schematic
 
 LINEAR_IMAGES = config['IMAGE_NAME']['ref_image']
 MODELS = [config[i]['model_name'] for i in ['RGC', 'V1']]
@@ -4366,40 +4366,6 @@ rule critical_scaling_pointplot:
                 g.savefig(output[0])
 
 
-rule sensitivities_figure_with_heatmaps:
-    input:
-        op.join('reports', 'figures', 'sensitivities_{schem_type}.svg')
-    output:
-        op.join(config['DATA_DIR'], 'figures', '{context}', 'sensitivities_{schem_type}.svg'),
-        [op.join(config['DATA_DIR'], 'figures', '{context}', f'heatmaps-{i}_{{schem_type}}.svg') for i in range(3)]
-    log:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'sensitivities_{schem_type}_with_heatmaps.log')
-    benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'sensitivities_{schem_type}_with_heatmaps_benchmark.txt')
-    run:
-        import subprocess
-        import shutil
-        import foveated_metamers as fov
-        import contextlib
-        with open(log[0], 'w', buffering=1) as log_file:
-            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                shutil.copy(input[0], output[0])
-                if wildcards.schem_type == 'full':
-                    figs = fov.plotting.white_noise_heatmap_schematic()
-                else:
-                    figs = fov.plotting.image_heatmap_schematic()
-                # we do this hackily because snakemake doesn't let us use a
-                # function to determine anything about outputs. therefore we
-                # say we have the 3 heatmaps in our output, even though with
-                # schem_type=1, we have 6
-                im_template_path = output[1].replace('-0', '-{}')
-                for i, fig in enumerate(figs):
-                    im = im_template_path.format(i)
-                    fig.savefig(im)
-                    # we add the trailing " to make sure we only replace IMAGE1, not IMAGE10
-                    subprocess.call(['sed', '-i', f's|IMAGE{i+1}"|{im}"|', output[0]])
-
-
 def get_all_metamers(wildcards, comp=['energy_ref', 'energy_met', 'energy_ref-nat', 'energy_met-nat',
                                       'luminance_ref', 'luminance_met', 'energy_ref_downsample'],
                      include_gamma=True):
@@ -4725,9 +4691,9 @@ rule paper_figures:
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_scaling-extended_partially-pooled_log-ci_sub-00_comp-downsample.svg"),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "radial_se_comp-ref_ecc-None.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "critical_scaling_norm-False.svg"),
-        op.join(config['DATA_DIR'], 'figures', 'paper', "sensitivities_1.svg"),
-        op.join(config['DATA_DIR'], 'figures', 'paper', "sensitivities_2.svg"),
-        op.join(config['DATA_DIR'], 'figures', 'paper', "sensitivities.svg"),
+        op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_1.svg"),
+        op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_2.svg"),
+        op.join(config['DATA_DIR'], 'figures', 'paper', "image_space.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "freeman_windows_comparison.svg"),
         op.join(config['DATA_DIR'], 'statistics', 'critical_scaling.txt'),
         op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.txt'),
