@@ -2254,7 +2254,7 @@ rule mcmc_compare_psychophysical_params_figure:
         op.join(config["DATA_DIR"], 'figures', '{context}', '{model_name}',
                 'task-split_comp-{comp}_mcmc_compare_unp-ppi_psychophysical-params_{comp_method}.svg'),
         op.join(config["DATA_DIR"], 'figures', '{context}', '{model_name}',
-                'task-split_comp-{comp}_mcmc_compare_pp-ppi_psychophysical-params_{comp_method}.svg'),
+                'task-split_comp-{comp}_mcmc_compare_ppi-pp_psychophysical-params_{comp_method}.svg'),
     log:
         op.join(config["DATA_DIR"], 'logs', 'figures', '{context}', '{model_name}',
                 'task-split_comp-{comp}_mcmc_compare_all_psychophysical-params_{comp_method}.log'),
@@ -2281,7 +2281,7 @@ rule mcmc_compare_psychophysical_params_figure:
                 df.model = df.model.map(fov.plotting.MODEL_PLOT)
                 df.trial_type = df.trial_type.map(fov.plotting.TRIAL_TYPE_PLOT)
                 comps = [('unpooled', 'partially-pooled'), ('unpooled', 'partially-pooled-interactions'),
-                         ('partially-pooled', 'partially-pooled-interactions')]
+                         ('partially-pooled-interactions', 'partially-pooled')]
                 for i, c in enumerate(comps):
                     g = fov.figures.compare_mcmc_psychophysical_params(df, c, height=fig_width/6,
                                                                        compare_method=wildcards.comp_method)
