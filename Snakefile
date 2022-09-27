@@ -2127,17 +2127,7 @@ rule mcmc_figure:
                         kwargs['hdi'] = 0
                         kwargs['markersize'] = .5 * plt.rcParams['lines.markersize']
                         # get rid of those lines that we don't have observations for
-                        scal = inf_data.observed_data.scaling[0]
-                        mask = inf_data.observed_data.responses.sel(trials=0, scaling=scal).isnull()
-                        mask = mask.squeeze().to_dataframe().reset_index()
-                        mask.image_name = mask.image_name.map(lambda x: x.replace('_range-.05,.95_size-2048,2600', ''))
-                        mask = mask.set_index(['subject_name', 'image_name'])
-                        mask = mask.drop(columns=['trials', 'scaling', 'trial_type', 'model']).rename(columns={'responses': 'value'})
-                        inf_data = fov.mcmc.inf_data_to_df(inf_data, 'predictive', hdi=0)
-                        inf_data = inf_data.set_index(['subject_name', 'image_name'])
-                        # this hacky nonsense puts a nan everywhere mask has a true value
-                        inf_data['mask'] = mask.mask(mask)
-                        inf_data = inf_data.reset_index().dropna(subset=['mask'])
+                        inf_data = fov.mcmc._drop_no_observations(inf_data, fov.mcmc.inf_data_to_df(inf_data, 'predictive', hdi=0))
 
                     inf_data['model'] = inf_data['model'].map(fov.plotting.MODEL_PLOT)
                     inf_data['trial_type'] = inf_data['trial_type'].map(fov.plotting.TRIAL_TYPE_PLOT)
@@ -2274,9 +2264,10 @@ rule mcmc_compare_psychophysical_params_figure:
                 df = []
                 for i in input:
                     inf = az.from_netcdf(i)
-                    df.append(fov.mcmc.inf_data_to_df(inf, 'psychophysical curve parameters',
-                                                      query_str="distribution=='posterior'",
-                                                      hdi=.95).query("hdi==50"))
+                    tmp = fov.mcmc.inf_data_to_df(inf, 'psychophysical curve parameters',
+                                                  query_str="distribution=='posterior'",
+                                                  hdi=0)
+                    df.append(fov.mcmc._drop_no_observations(inf, tmp))
                 df = pd.concat(df)
                 df.model = df.model.map(fov.plotting.MODEL_PLOT)
                 df.trial_type = df.trial_type.map(fov.plotting.TRIAL_TYPE_PLOT)

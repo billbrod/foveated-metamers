@@ -1170,6 +1170,48 @@ def assemble_inf_data(mcmc, dataset, mcmc_model_type='partially-pooled',
     return inf_data
 
 
+def _drop_no_observations(inf_data, df):
+    """Drop rows from df where inf_data has no observations.
+
+    That is, we want to drop the rows from df that correspond to (subject,
+    image) pairs where inf_data.observed_data.responses were null.
+
+    This is used for dropping the (subject, image) pairs where we had no data
+    from e.g., the partially-pooled mcmc model, since it will have parameters
+    (and predictions) for them regardless.
+
+    Parameters
+    ----------
+    inf_data : arviz.InferenceData
+        arviz InferenceData object (xarray-like) created by `assemble_inf_data`.
+    df : pd.DataFrame
+        Dataframe created by inf_data_to_df from inf_data
+
+    Returns
+    -------
+    df : pd.DataFrame
+        The dataframe with the non-observed rows dropped.
+
+    """
+    # when we have no observations for a (subject, image) condition, all the
+    # trials and scaling values will have NaNs, so we just grab a single one,
+    # to make our lives easier
+    scal = inf_data.observed_data.scaling[0]
+    mask = inf_data.observed_data.responses.sel(trials=0, scaling=scal).isnull()
+    # turn it into a dataframe
+    mask = mask.squeeze().to_dataframe().reset_index()
+    # make the same change to image_name that happens in inf_data_to_df
+    mask.image_name = mask.image_name.map(lambda x: x.replace('_range-.05,.95_size-2048,2600', ''))
+    mask = mask.set_index(['subject_name', 'image_name'])
+    mask = mask.drop(columns=['trials', 'scaling', 'trial_type', 'model']).rename(columns={'responses': 'value'})
+    df = df.set_index(['subject_name', 'image_name'])
+    # this hacky nonsense puts a nan everywhere mask has a true value
+    df['mask'] = mask.mask(mask)
+    # then drop them
+    df = df.reset_index().dropna(subset=['mask'])
+    return df
+
+
 def _compute_hdi(tmp, hdi):
     """Compute the HDI of a variable.
 
