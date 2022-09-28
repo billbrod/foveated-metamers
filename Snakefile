@@ -68,6 +68,7 @@ wildcard_constraints:
     # these are the only possible schematics
     schematic_name='|'.join([f.replace(op.join('reports', 'figures', ''), '').replace('.svg', '')
                              for f in glob(op.join('reports', 'figures', '*svg'))]),
+    yaxis_dbl='single|double'
 ruleorder:
     collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > download_freeman_check > mcmc_compare_plot > mcmc_plots > embed_bitmaps_into_figure > compose_figures > copy_schematic
 
@@ -2182,13 +2183,13 @@ rule mcmc_compare_figure:
                            for m in ['unpooled', 'partially-pooled', 'partially-pooled-interactions']]
     output:
         op.join(config["DATA_DIR"], 'figures', '{context}', '{model_name}',
-                'task-split_comp-{comp}_mcmc_compare_psychophysical-grouplevel_{axis_scale}.svg')
+                'task-split_comp-{comp}_mcmc_compare_psychophysical-grouplevel_{axis_scale}_yax-{yaxis_dbl}.svg')
     log:
         op.join(config["DATA_DIR"], 'logs', 'figures', '{context}', '{model_name}',
-                'task-split_comp-{comp}_mcmc_compare_psychophysical-grouplevel_{axis_scale}.log')
+                'task-split_comp-{comp}_mcmc_compare_psychophysical-grouplevel_{axis_scale}_yax-{yaxis_dbl}.log')
     benchmark:
         op.join(config["DATA_DIR"], 'logs', 'figures', '{context}', '{model_name}',
-                'task-split_comp-{comp}_mcmc_compare_psychophysical-grouplevel_{axis_scale}_benchmark.txt')
+                'task-split_comp-{comp}_mcmc_compare_psychophysical-grouplevel_{axis_scale}_yax-{yaxis_dbl}_benchmark.txt')
     run:
         import foveated_metamers as fov
         import contextlib
@@ -2223,6 +2224,10 @@ rule mcmc_compare_figure:
                     ax.set_xlabel(ax.get_xlabel().split('_')[0].capitalize())
                     if i % 2 == 0:
                         ax.set_ylabel(title)
+                if wildcards.yaxis_dbl == 'double':
+                    # need to draw so that the tick locations are set.
+                    fig.canvas.draw()
+                    fov.plotting.add_asymptotic_performance_yaxis(fig.axes[2])
                 fig.suptitle('')
                 # change title of this to be clearer. this is an
                 # exceedingly hacky way of doing this.

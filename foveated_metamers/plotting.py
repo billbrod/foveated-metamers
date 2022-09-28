@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Misc plotting functions."""
 import numpy as np
+import re
 import warnings
 import seaborn as sns
 import pandas as pd
@@ -10,6 +11,7 @@ import os.path as op
 import yaml
 from . import mcmc, other_data
 import scipy
+import jax.numpy as jnp
 import copy
 import itertools
 from collections import OrderedDict
@@ -2373,3 +2375,89 @@ def white_noise_heatmap_schematic():
 
     figs[2].axes[0].contourf(abs(img1-img2), levels, cmap='gray_r')
     return figs
+
+
+def add_asymptotic_performance_yaxis(ax, position=-.15):
+    """Add a secondary yaxis which gives the asymptotic performance (alongside max d')
+
+    We put our ticks in the same location as the existing ones on ax, just with
+    different labels (using `mcmc.proportion_correct_curve`) and add a label
+    saying "Asymptotic performance".
+
+    It's recommended that you call this *after* any changes you want to make to
+    the original yaxis (for example, relabelling, changing tick locations or
+    changing the axis scale). Should probably call fig.canvas.draw() first too.
+
+    Parameters
+    ----------
+    ax : axis
+        The axis to add the secondary yaxis to. We assume that this has a yaxis
+        with tick marks and labels giving the max d'.
+    position: float, optional
+        Position of the y-axis, in axes units. Note that the ticks and labels
+        are all on the left side of the newly-created axis
+
+    """
+    # convert from max d' to asymptotic performance.
+    def convert_to_float(l):
+        if not l:
+            return l
+        try:
+            # the text label uses what I think is en-dash (not a hypen) to
+            # represent the minus sign for negative numbers, which float()
+            # doesn't know how to handle. this swaps them.
+            l = float(l.replace('−', '-'))
+        except ValueError:
+            # if l is a latex label, this will parse it correctly (as long as
+            # the base is 10)
+            l = re.findall(r'([0-9]*)(?:\\times)?10\^\{([-0-9]+)\}', l)[0]
+            # need to convert to a list so we can reassign l[0] (tuples don't
+            # allow reassignment)
+            l = list(l)
+            if not l[0]:
+                l[0] = 1
+            l = float(l[0]) * 10 ** float(l[-1])
+        return l
+
+    def asymp_perf(d):
+        return mcmc.proportion_correct_curve(jnp.array([100]), d, .0001).item()
+
+    twinned = ax.twinx()
+    twinned.yaxis.tick_left()
+    twinned.spines['left'].set_position(('axes', position))
+    twinned.set_yscale(ax.get_yscale())
+    twinned.set_yticks(ax.get_yticks())
+    twinned.set_ylim(ax.get_ylim())
+    # there are way more yticks than show up on the plot, since there are ticks
+    # placed outside the ylim. with the minor tick labels, this has caused
+    # problems when aligning the labels and the ticks (I think because there
+    # are so many of both). the following two lines make sure that we include
+    # the empty string labels so everything lines up correctly
+    labels = [convert_to_float(l.get_text()) for l in ax.get_yticklabels()]
+    labels = [f'{asymp_perf(l):.03f}' if l else l for l in labels]
+    print(len(labels),labels, )
+    twinned.set_yticklabels(labels)
+    labels = [convert_to_float(l.get_text()) for l in ax.get_yminorticklabels()]
+    labels = [f'{asymp_perf(l):.03f}' if l else l for l in labels]
+    twinned.set_yticklabels(labels, minor=True)
+    # if we're only showing one label, we add two more. this only happens with
+    # log axis, so only check then
+    if ax.get_yscale() == 'log':
+        displayed_labels = [l.get_position()[1] for l in
+                            twinned.get_yticklabels(which='both') if l.get_text()]
+        displayed_labels = [l for l in displayed_labels if l >
+                            twinned.get_ylim()[0] and l < twinned.get_ylim()[1]]
+        if len(displayed_labels) == 1:
+            tick_locs = np.array([t.get_position()[1] for t in twinned.get_yticklabels(minor=True)])
+            for i, val in enumerate(['low', 'high']):
+                # grab a point halfway between the existing label and the high or low extreme...
+                approx_val = np.logspace(*[np.log10(y) for y in displayed_labels+[twinned.get_ylim()[i]]], 3,
+                                         endpoint=True)[1]
+                # ... then find the nearest tick
+                nearest_tick_arg = np.abs(tick_locs-approx_val).argmin()
+                # and add the corresponding label
+                labels[nearest_tick_arg] = f'{asymp_perf(tick_locs[nearest_tick_arg]):.03f}'
+            twinned.set_yticklabels(labels, minor=True)
+    twinned.yaxis.set_label_position('left')
+    twinned.set_ylabel('Asymptotic performance')
+    return twinned
