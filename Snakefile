@@ -4689,6 +4689,7 @@ rule paper_figures:
         op.join(config['DATA_DIR'], 'figures', 'paper', "critical_scaling_norm-False.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_1.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_2.svg"),
+        op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_2_sample.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "image_space.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "freeman_windows_comparison.svg"),
         op.join(config['DATA_DIR'], 'statistics', 'critical_scaling.txt'),
