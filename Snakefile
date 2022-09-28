@@ -2689,6 +2689,25 @@ rule ref_image_figure_paper:
                     subprocess.call(['sed', '-i', f's|IMAGE{i+1}"|{im}"|', output[0]])
 
 
+rule max_dprime_asymp_performance_figure:
+    output:
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'max_dprime_asymp_perf.svg')
+    log:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'max_dprime_asymp_perf.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'max_dprime_asymp_perf_benchmark.txt')
+    run:
+        import foveated_metamers as fov
+        import matplotlib.pyplot as plt
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                style, fig_width = fov.style.plotting_style(wildcards.context, figsize='half')
+                plt.style.use(style)
+                fig = fov.figures.max_dprime_vs_asymptotic_performance(figsize=(fig_width, fig_width))
+                fig.savefig(output[0], bbox_inches='tight', transparent=True)
+
+
 rule synthesis_video:
     input:
         METAMER_TEMPLATE_PATH.replace('_metamer.png', '.pt'),

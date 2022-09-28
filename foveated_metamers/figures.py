@@ -22,6 +22,7 @@ from collections import OrderedDict
 import xmltodict
 import flatten_dict
 import warnings
+import jax.numpy as jnp
 from blume.table import table as blume_table
 sys.path.append(op.join(op.dirname(op.realpath(__file__)), '..', 'extra_packages'))
 import plenoptic_part as pop
@@ -3084,3 +3085,37 @@ def compare_mcmc_psychophysical_params(df, compare_models,
     g.axes[x_idx].set_xlabel(label.format(p='Critical scaling'), x=xval, ha='center')
 
     return g
+
+
+def max_dprime_vs_asymptotic_performance(max_dprime_range=(0, 10),
+                                         figsize=(5, 5)):
+    """Figure with max d' on the x-axis and asymptotic performance on the y.
+
+    The psychophysical curve parameters are critical scaling and max d'. While
+    critical scaling is easily understandable, max d' takes a bit of work. This
+    plot, which shows the relationship between max d' and the asymptotic
+    performance, might help.
+
+    To get this, we use mcmc.proportion_correct_curve, evaluating it at for a
+    critical scaling of 1e-4 and scaling of 100, to be sure we've gotten the
+    asymptotic value.
+
+    Parameters
+    ----------
+    max_dprime_range : 2-tuple of floats
+        Range of values to plot for max d', on the x-axis.
+    figsize : 2-tuple of floats
+        Size of the figure.
+
+    Returns
+    -------
+    fig : matplotlib.Figure
+        The figure containing this plot
+
+    """
+    discrim = jnp.linspace(*max_dprime_range)
+    performance = mcmc.proportion_correct_curve(jnp.array([100]), discrim, 1e-4)
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
+    ax.plot(discrim, performance)
+    ax.set(xlabel="Max $d'$", ylabel="Asymptotic performance")
+    return fig
