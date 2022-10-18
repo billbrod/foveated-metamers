@@ -2338,7 +2338,7 @@ rule mcmc_arviz_compare_figure:
                                                    col='model', aspect=aspect,
                                                    row_order=row_order,
                                                    height=height, sharex=False)
-                g.savefig(output[0], bbox_inches='tight')
+                g.savefig(output[0], bbox_inches='tight', transparent=True)
 
 
 rule mcmc_performance_comparison_figure:
