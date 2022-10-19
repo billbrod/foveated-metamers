@@ -455,5 +455,4 @@ def performance_all(performance_1, performance_2,
 
 
                      size=title_font_size, **text_params),
-        compose.Grid(20, 20),
     )
