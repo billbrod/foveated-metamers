@@ -410,13 +410,17 @@ def radial_squared_error(error_1, error_2, context='paper'):
     )
 
 
-def sensitivities(sensitivities_1, sensitivities_2, context='paper'):
-    """Combine the two sensitivities figures.
+def performance_all(performance_1, performance_2,
+                    model_names=['partially-pooled', 'unpooled'],
+                    context='paper'):
+    """Combine two performance-all figures.
 
     Parameters
     ----------
-    sensitivities_1, sensitivities_2 : str
-        Paths to the two sensitivities figures.
+    performance_1, performance_2 : str
+        Paths to the two performance-all figures.
+    model_names : list, optional
+        List of strs giving the names with which to label the two figures.
     context : {'paper', 'poster'}, optional
         plotting context that's being used for this figure (as in
         seaborn's set_context function). if poster, will scale things up. Note
@@ -426,14 +430,30 @@ def sensitivities(sensitivities_1, sensitivities_2, context='paper'):
     -------
     fig : svgutils.compose.Figure
         Figure containing composed plots
+
     """
     text_params, figure_width = style.plotting_style(context, 'svgutils', 'full')
-    figure_width = _convert_to_pix(figure_width) - 45
-    figure_height = 1.53 * figure_width
+    figure_width = _convert_to_pix(figure_width) + 15
+    figure_height = 1.5 * figure_width
+    # font_size is for panel labels and so too large for the titles
+    label_font_size = text_params.pop('size')
+    title_font_size = float(label_font_size.replace('pt', ''))
+    # this offset looks correct for the title 'partially-pooled', so let's
+    # approximately match it for others
+    title_offset = [figure_width/3 + (title_font_size/8) * (len('partially-pooled') - len(lab))
+                    for lab in model_names]
     return compose.Figure(
         figure_width, figure_height,
-        SVG(sensitivities_1, 'inkscape').move(25, 0),
-        compose.Text('A', 0, 25, **text_params),
-        SVG(sensitivities_2, 'inkscape').move(25, figure_height/2),
-        compose.Text('B', 0, figure_height/2+25, **text_params),
+        SVG(performance_1).move(-8, 25),
+        compose.Text('A', 0, 25, size=label_font_size, **text_params),
+        compose.Text(model_names[0], title_offset[0], 25, size=title_font_size,
+                     **text_params),
+        SVG(performance_2).move(-8, figure_height/2 + 25),
+        compose.Text('B', 0, figure_height/2+25, size=label_font_size,
+                     **text_params),
+        compose.Text(model_names[1], title_offset[1], figure_height/2+25,
+
+
+                     size=title_font_size, **text_params),
+        compose.Grid(20, 20),
     )
