@@ -2227,7 +2227,12 @@ rule mcmc_compare_figure:
                 if wildcards.yaxis_dbl == 'double':
                     # need to draw so that the tick locations are set.
                     fig.canvas.draw()
-                    fov.plotting.add_asymptotic_performance_yaxis(fig.axes[2])
+                    # because the ylabels are longer for this one
+                    if wildcards.model_name == 'RGC_norm_gaussian' and wildcards.comp == 'ref':
+                        pos = -.20
+                    else:
+                        pos = -.15
+                    fov.plotting.add_asymptotic_performance_yaxis(fig.axes[2], position=pos)
                 fig.suptitle('')
                 # change title of this to be clearer. this is an
                 # exceedingly hacky way of doing this.
