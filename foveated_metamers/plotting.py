@@ -2435,7 +2435,6 @@ def add_asymptotic_performance_yaxis(ax, position=-.15):
     # the empty string labels so everything lines up correctly
     labels = [convert_to_float(l.get_text()) for l in ax.get_yticklabels()]
     labels = [f'{asymp_perf(l):.03f}' if l else l for l in labels]
-    print(len(labels),labels, )
     twinned.set_yticklabels(labels)
     labels = [convert_to_float(l.get_text()) for l in ax.get_yminorticklabels()]
     labels = [f'{asymp_perf(l):.03f}' if l else l for l in labels]
