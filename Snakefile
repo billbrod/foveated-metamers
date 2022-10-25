@@ -4580,7 +4580,7 @@ rule rearrange_mcmc_model_fits_for_osf:
         os.link(input[0], output[0])
 
 
-rule rearrange_figure_inputs_for_osf:
+rule rearrange_figure_input_for_osf:
     input:
         [op.join(config['DATA_DIR'], 'mad_images', 'ssim_max', 'RGC_norm_gaussian_comp-ref_scaling-0.01_ref-bike_range-.05,.95_size-2048,2600_synth-ivy_range-.05,.95_size-2048,2600', 'opt-Adam_tradeoff-None_penalty-1e0_stop-iters-50', 'seed-0_lr-0.1_iter-10000_stop-crit-1e-9_gpu-1_mad.npy'),
          op.join(config['DATA_DIR'], 'mad_images', 'ssim_max', 'RGC_norm_gaussian_comp-ref_scaling-0.01_ref-bike_range-.05,.95_size-2048,2600_synth-white', 'opt-Adam_tradeoff-None_penalty-1e0_stop-iters-50', 'seed-0_lr-0.1_iter-10000_stop-crit-1e-9_gpu-1_mad.npy'),
@@ -4615,7 +4615,7 @@ rule rearrange_figure_inputs_for_osf:
          op.join(config['DATA_DIR'], 'metamers', 'V1_norm_s6_gaussian', 'tiles_range-.05,.95_size-2048,2600', 'scaling-1.5', 'opt-Adam-SWA_s-50_f-5_loss-mse_range-0,1_beta-0.5', 'fr-0_lc-1_lt-1e-04_li-50_cf-together_clamp-False', 'seed-1011401_init-white_lr-0.01_e0-0.500_em-26.800_iter-15000_thresh-1e-09_gpu-1_metamer.npy'),
          op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.csv'),]
     output:
-        op.join(config['DATA_DIR'], 'to_share', 'figure_inputs.tar.gz')
+        op.join(config['DATA_DIR'], 'to_share', 'figure_input.tar.gz')
     run:
         import shutil
         import tarfile
