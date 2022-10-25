@@ -4580,6 +4580,60 @@ rule rearrange_mcmc_model_fits_for_osf:
         os.link(input[0], output[0])
 
 
+rule rearrange_figure_inputs_for_osf:
+    input:
+        [op.join(config['DATA_DIR'], 'mad_images', 'ssim_max', 'RGC_norm_gaussian_comp-ref_scaling-0.01_ref-bike_range-.05,.95_size-2048,2600_synth-ivy_range-.05,.95_size-2048,2600', 'opt-Adam_tradeoff-None_penalty-1e0_stop-iters-50', 'seed-0_lr-0.1_iter-10000_stop-crit-1e-9_gpu-1_mad.npy'),
+         op.join(config['DATA_DIR'], 'mad_images', 'ssim_max', 'RGC_norm_gaussian_comp-ref_scaling-0.01_ref-bike_range-.05,.95_size-2048,2600_synth-white', 'opt-Adam_tradeoff-None_penalty-1e0_stop-iters-50', 'seed-0_lr-0.1_iter-10000_stop-crit-1e-9_gpu-1_mad.npy'),
+         op.join(config['DATA_DIR'], 'mad_images', 'ssim_min', 'RGC_norm_gaussian_comp-ref_scaling-0.01_ref-bike_range-.05,.95_size-2048,2600_synth-white', 'opt-Adam_tradeoff-None_penalty-1e0_stop-iters-50', 'seed-0_lr-0.1_iter-10000_stop-crit-1e-9_gpu-1_mad.npy'),
+         op.join(config['DATA_DIR'], 'synth_match_mse', 'RGC_norm_gaussian_comp-ref', 'bike_range-.05,.95_size-2048,2600_init-ivy_range-.05,.95_size-2048,2600_scaling-0.01_dir-None_lr-1e-9_max-iter-200_seed-0.npy'),
+         op.join(config['DATA_DIR'], 'synth_match_mse', 'RGC_norm_gaussian_comp-ref', 'bike_range-.05,.95_size-2048,2600_init-white_scaling-0.01_dir-None_lr-1e-9_max-iter-200_seed-0.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'RGC_norm_gaussian', 'gnarled_range-.05,.95_size-2048,2600', 'scaling-1.5', 'opt-Adam_loss-mse', 'fr-0_lc-1_lt-1e-04_li-50_cf-False_clamp-True', 'seed-511500_init-white_lr-0.01_e0-0.500_em-26.800_iter-5000_thresh-1e-09_gpu-1_metamer.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'RGC_norm_gaussian', 'gnarled_range-.05,.95_size-2048,2600', 'scaling-1.5', 'opt-Adam_loss-mse', 'fr-0_lc-1_lt-1e-04_li-50_cf-False_clamp-True', 'seed-511501_init-white_lr-0.01_e0-0.500_em-26.800_iter-5000_thresh-1e-09_gpu-1_metamer.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'RGC_norm_gaussian', 'ivy_range-.05,.95_size-2048,2600', 'scaling-0.01', 'opt-Adam_loss-mse', 'fr-0_lc-1_lt-1e-04_li-50_cf-False_clamp-True', 'seed-420000_init-white_lr-0.01_e0-0.500_em-26.800_iter-5000_thresh-1e-09_gpu-0_metamer.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'RGC_norm_gaussian', 'ivy_range-.05,.95_size-2048,2600', 'scaling-0.058', 'opt-Adam_loss-mse', 'fr-0_lc-1_lt-1e-04_li-50_cf-False_clamp-True', 'seed-420700_init-white_lr-0.01_e0-0.500_em-26.800_iter-5000_thresh-1e-09_gpu-0_metamer.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'RGC_norm_gaussian', 'llama_range-.05,.95_size-2048,2600', 'scaling-0.23', 'opt-Adam_loss-mse', 'fr-0_lc-1_lt-1e-04_li-50_cf-False_clamp-True', 'seed-41100_init-lettuce_range-.05,.95_size-2048,2600_lr-0.01_e0-0.500_em-26.800_iter-5000_thresh-1e-09_gpu-1_metamer.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'RGC_norm_gaussian', 'llama_range-.05,.95_size-2048,2600', 'scaling-0.23', 'opt-Adam_loss-mse', 'fr-0_lc-1_lt-1e-04_li-50_cf-False_clamp-True', 'seed-41100_init-white_lr-0.01_e0-0.500_em-26.800_iter-5000_thresh-1e-09_gpu-1_metamer.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'RGC_norm_gaussian', 'llama_range-.05,.95_size-2048,2600', 'scaling-0.23', 'opt-Adam_loss-mse', 'fr-0_lc-1_lt-1e-04_li-50_cf-False_clamp-True', 'seed-41101_init-nyc_range-.05,.95_size-2048,2600_lr-0.01_e0-0.500_em-26.800_iter-5000_thresh-1e-09_gpu-1_metamer.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'RGC_norm_gaussian', 'llama_range-.05,.95_size-2048,2600', 'scaling-0.23', 'opt-Adam_loss-mse', 'fr-0_lc-1_lt-1e-04_li-50_cf-False_clamp-True', 'seed-41101_init-white_lr-0.01_e0-0.500_em-26.800_iter-5000_thresh-1e-09_gpu-1_metamer.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'RGC_norm_gaussian', 'llama_range-.05,.95_size-2048,2600', 'scaling-0.23', 'opt-Adam_loss-mse', 'fr-0_lc-1_lt-1e-04_li-50_cf-False_clamp-True', 'seed-41102_init-terraces_range-.05,.95_size-2048,2600_lr-0.01_e0-0.500_em-26.800_iter-5000_thresh-1e-09_gpu-1_metamer.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'V1_norm_s6_gaussian', 'gnarled_range-.05,.95_size-2048,2600', 'scaling-1.5', 'opt-Adam-SWA_s-50_f-5_loss-mse_range-0,1_beta-0.5', 'fr-0_lc-1_lt-1e-04_li-50_cf-together_clamp-False', 'seed-1511400_init-white_lr-0.01_e0-0.500_em-26.800_iter-15000_thresh-1e-09_gpu-1_metamer.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'V1_norm_s6_gaussian', 'gnarled_range-.05,.95_size-2048,2600', 'scaling-1.5', 'opt-Adam-SWA_s-50_f-5_loss-mse_range-0,1_beta-0.5', 'fr-0_lc-1_lt-1e-04_li-50_cf-together_clamp-False', 'seed-1511401_init-white_lr-0.01_e0-0.500_em-26.800_iter-15000_thresh-1e-09_gpu-1_metamer.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'V1_norm_s6_gaussian', 'ivy_range-.05,.95_size-2048,2600', 'scaling-0.063', 'opt-Adam-SWA_s-50_f-5_loss-mse_range-0,1_beta-0.5', 'fr-0_lc-1_lt-1e-04_li-50_cf-together_clamp-False', 'seed-1420900_init-white_lr-0.01_e0-0.500_em-26.800_iter-15000_thresh-1e-09_gpu-0_metamer.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'V1_norm_s6_gaussian', 'ivy_range-.05,.95_size-2048,2600', 'scaling-0.27', 'opt-Adam-SWA_s-50_f-5_loss-mse_range-0,1_beta-0.5', 'fr-0_lc-1_lt-1e-04_li-50_cf-together_clamp-False', 'seed-1420500_init-white_lr-0.01_e0-0.500_em-26.800_iter-15000_thresh-1e-09_gpu-1_metamer.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'V1_norm_s6_gaussian', 'llama_range-.05,.95_size-2048,2600', 'scaling-0.063', 'opt-Adam-SWA_s-50_f-5_loss-mse_range-0,1_beta-0.5', 'fr-0_lc-1_lt-1e-04_li-50_cf-together_clamp-False', 'seed-1040900_init-white_lr-0.01_e0-0.500_em-26.800_iter-15000_thresh-1e-09_gpu-0_metamer.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'V1_norm_s6_gaussian', 'llama_range-.05,.95_size-2048,2600', 'scaling-0.27', 'opt-Adam-SWA_s-50_f-5_loss-mse_range-0,1_beta-0.5', 'fr-0_lc-1_lt-1e-04_li-50_cf-together_clamp-False', 'seed-0_init-white_lr-0.01_e0-0.500_em-26.800_iter-15000_thresh-1e-09_gpu-1_metamer.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'V1_norm_s6_gaussian', 'nyc_range-.05,.95_size-2048,2600', 'scaling-0.063', 'opt-Adam-SWA_s-50_f-5_loss-mse_range-0,1_beta-0.5', 'fr-0_lc-1_lt-1e-04_li-50_cf-together_clamp-False', 'seed-1430900_init-white_lr-0.01_e0-0.500_em-26.800_iter-15000_thresh-1e-09_gpu-0_metamer.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'V1_norm_s6_gaussian', 'nyc_range-.05,.95_size-2048,2600', 'scaling-0.27', 'opt-Adam-SWA_s-50_f-5_loss-mse_range-0,1_beta-0.5', 'fr-0_lc-1_lt-1e-04_li-50_cf-together_clamp-False', 'seed-1430500_init-white_lr-0.01_e0-0.500_em-26.800_iter-15000_thresh-1e-09_gpu-1_metamer.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'V1_norm_s6_gaussian', 'portrait_symmetric_range-.05,.95_size-2048,2600', 'scaling-0.27', 'opt-Adam-SWA_s-50_f-5_loss-mse_range-0,1_beta-0.5', 'fr-0_lc-1_lt-1e-04_li-50_cf-together_clamp-False', 'seed-1240500_init-bike_range-.05,.95_size-2048,2600_lr-0.01_e0-0.500_em-26.800_iter-15000_thresh-1e-09_gpu-1_metamer.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'V1_norm_s6_gaussian', 'portrait_symmetric_range-.05,.95_size-2048,2600', 'scaling-0.27', 'opt-Adam-SWA_s-50_f-5_loss-mse_range-0,1_beta-0.5', 'fr-0_lc-1_lt-1e-04_li-50_cf-together_clamp-False', 'seed-1240500_init-white_lr-0.01_e0-0.500_em-26.800_iter-15000_thresh-1e-09_gpu-1_metamer.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'V1_norm_s6_gaussian', 'portrait_symmetric_range-.05,.95_size-2048,2600', 'scaling-0.27', 'opt-Adam-SWA_s-50_f-5_loss-mse_range-0,1_beta-0.5', 'fr-0_lc-1_lt-1e-04_li-50_cf-together_clamp-False', 'seed-1240501_init-tiles_range-.05,.95_size-2048,2600_lr-0.01_e0-0.500_em-26.800_iter-15000_thresh-1e-09_gpu-1_metamer.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'V1_norm_s6_gaussian', 'portrait_symmetric_range-.05,.95_size-2048,2600', 'scaling-0.27', 'opt-Adam-SWA_s-50_f-5_loss-mse_range-0,1_beta-0.5', 'fr-0_lc-1_lt-1e-04_li-50_cf-together_clamp-False', 'seed-1240501_init-white_lr-0.01_e0-0.500_em-26.800_iter-15000_thresh-1e-09_gpu-1_metamer.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'V1_norm_s6_gaussian', 'portrait_symmetric_range-.05,.95_size-2048,2600', 'scaling-0.27', 'opt-Adam-SWA_s-50_f-5_loss-mse_range-0,1_beta-0.5', 'fr-0_lc-1_lt-1e-04_li-50_cf-together_clamp-False', 'seed-1240502_init-highway_symmetric_range-.05,.95_size-2048,2600_lr-0.01_e0-0.500_em-26.800_iter-15000_thresh-1e-09_gpu-1_metamer.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'V1_norm_s6_gaussian', 'tiles_downsample-2_range-.05,.95_size-2048,2600', 'scaling-1.5', 'opt-Adam-SWA_s-50_f-5_loss-mse_range-0,1_beta-0.5', 'fr-0_lc-1_lt-1e-04_li-50_cf-together_clamp-False', 'seed-1011400_init-white_lr-0.01_e0-0.500_em-26.800_iter-15000_thresh-1e-09_gpu-1_metamer.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'V1_norm_s6_gaussian', 'tiles_downsample-2_range-.05,.95_size-2048,2600', 'scaling-1.5', 'opt-Adam-SWA_s-50_f-5_loss-mse_range-0,1_beta-0.5', 'fr-0_lc-1_lt-1e-04_li-50_cf-together_clamp-False', 'seed-1011401_init-white_lr-0.01_e0-0.500_em-26.800_iter-15000_thresh-1e-09_gpu-1_metamer.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'V1_norm_s6_gaussian', 'tiles_range-.05,.95_size-2048,2600', 'scaling-1.5', 'opt-Adam-SWA_s-50_f-5_loss-mse_range-0,1_beta-0.5', 'fr-0_lc-1_lt-1e-04_li-50_cf-together_clamp-False', 'seed-1011400_init-white_lr-0.01_e0-0.500_em-26.800_iter-15000_thresh-1e-09_gpu-1_metamer.npy'),
+         op.join(config['DATA_DIR'], 'metamers', 'V1_norm_s6_gaussian', 'tiles_range-.05,.95_size-2048,2600', 'scaling-1.5', 'opt-Adam-SWA_s-50_f-5_loss-mse_range-0,1_beta-0.5', 'fr-0_lc-1_lt-1e-04_li-50_cf-together_clamp-False', 'seed-1011401_init-white_lr-0.01_e0-0.500_em-26.800_iter-15000_thresh-1e-09_gpu-1_metamer.npy'),
+         op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.csv'),]
+    output:
+        op.join(config['DATA_DIR'], 'to_share', 'figure_inputs.tar.gz')
+    run:
+        import shutil
+        import tarfile
+        import os
+        # this is just a temporary directory that we'll delete once we've
+        # created the .tar.gz file
+        output_dir = output[0].replace('.tar.gz', '') + os.sep
+        os.makedirs(output_dir)
+        for inp in input:
+            outp = inp.replace(config["DATA_DIR"], output_dir)
+            outp_dir = op.split(outp)[0]
+            os.makedirs(outp_dir, exist_ok=True)
+            os.link(inp, outp)
+        with tarfile.open(output[0], 'w:gz') as tar:
+            tar.add(output_dir, arcname=op.split(output_dir)[-1])
+        shutil.rmtree(output_dir)
+
+
 rule upload_to_osf:
     input:
         '.osfcli.config',
