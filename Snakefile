@@ -4656,6 +4656,29 @@ rule upload_to_osf:
             f.write(f'Uploaded to {upload_path} at {datetime.now()}')
 
 
+# these files are only required for the MCMC comparison, in the appendix, and
+# make the overall project too large for the OSF. Instead, we use NYU's RCS,
+# which we'll then upload the faculty data archive
+rule copy_mcmc_compare_to_rcs:
+    input:
+        lambda wildcards: get_osf_names(wildcards, 'mcmc')
+    output:
+        op.join(config['RCS_DIR'], 'mcmc_{osf_model_name}_{osf_comp}_{mcmc_model}.nc')
+    run:
+        import shutil
+        # because these are two different filesystems, we copy rather than link
+        shutil.copy(input[0], output[0])
+
+
+rule copy_all_mcmc_compare_to_rcs:
+    input:
+        [op.join(config['RCS_DIR'], 'mcmc_{osf_model_name}_{osf_comp}_{mcmc_model}.nc').format(osf_model_name=m,
+                                                                                               osf_comp=c,
+                                                                                               mcmc_model=mc)
+         for m in ['energy', 'luminance'] for mc in ['unpooled', 'partially-pooled-interactions']
+         for c in {'energy': ['met', 'ref', 'met-nat', 'ref-nat', 'met_downsample'], 'luminance': ['ref', 'met']}[m]]
+
+
 rule rearrange_metamers_for_browser:
     input:
         unpack(get_all_metamers),

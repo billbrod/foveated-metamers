@@ -1,5 +1,6 @@
 DATA_DIR: "/home/billbrod/Desktop/metamers/"
 TEXTURE_DIR: "/home/billbrod/Desktop/textures/cropped512-gray-jpg"
+RCS_DIR: "/mnt/rcs/foveated_metamers"
 
 # required for making some of the figures
 INKSCAPE_PREF_FILE: "/home/billbrod/.config/inkscape/preferences.xml"
