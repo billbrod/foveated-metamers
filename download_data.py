@@ -71,16 +71,21 @@ def main(target_dataset):
     data_dir = config['DATA_DIR']
     os.makedirs(data_dir, exist_ok=True)
     print(f"Using {data_dir} as data root directory.")
-    targets = ['synthesis_input', 'stimuli', 'behavioral_data', 'mcmc_fits']
-    check_dirs = ['ref_images_preproc', 'stimuli', 'behavioral', 'mcmc']
+    targets = ['synthesis_input', 'stimuli', 'behavioral_data', 'mcmc_fits', 'figure_input',
+               'freeman2011_check_input', 'freeman2011_check_output']
+    check_dirs = ['ref_images_preproc', 'stimuli', 'behavioral', 'mcmc', 'statistics',
+                  'freeman_check/Freeman2011_metamers', 'freeman_check/windows']
+    sizes = ['176MB', '12GB', '2.6MB', '12GB', '550MB', '1MB', '60MB']
     yesno = 'y'
-    for tar, check, size in zip(targets, check_dirs, ['176MB', '12GB', '2.6MB', '12GB']):
+    for tar, check, size in zip(targets, check_dirs, sizes):
         if target_dataset == tar:
             if op.exists(op.join(data_dir, check)):
                 yesno = input("Previous data found, do you wish to download the data anyway? [y/n] ")
                 while yesno not in ['y', 'n']:
                     print("Please enter y or n")
                     yesno = input("Previous data found, do you wish to download the data anyway? [y/n] ")
+            if yesno == 'n':
+                break
             yesno = input(f"{tar} dataset will be approximately {size}, do you wish to download it? [y/n] ")
             while yesno not in ['y', 'n']:
                 print("Please enter y or n")
@@ -158,12 +163,13 @@ def main(target_dataset):
             subprocess.call(["curl", "-O", "-J", "-L", OSF_URL['figure_input']])
             fig_checksum = check_checksum('figure_input.tar.gz', checksums['figure_input.tar.gz'])
         subprocess.call(["tar", "xf", "figure_input.tar.gz"])
-        subprocess.call(["rsync", "-avPLuz", "figure_input/", f"{data_dir}/"])
-        subprocess.call(["rm", "-r", "figure_input/"])
+        for subdir in ['metamers', 'mad_images', 'synth_match_mse', 'statistics']:
+            subprocess.call(["rsync", "-avPLuz", subdir, f"{data_dir}/"])
+            subprocess.call(["rm", "-r", f"{subdir}/"])
         subprocess.call(["rm", "figure_input.tar.gz"])
     elif target_dataset == 'freeman2011_check_input':
         print("Downloading input for comparison against Freeman2011.")
-        met_dir = op.join(data_dir, 'freeman_check')
+        met_dir = op.join(data_dir, 'freeman_check', 'Freeman2011_metamers')
         os.makedirs(met_dir, exist_ok=True)
         ref_dir = op.join(data_dir, 'ref_images')
         os.makedirs(ref_dir, exist_ok=True)
@@ -189,8 +195,9 @@ def main(target_dataset):
             freeman_checksum = check_checksum('freeman_check.tar.gz', checksums['freeman_check.tar.gz'])
         subprocess.call(["tar", "xf", "freeman_check.tar.gz"])
         subprocess.call(["rm", "freeman_check.tar.gz"])
-        subprocess.call(["cp", "-R", "metamers/V1_norm_s4_gaussian", f"{met_dir_name}/"])
-        subprocess.call(["cp", "-R", "freeman_check/windows/*", f"{windows_dir_name}/"])
+        subprocess.call(["cp", "-R", "metamers/V1_norm_s4_gaussian", f"{met_dir}/"])
+        subprocess.call(["cp", "-R", "freeman_check/windows/scaling-0.25/", f"{windows_dir}/"])
+        subprocess.call(["cp", "-R", "freeman_check/windows/scaling-0.5/", f"{windows_dir}/"])
         subprocess.call(["rm", "-r", "metamers/V1_norm_s4_gaussian"])
         subprocess.call(["rmdir", "metamers"])
         subprocess.call(["rm", "-r", "freeman_check"])
@@ -204,7 +211,7 @@ if __name__ == '__main__':
     parser.add_argument("target_dataset", choices=['synthesis_input', 'stimuli',
                                                    'behavioral_data', 'mcmc_fits',
                                                    'figure_input',
-                                                   'freeman2011_check_input'
+                                                   'freeman2011_check_input',
                                                    'freeman2011_check_output'],
                         help="Which dataset to download, see project README for details.")
     args = vars(parser.parse_args())
