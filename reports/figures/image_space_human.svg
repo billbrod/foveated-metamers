@@ -14,7 +14,7 @@
    version="1.1"
    id="svg8"
    inkscape:version="1.0.2 (1.0.2+r75+1)"
-   sodipodi:docname="image_space.svg">
+   sodipodi:docname="image_space_human.svg">
   <defs
      id="defs2">
     <g
@@ -14071,17 +14071,17 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="2.8284274"
-     inkscape:cx="353.19686"
-     inkscape:cy="73.455016"
+     inkscape:zoom="11.31371"
+     inkscape:cx="242.75372"
+     inkscape:cy="68.594936"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
      units="px"
-     inkscape:window-width="1898"
-     inkscape:window-height="1039"
-     inkscape:window-x="3846"
-     inkscape:window-y="50"
+     inkscape:window-width="3840"
+     inkscape:window-height="2122"
+     inkscape:window-x="1920"
+     inkscape:window-y="38"
      inkscape:window-maximized="1"
      inkscape:document-rotation="0" />
   <metadata
@@ -14813,12 +14813,12 @@
        inkscape:label=""
        transform="matrix(0.46431575,0,0,0.46431575,168.81903,62.527203)"
        id="g15801-1"
-       style="fill:#80b3ff;stroke:#80b3ff;stroke-width:2.15371">
+       style="fill:#999999;stroke:#999999;stroke-width:2.15371;fill-opacity:1">
       <g
          id="g5316-0"
-         style="fill:#80b3ff;stroke:#80b3ff;stroke-width:2.15371">
+         style="fill:#999999;stroke:#999999;stroke-width:2.15371;fill-opacity:1">
         <g
-           style="fill:#80b3ff;fill-opacity:1;stroke:#80b3ff;stroke-width:2.15371"
+           style="fill:#999999;fill-opacity:1;stroke:#999999;stroke-width:2.15371"
            id="g9282-9">
           <use
              xlink:href="#symbol834"
@@ -14827,10 +14827,10 @@
              id="use2175-4"
              width="100%"
              height="100%"
-             style="fill:#80b3ff;stroke:#80b3ff;stroke-width:2.15371" />
+             style="fill:#999999;stroke:#999999;stroke-width:2.15371;fill-opacity:1" />
         </g>
         <g
-           style="fill:#80b3ff;fill-opacity:1;stroke:#80b3ff;stroke-width:2.15371"
+           style="fill:#999999;fill-opacity:1;stroke:#999999;stroke-width:2.15371"
            id="g8640-5">
           <use
              xlink:href="#symbol7520"
@@ -14839,7 +14839,7 @@
              id="use1143-6"
              width="100%"
              height="100%"
-             style="fill:#80b3ff;stroke:#80b3ff;stroke-width:2.15371" />
+             style="fill:#999999;stroke:#999999;stroke-width:2.15371;fill-opacity:1" />
         </g>
       </g>
     </g>
@@ -14847,12 +14847,12 @@
        inkscape:label=""
        transform="matrix(0.46431575,0,0,0.46431575,165.82353,51.368315)"
        id="g15956-2"
-       style="fill:#0044aa;stroke:#0044aa;stroke-width:2.15371">
+       style="fill:#666666;stroke:#0044aa;stroke-width:2.15371;fill-opacity:1">
       <g
          id="g1392-5"
-         style="fill:#0044aa;stroke:#0044aa;stroke-width:2.15371">
+         style="fill:#666666;stroke:#0044aa;stroke-width:2.15371;fill-opacity:1">
         <g
-           style="fill:#0044aa;fill-opacity:1;stroke:#0044aa;stroke-width:2.15371"
+           style="fill:#666666;fill-opacity:1;stroke:#0044aa;stroke-width:2.15371"
            id="g4661-9">
           <use
              xlink:href="#symbol15"
@@ -14861,10 +14861,10 @@
              id="use5215-1"
              width="100%"
              height="100%"
-             style="fill:#0044aa;stroke:#0044aa;stroke-width:2.15371" />
+             style="fill:#666666;stroke:#0044aa;stroke-width:2.15371;fill-opacity:1" />
         </g>
         <g
-           style="fill:#0044aa;fill-opacity:1;stroke:#0044aa;stroke-width:2.15371"
+           style="fill:#666666;fill-opacity:1;stroke:#0044aa;stroke-width:2.15371"
            id="g7854-7">
           <use
              xlink:href="#symbol7053"
@@ -14873,16 +14873,16 @@
              id="use9713-7"
              width="100%"
              height="100%"
-             style="fill:#0044aa;stroke:#0044aa;stroke-width:2.15371" />
+             style="fill:#666666;stroke:#0044aa;stroke-width:2.15371;fill-opacity:1" />
         </g>
       </g>
     </g>
     <path
-       style="fill:none;stroke:#0044aa;stroke-width:0.75;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-variation-settings:normal;opacity:1;vector-effect:none;fill-opacity:1;stroke-miterlimit:4;stroke-dasharray:2.25, 0.75000000000000000;stroke-dashoffset:0;stop-color:#000000;stop-opacity:1"
+       style="fill:none;stroke:#666666;stroke-width:0.75;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-variation-settings:normal;opacity:1;vector-effect:none;fill-opacity:1;stroke-miterlimit:4;stroke-dasharray:2.25, 0.75000000000000000;stroke-dashoffset:0;stop-color:#000000;stop-opacity:1"
        d="m 203.27987,92.436101 6.40832,-8.089927 31.28366,3.534652 -28.94227,19.517694 z"
        id="path16957" />
     <path
-       style="fill:none;stroke:#80b3ff;stroke-width:0.75;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-variation-settings:normal;opacity:1;vector-effect:none;fill-opacity:1;stroke-miterlimit:4;stroke-dasharray:2.25, 0.75000000000000000;stroke-dashoffset:0;stop-color:#000000;stop-opacity:1"
+       style="fill:none;stroke:#999999;stroke-width:0.75;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;font-variation-settings:normal;opacity:1;vector-effect:none;fill-opacity:1;stroke-miterlimit:4;stroke-dasharray:2.25, 0.75000000000000000;stroke-dashoffset:0;stop-color:#000000;stop-opacity:1"
        d="m 237.36664,88.671964 -24.83734,16.566886 -5.36663,-8.656982 14.97715,-9.738784 z"
        id="path16976" />
     <g
