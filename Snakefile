@@ -4713,7 +4713,7 @@ rule create_checksum:
 rule create_checksum_dict:
     input:
         [op.join(config['DATA_DIR'], 'to_share', 'checksums', f"{f}_checksum.json") for f in
-         ['behavioral_data.tar.gz', 'figure_input.tar.gz', 'synthesis_input.tar.gz', #'freeman_check.tar.gz', 'freeman_check_inputs.tar.gz',
+         ['behavioral_data.tar.gz', 'figure_input.tar.gz', 'synthesis_input.tar.gz', 'freeman_check.tar.gz', 'freeman_check_inputs.tar.gz',
           'mcmc_luminance_ref_partially-pooled.nc', 'mcmc_luminance_met_partially-pooled.nc', 'mcmc_energy_ref_partially-pooled.nc', 'mcmc_energy_ref-nat_partially-pooled.nc',
           'mcmc_energy_met_partially-pooled.nc', 'mcmc_energy_met-nat_partially-pooled.nc', 'mcmc_energy_met_downsample_partially-pooled.nc',
           'stimuli_luminance_ref.tar.gz', 'stimuli_luminance_met.tar.gz', 'stimuli_energy_ref.tar.gz', 'stimuli_energy_ref-nat.tar.gz',
@@ -4728,7 +4728,8 @@ rule create_checksum_dict:
                 tmp = json.load(f)
             if len(tmp) > 1:
                 raise Exception(f"Expected one file but found {len(tmp)}!")
-            if tmp.keys()[0] in checksums.keys():
+            # there's only one key, so this grabs it
+            if list(tmp.keys())[0] in checksums.keys():
                 raise Exception(f"{tmp.keys()[0]} already found in checksums dict!")
             checksums.update(tmp)
         with open(output[0], 'w') as f:
