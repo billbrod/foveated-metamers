@@ -4696,6 +4696,45 @@ rule copy_all_mcmc_compare_to_rcs:
          for c in {'energy': ['met', 'ref', 'met-nat', 'ref-nat', 'met_downsample'], 'luminance': ['ref', 'met']}[m]]
 
 
+rule create_checksum:
+    input:
+        op.join(config["DATA_DIR"], 'to_share', '{filename}')
+    output:
+        op.join(config["DATA_DIR"], 'to_share', 'checksums', '{filename}_checksum.json')
+    run:
+        import hashlib
+        import json
+        with open(input[0], 'rb') as f:
+            checksum = hashlib.blake2b(f.read())
+        with open(output[0], 'w') as f:
+            json.dump({wildcards.filename: checksum.hexdigest()}, f)
+
+
+rule create_checksum_dict:
+    input:
+        [op.join(config['DATA_DIR'], 'to_share', 'checksums', f"{f}_checksum.json") for f in
+         ['behavioral_data.tar.gz', 'figure_input.tar.gz', 'synthesis_input.tar.gz', #'freeman_check.tar.gz', 'freeman_check_inputs.tar.gz',
+          'mcmc_luminance_ref_partially-pooled.nc', 'mcmc_luminance_met_partially-pooled.nc', 'mcmc_energy_ref_partially-pooled.nc', 'mcmc_energy_ref-nat_partially-pooled.nc',
+          'mcmc_energy_met_partially-pooled.nc', 'mcmc_energy_met-nat_partially-pooled.nc', 'mcmc_energy_met_downsample_partially-pooled.nc',
+          'stimuli_luminance_ref.tar.gz', 'stimuli_luminance_met.tar.gz', 'stimuli_energy_ref.tar.gz', 'stimuli_energy_ref-nat.tar.gz',
+          'stimuli_energy_met.tar.gz', 'stimuli_energy_met-nat.tar.gz', 'stimuli_energy_met_downsample.tar.gz']]
+    output:
+        op.join('data', 'checksums.json')
+    run:
+        import json
+        checksums = {}
+        for inp in input:
+            with open(inp) as f:
+                tmp = json.load(f)
+            if len(tmp) > 1:
+                raise Exception(f"Expected one file but found {len(tmp)}!")
+            if tmp.keys()[0] in checksums.keys():
+                raise Exception(f"{tmp.keys()[0]} already found in checksums dict!")
+            checksums.update(tmp)
+        with open(output[0], 'w') as f:
+            json.dump(checksums, f)
+
+
 rule rearrange_metamers_for_browser:
     input:
         unpack(get_all_metamers),
