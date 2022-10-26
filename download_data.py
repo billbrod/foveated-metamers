@@ -93,7 +93,10 @@ def main(target_dataset):
     comp_name_map = lambda x: x.replace('-nat', '-natural').replace('_downsample', '-downsample-2')
     if target_dataset == 'synthesis_input':
         print("Downloading synthesis input.")
-        subprocess.call(["curl", "-O", "-J", "-L", OSF_URL['synthesis_input']])
+        synth_checksum = False
+        while not synth_checksum:
+            subprocess.call(["curl", "-O", "-J", "-L", OSF_URL['synthesis_input']])
+            synth_checksum = check_checksum('synthesis_input.tar.gz', checksums['synthesis_input.tar.gz'])
         subprocess.call(["tar", "xf", "synthesis_input.tar.gz"])
         # this file is unnecessary for the experiment
         subprocess.call(['rm', op.join('synthesis_input', 'metadata.json')])
@@ -107,7 +110,10 @@ def main(target_dataset):
             download_model = re.findall('stimuli_([a-z]+)_', name)[0]
             output_model = model_name_map[download_model]
             os.makedirs(op.join(data_dir, "stimuli", output_model), exist_ok=True)
-            subprocess.call(["curl", "-O", "-J", "-L", url])
+            stim_checksum = False
+            while not stim_checksum:
+                subprocess.call(["curl", "-O", "-J", "-L", url])
+                stim_checksum = check_checksum(f'{name}.tar.gz', checksums[f'{name}.tar.gz'])
             subprocess.call(["tar", "xf", f"{name}.tar.gz"])
             for f in glob(op.join(name, 'stimuli*')):
                 subprocess.call(["mv", f, op.join(data_dir, 'stimuli', output_model) + '/'])
@@ -115,7 +121,10 @@ def main(target_dataset):
             subprocess.call(["rm", f"{name}.tar.gz"])
     elif target_dataset == 'behavioral_data':
         print("Downloading behavioral data for all comparisons.")
-        subprocess.call(["curl", "-O", "-J", "-L", OSF_URL['behavioral_data']])
+        behav_checksum = False
+        while not behav_checksum:
+            subprocess.call(["curl", "-O", "-J", "-L", OSF_URL['behavioral_data']])
+            behav_checksum = check_checksum('behavioral_data.tar.gz', checksums['behavioral_data.tar.gz'])
         subprocess.call(["tar", "xf", "behavioral_data.tar.gz"])
         for f in glob(op.join('behavioral_data', '*csv')):
             download_model, download_comp = re.findall(op.join('behavioral_data', '([a-z]+)_comp-([a-z-_]+)_data.csv'), f)[0]
@@ -136,12 +145,18 @@ def main(target_dataset):
                                                 'model_name': outp_model, 'comp': outp_comp})
             outp = op.join(data_dir, 'mcmc', outp_model, f'task-split_comp-{outp_comp}',
                            f'task-split_comp-{outp_comp}_mcmc_partially-pooled_{hyper}_scaling-extended.nc')
-            subprocess.call(["curl", "-O", "-J", "-L", url])
+            mcmc_checksum = False
+            while not mcmc_checksum:
+                subprocess.call(["curl", "-O", "-J", "-L", url])
+                mcmc_checksum = check_checksum(name, checksums[name])
             os.makedirs(op.dirname(outp), exist_ok=True)
             subprocess.call(["mv", name, outp])
     elif target_dataset == 'figure_input':
         print("Downloading figure input.")
-        subprocess.call(["curl", "-O", "-J", "-L", OSF_URL['figure_input']])
+        fig_checksum = False
+        while not fig_checksum:
+            subprocess.call(["curl", "-O", "-J", "-L", OSF_URL['figure_input']])
+            fig_checksum = check_checksum('figure_input.tar.gz', checksums['figure_input.tar.gz'])
         subprocess.call(["tar", "xf", "figure_input.tar.gz"])
         subprocess.call(["rsync", "-avPLuz", "figure_input/", f"{data_dir}/"])
         subprocess.call(["rm", "-r", "figure_input/"])
@@ -152,7 +167,10 @@ def main(target_dataset):
         os.makedirs(met_dir, exist_ok=True)
         ref_dir = op.join(data_dir, 'ref_images')
         os.makedirs(ref_dir, exist_ok=True)
-        subprocess.call(["curl", "-O", "-J", "-L", OSF_URL['freeman2011_check_input']])
+        freeman_checksum = False
+        while not freeman_checksum:
+            subprocess.call(["curl", "-O", "-J", "-L", OSF_URL['freeman2011_check_input']])
+            freeman_checksum = check_checksum('freeman_check_inputs.tar.gz', checksums['freeman_check_inputs.tar.gz'])
         subprocess.call(["tar", "xf", "freeman_check_inputs.tar.gz"])
         subprocess.call(["mv", "freeman_check_inputs/metamer1.png", f"{met_dir}/"])
         subprocess.call(["mv", "freeman_check_inputs/metamer2.png", f"{met_dir}/"])
@@ -165,7 +183,10 @@ def main(target_dataset):
         os.makedirs(met_dir, exist_ok=True)
         windows_dir = op.join(data_dir, 'freeman_check', 'windows')
         os.makedirs(windows_dir, exist_ok=True)
-        subprocess.call(["curl", "-O", "-J", "-L", OSF_URL['freeman2011_check_output']])
+        freeman_checksum = False
+        while not freeman_checksum:
+            subprocess.call(["curl", "-O", "-J", "-L", OSF_URL['freeman2011_check_output']])
+            freeman_checksum = check_checksum('freeman_check.tar.gz', checksums['freeman_check.tar.gz'])
         subprocess.call(["tar", "xf", "freeman_check.tar.gz"])
         subprocess.call(["rm", "freeman_check.tar.gz"])
         subprocess.call(["cp", "-R", "metamers/V1_norm_s4_gaussian", f"{met_dir_name}/"])
