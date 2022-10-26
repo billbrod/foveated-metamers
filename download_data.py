@@ -5,9 +5,14 @@ import subprocess
 import os
 import re
 import yaml
+import hashlib
+import json
 import os.path as op
 from glob import glob
 from foveated_metamers import utils
+
+
+CHECKSUM_PATH = op.join(op.dirname(op.realpath(__file__)), 'data', 'checksums.json')
 
 
 # dictionary of download urls from the OSF
@@ -32,7 +37,16 @@ OSF_URL = {
         'mcmc_energy_met-nat_partially-pooled.nc': 'https://osf.io/dx9ew/download',
         'mcmc_energy_met_downsample_partially-pooled.nc': 'https://osf.io/9wnvq/download',
     },
+    'figure_input': 'https://osf.io/hvrs2/download',
+    'freeman2011_check_input': "https://osf.io/e2zn8/download",
+    'freeman2011_check_output': "https://osf.io/wa2zu/download",
 }
+
+
+def check_checksum(path, checksum):
+    with open(path, 'rb') as f:
+        test_checksum = hashlib.blake2b(f.read())
+    return test_checksum.hexdigest() == checksum
 
 
 def main(target_dataset):
@@ -41,7 +55,10 @@ def main(target_dataset):
     Parameters
     ----------
     target_dataset : {'synthesis_input', 'stimuli',
-                      'behavioral_data', 'mcmc_fits'}
+                      'behavioral_data', 'mcmc_fits',
+                      'figure_input',
+                      'freeman2011_check_input',
+                      'freeman2011_check_output'}
         Which dataset to download. See project README for more info.
 
     """
@@ -49,6 +66,8 @@ def main(target_dataset):
         config = yaml.safe_load(f)
     if op.split(config['DATA_DIR'])[-1].lower() != op.split(config['DATA_DIR'])[-1]:
         raise Exception(f"Name of your DATA_DIR must be all lowercase! But got {config['DATA_DIR']}")
+    with open(CHECKSUM_PATH) as f:
+        checksums = json.load(f)
     data_dir = config['DATA_DIR']
     os.makedirs(data_dir, exist_ok=True)
     print(f"Using {data_dir} as data root directory.")
@@ -120,6 +139,40 @@ def main(target_dataset):
             subprocess.call(["curl", "-O", "-J", "-L", url])
             os.makedirs(op.dirname(outp), exist_ok=True)
             subprocess.call(["mv", name, outp])
+    elif target_dataset == 'figure_input':
+        print("Downloading figure input.")
+        subprocess.call(["curl", "-O", "-J", "-L", OSF_URL['figure_input']])
+        subprocess.call(["tar", "xf", "figure_input.tar.gz"])
+        subprocess.call(["rsync", "-avPLuz", "figure_input/", f"{data_dir}/"])
+        subprocess.call(["rm", "-r", "figure_input/"])
+        subprocess.call(["rm", "figure_input.tar.gz"])
+    elif target_dataset == 'freeman2011_check_input':
+        print("Downloading input for comparison against Freeman2011.")
+        met_dir = op.join(data_dir, 'freeman_check')
+        os.makedirs(met_dir, exist_ok=True)
+        ref_dir = op.join(data_dir, 'ref_images')
+        os.makedirs(ref_dir, exist_ok=True)
+        subprocess.call(["curl", "-O", "-J", "-L", OSF_URL['freeman2011_check_input']])
+        subprocess.call(["tar", "xf", "freeman_check_inputs.tar.gz"])
+        subprocess.call(["mv", "freeman_check_inputs/metamer1.png", f"{met_dir}/"])
+        subprocess.call(["mv", "freeman_check_inputs/metamer2.png", f"{met_dir}/"])
+        subprocess.call(["mv", "freeman_check_inputs/fountain_size-512,512.png", f"{ref_dir}/"])
+        subprocess.call(["rm", "freeman_check_inputs.tar.gz"])
+        subprocess.call(["rmdir", "freeman_check_inputs"])
+    elif target_dataset == 'freeman2011_check_output':
+        print("Downloading output for comparison against Freeman2011.")
+        met_dir = op.join(data_dir, 'metamers')
+        os.makedirs(met_dir, exist_ok=True)
+        windows_dir = op.join(data_dir, 'freeman_check', 'windows')
+        os.makedirs(windows_dir, exist_ok=True)
+        subprocess.call(["curl", "-O", "-J", "-L", OSF_URL['freeman2011_check_output']])
+        subprocess.call(["tar", "xf", "freeman_check.tar.gz"])
+        subprocess.call(["rm", "freeman_check.tar.gz"])
+        subprocess.call(["cp", "-R", "metamers/V1_norm_s4_gaussian", f"{met_dir_name}/"])
+        subprocess.call(["cp", "-R", "freeman_check/windows/*", f"{windows_dir_name}/"])
+        subprocess.call(["rm", "-r", "metamers/V1_norm_s4_gaussian"])
+        subprocess.call(["rmdir", "metamers"])
+        subprocess.call(["rm", "-r", "freeman_check"])
     subprocess.call(['chmod', '-R', '777', data_dir])
 
 
@@ -128,7 +181,10 @@ if __name__ == '__main__':
         description=("Download data associated with the foveated metamers project, to reproduce the results.")
     )
     parser.add_argument("target_dataset", choices=['synthesis_input', 'stimuli',
-                                                   'behavioral_data', 'mcmc_fits'],
+                                                   'behavioral_data', 'mcmc_fits',
+                                                   'figure_input',
+                                                   'freeman2011_check_input'
+                                                   'freeman2011_check_output'],
                         help="Which dataset to download, see project README for details.")
     args = vars(parser.parse_args())
     main(**args)
