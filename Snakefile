@@ -4519,6 +4519,8 @@ def get_osf_names(wildcards, to_upload):
                                                                                                       hyper=utils.get_mcmc_hyperparams({'mcmc_model': wildcards.mcmc_model,
                                                                                                                                         'model_name': model_name,
                                                                                                                                   'comp': comp}))
+    elif to_upload == 'mcmc_compare':
+        return op.join(config["DATA_DIR"], 'mcmc', model_name, 'task-split_comp-{comp}', 'task-split_comp-{comp}_mcmc_compare_ic-loo.csv').format(comp=comp)
 
 
 rule rearrange_stimuli_for_osf:
@@ -4670,12 +4672,27 @@ rule copy_mcmc_compare_to_rcs:
         shutil.copy(input[0], output[0])
 
 
+rule copy_mcmc_compare_csv_to_rcs:
+    input:
+        lambda wildcards: get_osf_names(wildcards, 'mcmc_compare')
+    output:
+        op.join(config['RCS_DIR'], 'mcmc_{osf_model_name}_{osf_comp}_compare_ic-loo.csv')
+    run:
+        import shutil
+        # because these are two different filesystems, we copy rather than link
+        shutil.copy(input[0], output[0])
+
+
 rule copy_all_mcmc_compare_to_rcs:
     input:
         [op.join(config['RCS_DIR'], 'mcmc_{osf_model_name}_{osf_comp}_{mcmc_model}.nc').format(osf_model_name=m,
                                                                                                osf_comp=c,
                                                                                                mcmc_model=mc)
          for m in ['energy', 'luminance'] for mc in ['unpooled', 'partially-pooled-interactions']
+         for c in {'energy': ['met', 'ref', 'met-nat', 'ref-nat', 'met_downsample'], 'luminance': ['ref', 'met']}[m]],
+        [op.join(config['RCS_DIR'], 'mcmc_{osf_model_name}_{osf_comp}_compare_ic-loo.csv').format(osf_model_name=m,
+                                                                                                  osf_comp=c)
+         for m in ['energy', 'luminance']
          for c in {'energy': ['met', 'ref', 'met-nat', 'ref-nat', 'met_downsample'], 'luminance': ['ref', 'met']}[m]]
 
 
