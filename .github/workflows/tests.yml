@@ -98,6 +98,7 @@ jobs:
         run : |
           source activate metamers
           python download_data.py freeman2011_check_output -s
+          python download_data.py freeman2011_check_input -s
       - name: run nbconvert
         run: |
           source activate metamers
