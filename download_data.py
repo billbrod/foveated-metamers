@@ -49,7 +49,7 @@ def check_checksum(path, checksum):
     return test_checksum.hexdigest() == checksum
 
 
-def main(target_dataset):
+def main(target_dataset, skip_confirmation=False):
     """Download dataset from OpenNeuro or OSF.
 
     Parameters
@@ -60,6 +60,8 @@ def main(target_dataset):
                       'freeman2011_check_input',
                       'freeman2011_check_output'}
         Which dataset to download. See project README for more info.
+    skip_confirmation : bool, optional
+        If True, skip all confirmation checks and always download data.
 
     """
     with open(op.join(op.dirname(op.realpath(__file__)), 'config.yml')) as f:
@@ -77,22 +79,25 @@ def main(target_dataset):
                   'freeman_check/Freeman2011_metamers', 'freeman_check/windows']
     sizes = ['176MB', '12GB', '2.6MB', '12GB', '550MB', '1MB', '60MB']
     yesno = 'y'
-    for tar, check, size in zip(targets, check_dirs, sizes):
-        if target_dataset == tar:
-            if op.exists(op.join(data_dir, check)):
-                yesno = input("Previous data found, do you wish to download the data anyway? [y/n] ")
+    if not skip_confirmation:
+        for tar, check, size in zip(targets, check_dirs, sizes):
+            if target_dataset == tar:
+                if op.exists(op.join(data_dir, check)):
+                    yesno = input("Previous data found, do you wish to download the data anyway? [y/n] ")
+                    while yesno not in ['y', 'n']:
+                        print("Please enter y or n")
+                        yesno = input("Previous data found, do you wish to download the data anyway? [y/n] ")
+                if yesno == 'n':
+                    break
+                yesno = input(f"{tar} dataset will be approximately {size}, do you wish to download it? [y/n] ")
                 while yesno not in ['y', 'n']:
                     print("Please enter y or n")
-                    yesno = input("Previous data found, do you wish to download the data anyway? [y/n] ")
-            if yesno == 'n':
-                break
-            yesno = input(f"{tar} dataset will be approximately {size}, do you wish to download it? [y/n] ")
-            while yesno not in ['y', 'n']:
-                print("Please enter y or n")
-                yesno = input(f"{tar} dataset will be approximately {size}, do you wish to download it? [y/n] ")
-    if yesno == 'n':
-        print("Exiting...")
-        exit(0)
+                    yesno = input(f"{tar} dataset will be approximately {size}, do you wish to download it? [y/n] ")
+        if yesno == 'n':
+            print("Exiting...")
+            exit(0)
+    else:
+        print(f"Skipping all requests for confirmation and downloading {target_dataset} dataset...")
     # dictionary mapping between the names used in the upload vs those in the actual data directory
     model_name_map = {'energy': 'V1_norm_s6_gaussian', 'luminance': 'RGC_norm_gaussian'}
     comp_name_map = lambda x: x.replace('-nat', '-natural').replace('_downsample', '-downsample-2')
@@ -214,5 +219,7 @@ if __name__ == '__main__':
                                                    'freeman2011_check_input',
                                                    'freeman2011_check_output'],
                         help="Which dataset to download, see project README for details.")
+    parser.add_argument('--skip-confirmation', '-s', action='store_true',
+                        help="Skip all requests for confirmation and download data (intended for use in tests).")
     args = vars(parser.parse_args())
     main(**args)
