@@ -87,7 +87,7 @@ jobs:
           conda clean --all -y
           mamba env create -f environment.yml
           source activate metamers
-          mamba install jupyter nbconvert
+          mamba install jupyter nbclient>=0.5.5
       - name: modify config.yml
         run: |
           sed -i 's|DATA_DIR:.*|DATA_DIR: "data/metamers"|g' config.yml
@@ -101,5 +101,4 @@ jobs:
       - name: run nbconvert
         run: |
           source activate metamers
-          jupyter kernelspec list
-          jupyter nbconvert --ExecutePreprocessor.kernel_name=python3 --to notebook --execute notebooks/Freeman_Check.ipynb
+          jupyter execute notebooks/Freeman_Check.ipynb --kernel_name=python3
