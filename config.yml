@@ -2,8 +2,10 @@ DATA_DIR: "/home/billbrod/Desktop/metamers/"
 TEXTURE_DIR: "/home/billbrod/Desktop/textures/cropped512-gray-jpg"
 RCS_DIR: "/mnt/rcs/foveated_metamers"
 
-# required for making some of the figures
-INKSCAPE_PREF_FILE: "/home/billbrod/.config/inkscape/preferences.xml"
+# required for making some of the figures. this can contain ~ (for home
+# directory) and is probably correct on Linux or Macs. On Windows, it's
+# probably: %userprofile\Application\Data\Inkscape\, but you should double check
+INKSCAPE_PREF_FILE: "~/.config/inkscape/preferences.xml"
 
 REF_IMAGE_TEMPLATE_PATH: "{DATA_DIR}/ref_images/{image_name}.png"
 METAMER_TEMPLATE_PATH: "{DATA_DIR}/metamers/{model_name}/{image_name}/scaling-{scaling}/opt-{optimizer}_loss-{loss}/fr-{fract_removed}_lc-{loss_fract}_lt-{loss_change_thresh}_li-{loss_change_iter}_cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}/seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc:.03f}_em-{max_ecc:.03f}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}{save_all}_metamer.png"
@@ -13,9 +15,10 @@ MAD_TEMPLATE_PATH: "{DATA_DIR}/mad_images/{model_name}_{synth_target}/{met_model
 # (rule freeman_check in Snakefile), 2011 windows, download these two matlab
 # packages from github (https://github.com/freeman-lab/metamers/ and
 # https://github.com/LabForComputationalVision/matlabPyrTools, respectively) and
-# update the paths below
-FREEMAN_METAMER_PATH: "/home/billbrod/Documents/freeman_metamers"
-MATLABPYRTOOLS_PATH: "/home/billbrod/Documents/matlab_toolboxes/matlabPyrTools"
+# update the paths below. These paths are allowed to contain ~ (for home
+# directory)
+FREEMAN_METAMER_PATH: "~/Documents/freeman_metamers"
+MATLABPYRTOOLS_PATH: "~/Documents/matlab_toolboxes/matlabPyrTools"
 
 IMAGE_NAME:
   template: "{ref_image}_{preproc}_size-{size}"
