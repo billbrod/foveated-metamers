@@ -72,6 +72,9 @@ wildcard_constraints:
 ruleorder:
     collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > mcmc_compare_plot > mcmc_plots > embed_bitmaps_into_figure > compose_figures > copy_schematic
 
+config['INKSCAPE_PREF_FILE'] = op.expanduser(config['INKSCAPE_PREF_FILE'])
+config['FREEMAN_METAMER_PATH'] = op.expanduser(config['FREEMAN_METAMER_PATH'])
+config['MATLABPYRTOOLS_PATH'] = op.expanduser(config['MATLABPYRTOOLS_PATH'])
 LINEAR_IMAGES = config['IMAGE_NAME']['ref_image']
 MODELS = [config[i]['model_name'] for i in ['RGC', 'V1']]
 IMAGES = config['DEFAULT_METAMERS']['image_name']
