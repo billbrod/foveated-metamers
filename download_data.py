@@ -213,6 +213,22 @@ def main(target_dataset, skip_confirmation=False):
         subprocess.call(["rm", "-r", "metamers/V1_norm_s4_gaussian"])
         subprocess.call(["rmdir", "metamers"])
         subprocess.call(["rm", "-r", "freeman_check"])
+    # need to touch these files, in this order, to make sure that snakemake
+    # doesn't get confused and thinks it needs to rerun things.
+    paths_to_touch = []
+    if op.exists(op.join(data_dir, 'metamers')):
+        paths_to_touch.append('metamers')
+    if op.exists(op.join(data_dir, 'synth_match_mse')):
+        paths_to_touch.append('synth_match_mse')
+    if op.exists(op.join(data_dir, 'mad_images')):
+        paths_to_touch.append('mad_images')
+    if op.exists(op.join(data_dir, 'stimuli')):
+        paths_to_touch.append('stimuli')
+    # The command we call just recursively touches everything in the specified
+    # directory
+    for path in paths_to_touch:
+        subprocess.call(['find', f'{op.join(data_dir, path)}', '-type', 'f',
+                         '-exec', 'touch', '{}', '+'])
     subprocess.call(['chmod', '-R', '777', data_dir])
 
 
