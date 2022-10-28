@@ -1922,7 +1922,7 @@ def _get_image_for_window_example(wildcards):
 def _get_single_window(wildcards):
     window = get_windows(wildcards)
     if isinstance(window, list):
-        return [w.replace('.pt', '_single.pt') for w in window]
+        return window[0].replace('.pt', '_single.pt')
     else:
         return window.replace('.pt', '_single.pt')
 
