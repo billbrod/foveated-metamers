@@ -275,8 +275,8 @@ def scaling_comparison_figure(model_name, image_name, scaling_vals, seed, window
     return fig
 
 
-def pooling_window_example(windows, image, target_eccentricity=24,
-                           windows_scale=0, linewidths=5, **kwargs):
+def pooling_window_example(window, image, windows_scale=0, linewidths=5,
+                           target_amp=None, **kwargs):
     """Plot example window on image.
 
     This plots a single window, as close to the target_eccentricity as
@@ -285,19 +285,20 @@ def pooling_window_example(windows, image, target_eccentricity=24,
 
     Parameters
     ----------
-    windows : pooling.PoolingWindows
-        The PoolingWindows object to plot.
+    window : torch.Tensor
+        The tensor containing the single window, as created by
+        utils.grab_single_window
     image : np.ndarray or str
         The image to plot the window on. If a np.ndarray, then this should
         already lie between 0 and 1. If a str, must be the path to the image
         file,and we'll load it in.
-    target_eccentricity : float, optional
-        The approximate central eccentricity of the window to plot
     windows_scale : int, optional
         The scale of the windows to plot. If greater than 0, we down-sampled
         image by a factor of 2 that many times so they plot correctly.
     linewidths : float, optional
         line width for the window contour.
+    target_amp : float or None, optional
+        what amplitude to draw the contour at. If None, we do half the max.
     kwargs :
         Passed to pyrtools.imshow.
 
@@ -309,19 +310,12 @@ def pooling_window_example(windows, image, target_eccentricity=24,
     """
     if isinstance(image, str):
         image = utils.convert_im_to_float(imageio.imread(image))
-    target_ecc_idx = abs(windows.central_eccentricity_degrees -
-                         target_eccentricity).argmin()
-    ecc_windows = (windows.ecc_windows[windows_scale] /
-                   windows.norm_factor[windows_scale])
-    target_amp = windows.window_max_amplitude / 2
-    window = torch.einsum('hw,hw->hw',
-                          windows.angle_windows[windows_scale][0],
-                          ecc_windows[target_ecc_idx])
-
     # need to down-sample image for these scales
     for i in range(windows_scale):
         image = measure.block_reduce(image, (2, 2))
     fig = pt.imshow(image, title=None, **kwargs)
+    if target_amp is None:
+        target_amp = window.max() / 2
     fig.axes[0].contour(po.to_numpy(window).squeeze(), [target_amp],
                         colors='r', linewidths=linewidths)
     return fig

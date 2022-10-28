@@ -68,7 +68,9 @@ wildcard_constraints:
     # these are the only possible schematics
     schematic_name='|'.join([f.replace(op.join('reports', 'figures', ''), '').replace('.svg', '')
                              for f in glob(op.join('reports', 'figures', '*svg'))]),
-    yaxis_dbl='single|double'
+    yaxis_dbl='single|double',
+    t_width='[0-9.]+',
+    window_type='cosine|gaussian',
 ruleorder:
     collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > mcmc_compare_plot > mcmc_plots > embed_bitmaps_into_figure > compose_figures > copy_schematic
 
@@ -1874,6 +1876,41 @@ rule window_area_figure:
                     fig.savefig(output[0], bbox_inches='tight')
 
 
+rule create_single_window:
+    input:
+        op.join(config["DATA_DIR"], 'windows_cache', 'scaling-{scaling}_size-{size}_e0-{min_ecc}_'
+                'em-{max_ecc}_w-{t_width}_{window_type}.pt')
+    output:
+        op.join(config["DATA_DIR"], 'windows_cache', 'scaling-{scaling}_size-{size}_e0-{min_ecc}_'
+                'em-{max_ecc}_w-{t_width}_{window_type}_single.pt')
+    log:
+        op.join(config["DATA_DIR"], 'logs', 'windows_cache', 'scaling-{scaling}_size-{size}_e0-{min_ecc}_'
+                'em-{max_ecc}_w-{t_width}_{window_type}_single.log')
+    benchmark:
+        op.join(config["DATA_DIR"], 'logs', 'windows_cache', 'scaling-{scaling}_size-{size}_e0-{min_ecc}_'
+                'em-{max_ecc}_w-{t_width}_{window_type}_single_benchmark.txt')
+    params:
+        cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
+    resources:
+        mem = get_mem_estimate,
+    run:
+        import foveated_metamers as fov
+        import torch
+        import contextlib
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                size = [int(i) for i in wildcards.size.split(',')]
+                image = torch.rand((1, 1, *size))
+                model, _, _, _ = fov.create_metamers.setup_model(f'RGC_{wildcards.window_type}',
+                                                                 float(wildcards.scaling),
+                                                                 image,
+                                                                 float(wildcards.min_ecc),
+                                                                 float(wildcards.max_ecc),
+                                                                 params.cache_dir)
+                window = fov.utils.grab_single_window(model.PoolingWindows)
+                torch.save(window, output[0])
+
+
 def _get_image_for_window_example(wildcards):
     if wildcards.comp.startswith('met-downsample'):
         # if we set image_name when calling generate_metamer_paths, it will
@@ -1882,9 +1919,18 @@ def _get_image_for_window_example(wildcards):
     return utils.generate_metamer_paths(gamma_corrected=True, **wildcards)
 
 
+def _get_single_window(wildcards):
+    window = get_windows(wildcards)
+    if isinstance(window, list):
+        return [w.replace('.pt', '_single.pt') for w in window]
+    else:
+        return window.replace('.pt', '_single.pt')
+
+
 rule window_example_figure:
     input:
-        image = _get_image_for_window_example,
+        _get_image_for_window_example,
+        _get_single_window,
     output:
         report(op.join(config['DATA_DIR'], 'figures', '{context}', '{model_name}',
                        '{image_name}_scaling-{scaling}_seed-{seed_n}_comp-{comp}_gpu-{gpu}_linewidth-{lw}_window.png'))
@@ -1896,15 +1942,14 @@ rule window_example_figure:
                 '{image_name}_scaling-{scaling}_seed-{seed_n}_comp-{comp}_gpu-{gpu}_linewidth-{lw}_window_benchmark.txt')
     params:
         cache_dir = lambda wildcards: op.join(config['DATA_DIR'], 'windows_cache'),
-    resources:
-        mem = get_mem_estimate,
     run:
         import foveated_metamers as fov
-        import seaborn as sns
         import contextlib
+        import torch
         import imageio
-        import plenoptic as po
         import matplotlib.pyplot as plt
+        sys.path.append('extra_packages/pooling-windows/')
+        import pooling
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 style, _ = fov.style.plotting_style(wildcards.context)
@@ -1914,15 +1959,21 @@ rule window_example_figure:
                     downsample_n = float(re.findall('downsample-([0-9]+)', wildcards.comp)[0])
                     style['lines.linewidth'] = style['lines.linewidth'] / downsample_n
                 plt.style.use(style)
-                min_ecc = config['DEFAULT_METAMERS']['min_ecc']
-                max_ecc = config['DEFAULT_METAMERS']['max_ecc']
-                image = fov.utils.convert_im_to_float(imageio.imread(input.image[0]))
-                # remove the normalizing aspect, since we don't need it here
-                model, _, _, _ = fov.create_metamers.setup_model(wildcards.model_name.replace('_norm', ''),
-                                                                 float(wildcards.scaling),
-                                                                 image, min_ecc, max_ecc, params.cache_dir)
-                fig = fov.figures.pooling_window_example(model.PoolingWindows, image, vrange=(0, 1),
-                                                         linewidths=float(wildcards.lw)*style['lines.linewidth'])
+                image = fov.utils.convert_im_to_float(imageio.imread(input[0]))
+                window = torch.load(input[1])
+                # this is the same computation to get the window_max_amplitude
+                # from the creation of the PoolingWindows attribute (but
+                # asserting that the gaussian width is 1, which we guarantee
+                # elsewhere). this way we don't need to load in the
+                # corresponding PoolingWindows object (which may be huge) to
+                # retrieve this value
+                if 'gaussian' in wildcards.model_name:
+                    window_max_amplitude = (1 / (1 * pooling.pooling.GAUSSIAN_SUM)) ** 2
+                elif 'cosine' in wildcards.model_name:
+                    window_max_amplitude = 1
+                fig = fov.figures.pooling_window_example(window, image, vrange=(0, 1),
+                                                         linewidths=float(wildcards.lw)*style['lines.linewidth'],
+                                                         target_amp=window_max_amplitude / 2)
                 fig.savefig(output[0])
 
 

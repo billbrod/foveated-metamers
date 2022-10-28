@@ -1,6 +1,7 @@
 """various utilities
 """
 import os
+import torch
 import re
 import copy
 import os.path as op
@@ -774,6 +775,33 @@ def get_mcmc_hyperparams(wildcards, **kwargs):
             if kwargs['comp'] == 'met':
                 return hyper_str.format(1, '.95', 15, 4, 15000, 15000, 1)
     return hyper_str.format(1, '.8', 10, 4, 10000, 10000, 0)
+
+
+def grab_single_window(windows, target_eccentricity=24, windows_scale=0):
+    """Return single specified window.
+
+    Parameters
+    ----------
+    windows : pooling.PoolingWindows
+        The PoolingWindows object to grab the window from.
+    target_eccentricity : float, optional
+        The approximate central eccentricity of the window to grab
+    windows_scale : int, optional
+        The scale of the windows to grab.
+
+    Returns
+    -------
+    window : torch.Tensor
+        2d tensor containing the single window
+
+    """
+    target_ecc_idx = abs(windows.central_eccentricity_degrees -
+                         target_eccentricity).argmin()
+    ecc_windows = (windows.ecc_windows[windows_scale] /
+                   windows.norm_factor[windows_scale])
+    return torch.einsum('hw,hw->hw',
+                        windows.angle_windows[windows_scale][0],
+                        ecc_windows[target_ecc_idx])
 
 
 if __name__ == '__main__':
