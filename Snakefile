@@ -696,10 +696,14 @@ def get_windows(wildcards):
         window_type = 'cosine'
     elif 'gaussian' in wildcards.model_name or wildcards.model_name.startswith('Obs'):
         window_type = 'gaussian'
+    scaling = wildcards.scaling
+    # make sure that scaling is 0-padded, if appropriate. e.g., 0.01, not .01
+    if scaling[0] == '.':
+        scaling = '0' + scaling
     if wildcards.model_name.startswith("RGC"):
         # RGC model only needs a single scale of PoolingWindows.
         size = ','.join([str(i) for i in im_shape])
-        return window_template.format(scaling=wildcards.scaling, size=size,
+        return window_template.format(scaling=scaling, size=size,
                                       max_ecc=max_ecc, t_width=t_width,
                                       min_ecc=min_ecc, window_type=window_type,)
     elif wildcards.model_name.startswith('V1') or wildcards.model_name.startswith('Obs'):
@@ -711,7 +715,7 @@ def get_windows(wildcards):
             num_scales = 4
         for i in range(num_scales):
             output_size = ','.join([str(int(np.ceil(j / 2**i))) for j in im_shape])
-            windows.append(window_template.format(scaling=wildcards.scaling, size=output_size,
+            windows.append(window_template.format(scaling=scaling, size=output_size,
                                                   max_ecc=max_ecc,
                                                   min_ecc=min_ecc,
                                                   t_width=t_width, window_type=window_type))
