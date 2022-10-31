@@ -1957,11 +1957,6 @@ rule window_example_figure:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 style, _ = fov.style.plotting_style(wildcards.context)
-                # change sizes of things so they look comparable to the regular
-                # version when put into the comparison plot
-                if 'downsample' in wildcards.comp:
-                    downsample_n = float(re.findall('downsample-([0-9]+)', wildcards.comp)[0])
-                    style['lines.linewidth'] = style['lines.linewidth'] / downsample_n
                 plt.style.use(style)
                 image = fov.utils.convert_im_to_float(imageio.imread(input[0]))
                 window = torch.load(input[1])

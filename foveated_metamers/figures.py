@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 import pyrtools as pt
 import plenoptic as po
-from skimage import measure
+from skimage import transform
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -279,9 +279,14 @@ def pooling_window_example(window, image, windows_scale=0, linewidths=5,
                            target_amp=None, **kwargs):
     """Plot example window on image.
 
-    This plots a single window, as close to the target_eccentricity as
-    possible, at half-max amplitude, to visualize the size of the pooling
-    windows
+    This plots a single window at half-max amplitude, to visualize the size of
+    the pooling windows.
+
+    If image.shape < window.shape, we'll use skimage.transform.pyramid_expand
+    to upsample image by factors of 2 until that's no longer true. If
+    image.shape > window.shape, we'll use skimage.transform.pyramid_reduce to
+    downsample image by factors of 2 until that's no longer true. Thus, they
+    should either be the same size or off by a power of 2.
 
     Parameters
     ----------
@@ -292,9 +297,6 @@ def pooling_window_example(window, image, windows_scale=0, linewidths=5,
         The image to plot the window on. If a np.ndarray, then this should
         already lie between 0 and 1. If a str, must be the path to the image
         file,and we'll load it in.
-    windows_scale : int, optional
-        The scale of the windows to plot. If greater than 0, we down-sampled
-        image by a factor of 2 that many times so they plot correctly.
     linewidths : float, optional
         line width for the window contour.
     target_amp : float or None, optional
@@ -310,9 +312,12 @@ def pooling_window_example(window, image, windows_scale=0, linewidths=5,
     """
     if isinstance(image, str):
         image = utils.convert_im_to_float(imageio.imread(image))
-    # need to down-sample image for these scales
-    for i in range(windows_scale):
-        image = measure.block_reduce(image, (2, 2))
+    if image.shape < window.shape:
+        while image.shape < window.shape:
+            image = transform.pyramid_expand(image)
+    else:
+        while image.shape > window.shape:
+            image = transform.pyramid_reduce(image)
     fig = pt.imshow(image, title=None, **kwargs)
     if target_amp is None:
         target_amp = window.max() / 2
