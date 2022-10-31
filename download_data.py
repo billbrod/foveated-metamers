@@ -185,6 +185,8 @@ def main(target_dataset, skip_confirmation=False):
         os.makedirs(met_dir, exist_ok=True)
         ref_dir = op.join(data_dir, 'ref_images')
         os.makedirs(ref_dir, exist_ok=True)
+        norm_stats_dir = op.join(data_dir, 'norm_stats')
+        os.makedirs(norm_stats_dir, exist_ok=True)
         freeman_checksum = False
         while not freeman_checksum:
             subprocess.call(["curl", "-O", "-J", "-L", OSF_URL['freeman2011_check_input']])
@@ -193,6 +195,7 @@ def main(target_dataset, skip_confirmation=False):
         subprocess.call(["mv", "freeman_check_inputs/metamer1.png", f"{met_dir}/"])
         subprocess.call(["mv", "freeman_check_inputs/metamer2.png", f"{met_dir}/"])
         subprocess.call(["mv", "freeman_check_inputs/fountain_size-512,512.png", f"{ref_dir}/"])
+        subprocess.call(["mv", "freeman_check_inputs/V1_texture_norm_stats.pt", f"{norm_stats_dir}/"])
         subprocess.call(["rm", "freeman_check_inputs.tar.gz"])
         subprocess.call(["rmdir", "freeman_check_inputs"])
     if 'freeman2011_check_output' in target_dataset:
