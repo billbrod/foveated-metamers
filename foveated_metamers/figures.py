@@ -2510,7 +2510,35 @@ def write_create_bitmap_resolution(path, res=300):
     return orig
 
 
-def get_image_ids(path):
+def grab_old_data_dir(path, current_data_dir):
+    """If images were linked with old data dir, grab it.
+
+    Parameters
+    ----------
+    path : str
+        Path of one linked image (we assume all were embedded with same data
+        dir)
+    current_data_dir : str
+        Path of current data dir, to check
+
+    Returns
+    -------
+    data_dir : str
+        Path of old data dir (which we can then use in a sed or replace call)
+
+    """
+    i = 0
+    while not op.exists(op.join(current_data_dir, *path.split(op.sep)[i:])):
+        i += 1
+    old_dd = op.join(*path.split(op.sep)[:i])
+    # op.join will throw away the / at the beginning, if it's there, so make
+    # sure it has it
+    if path[0] == '/' and old_dd[0] != '/':
+        old_dd = '/' + old_dd
+    return old_dd
+
+
+def get_image_ids(path, current_data_dir):
     """Get inkscape ids of images that are linked (vs embedded).
 
     We only check the images, and we return the ids of all that contain an
@@ -2520,6 +2548,8 @@ def get_image_ids(path):
     ----------
     path : str
         Path to the svg.
+    current_data_dir : str
+        Path of current data dir, to check
 
     Returns
     -------
@@ -2527,6 +2557,9 @@ def get_image_ids(path):
         List of strings containing the ids of these images. These can then be
         used with the inskcape command line, like so: `f'inkscape -g
         --action="select-by-id:{ids[0]};EditDelete;" {path}'`
+    old_data_dir : str
+        If it looks images were linked with a different data dir, we return its
+        path
 
     """
     with open(path) as f:
@@ -2537,10 +2570,16 @@ def get_image_ids(path):
     # then we grab the xlink:href field for each image
     images = {k: v for k, v in flattened_svg.items() if 'image' in k
               and '@xlink:href' in k}
+    old_data_dir = None
+    if all([~op.exists(v) for v in images.values()]):
+        # if none of the paths exist, then it's likely this was done with an
+        # old data dir. just grab the first image to test against
+        old_data_dir = grab_old_data_dir(list(images.values())[0],
+                                         current_data_dir)
     # and grab only the ids of those images whose xlink:href exists
     ids = [flattened_svg[(*k[:-1], '@id')] for k, v in images.items()
-           if op.exists(v)]
-    return ids
+           if op.exists(v.replace(old_data_dir, current_data_dir))]
+    return ids, old_data_dir
 
 
 def mse_heatmap(df, mse_val, x='trial_structure', y='scaling',

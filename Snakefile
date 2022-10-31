@@ -3736,13 +3736,19 @@ rule embed_bitmaps_into_figure:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 orig_dpi = fov.figures.write_create_bitmap_resolution(input[0], wildcards.bitmap_dpi)
-                ids = fov.figures.get_image_ids(input[1])
+                ids, old_dd = fov.figures.get_image_ids(input[1], config['DATA_DIR'])
+                shutil.copy(input[1], output[0])
+                # if images were linked on a diferent machine, the data
+                # directory is probably different, and this should fix it (see
+                # fov.figures.grab_old_data_dir for how we figure out the old
+                # data dir)
+                if old_dd is not None:
+                    subprocess.call(['sed', '-i', f's|{old_dd}|{config["DATA_DIR"]}|g', output[0]])
                 select_ids = ''.join([f'select-by-id:{id};' for id in ids])
                 action_str = select_ids + "SelectionCreateBitmap;select-clear;" + select_ids + "EditDelete;"
-                action_str += "FileSave;FileQuit;"
-                shutil.copy(input[1], output[0])
+                action_str += "FileSave;"
                 print(f"inkscape action string:\n{action_str}")
-                subprocess.call(['inkscape', '-g', f'--actions={action_str}', output[0]])
+                subprocess.call(['inkscape', '--batch-process', f'--actions={action_str}', output[0]])
                 # the inkscape call above embeds the bitmaps but also
                 # apparently creates a separate png file containing the
                 # embedded bitmaps, which we want to remove. commas get
