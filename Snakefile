@@ -4904,7 +4904,7 @@ rule appendix_figures:
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "radial_se_comp-ref_ecc-None.svg"),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'all_comps_summary_scaling-extended_partially-pooled_focus-outlier.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'all_comps_summary_scaling-extended_partially-pooled_focus-subject_one-ax.svg'),
-        # op.join(config['DATA_DIR'], 'figures', 'paper', "mcmc_compare_ic-loo.svg"),
+        op.join(config['DATA_DIR'], 'figures', 'paper', "mcmc_compare_ic-loo.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', 'V1_norm_s6_gaussian', 'task-split_comp-ref_mcmc_compare_psychophysical-grouplevel_log_yax-double.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'V1_norm_s6_gaussian_comp-ref_performance-all.svg'),
         op.join(config['DATA_DIR'], 'figures', 'paper', 'RGC_norm_gaussian', 'task-split_comp-ref_mcmc_compare_psychophysical-grouplevel_log_yax-double.svg'),
