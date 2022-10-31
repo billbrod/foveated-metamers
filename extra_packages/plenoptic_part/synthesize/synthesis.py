@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 from ..tools.display import rescale_ylim, plot_representation, update_plot
 from matplotlib import animation
 from tqdm import tqdm
+import dill
 from ..tools.clamps import RangeClamper
 
 
@@ -1103,7 +1104,7 @@ class Synthesis(metaclass=abc.ABCMeta):
             if isinstance(attr, torch.Tensor):
                 attr = attr.detach()
             save_dict[k] = attr
-        torch.save(save_dict, file_path)
+        torch.save(save_dict, file_path, pickle_module=dill)
 
     @classmethod
     @abc.abstractmethod
@@ -1189,7 +1190,7 @@ class Synthesis(metaclass=abc.ABCMeta):
                                                  cache_dir="/home/user/Desktop/metamers/windows_cache")
 
         """
-        tmp_dict = torch.load(file_path, map_location=map_location)
+        tmp_dict = torch.load(file_path, map_location=map_location, pickle_module=dill)
         device = torch.device(map_location)
         if not isinstance(model_attr_name, list):
             model_attr_name = [model_attr_name]
