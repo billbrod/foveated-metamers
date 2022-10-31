@@ -1957,11 +1957,6 @@ rule window_example_figure:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 style, _ = fov.style.plotting_style(wildcards.context)
-                # change sizes of things so they look comparable to the regular
-                # version when put into the comparison plot
-                if 'downsample' in wildcards.comp:
-                    downsample_n = float(re.findall('downsample-([0-9]+)', wildcards.comp)[0])
-                    style['lines.linewidth'] = style['lines.linewidth'] / downsample_n
                 plt.style.use(style)
                 image = fov.utils.convert_im_to_float(imageio.imread(input[0]))
                 window = torch.load(input[1])
@@ -3741,13 +3736,19 @@ rule embed_bitmaps_into_figure:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 orig_dpi = fov.figures.write_create_bitmap_resolution(input[0], wildcards.bitmap_dpi)
-                ids = fov.figures.get_image_ids(input[1])
+                ids, old_dd = fov.figures.get_image_ids(input[1], config['DATA_DIR'])
+                shutil.copy(input[1], output[0])
+                # if images were linked on a diferent machine, the data
+                # directory is probably different, and this should fix it (see
+                # fov.figures.grab_old_data_dir for how we figure out the old
+                # data dir)
+                if old_dd is not None:
+                    subprocess.call(['sed', '-i', f's|{old_dd}|{config["DATA_DIR"]}|g', output[0]])
                 select_ids = ''.join([f'select-by-id:{id};' for id in ids])
                 action_str = select_ids + "SelectionCreateBitmap;select-clear;" + select_ids + "EditDelete;"
-                action_str += "FileSave;FileQuit;"
-                shutil.copy(input[1], output[0])
+                action_str += "FileSave;"
                 print(f"inkscape action string:\n{action_str}")
-                subprocess.call(['inkscape', '-g', f'--actions={action_str}', output[0]])
+                subprocess.call(['inkscape', '--batch-process', f'--actions={action_str}', output[0]])
                 # the inkscape call above embeds the bitmaps but also
                 # apparently creates a separate png file containing the
                 # embedded bitmaps, which we want to remove. commas get
@@ -4911,7 +4912,7 @@ rule appendix_figures:
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "radial_se_comp-ref_ecc-None.svg"),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'all_comps_summary_scaling-extended_partially-pooled_focus-outlier.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'all_comps_summary_scaling-extended_partially-pooled_focus-subject_one-ax.svg'),
-        # op.join(config['DATA_DIR'], 'figures', 'paper', "mcmc_compare_ic-loo.svg"),
+        op.join(config['DATA_DIR'], 'figures', 'paper', "mcmc_compare_ic-loo.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', 'V1_norm_s6_gaussian', 'task-split_comp-ref_mcmc_compare_psychophysical-grouplevel_log_yax-double.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'V1_norm_s6_gaussian_comp-ref_performance-all.svg'),
         op.join(config['DATA_DIR'], 'figures', 'paper', 'RGC_norm_gaussian', 'task-split_comp-ref_mcmc_compare_psychophysical-grouplevel_log_yax-double.svg'),

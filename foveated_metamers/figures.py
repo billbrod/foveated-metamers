@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 import pyrtools as pt
 import plenoptic as po
-from skimage import measure
+from skimage import transform
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -279,9 +279,14 @@ def pooling_window_example(window, image, windows_scale=0, linewidths=5,
                            target_amp=None, **kwargs):
     """Plot example window on image.
 
-    This plots a single window, as close to the target_eccentricity as
-    possible, at half-max amplitude, to visualize the size of the pooling
-    windows
+    This plots a single window at half-max amplitude, to visualize the size of
+    the pooling windows.
+
+    If image.shape < window.shape, we'll use skimage.transform.pyramid_expand
+    to upsample image by factors of 2 until that's no longer true. If
+    image.shape > window.shape, we'll use skimage.transform.pyramid_reduce to
+    downsample image by factors of 2 until that's no longer true. Thus, they
+    should either be the same size or off by a power of 2.
 
     Parameters
     ----------
@@ -292,9 +297,6 @@ def pooling_window_example(window, image, windows_scale=0, linewidths=5,
         The image to plot the window on. If a np.ndarray, then this should
         already lie between 0 and 1. If a str, must be the path to the image
         file,and we'll load it in.
-    windows_scale : int, optional
-        The scale of the windows to plot. If greater than 0, we down-sampled
-        image by a factor of 2 that many times so they plot correctly.
     linewidths : float, optional
         line width for the window contour.
     target_amp : float or None, optional
@@ -310,9 +312,12 @@ def pooling_window_example(window, image, windows_scale=0, linewidths=5,
     """
     if isinstance(image, str):
         image = utils.convert_im_to_float(imageio.imread(image))
-    # need to down-sample image for these scales
-    for i in range(windows_scale):
-        image = measure.block_reduce(image, (2, 2))
+    if image.shape < window.shape:
+        while image.shape < window.shape:
+            image = transform.pyramid_expand(image)
+    else:
+        while image.shape > window.shape:
+            image = transform.pyramid_reduce(image)
     fig = pt.imshow(image, title=None, **kwargs)
     if target_amp is None:
         target_amp = window.max() / 2
@@ -2505,7 +2510,35 @@ def write_create_bitmap_resolution(path, res=300):
     return orig
 
 
-def get_image_ids(path):
+def grab_old_data_dir(path, current_data_dir):
+    """If images were linked with old data dir, grab it.
+
+    Parameters
+    ----------
+    path : str
+        Path of one linked image (we assume all were embedded with same data
+        dir)
+    current_data_dir : str
+        Path of current data dir, to check
+
+    Returns
+    -------
+    data_dir : str
+        Path of old data dir (which we can then use in a sed or replace call)
+
+    """
+    i = 0
+    while not op.exists(op.join(current_data_dir, *path.split(op.sep)[i:])):
+        i += 1
+    old_dd = op.join(*path.split(op.sep)[:i])
+    # op.join will throw away the / at the beginning, if it's there, so make
+    # sure it has it
+    if path[0] == '/' and old_dd[0] != '/':
+        old_dd = '/' + old_dd
+    return old_dd
+
+
+def get_image_ids(path, current_data_dir):
     """Get inkscape ids of images that are linked (vs embedded).
 
     We only check the images, and we return the ids of all that contain an
@@ -2515,6 +2548,8 @@ def get_image_ids(path):
     ----------
     path : str
         Path to the svg.
+    current_data_dir : str
+        Path of current data dir, to check
 
     Returns
     -------
@@ -2522,6 +2557,9 @@ def get_image_ids(path):
         List of strings containing the ids of these images. These can then be
         used with the inskcape command line, like so: `f'inkscape -g
         --action="select-by-id:{ids[0]};EditDelete;" {path}'`
+    old_data_dir : str
+        If it looks images were linked with a different data dir, we return its
+        path
 
     """
     with open(path) as f:
@@ -2532,10 +2570,16 @@ def get_image_ids(path):
     # then we grab the xlink:href field for each image
     images = {k: v for k, v in flattened_svg.items() if 'image' in k
               and '@xlink:href' in k}
+    old_data_dir = None
+    if all([~op.exists(v) for v in images.values()]):
+        # if none of the paths exist, then it's likely this was done with an
+        # old data dir. just grab the first image to test against
+        old_data_dir = grab_old_data_dir(list(images.values())[0],
+                                         current_data_dir)
     # and grab only the ids of those images whose xlink:href exists
     ids = [flattened_svg[(*k[:-1], '@id')] for k, v in images.items()
-           if op.exists(v)]
-    return ids
+           if op.exists(v.replace(old_data_dir, current_data_dir))]
+    return ids, old_data_dir
 
 
 def mse_heatmap(df, mse_val, x='trial_structure', y='scaling',
