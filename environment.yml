@@ -26,6 +26,7 @@ dependencies:
   - pytest>=5.0.1
   - gputil>=1.4.0
   - opt_einsum>=3.3
+  - dill
   - pip:
       - pyrtools>=1.0
       - git+https://github.com/LabForComputationalVision/plenoptic.git@main
