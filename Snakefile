@@ -4615,7 +4615,14 @@ rule rearrange_figure_input_for_osf:
          op.join(config['DATA_DIR'], 'metamers', 'V1_norm_s6_gaussian', 'tiles_downsample-2_range-.05,.95_size-2048,2600', 'scaling-1.5', 'opt-Adam-SWA_s-50_f-5_loss-mse_range-0,1_beta-0.5', 'fr-0_lc-1_lt-1e-04_li-50_cf-together_clamp-False', 'seed-1011401_init-white_lr-0.01_e0-0.500_em-26.800_iter-15000_thresh-1e-09_gpu-1_metamer.npy'),
          op.join(config['DATA_DIR'], 'metamers', 'V1_norm_s6_gaussian', 'tiles_range-.05,.95_size-2048,2600', 'scaling-1.5', 'opt-Adam-SWA_s-50_f-5_loss-mse_range-0,1_beta-0.5', 'fr-0_lc-1_lt-1e-04_li-50_cf-together_clamp-False', 'seed-1011400_init-white_lr-0.01_e0-0.500_em-26.800_iter-15000_thresh-1e-09_gpu-1_metamer.npy'),
          op.join(config['DATA_DIR'], 'metamers', 'V1_norm_s6_gaussian', 'tiles_range-.05,.95_size-2048,2600', 'scaling-1.5', 'opt-Adam-SWA_s-50_f-5_loss-mse_range-0,1_beta-0.5', 'fr-0_lc-1_lt-1e-04_li-50_cf-together_clamp-False', 'seed-1011401_init-white_lr-0.01_e0-0.500_em-26.800_iter-15000_thresh-1e-09_gpu-1_metamer.npy'),
-         op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.csv'),]
+         op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.csv'),
+         op.join(config['DATA_DIR'], 'windows_cache', 'scaling-0.01_size-2048,2600_e0-0.500_em-26.8_w-1.0_gaussian_single.pt'),
+         op.join(config['DATA_DIR'], 'windows_cache', 'scaling-0.058_size-2048,2600_e0-0.500_em-26.8_w-1.0_gaussian_single.pt'),
+         op.join(config['DATA_DIR'], 'windows_cache', 'scaling-0.063_size-2048,2600_e0-0.500_em-26.8_w-1.0_gaussian_single.pt'),
+         op.join(config['DATA_DIR'], 'windows_cache', 'scaling-0.23_size-2048,2600_e0-0.500_em-26.8_w-1.0_gaussian_single.pt'),
+         op.join(config['DATA_DIR'], 'windows_cache', 'scaling-0.27_size-2048,2600_e0-0.500_em-26.8_w-1.0_gaussian_single.pt'),
+         op.join(config['DATA_DIR'], 'windows_cache', 'scaling-1.5_size-2048,2600_e0-0.500_em-26.8_w-1.0_gaussian_single.pt'),]
+
     output:
         op.join(config['DATA_DIR'], 'to_share', 'figure_input.tar.gz')
     run:
