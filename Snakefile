@@ -4254,7 +4254,7 @@ rule number_of_stats_txt:
                 rgc_df = df.query('model=="Luminance model"')
                 v1_df = df.query('model=="Energy model"')
                 result = (
-                    f'Luminance model number of statistics go from {rgc_df.num_stats.max()} for scaling {rgc_df.scaling.min()}% '
+                    f'Luminance model number of statistics go from {rgc_df.num_stats.max()} for scaling {rgc_df.scaling.min()} '
                     f'({100 *rgc_df.num_stats.max() / n_pix:.03f}%)\n'
                     f'   to {rgc_df.num_stats.min()} for scaling {rgc_df.scaling.max()} ({100 * rgc_df.num_stats.min() / n_pix:.03f}%)\n'
                     f'   this is fit with the equation {popts[0][0]:.02f} * scaling ^ -2 + {popts[0][1]:.02f} * scaling ^ -1\n'
