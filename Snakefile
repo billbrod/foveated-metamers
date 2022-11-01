@@ -698,7 +698,7 @@ def get_windows(wildcards):
         window_type = 'gaussian'
     scaling = wildcards.scaling
     # make sure that scaling is 0-padded, if appropriate. e.g., 0.01, not .01
-    if scaling[0] == '.':
+    if isinstance(scaling, str) and scaling[0] == '.':
         scaling = '0' + scaling
     if wildcards.model_name.startswith("RGC"):
         # RGC model only needs a single scale of PoolingWindows.
@@ -4184,9 +4184,9 @@ def get_all_windows(wildcards):
             wildcards.scaling = sc
             wdw = get_windows(wildcards)
             if isinstance(wdw, list):
-                windows.extend(get_windows(wildcards))
+                windows.extend(wdw)
             else:
-                windows.append(get_windows(wildcards))
+                windows.append(wdw)
     return windows
 
 

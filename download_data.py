@@ -175,7 +175,8 @@ def main(target_dataset, skip_confirmation=False):
             subprocess.call(["curl", "-O", "-J", "-L", OSF_URL['figure_input']])
             fig_checksum = check_checksum('figure_input.tar.gz', checksums['figure_input.tar.gz'])
         subprocess.call(["tar", "xf", "figure_input.tar.gz"])
-        for subdir in ['metamers', 'mad_images', 'synth_match_mse', 'statistics']:
+        for subdir in ['metamers', 'mad_images', 'synth_match_mse', 'statistics',
+                       'windows_cache']:
             subprocess.call(["rsync", "-avPLuz", subdir, f"{data_dir}/"])
             subprocess.call(["rm", "-r", f"{subdir}/"])
         subprocess.call(["rm", "figure_input.tar.gz"])
@@ -221,12 +222,16 @@ def main(target_dataset, skip_confirmation=False):
     paths_to_touch = []
     if op.exists(op.join(data_dir, 'metamers')):
         paths_to_touch.append('metamers')
+    if op.exists(op.join(data_dir, 'stimuli')):
+        paths_to_touch.append('stimuli')
     if op.exists(op.join(data_dir, 'synth_match_mse')):
         paths_to_touch.append('synth_match_mse')
     if op.exists(op.join(data_dir, 'mad_images')):
         paths_to_touch.append('mad_images')
-    if op.exists(op.join(data_dir, 'stimuli')):
-        paths_to_touch.append('stimuli')
+    if op.exists(op.join(data_dir, 'behavioral')):
+        paths_to_touch.append('behavioral')
+    if op.exists(op.join(data_dir, 'mcmc')):
+        paths_to_touch.append('mcmc')
     # The command we call just recursively touches everything in the specified
     # directory
     for path in paths_to_touch:
