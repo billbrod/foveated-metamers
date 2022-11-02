@@ -137,4 +137,4 @@ jobs:
         run: |
           source activate metamers
           # test one that has a single subject, one with multiple
-          snakemake -j 5 -prk data/metamers/mcmc/V1_norm_s6_gaussian/task-split_comp-ref/task-split_comp-ref_mcmc_partially-pooled_step-1_prob-.8_depth-10_c-2_d-10_dw-10_s-0.nc data/metamers/mcmc/V1_norm_s6_gaussian/task-split_comp-ref-natural/task-split_comp-ref_mcmc_partially-pooled_step-1_prob-.8_depth-10_c-2_d-10_dw-10_s-0.nc
+          snakemake -j 5 -prk data/metamers/mcmc/V1_norm_s6_gaussian/task-split_comp-ref/task-split_comp-ref_mcmc_partially-pooled_step-1_prob-.8_depth-10_c-2_d-10_dw-10_s-0.nc data/metamers/mcmc/V1_norm_s6_gaussian/task-split_comp-ref-natural/task-split_comp-ref-natural_mcmc_partially-pooled_step-1_prob-.8_depth-10_c-2_d-10_dw-10_s-0.nc
