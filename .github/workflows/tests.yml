@@ -130,6 +130,7 @@ jobs:
           mkdir -p data/metamers
       - name: Download data
         run: |
+          source activate metamers
           python download_data.py behavioral_data -s
       - name: run mcmc test
         run: |
