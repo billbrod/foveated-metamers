@@ -81,7 +81,7 @@ def main(target_dataset, skip_confirmation=False):
                'freeman2011_check_input', 'freeman2011_check_output']
     check_dirs = ['ref_images_preproc', 'stimuli', 'behavioral', 'mcmc', 'statistics',
                   'freeman_check/Freeman2011_metamers', 'freeman_check/windows']
-    sizes = ['176MB', '12GB', '2.6MB', '12GB', '550MB', '1MB', '60MB']
+    sizes = ['176MB', '12GB', '2.6MB', '12GB', '580MB', '1MB', '60MB']
     if not skip_confirmation:
         for tar, check, size in zip(targets, check_dirs, sizes):
             yesno = 'y'
