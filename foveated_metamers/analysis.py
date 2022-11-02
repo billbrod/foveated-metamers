@@ -263,8 +263,13 @@ def create_experiment_df_split(df, presentation_idx, dep_variables=['scaling']):
             # then it's a string, reference
             return x
     expt_df['first_image'] = expt_df.image_left_1.map(ref_or_not)
-    expt_df['min_ecc'] = df.min_ecc.dropna().unique()[0]
-    expt_df['max_ecc'] = df.max_ecc.dropna().unique()[0]
+    try:
+        expt_df['min_ecc'] = df.min_ecc.dropna().unique()[0]
+        expt_df['max_ecc'] = df.max_ecc.dropna().unique()[0]
+    except AttributeError:
+        # then expt_df didn't have a min/max ecc col, and this is from the
+        # training noise task, just grabbing the correct responses.
+        pass
     return expt_df
 
 

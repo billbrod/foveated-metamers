@@ -1019,7 +1019,14 @@ def get_training_metamers(wildcards):
                        config[wildcards.model_name.split('_')[0]]['met_v_met_scaling'])
         scaling = [all_scaling[-8], all_scaling[-1]]
         seed_n = [0, 1]
-    mets = utils.generate_metamer_paths(scaling=scaling, image_name=IMAGES[:2],
+    # we don't generate all the metamers for this comparison, so specify
+    # exactly which images to grab
+    if wildcards.model_name.startswith('RGC') and wildcards.comp == 'met':
+        images = ['gnarled_range-.05,.95_size-2048,2600',
+                  'boats_range-.05,.95_size-2048,2600']
+    else:
+        images = IMAGES[:2]
+    mets = utils.generate_metamer_paths(scaling=scaling, image_name=images,
                                         seed_n=seed_n, **wildcards)
     return [m.replace('metamer.png', 'metamer.npy') for m in mets]
                     
@@ -4546,6 +4553,33 @@ rule rearrange_stimuli_for_osf:
         shutil.rmtree(output_dir)
 
 
+rule rearrange_expt_training_for_osf:
+    input:
+        [[op.join(config['DATA_DIR'], 'stimuli', 'training_{model}', 'stimuli_comp-{comp}.npy').format(model=m, comp=c),
+          op.join(config['DATA_DIR'], 'stimuli', 'training_{model}', 'stimuli_description_comp-{comp}.csv').format(model=m, comp=c),
+          op.join(config['DATA_DIR'], 'stimuli', 'training_{model}', 'task-split_comp-{comp}', 'sub-training', 'sub-training_task-split_comp-{comp}_idx_sess-00_run-00.npy').format(model=m, comp=c),
+          op.join(config['DATA_DIR'], 'stimuli', 'training_{model}', 'task-split_comp-{comp}', 'sub-training', 'sub-training_task-split_comp-{comp}_sess-00_run-00_correct-responses.npy').format(model=m, comp=c)]
+         for m in ['noise'] + MODELS for c in {'noise': ['ref']}.get(m, ['ref', 'met'])]
+    output:
+        op.join(config['DATA_DIR'], 'to_share', 'experiment_training.tar.gz')
+    run:
+        import shutil
+        import tarfile
+        import os
+        # this is just a temporary directory that we'll delete once we've
+        # created the .tar.gz file
+        output_dir = output[0].replace('.tar.gz', '') + os.sep
+        os.makedirs(output_dir)
+        for inp in input:
+            outp = inp.replace(config["DATA_DIR"], output_dir)
+            outp_dir = op.split(outp)[0]
+            os.makedirs(outp_dir, exist_ok=True)
+            os.link(inp, outp)
+        with tarfile.open(output[0], 'w:gz') as tar:
+            tar.add(output_dir, arcname=op.split(output_dir)[-1])
+        shutil.rmtree(output_dir)
+
+
 rule rearrange_behavioral_data_for_osf:
     input:
         [op.join(config['DATA_DIR'], 'behavioral', m, 'task-split_comp-{comp}', 'task-split_comp-{comp}_data.csv').format(comp=c)
@@ -4725,7 +4759,7 @@ rule create_checksum_dict:
           'mcmc_luminance_ref_partially-pooled.nc', 'mcmc_luminance_met_partially-pooled.nc', 'mcmc_energy_ref_partially-pooled.nc', 'mcmc_energy_ref-nat_partially-pooled.nc',
           'mcmc_energy_met_partially-pooled.nc', 'mcmc_energy_met-nat_partially-pooled.nc', 'mcmc_energy_met_downsample_partially-pooled.nc',
           'stimuli_luminance_ref.tar.gz', 'stimuli_luminance_met.tar.gz', 'stimuli_energy_ref.tar.gz', 'stimuli_energy_ref-nat.tar.gz',
-          'stimuli_energy_met.tar.gz', 'stimuli_energy_met-nat.tar.gz', 'stimuli_energy_met_downsample.tar.gz']]
+          'stimuli_energy_met.tar.gz', 'stimuli_energy_met-nat.tar.gz', 'stimuli_energy_met_downsample.tar.gz', 'experiment_training.tar.gz']]
     output:
         op.join('data', 'checksums.json')
     run:

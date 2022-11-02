@@ -40,6 +40,7 @@ OSF_URL = {
     'figure_input': 'https://osf.io/hvrs2/download',
     'freeman2011_check_input': "https://osf.io/e2zn8/download",
     'freeman2011_check_output': "https://osf.io/wa2zu/download",
+    'experiment_training': "https://osf.io/xy4ku/download",
 }
 
 
@@ -78,10 +79,10 @@ def main(target_dataset, skip_confirmation=False):
     os.makedirs(data_dir, exist_ok=True)
     print(f"Using {data_dir} as data root directory.")
     targets = ['synthesis_input', 'stimuli', 'behavioral_data', 'mcmc_fits', 'figure_input',
-               'freeman2011_check_input', 'freeman2011_check_output']
+               'freeman2011_check_input', 'freeman2011_check_output', 'experiment_training']
     check_dirs = ['ref_images_preproc', 'stimuli', 'behavioral', 'mcmc', 'statistics',
-                  'freeman_check/Freeman2011_metamers', 'freeman_check/windows']
-    sizes = ['176MB', '12GB', '2.6MB', '12GB', '580MB', '1MB', '60MB']
+                  'freeman_check/Freeman2011_metamers', 'freeman_check/windows', 'stimuli/training_noise']
+    sizes = ['176MB', '12GB', '2.6MB', '12GB', '580MB', '1MB', '60MB', '160MB']
     if not skip_confirmation:
         for tar, check, size in zip(targets, check_dirs, sizes):
             yesno = 'y'
@@ -217,6 +218,17 @@ def main(target_dataset, skip_confirmation=False):
         subprocess.call(["rm", "-r", "metamers/V1_norm_s4_gaussian"])
         subprocess.call(["rmdir", "metamers"])
         subprocess.call(["rm", "-r", "freeman_check"])
+    if 'experiment_training' in target_dataset:
+        print("Downloading experiment training files.")
+        training_checksum = False
+        while not training_checksum:
+            subprocess.call(["curl", "-O", "-J", "-L", OSF_URL['experiment_training']])
+            training_checksum = check_checksum('experiment_training.tar.gz',
+                                               checksums['experiment_training.tar.gz'])
+        subprocess.call(["tar", "xf", "experiment_training.tar.gz"])
+        subprocess.call(["rsync", "-avPLuz", 'stimuli', f"{data_dir}/"])
+        subprocess.call(["rm", "-r", "stimuli/"])
+        subprocess.call(["rm", "experiment_training.tar.gz"])
     # need to touch these files, in this order, to make sure that snakemake
     # doesn't get confused and thinks it needs to rerun things.
     paths_to_touch = []
@@ -248,7 +260,8 @@ if __name__ == '__main__':
                                                    'behavioral_data', 'mcmc_fits',
                                                    'figure_input',
                                                    'freeman2011_check_input',
-                                                   'freeman2011_check_output'],
+                                                   'freeman2011_check_output',
+                                                   'experiment_training'],
                         help="Which dataset to download, see project README for details.",
                         nargs='+')
     parser.add_argument('--skip-confirmation', '-s', action='store_true',
