@@ -103,3 +103,36 @@ jobs:
         run: |
           source activate metamers
           jupyter execute notebooks/Freeman_Check.ipynb --kernel_name=python3
+
+  test_mcmc:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Setup conda
+        uses: s-weigand/setup-conda@v1.1.1
+        with:
+          update-conda: true
+          python-version: 3.7
+          conda-channels: anaconda, conda-forge, bioconda
+      - name: Create environment
+        run: |
+          conda install -n base mamba
+          conda clean --all -y
+          mamba env create -f environment.yml
+      - name: modify config.yml
+        run: |
+          sed -i 's|DATA_DIR:.*|DATA_DIR: "data/metamers"|g' config.yml
+          sed -i 's|TEXTURE_DIR:.*|TEXTURE_DIR: "data/textures-subset-for-testing"|g' config.yml
+          mkdir -p data/metamers
+      - name: Download data
+        run: |
+          python download_data.py behavioral_data -s
+      - name: run mcmc test
+        run: |
+          source activate metamers
+          # test one that has a single subject, one with multiple
+          snakemake -j 5 -prk data/mcmc/V1_norm_s6_gaussian/task-split_comp-ref/task-split_comp-ref_mcmc_partially-pooled_step-1_prob-.8_depth-10_c-2_d-10_dw-10_s-0.nc data/mcmc/V1_norm_s6_gaussian/task-split_comp-ref-natural/task-split_comp-ref_mcmc_partially-pooled_step-1_prob-.8_depth-10_c-2_d-10_dw-10_s-0.nc
