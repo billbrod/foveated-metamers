@@ -266,8 +266,8 @@ def partially_pooled_interactions_response_model(scaling, model='V1', observed_r
             with trials_plate, scaling_plate:
                 if obs_nans is not None:
                     # expand this out, for broadcasting purposes
-                    prob_corr_nan = jnp.expand_dims(prob_corr, 0).tile((observed_responses.shape[0],
-                                                                        *([1]*prob_corr.ndim)))
+                    prob_corr_nan = jnp.tile(jnp.expand_dims(prob_corr, 0), (observed_responses.shape[0],
+                                                                             *([1]*prob_corr.ndim)))
                     # sample the responses...
                     imputed_responses = numpyro.sample(
                         'responses_imputed',
@@ -474,8 +474,8 @@ def partially_pooled_response_model(scaling, model='V1', observed_responses=None
             with trials_plate, scaling_plate:
                 if obs_nans is not None:
                     # expand this out, for broadcasting purposes
-                    prob_corr_nan = jnp.expand_dims(prob_corr, 0).tile((observed_responses.shape[0],
-                                                                        *([1]*prob_corr.ndim)))
+                    prob_corr_nan = jnp.tile(jnp.expand_dims(prob_corr, 0), (observed_responses.shape[0],
+                                                                             *([1]*prob_corr.ndim)))
                     # sample the responses...
                     imputed_responses = numpyro.sample(
                         'responses_imputed',
@@ -651,8 +651,8 @@ def unpooled_response_model(scaling, model='V1', observed_responses=None):
             with trials_plate, scaling_plate:
                 if obs_nans is not None:
                     # expand this out, for broadcasting purposes
-                    prob_corr_nan = jnp.expand_dims(prob_corr, 0).tile((observed_responses.shape[0],
-                                                                        *([1]*prob_corr.ndim)))
+                    prob_corr_nan = jnp.tile(jnp.expand_dims(prob_corr, 0), (observed_responses.shape[0],
+                                                                             *([1]*prob_corr.ndim)))
                     # sample the responses...
                     imputed_responses = numpyro.sample(
                         'responses_imputed',
@@ -889,7 +889,7 @@ def _arrange_vars(dataset, extend_scaling=False):
     # and then repeated to match the shape of observed_responses after that
     scaling = jnp.expand_dims(scaling, tuple(-(i+1) for i in
                                              range(observed_responses.ndim-2)))
-    scaling = scaling.tile((1, *observed_responses.shape[2:]))
+    scaling = jnp.tile(scaling, (1, *observed_responses.shape[2:]))
     return scaling, observed_responses
 
 
