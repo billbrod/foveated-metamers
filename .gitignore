@@ -107,3 +107,4 @@ venv.bak/
 
 .snakemake
 .osfcli.config
+reports/paper_figures

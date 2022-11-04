@@ -4873,49 +4873,9 @@ rule combine_browser_metadata:
             json.dump(metadata, f)
 
 
-rule main_paper_figures_no_embed:
-    input:
-        op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_human.svg"),
-        op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_models.svg"),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'model_schematic_halfwidth_ivy.svg'),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_ivy_scaling-.01,.058,.063,.27_cutout.svg'),
-        op.join(config['DATA_DIR'], 'figures', 'paper', "ref_images.svg"),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_scaling-extended_partially-pooled_log-ci_comp-base.svg"),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_gnarled_scaling-1.5,1.5,1.5,1.5_cutout.svg'),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'performance_scaling-extended_metamer_comparison_nyc,llama_scaling-.063,.27_nocutout_small.svg'),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_scaling-extended_partially-pooled_log-ci_sub-00_comp-natural_line-scaling-0.27.svg"),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_portrait_symmetric_scaling-.27,.27,.27,.27,.27_cutout_V1_natural-seed.svg'),
-        op.join(config['DATA_DIR'], 'statistics', 'critical_scaling.txt'),
-        op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.txt'),
-        op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_ideal.svg"),
-        op.join(config['DATA_DIR'], 'figures', 'paper', "critical_scaling_norm-False.svg"),
-        op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_results.svg"),
-        op.join(config['DATA_DIR'], 'figures', 'paper', 'psychophys_expt2_with_table.svg'),
-        op.join(config['DATA_DIR'], 'figures', 'paper', "max_dprime_asymp_perf.svg"),
-
-
-rule appendix_figures_no_embed:
-    input:
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_llama_scaling-.23,.23,.23,.23,.23_cutout_RGC_natural-seed.svg'),
-        op.join(config['DATA_DIR'], 'figures', 'paper', 'Dacey1992_mcmc_line-nooffset_linear.svg'),
-        op.join(config['DATA_DIR'], 'figures', 'paper', "freeman_windows_comparison.svg"),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_scaling-extended_partially-pooled_log-ci_sub-00_comp-downsample.svg"),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_tiles_scaling-1.5,1.5,1.5,1.5_cutout_downsample.svg'),
-        op.join(config['DATA_DIR'], 'figures', 'paper', 'mse_comparison_bike_scaling-0.01_nocutout_with_target.svg'),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "radial_se_comp-ref_ecc-None.svg"),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'all_comps_summary_scaling-extended_partially-pooled_focus-outlier.svg'),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'all_comps_summary_scaling-extended_partially-pooled_focus-subject_one-ax.svg'),
-        op.join(config['DATA_DIR'], 'figures', 'paper', "mcmc_compare_ic-loo.svg"),
-        op.join(config['DATA_DIR'], 'figures', 'paper', 'V1_norm_s6_gaussian', 'task-split_comp-ref_mcmc_compare_psychophysical-grouplevel_log_yax-double.svg'),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'V1_norm_s6_gaussian_comp-ref_performance-all.svg'),
-        op.join(config['DATA_DIR'], 'figures', 'paper', 'RGC_norm_gaussian', 'task-split_comp-ref_mcmc_compare_psychophysical-grouplevel_log_yax-double.svg'),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'RGC_norm_gaussian_comp-ref_performance-all.svg'),
-        op.join(config['DATA_DIR'], 'figures', 'paper', 'V1_norm_s6_gaussian', 'task-split_comp-met_mcmc_compare_psychophysical-grouplevel_log_yax-double.svg'),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'V1_norm_s6_gaussian_comp-met_performance-all.svg'),
-
-
-rule main_paper_figures:
-    input:
+def figure_paper_input(wildcards):
+    inputs = [
+        # main figures
         op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_human.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_models.svg"),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'model_schematic_halfwidth_ivy_dpi-300.svg'),
@@ -4933,10 +4893,7 @@ rule main_paper_figures:
         op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_results.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', 'psychophys_expt2_with_table.svg'),
         op.join(config['DATA_DIR'], 'figures', 'paper', "max_dprime_asymp_perf.svg"),
-
-
-rule appendix_figures:
-    input:
+        # appendix figures
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_llama_scaling-.23,.23,.23,.23,.23_cutout_RGC_natural-seed_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'figures', 'paper', 'Dacey1992_mcmc_line-nooffset_linear.svg'),
         op.join(config['DATA_DIR'], 'figures', 'paper', "freeman_windows_comparison.svg"),
@@ -4953,3 +4910,55 @@ rule appendix_figures:
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'RGC_norm_gaussian_comp-ref_performance-all.svg'),
         op.join(config['DATA_DIR'], 'figures', 'paper', 'V1_norm_s6_gaussian', 'task-split_comp-met_mcmc_compare_psychophysical-grouplevel_log_yax-double.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'V1_norm_s6_gaussian_comp-met_performance-all.svg'),
+        # txt files used to get numbers in the paper
+        op.join(config['DATA_DIR'], 'statistics', 'critical_scaling.txt'),
+        op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.txt'),
+    ]
+    appendix_n_figs = {3: 3, 4: 2, 5: 2, 6: 7}
+    outputs = (['fig-{:02d}.svg'.format(i) for i in range(1, 17)] +
+               ['fig-A{:01d}-S{:02d}.svg'.format(i, j) for i in range(1, 7)
+                for j in range(1, appendix_n_figs.get(i, 1)+1)] +
+               ['critical_scaling.txt', 'number_of_stats.txt'])
+    mapping = dict(zip(outputs, inputs))
+    mapping.update({k.replace('.svg', '_no-embed.svg'): v.replace('_dpi-300', '') for k, v in mapping.items()
+                    if 'dpi-300' in v})
+    return mapping[wildcards.fig_name]
+
+
+rule figure_paper:
+    input:
+        figure_paper_input,
+    output:
+        os.path.join('reports', 'paper_figures', '{fig_name}'),
+    run:
+        import shutil
+        shutil.copy(input[0], output[0])
+
+
+rule main_paper_figures_no_embed:
+    input:
+        [op.join('reports', 'paper_figures', 'fig-{:02d}{}.svg').format(i, '_no-embed' if i in [3, 4, 5, 7, 8, 10] else '')
+         for i in range(1, 17)],
+        op.join('reports', 'paper_figures', 'critical_scaling.txt'),
+        op.join('reports', 'paper_figures', 'number_of_stats.txt'),
+
+
+rule appendix_figures_no_embed:
+    input:
+        [op.join('reports', 'paper_figures', 'fig-A{:01d}-S{:02d}{}.svg').format(i, j, '_no-embed' if (i, j) in [(2, 1), (4, 1), (4, 2)] else '')
+         for i in range(1, 7)
+         for j in range(1, {3: 3, 4: 2, 5: 2, 6: 7}.get(i, 1)+1)]
+
+
+rule main_paper_figures:
+    input:
+        [op.join('reports', 'paper_figures', 'fig-{:02d}.svg').format(i)
+         for i in range(1, 17)],
+        op.join('reports', 'paper_figures', 'critical_scaling.txt'),
+        op.join('reports', 'paper_figures', 'number_of_stats.txt'),
+
+
+rule appendix_figures:
+    input:
+        [op.join('reports', 'paper_figures', f'fig-A{i:01d}-S{j:02d}.svg') for i in range(1, 7)
+         for j in range(1, {3: 3, 4: 2, 5: 2, 6: 7}.get(i, 1)+1)]
