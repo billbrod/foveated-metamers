@@ -4890,6 +4890,7 @@ def figure_paper_input(wildcards):
         op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.txt'),
         op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_ideal.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "critical_scaling_norm-False.svg"),
+        op.join(config['DATA_DIR'], 'figures', 'paper', "metamer_asymmetry.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_results.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', 'psychophys_expt2_with_table.svg'),
         op.join(config['DATA_DIR'], 'figures', 'paper', "max_dprime_asymp_perf.svg"),
@@ -4915,7 +4916,7 @@ def figure_paper_input(wildcards):
         op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.txt'),
     ]
     appendix_n_figs = {3: 3, 4: 2, 5: 2, 6: 7}
-    outputs = (['fig-{:02d}.svg'.format(i) for i in range(1, 17)] +
+    outputs = (['fig-{:02d}.svg'.format(i) for i in range(1, 18)] +
                ['fig-A{:01d}-S{:02d}.svg'.format(i, j) for i in range(1, 7)
                 for j in range(1, appendix_n_figs.get(i, 1)+1)] +
                ['critical_scaling.txt', 'number_of_stats.txt'])
@@ -4938,7 +4939,7 @@ rule figure_paper:
 rule main_paper_figures_no_embed:
     input:
         [op.join('reports', 'paper_figures', 'fig-{:02d}{}.svg').format(i, '_no-embed' if i in [3, 4, 5, 7, 8, 10] else '')
-         for i in range(1, 17)],
+         for i in range(1, 18)],
         op.join('reports', 'paper_figures', 'critical_scaling.txt'),
         op.join('reports', 'paper_figures', 'number_of_stats.txt'),
 
@@ -4953,7 +4954,7 @@ rule appendix_figures_no_embed:
 rule main_paper_figures:
     input:
         [op.join('reports', 'paper_figures', 'fig-{:02d}.svg').format(i)
-         for i in range(1, 17)],
+         for i in range(1, 18)],
         op.join('reports', 'paper_figures', 'critical_scaling.txt'),
         op.join('reports', 'paper_figures', 'number_of_stats.txt'),
 
