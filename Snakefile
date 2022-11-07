@@ -4738,9 +4738,27 @@ rule copy_all_mcmc_compare_to_rcs:
          for c in {'energy': ['met', 'ref', 'met-nat', 'ref-nat', 'met_downsample'], 'luminance': ['ref', 'met']}[m]]
 
 
+def create_checksum_input(wildcards):
+    # then these are shared on the RCS, not the OSF, and so the input should be
+    # the file found in the mcmc directory
+    if 'unpooled' in wildcards.filename or 'interactions' in wildcards.filename:
+        m, c, mc = re.findall('mcmc_([a-z]+)_([a-z-_]+)_([a-z-]+).nc', wildcards.filename)[0]
+        wildcards.osf_model_name = m
+        wildcards.osf_comp = c
+        wildcards.mcmc_model = mc
+        return get_osf_names(wildcards, 'mcmc')
+    elif 'compare_ic' in wildcards.filename:
+        m, c = re.findall('mcmc_([a-z]+)_([a-z-_]+)_compare_ic-loo.csv', wildcards.filename)[0]
+        wildcards.osf_model_name = m
+        wildcards.osf_comp = c
+        return get_osf_names(wildcards, 'mcmc_compare')
+    else:
+        return op.join(config["DATA_DIR"], 'to_share', '{filename}')
+
+
 rule create_checksum:
     input:
-        op.join(config["DATA_DIR"], 'to_share', '{filename}')
+        create_checksum_input
     output:
         op.join(config["DATA_DIR"], 'to_share', 'checksums', '{filename}_checksum.json')
     run:
@@ -4759,7 +4777,14 @@ rule create_checksum_dict:
           'mcmc_luminance_ref_partially-pooled.nc', 'mcmc_luminance_met_partially-pooled.nc', 'mcmc_energy_ref_partially-pooled.nc', 'mcmc_energy_ref-nat_partially-pooled.nc',
           'mcmc_energy_met_partially-pooled.nc', 'mcmc_energy_met-nat_partially-pooled.nc', 'mcmc_energy_met_downsample_partially-pooled.nc',
           'stimuli_luminance_ref.tar.gz', 'stimuli_luminance_met.tar.gz', 'stimuli_energy_ref.tar.gz', 'stimuli_energy_ref-nat.tar.gz',
-          'stimuli_energy_met.tar.gz', 'stimuli_energy_met-nat.tar.gz', 'stimuli_energy_met_downsample.tar.gz', 'experiment_training.tar.gz']]
+          'stimuli_energy_met.tar.gz', 'stimuli_energy_met-nat.tar.gz', 'stimuli_energy_met_downsample.tar.gz', 'experiment_training.tar.gz',
+          "mcmc_energy_met_compare_ic-loo.csv", "mcmc_energy_met_downsample_compare_ic-loo.csv", "mcmc_energy_met_downsample_partially-pooled-interactions.nc",
+          "mcmc_energy_met_downsample_unpooled.nc", "mcmc_energy_met-nat_compare_ic-loo.csv", "mcmc_energy_met-nat_partially-pooled-interactions.nc",
+          "mcmc_energy_met-nat_unpooled.nc", "mcmc_energy_met_partially-pooled-interactions.nc", "mcmc_energy_met_unpooled.nc",
+          "mcmc_energy_ref_compare_ic-loo.csv", "mcmc_energy_ref-nat_compare_ic-loo.csv", "mcmc_energy_ref-nat_partially-pooled-interactions.nc",
+          "mcmc_energy_ref-nat_unpooled.nc", "mcmc_energy_ref_partially-pooled-interactions.nc", "mcmc_energy_ref_unpooled.nc",
+          "mcmc_luminance_met_compare_ic-loo.csv", "mcmc_luminance_met_partially-pooled-interactions.nc", "mcmc_luminance_met_unpooled.nc",
+          "mcmc_luminance_ref_compare_ic-loo.csv", "mcmc_luminance_ref_partially-pooled-interactions.nc"]]
     output:
         op.join('data', 'checksums.json')
     run:
