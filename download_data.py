@@ -15,8 +15,8 @@ from foveated_metamers import utils
 CHECKSUM_PATH = op.join(op.dirname(op.realpath(__file__)), 'data', 'checksums.json')
 
 
-# dictionary of download urls from the OSF
-OSF_URL = {
+# dictionary of download urls
+DOWNLOAD_URL = {
     'synthesis_input': 'https://osf.io/sw4tb/download',
     'stimuli': {
         'stimuli_luminance_ref': 'https://osf.io/3d49e/download',
@@ -41,7 +41,29 @@ OSF_URL = {
     'freeman2011_check_input': "https://osf.io/e2zn8/download",
     'freeman2011_check_output': "https://osf.io/wa2zu/download",
     'experiment_training': "https://osf.io/xy4ku/download",
+    'mcmc_compare': "https://archive.nyu.edu/rest/bitstreams/{}/retrieve",
 }
+
+MCMC_COMPARE_FILES = ["mcmc_energy_met_compare_ic-loo.csv",
+                      "mcmc_energy_met_downsample_compare_ic-loo.csv",
+                      "mcmc_energy_met_downsample_partially-pooled-interactions.nc",
+                      "mcmc_energy_met_downsample_unpooled.nc",
+                      "mcmc_energy_met-nat_compare_ic-loo.csv",
+                      "mcmc_energy_met-nat_partially-pooled-interactions.nc",
+                      "mcmc_energy_met-nat_unpooled.nc",
+                      "mcmc_energy_met_partially-pooled-interactions.nc",
+                      "mcmc_energy_met_unpooled.nc",
+                      "mcmc_energy_ref_compare_ic-loo.csv",
+                      "mcmc_energy_ref-nat_compare_ic-loo.csv",
+                      "mcmc_energy_ref-nat_partially-pooled-interactions.nc",
+                      "mcmc_energy_ref-nat_unpooled.nc",
+                      "mcmc_energy_ref_partially-pooled-interactions.nc",
+                      "mcmc_energy_ref_unpooled.nc",
+                      "mcmc_luminance_met_compare_ic-loo.csv",
+                      "mcmc_luminance_met_partially-pooled-interactions.nc",
+                      "mcmc_luminance_met_unpooled.nc",
+                      "mcmc_luminance_ref_compare_ic-loo.csv",
+                      "mcmc_luminance_ref_partially-pooled-interactions.nc"]
 
 
 def check_checksum(path, checksum):
@@ -113,7 +135,7 @@ def main(target_dataset, skip_confirmation=False):
         print("Downloading synthesis input.")
         synth_checksum = False
         while not synth_checksum:
-            subprocess.call(["curl", "-O", "-J", "-L", OSF_URL['synthesis_input']])
+            subprocess.call(["curl", "-O", "-J", "-L", DOWNLOAD_URL['synthesis_input']])
             synth_checksum = check_checksum('synthesis_input.tar.gz', checksums['synthesis_input.tar.gz'])
         subprocess.call(["tar", "xf", "synthesis_input.tar.gz"])
         # this file is unnecessary for the experiment
@@ -123,7 +145,7 @@ def main(target_dataset, skip_confirmation=False):
         subprocess.call(["rm", "synthesis_input.tar.gz"])
     if 'stimuli' in target_dataset:
         print("Downloading stimuli for all comparisons.")
-        for name, url in OSF_URL['stimuli'].items():
+        for name, url in DOWNLOAD_URL['stimuli'].items():
             print(f"Downloading {name}")
             download_model = re.findall('stimuli_([a-z]+)_', name)[0]
             output_model = model_name_map[download_model]
@@ -141,7 +163,7 @@ def main(target_dataset, skip_confirmation=False):
         print("Downloading behavioral data for all comparisons.")
         behav_checksum = False
         while not behav_checksum:
-            subprocess.call(["curl", "-O", "-J", "-L", OSF_URL['behavioral_data']])
+            subprocess.call(["curl", "-O", "-J", "-L", DOWNLOAD_URL['behavioral_data']])
             behav_checksum = check_checksum('behavioral_data.tar.gz', checksums['behavioral_data.tar.gz'])
         subprocess.call(["tar", "xf", "behavioral_data.tar.gz"])
         for f in glob(op.join('behavioral_data', '*csv')):
@@ -154,7 +176,7 @@ def main(target_dataset, skip_confirmation=False):
         subprocess.call(["rm", "behavioral_data.tar.gz"])
     if 'mcmc_fits' in target_dataset:
         print("Downloading MCMC fits for all comparisons.")
-        for name, url in OSF_URL['mcmc_fits'].items():
+        for name, url in DOWNLOAD_URL['mcmc_fits'].items():
             print(f"Downloading {name}")
             download_model, download_comp = re.findall('mcmc_([a-z]+)_([a-z-_]+)_partially-pooled.nc', name)[0]
             outp_model = model_name_map[download_model]
@@ -173,7 +195,7 @@ def main(target_dataset, skip_confirmation=False):
         print("Downloading figure input.")
         fig_checksum = False
         while not fig_checksum:
-            subprocess.call(["curl", "-O", "-J", "-L", OSF_URL['figure_input']])
+            subprocess.call(["curl", "-O", "-J", "-L", DOWNLOAD_URL['figure_input']])
             fig_checksum = check_checksum('figure_input.tar.gz', checksums['figure_input.tar.gz'])
         subprocess.call(["tar", "xf", "figure_input.tar.gz"])
         for subdir in ['metamers', 'mad_images', 'synth_match_mse', 'statistics',
@@ -191,7 +213,7 @@ def main(target_dataset, skip_confirmation=False):
         os.makedirs(norm_stats_dir, exist_ok=True)
         freeman_checksum = False
         while not freeman_checksum:
-            subprocess.call(["curl", "-O", "-J", "-L", OSF_URL['freeman2011_check_input']])
+            subprocess.call(["curl", "-O", "-J", "-L", DOWNLOAD_URL['freeman2011_check_input']])
             freeman_checksum = check_checksum('freeman_check_inputs.tar.gz', checksums['freeman_check_inputs.tar.gz'])
         subprocess.call(["tar", "xf", "freeman_check_inputs.tar.gz"])
         subprocess.call(["mv", "freeman_check_inputs/metamer1.png", f"{met_dir}/"])
@@ -208,7 +230,7 @@ def main(target_dataset, skip_confirmation=False):
         os.makedirs(windows_dir, exist_ok=True)
         freeman_checksum = False
         while not freeman_checksum:
-            subprocess.call(["curl", "-O", "-J", "-L", OSF_URL['freeman2011_check_output']])
+            subprocess.call(["curl", "-O", "-J", "-L", DOWNLOAD_URL['freeman2011_check_output']])
             freeman_checksum = check_checksum('freeman_check.tar.gz', checksums['freeman_check.tar.gz'])
         subprocess.call(["tar", "xf", "freeman_check.tar.gz"])
         subprocess.call(["rm", "freeman_check.tar.gz"])
@@ -222,13 +244,42 @@ def main(target_dataset, skip_confirmation=False):
         print("Downloading experiment training files.")
         training_checksum = False
         while not training_checksum:
-            subprocess.call(["curl", "-O", "-J", "-L", OSF_URL['experiment_training']])
+            subprocess.call(["curl", "-O", "-J", "-L", DOWNLOAD_URL['experiment_training']])
             training_checksum = check_checksum('experiment_training.tar.gz',
-                                               checksums['experiment_training.tar.gz'])
+                                               checksums['.tar.gz'])
         subprocess.call(["tar", "xf", "experiment_training.tar.gz"])
         subprocess.call(["rsync", "-avPLuz", 'stimuli', f"{data_dir}/"])
         subprocess.call(["rm", "-r", "stimuli/"])
         subprocess.call(["rm", "experiment_training.tar.gz"])
+    if 'mcmc_compare' in target_dataset:
+        print("Downloading files for MCMC model comparison.")
+        # create checksums for these files
+        for i, name in enumerate(MCMC_COMPARE_FILES):
+            print(f'Downloading {name}')
+            url = DOWNLOAD_URL['mcmc_compare'].format(129631+i)
+            try:
+                # if this regex works, then this is one of the .nc files
+                # containing the mcmc fit
+                download_model, download_comp, mcmc_model = re.findall('mcmc_([a-z]+)_([a-z-_]+)_([a-z-]+).nc', name)[0]
+                outp_model = model_name_map[download_model]
+                outp_comp = comp_name_map(download_comp)
+                hyper = utils.get_mcmc_hyperparams({'mcmc_model': mcmc_model,
+                                                    'model_name': outp_model, 'comp': outp_comp})
+                outp = op.join(data_dir, 'mcmc', outp_model, f'task-split_comp-{outp_comp}',
+                               f'task-split_comp-{outp_comp}_mcmc_partially-pooled_{hyper}_scaling-extended.nc')
+            except IndexError:
+                # then it's a mcmc compare csv, and we handle it differently
+                download_model, download_comp, ic = re.findall('mcmc_([a-z]+)_([a-z-_]+)_compare_ic-([a-z]+).csv', name)[0]
+                outp_model = model_name_map[download_model]
+                outp_comp = comp_name_map(download_comp)
+                outp = op.join(data_dir, 'mcmc', outp_model, f'tas-split_comp-{outp_comp}',
+                               f'task-split_comp-{outp_comp}_mcmc_compare_ic-{ic}.csv')
+            mcmc_compare_checksum = False
+            while not mcmc_compare_checksum:
+                subprocess.call(["curl", "-k", "-L", url, '-o', name])
+                mcmc_compare_checksum = check_checksum(name, checksums[name])
+            os.makedirs(op.dirname(outp), exist_ok=True)
+            subprocess.call(["mv", name, outp])
     # need to touch these files, in this order, to make sure that snakemake
     # doesn't get confused and thinks it needs to rerun things.
     paths_to_touch = []
