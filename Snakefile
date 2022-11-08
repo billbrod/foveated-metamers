@@ -4971,8 +4971,8 @@ rule main_paper_figures_no_embed:
 rule appendix_figures_no_embed:
     input:
         [op.join('reports', 'paper_figures', 'fig-A{:01d}-{:02d}{}.svg').format(i, j, '_no-embed' if (i, j) in [(1, 1), (3, 3), (4, 1)] else '')
-         for i in range(1, 7)
-         for j in range(1, {3: 3, 4: 2, 5: 2, 6: 7}.get(i, 1)+1)]
+         for i in range(1, 6)
+         for j in range(1, {3: 3, 4: 2, 5: 2}.get(i, 1)+1)]
 
 
 rule main_paper_figures:
@@ -4985,5 +4985,10 @@ rule main_paper_figures:
 
 rule appendix_figures:
     input:
-        [op.join('reports', 'paper_figures', f'fig-A{i:01d}-{j:02d}.svg') for i in range(1, 7)
-         for j in range(1, {3: 3, 4: 2, 5: 2, 6: 7}.get(i, 1)+1)]
+        [op.join('reports', 'paper_figures', f'fig-A{i:01d}-{j:02d}.svg') for i in range(1, 6)
+         for j in range(1, {3: 3, 4: 2, 5: 2}.get(i, 1)+1)]
+
+
+rule appendix_figures_mcmc_compare:
+    input:
+        [op.join('reports', 'paper_figures', f'fig-A6-{j:02d}.svg') for j in range(1, 8)]
