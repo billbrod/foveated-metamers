@@ -63,7 +63,8 @@ MCMC_COMPARE_FILES = ["mcmc_energy_met_compare_ic-loo.csv",
                       "mcmc_luminance_met_partially-pooled-interactions.nc",
                       "mcmc_luminance_met_unpooled.nc",
                       "mcmc_luminance_ref_compare_ic-loo.csv",
-                      "mcmc_luminance_ref_partially-pooled-interactions.nc"]
+                      "mcmc_luminance_ref_partially-pooled-interactions.nc",
+                      "mcmc_luminance_ref_unpooled.nc"]
 
 
 def check_checksum(path, checksum):
@@ -81,7 +82,8 @@ def main(target_dataset, skip_confirmation=False):
                       'behavioral_data', 'mcmc_fits',
                       'figure_input',
                       'freeman2011_check_input',
-                      'freeman2011_check_output'}
+                      'freeman2011_check_output',
+                      'mcmc_compare'}
         Which dataset to download (list of the above also allowable, in which
         case they'll be downloaded in the above order). See project README for
         more info.
@@ -101,10 +103,13 @@ def main(target_dataset, skip_confirmation=False):
     os.makedirs(data_dir, exist_ok=True)
     print(f"Using {data_dir} as data root directory.")
     targets = ['synthesis_input', 'stimuli', 'behavioral_data', 'mcmc_fits', 'figure_input',
-               'freeman2011_check_input', 'freeman2011_check_output', 'experiment_training']
+               'freeman2011_check_input', 'freeman2011_check_output', 'experiment_training',
+               'mcmc_compare']
     check_dirs = ['ref_images_preproc', 'stimuli', 'behavioral', 'mcmc', 'statistics',
-                  'freeman_check/Freeman2011_metamers', 'freeman_check/windows', 'stimuli/training_noise']
-    sizes = ['176MB', '12GB', '2.6MB', '12GB', '580MB', '1MB', '60MB', '160MB']
+                  'freeman_check/Freeman2011_metamers', 'freeman_check/windows', 'stimuli/training_noise',
+                  # this isn't a dir, but a file
+                  'mcmc/V1_norm_s6_gaussian/task-split_comp-met/task-split_comp-met_mcmc_compare_ic-loo.csv']
+    sizes = ['176MB', '12GB', '2.6MB', '12GB', '580MB', '1MB', '60MB', '160MB', '24GB']
     if not skip_confirmation:
         for tar, check, size in zip(targets, check_dirs, sizes):
             yesno = 'y'
@@ -253,7 +258,6 @@ def main(target_dataset, skip_confirmation=False):
         subprocess.call(["rm", "experiment_training.tar.gz"])
     if 'mcmc_compare' in target_dataset:
         print("Downloading files for MCMC model comparison.")
-        # create checksums for these files
         for i, name in enumerate(MCMC_COMPARE_FILES):
             print(f'Downloading {name}')
             url = DOWNLOAD_URL['mcmc_compare'].format(129631+i)
@@ -266,13 +270,13 @@ def main(target_dataset, skip_confirmation=False):
                 hyper = utils.get_mcmc_hyperparams({'mcmc_model': mcmc_model,
                                                     'model_name': outp_model, 'comp': outp_comp})
                 outp = op.join(data_dir, 'mcmc', outp_model, f'task-split_comp-{outp_comp}',
-                               f'task-split_comp-{outp_comp}_mcmc_partially-pooled_{hyper}_scaling-extended.nc')
+                               f'task-split_comp-{outp_comp}_mcmc_{mcmc_model}_{hyper}_scaling-extended.nc')
             except IndexError:
                 # then it's a mcmc compare csv, and we handle it differently
                 download_model, download_comp, ic = re.findall('mcmc_([a-z]+)_([a-z-_]+)_compare_ic-([a-z]+).csv', name)[0]
                 outp_model = model_name_map[download_model]
                 outp_comp = comp_name_map(download_comp)
-                outp = op.join(data_dir, 'mcmc', outp_model, f'tas-split_comp-{outp_comp}',
+                outp = op.join(data_dir, 'mcmc', outp_model, f'task-split_comp-{outp_comp}',
                                f'task-split_comp-{outp_comp}_mcmc_compare_ic-{ic}.csv')
             mcmc_compare_checksum = False
             while not mcmc_compare_checksum:
@@ -312,7 +316,8 @@ if __name__ == '__main__':
                                                    'figure_input',
                                                    'freeman2011_check_input',
                                                    'freeman2011_check_output',
-                                                   'experiment_training'],
+                                                   'experiment_training',
+                                                   'mcmc_compare'],
                         help="Which dataset to download, see project README for details.",
                         nargs='+')
     parser.add_argument('--skip-confirmation', '-s', action='store_true',
