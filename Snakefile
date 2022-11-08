@@ -2238,8 +2238,8 @@ rule mcmc_figure:
 rule mcmc_compare_figure:
     input:
         lambda wildcards: [op.join(config["DATA_DIR"], 'mcmc', '{{model_name}}', 'task-split_comp-{{comp}}',
-                                   'task-split_comp-{{comp}}_mcmc_{mcmc_model}_{hyper}.nc').format(mcmc_model=m,
-                                                                                                   hyper=utils.get_mcmc_hyperparams(wildcards, mcmc_model=m))
+                                   'task-split_comp-{{comp}}_mcmc_{mcmc_model}_{hyper}_scaling-extended.nc').format(mcmc_model=m,
+                                                                                                                    hyper=utils.get_mcmc_hyperparams(wildcards, mcmc_model=m))
                            for m in ['unpooled', 'partially-pooled', 'partially-pooled-interactions']]
     output:
         op.join(config["DATA_DIR"], 'figures', '{context}', '{model_name}',
@@ -4911,12 +4911,11 @@ def figure_paper_input(wildcards):
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'performance_scaling-extended_metamer_comparison_nyc,llama_scaling-.063,.27_nocutout_small_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_scaling-extended_partially-pooled_log-ci_sub-00_comp-natural_line-scaling-0.27.svg"),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_portrait_symmetric_scaling-.27,.27,.27,.27,.27_cutout_V1_natural-seed_dpi-300.svg'),
-        op.join(config['DATA_DIR'], 'statistics', 'critical_scaling.txt'),
-        op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.txt'),
         op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_ideal.svg"),
-        op.join(config['DATA_DIR'], 'figures', 'paper', "critical_scaling_norm-False.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "metamer_asymmetry.svg"),
+        op.join(config['DATA_DIR'], 'figures', 'paper', "critical_scaling_norm-False.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_results.svg"),
+        op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_lum.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', 'psychophys_expt2_with_table.svg'),
         op.join(config['DATA_DIR'], 'figures', 'paper', "max_dprime_asymp_perf.svg"),
         # appendix figures
@@ -4942,7 +4941,7 @@ def figure_paper_input(wildcards):
     ]
     appendix_n_figs = {3: 3, 4: 2, 5: 2, 6: 7}
     outputs = (['fig-{:02d}.svg'.format(i) for i in range(1, 18)] +
-               ['fig-A{:01d}-S{:02d}.svg'.format(i, j) for i in range(1, 7)
+               ['fig-A{:01d}-{:02d}.svg'.format(i, j) for i in range(1, 7)
                 for j in range(1, appendix_n_figs.get(i, 1)+1)] +
                ['critical_scaling.txt', 'number_of_stats.txt'])
     mapping = dict(zip(outputs, inputs))
@@ -4971,7 +4970,7 @@ rule main_paper_figures_no_embed:
 
 rule appendix_figures_no_embed:
     input:
-        [op.join('reports', 'paper_figures', 'fig-A{:01d}-S{:02d}{}.svg').format(i, j, '_no-embed' if (i, j) in [(2, 1), (4, 1), (4, 2)] else '')
+        [op.join('reports', 'paper_figures', 'fig-A{:01d}-{:02d}{}.svg').format(i, j, '_no-embed' if (i, j) in [(1, 1), (3, 3), (4, 1)] else '')
          for i in range(1, 7)
          for j in range(1, {3: 3, 4: 2, 5: 2, 6: 7}.get(i, 1)+1)]
 
@@ -4986,5 +4985,5 @@ rule main_paper_figures:
 
 rule appendix_figures:
     input:
-        [op.join('reports', 'paper_figures', f'fig-A{i:01d}-S{j:02d}.svg') for i in range(1, 7)
+        [op.join('reports', 'paper_figures', f'fig-A{i:01d}-{j:02d}.svg') for i in range(1, 7)
          for j in range(1, {3: 3, 4: 2, 5: 2, 6: 7}.get(i, 1)+1)]
