@@ -7,25 +7,6 @@ This project starts with a replication of Freeman and Simoncelli,
 2011, out to higher eccentricities, and will extend it by looking at
 spatial frequency information as well.
 
-# Dockerfile
-
-In order to build Dockerfile, have this directory and the most recent
-version of `plenoptic` in the same directory and then FROM THAT
-DIRECTORY (the one above this one), run `sudo docker build
---tag=foveated-metamers:YYYY-MM-dd -f foveated-metamers/Dockerfile
---compress .`. This ensures that we can copy plenoptic over into the
-Docker container.
-
-Once we get plenoptic up on pip (or even make it public on github), we
-won't need to do this. At that time, make sure to replace
-`foveated-metamers/environment.yml` with `environment.yml` and remove
-the plenoptic bit.
-
-Once image is built, save it to a gzipped tarball by the following:
-`sudo docker save foveated-metamers:YYYY-MM-dd | gzip >
-foveated-metamers_YYYY-MM-dd.tgz` and then copy to wherever you
-need it.
-
 # Requirements
 
 This has only been tested on Linux, both Ubuntu 18.04 and
@@ -49,13 +30,11 @@ need it.
 Both provided conda environment files pin the versions of all the
 python packages required to those used for the experiment. That's
 probably not necessary, but is provided as a step to improve
-reproducibility. We provide built Docker images for the same reason: 
+reproducibility.
 
 If you're using GPUs to create images, you'll also need `dotlockfile`
 on your machine in order to create the lockfiles we use to prevent
 multiple jobs using the same GPU.
-
-TODO: ADD DOCKER IMAGES
 
 Other requirements:
 - inkscape, at least version 1.0.2 (used for figure creation).
@@ -148,65 +127,7 @@ install it with `pip install path/to/your/wxpython.whl`.
 
 Everything should then hopefully work.
 
-# Data dictionaries
-
-Several pandas DataFrames are created during the course of this
-experiment and saved as `.csv` files. In order to explain what the
-different fields they have mean, I've put together some data
-dictionaries, in the `data_dictionaries` directory. I tried to follow
-[these
-guidelines](https://help.osf.io/hc/en-us/articles/360019739054-How-to-Make-a-Data-Dictionary)
-from the OSF. They are `.tsv` files and so can be viewed in Excel,
-Google Sheets, a text editor, LibreOffice Calc, or loaded in to pandas
-(`data_dict = pd.read_csv(data_dictionaries/metamer_summary.tsv,
-'\t')`)
-
- - `metamer_summary.tsv`: during metamer synthesis, we save out a
-   `summary.csv` file, which contains a DataFrame with one row,
-   describing the metamer generated and some information about its
-   synthesis. This data dictionary describes the columns in that
-   DataFrame.
-   
- - `all_metamer_summary.tsv`: in order to create the indices that determine the
-   trias in the experiment, we gather together and concatenate all the
-   `summary.csv` files, then save the resulting DataFrame as
-   `stimuli_description.csv`. This data dictionary describes that DataFrame's
-   columns, which are identical to those in `summary.csv`.
-   
-- `experiment_df.tsv`: in order to analyze the data, we want to
-  examine the images presented in each trial, what the correct answers
-  was, and what button the subject pressed. We do this using
-  `experiment_df.csv`, which we create for each experimental session
-  (in a given session, one subject will see all trials for a given
-  model; each subject, session pair has a different random seed used
-  to generate the presentation index). Most of the DataFrame can be
-  generated before the experiment is run (but after the index has been
-  generated), but the final four columns (`subject_response,
-  hit_or_miss, subject_name and session_number`) are only added when
-  combining the subject's response information with the pre-existing
-  `experiment_df`. We have two separate functions in `stimulus.py` for
-  generating the DataFrame with and without subject response info, but
-  we only save the completed version to disk.
-  
-- `summary_df.tsv`: In order to plot our psychophysical curves, we
-  want to get the proportion of correct responses in each
-  condition. That's what this summary DataFrame contains. This is the
-  "least combined" way of looking at it: we have not collapsed across
-  images, trial types, sessions, or, subjects (the `n_trials` column
-  will be useful to correctly weight the average if you want to
-  collapse across them).
-  
-## Additional data
-
-`data/Dacey1992_RGC.csv` contains data from figure 2B of Dennis M. Dacey and
-Michael R. Petersen (1992), "Dendritic field size and morphology of midget and
-parasol ganglion cells of the human retina", PNAS 89, 9666-9670, extracted using
-[WebPlotDigitizer](https://apps.automeris.io/wpd/) on July 15, 2021. To recreate
-that figure, using the snakemake rule `dacey_figure`. Note that we did not
-separate the data into nasal field and temporal, upper, and lower fields, as the
-paper does.
-
-# Code structure
+# Directory structure
 
  - `Snakefile`: used by snakemake to determine how to create the files for this
    project. Handles everything except the experiment.
@@ -232,6 +153,9 @@ paper does.
     - `figures.py`: creates various figures.
     - `compose_figures.py`: combines plots (as created by functions in
       `figures.py`) into multi-panel figures.
+    - `other_data.py`: functions to fit a line (hinged or not) to the Dacey 1992
+      data, which gives the receptive field size of retinal ganglion cells. This
+      also uses `numpyro` and so looks fairly similar to `mcmc.py`.
     - `create_mad_images.py`: synthesize Maximally-Differentiating images (as in
       Wang and Simoncelli, 2008), to highlight mean-squared error remaining in
       human metamers.
@@ -241,7 +165,7 @@ paper does.
       human performance when images are *not* metamers. Did not end up making
       much progress, so this is not present in the paper.
     - `utils.py`: various utility functions.
-    - `stype.py`: code for styling the figures.
+    - `style.py`: code for styling the figures.
   - `extra_packages/`: additional python code used by this repo. The bits that
     live here were originally part of
     [plenoptic](https://github.com/LabForComputationalVision/plenoptic/), but
@@ -266,6 +190,51 @@ paper does.
       scaling parameter has the same meaning); see
       [below](#check-against-freeman-and-simoncelli-2011-windows) for more
       details.
+  - `examples_images.py`: script to open up some example images to show
+    participants before the experiment (example usage elsewhere in this readme).
+  - `download_data.py`: script to download and arrange data for reproducing
+    results and figures. See explanation elsewhere in this readme.
+  - `matlab/`: two matlab scripts using external matlab libraries. Neither are
+    necessary: one is used to generate the windows from the Freeman and
+    Simoncelli, 2011 paper (the output of which can be downloaded using
+    `download_data.py`) and the other generates some LGN-like image statistics
+    that we didn't end up using.
+  - `data/`: contains some data files.
+    - `Dacey1992_RGC.csv`: csv containing data from figure 2B of Dennis M. Dacey
+      and Michael R. Petersen (1992), "Dendritic field size and morphology of
+      midget and parasol ganglion cells of the human retina", PNAS 89,
+      9666-9670, extracted using
+      [WebPlotDigitizer](https://apps.automeris.io/wpd/) on July 15, 2021. To
+      recreate that figure, using the snakemake rule `dacey_figure`. Note that
+      we did not separate the data into nasal field and temporal, upper, and
+      lower fields, as the paper does.
+    - `checksums.json`: json file containing BLAKE2b hashes for the files
+      downloadable via `download_data.py`, so we can check they downloaded
+      corectly.
+  - `reports/`: contains a variety of figure-related files.
+     - `figures/`: these are figure components that I use when putting the
+       figures together. They fall into two categories: schematics that are
+       copied as is, with no changes (e.g., image space schematics, experiment
+       schematic), and templates that we embed images into (e.g., the example
+       metamer figures).
+     - `paper_figures/`: these are the actual figures used in the paper, as
+       created by the `snakemake` file. There are none in the github repo, see
+       main repo README for details on how to create them.
+     - `figure_rules.txt`: this is a list of snakemake rules that create figures
+       (rather than analyze the data). It can be used to limit snakemake's
+       search of possible analysis paths. See main github README for more
+       details.
+  - `tests/test_models.py`: contains a small number of tests of the pooling
+    models, ran weekly and on every push (alongside other tests).
+  - `environment-psychopy.yml`, `environment.yml`: yml files defining conda
+    environment for the experiment (using `psychopy`) and for everything. See
+    elsewhere in this readme for details.
+  - `greene.json`, `rusty.json`: json files defining how snakemake should
+    communicate with NYU's and Flatiron's SLURM clusters, respectively (works
+    with the [snakemake-slurm](https://github.com/billbrod/snakemake-slurm)
+    profile). See elsewhere in this readme for details.
+  - `config.yml`: yml configuration file, defining paths, metmaer structure, and
+    some info on experiment structure.
 
 # Usage
 
