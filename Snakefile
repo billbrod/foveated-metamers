@@ -4945,7 +4945,7 @@ def figure_paper_input(wildcards):
                 for j in range(1, appendix_n_figs.get(i, 1)+1)] +
                ['critical_scaling.txt', 'number_of_stats.txt'])
     mapping = dict(zip(outputs, inputs))
-    mapping.update({k.replace('.svg', '_no-embed.svg'): v.replace('_dpi-300', '') for k, v in mapping.items()
+    mapping.update({k.replace('.svg', '_no_embed.svg'): v.replace('_dpi-300', '') for k, v in mapping.items()
                     if 'dpi-300' in v})
     return mapping[wildcards.fig_name]
 
@@ -4962,7 +4962,7 @@ rule figure_paper:
 
 rule main_paper_figures_no_embed:
     input:
-        [op.join('reports', 'paper_figures', 'fig-{:02d}{}.svg').format(i, '_no-embed' if i in [3, 4, 5, 7, 8, 10] else '')
+        [op.join('reports', 'paper_figures', 'fig-{:02d}{}.svg').format(i, '_no_embed' if i in [3, 4, 5, 7, 8, 10] else '')
          for i in range(1, 18)],
         op.join('reports', 'paper_figures', 'critical_scaling.txt'),
         op.join('reports', 'paper_figures', 'number_of_stats.txt'),
@@ -4970,7 +4970,7 @@ rule main_paper_figures_no_embed:
 
 rule appendix_figures_no_embed:
     input:
-        [op.join('reports', 'paper_figures', 'fig-A{:01d}-{:02d}{}.svg').format(i, j, '_no-embed' if (i, j) in [(1, 1), (3, 3), (4, 1)] else '')
+        [op.join('reports', 'paper_figures', 'fig-A{:01d}-{:02d}{}.svg').format(i, j, '_no_embed' if (i, j) in [(1, 1), (3, 3), (4, 1)] else '')
          for i in range(1, 6)
          for j in range(1, {3: 3, 4: 2, 5: 2}.get(i, 1)+1)]
 

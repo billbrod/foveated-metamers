@@ -1,17 +1,132 @@
 # foveated-metamers
 
-Create metamers using models of the ventral stream and run experiments
-to validate them
+This repo contains the code for a vision science experiment investigating how
+human perception changes across the visual field using behavioral experiments
+and computational models inspired by the earlys tages of visual processing. We
+use these models to investigate what people cannot see, an approach that has a
+long history of vision science. If we know what information people are
+insensitive to, we can discard it or randomize it, and the resulting image
+should appear unchanged from the original.
 
-This project starts with a replication of Freeman and Simoncelli,
-2011, out to higher eccentricities, and will extend it by looking at
-spatial frequency information as well.
+See the [VSS 2020 poster](https://osf.io/aketq/) for scientific details. You may
+also be interested in the
+[website](https://users.flatironinstitute.org/~wbroderick/metamers/) we put
+together for browsing through the created images. If you re-use some component
+of this project in an academic publication, see the [citing](#citation) section
+for how to credit us.
+
+# Usage
+
+The data and code for this project are shared with the primary goal of enabling
+reproduction of the results presented in the associated paper. Novel analyses
+should be possible, but no guarantees.
+
+To that end, we provide [several entrypoints into the data](#data) for
+re-running the analysis, with a script to automate their download and proper
+arrangement.
+
+As a note: `snakemake` commands create files. I recommend adding `-n` to any
+`snakemake` command when you run it for the first time. This will do a "dry
+run", so you can see what steps `snakemake` will take, without running anything.
+
+The following steps will walk you through downloading the fully-processed data
+and recreating the figures, read further on in this README for details:
+1. Clone this repo.
+2. Open `config.yml` and modify the `DATA_DIR` path to wherever you wish to
+   download the data (see [config.yml](#config.yml) section for details on this
+   file).
+3. Install the required software:
+   - Install [miniconda](https://docs.conda.io/en/latest/miniconda.html) on your
+     system for python 3.7.
+   - Install [mamba](https://github.com/mamba-org/mamba): `conda install mamba
+     -n base -c conda-forge`
+   - Navigate to this directory and run `mamba env create -f environment.yml` to
+     install the environment.
+   - Run `conda activate metamers` to activate the python environment.
+   - Additionally, install [inkscape](https://inkscape.org/).
+4. Run `python download_data.py synthesis_input mcmc_fits figure_input ` to
+   download the data required to create the papers in the main figure (this is
+   about 20GB).
+5. Run `snakemake -k -j N reports/paper_figures/fig-XX.svg`
+   (where `N` is the number of cores to use in parallel) to recreate a given
+   figure from the paper (note the number must be 0-padded, i.e., `fig-01.svg`,
+   *not* `fig-1.svg`). These will end up in the `reports/paper_figures/`
+   directory. Note that they are svgs, a vector file format. If your default
+   image viewer cannot open them, your browser can. They can be converted to
+   pdfs using [inkscape](https://inkscape.org/) or Adobe Illustrator.
+6. If you wish to create all the figures from the main body of the text, run
+   `snakemake -k -j N main_paper_figures`. If one job fails, this
+   will continue to run the others (that's what the `-k` flag means).
+
+If you wish to create the figures in the appendix as well:
+1. Download the additional data required: `python download_data.py stimuli
+   freeman2011_check_output` (this is about 14GB).
+2. Run `snakemake -k -j N reports/paper_figures/fig-AY-XX.svg` (where `XX` must
+   again be 0-padded, but `Y` does not) to create figure `XX` from appendix `Y`
+   or `snakemake -k -j N appendix_figures` to create all the figures from
+   appendices 1 through 5.
+3. The figures in appendix 6 have been split off because they require an
+   additional 24GB data set, so to create these:
+    - Download the additional data: `python download_data.py mcmc_compare`.
+    - Create a single figure with `snakemake -k -j N
+      reports/paper_figures/fig-A6-XX.svg` or all of them with `snakemake -k -j
+      N appendix_figures_mcmc_compare`.
+      
+Some notes about the above:
+1. The workflow for figure creation looks intimidating: because parallelization
+   is easy, I split up the process into many small jobs. Therefore, there's ~100
+   jobs for each of the above `main_paper_figures` and `appendix_figures`. Don't
+   worry! They generally don't take that much time.
+2. The overall workflow is very long (going back to preparing the images for
+   metamer synthesis), and so sometimes `snakemake` can take a long time to
+   determine what to run. This problem can get exacerbated if the file
+   modification timestamps get thrown off, so that `snakemake` thinks it needs
+   to re-create some of the existing files. To limit the search space and force
+   `snakemake` to only consider figure-related rules, use the included
+   `reports/figure_rules.txt` and the `--allowed-rules` flag: `cat
+   reports/figure_rules.txt | xargs snakemake -prk main_paper_figures
+   --allowed-rules`. You can pass any argument to `snakemake`, as long as the
+   command ends with `--allowed-rules`.
+2. Several of the figures in the paper (e.g., figure 4) include example metamers
+   or other large images. We link these images into the figure, rather than
+   embed them, until the very end, in order to reduce file size. Embedding them
+   requires `inkscape` and an attached display (so it cannot be run on e.g., a
+   compute cluster). You can do all the steps *except* embedding the large
+   images by appending `_no_embed` to the file or target name. So, you would
+   create `reports/paper_figures/fig-04_no_embed.svg` rather than
+   `reports/paper_figures/fig-04.svg` to create that single figure, or call
+   `snakemake -k -j N main_paper_figures_no_embed` / `snakemake -k -j N
+   appendix_figures_no_embed` to create all of the main paper / appendix figures
+   without embedding.
+    - This allows you to run everything except the embedding on one machine that
+      may be more powerful but lack a display (such as a compute cluster), and
+      then finish up on e.g., your laptop. However, the paths used to link
+      images will almost certainly *not work* when moving to a different
+      machine, so if you view `fig-04_no_embed.svg`, you will see empty red
+      squares where the images should go. When embedding the images in, we
+      correct the paths, so this is not a problem.
+    - It is possible that `snakemake` will get confused when you switch machines
+      and decide that it wants to re-run steps because the file modification
+      timestamps appear out of order. To prevent this, use the same trick as
+      above: append `--allowed-rules embed_bitmaps_into_figures main_figures
+      appendix_figures` to any `snakemake` command to ensure that it will only
+      run the embedding rule.
+   
+Reproducing someone else's research code is hard and, in all likelihood, you'll
+run into some problem. If that happens, please [open an
+issue](https://github.com/billbrod/foveated-metamers/issues) on this repo, with
+as much info about your machine and the steps you've taken as possible, and I'll
+try to help you fix the problem.
+
+To understand what the `snakemake` command is doing, see the [What's going
+on?](https://github.com/billbrod/spatial-frequency-preferences#whats-going-on)
+section I wrote in the readme for another project (here's the [zenodo
+doi](https://zenodo.org/record/6028263) in case that disappears).
 
 # Requirements
 
-This has only been tested on Linux, both Ubuntu 18.04 and
-Fedora 29. It will probably work with minimal to no changes on OSX,
-but there's no guarantee, and we definitely don't support Windows.
+This has only been tested on Linux. It will probably work with minimal to no
+changes on OSX, but there's no guarantee, and I have no idea about Windows.
 
 Need to make sure you have ffmpeg on your path when creating the metamers, so
 make sure it's installed and on your path. I have had a lot of trouble using
@@ -236,7 +351,7 @@ Everything should then hopefully work.
   - `config.yml`: yml configuration file, defining paths, metmaer structure, and
     some info on experiment structure.
 
-# Usage
+# Usage details
 
 The general structure of the research project this repo describes is
 as follows:
@@ -844,6 +959,13 @@ here. Most important, it does not include a SWA implementation and probably will
 never include one, but I would be happy to help come up with how to add it in an
 extension or a fork.
    
+# Citation
+
+If you use the data or code (including the stimuli) from this project in an
+academic publication, please cite the [poster](https://osf.io/aketq/).
+
+More to come...
+
 # References
 
 - Freeman, J., & Simoncelli, E. P. (2011). Metamers of the ventral

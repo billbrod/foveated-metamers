@@ -8,7 +8,7 @@ from glob import glob
 from foveated_metamers import stimuli, utils
 
 
-def main(model, subj_name, sess_num, comparison='ref'):
+def main(model, subj_name, sess_num, comparison='ref', image_viewer='eog'):
     with open(op.join(op.dirname(op.realpath(__file__)), 'config.yml')) as f:
         config = yaml.safe_load(f)
 
@@ -46,12 +46,12 @@ def main(model, subj_name, sess_num, comparison='ref'):
         low_scaling_mets_2.append(mets_2[-1])
     # don't show natural images if comparison.startswith('met'), because they won't see them
     if comparison.startswith('ref'):
-        subprocess.Popen(['eog', *ref_images], shell=False)
-    subprocess.Popen(['eog', *low_scaling_mets], shell=False)
-    subprocess.Popen(['eog', *high_scaling_mets], shell=False)
+        subprocess.Popen([image_viewer, *ref_images], shell=False)
+    subprocess.Popen([image_viewer, *low_scaling_mets], shell=False)
+    subprocess.Popen([image_viewer, *high_scaling_mets], shell=False)
     if comparison.startswith('met'):
-        subprocess.Popen(['eog', *low_scaling_mets_2], shell=False)
-        subprocess.Popen(['eog', *high_scaling_mets_2], shell=False)
+        subprocess.Popen([image_viewer, *low_scaling_mets_2], shell=False)
+        subprocess.Popen([image_viewer, *high_scaling_mets_2], shell=False)
 
 
 if __name__ == '__main__':
@@ -64,5 +64,7 @@ if __name__ == '__main__':
     parser.add_argument("--comparison", '-c', default='ref',
                         help=("{ref, met, met-downsample-2, ref-natural, met-natural}."
                               " What comparison to show example images for"))
+    parser.add_argument('--image_viewer', default='eog',
+                        help="Program to use for opening image files (must be callable from command line)")
     args = vars(parser.parse_args())
     main(**args)
