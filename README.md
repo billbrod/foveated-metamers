@@ -11,9 +11,10 @@ should appear unchanged from the original.
 See the [VSS 2020 poster](https://osf.io/aketq/) for scientific details. You may
 also be interested in the
 [website](https://users.flatironinstitute.org/~wbroderick/metamers/) we put
-together for browsing through the created images. If you re-use some component
-of this project in an academic publication, see the [citing](#citation) section
-for how to credit us.
+together for browsing through the synthesized images.
+
+If you re-use some component of this project in an academic publication, see the
+[citation](#citation) section for how to credit us.
 
 # Usage
 
@@ -107,10 +108,12 @@ Some notes about the above:
       correct the paths, so this is not a problem.
     - It is possible that `snakemake` will get confused when you switch machines
       and decide that it wants to re-run steps because the file modification
-      timestamps appear out of order. To prevent this, use the same trick as
-      above: append `--allowed-rules embed_bitmaps_into_figures main_figures
-      appendix_figures` to any `snakemake` command to ensure that it will only
-      run the embedding rule.
+      timestamps appear out of order (this might happen, in particular, because
+      of `TEXTURE_DIR`, which is used at the very beginning of the workflow;
+      point it to something old or non-existant to avoid this!). To prevent
+      this, use the same trick as above: append `--allowed-rules
+      embed_bitmaps_into_figures main_figures appendix_figures` to any
+      `snakemake` command to ensure that it will only run the embedding rule.
    
 Reproducing someone else's research code is hard and, in all likelihood, you'll
 run into some problem. If that happens, please [open an
@@ -123,10 +126,122 @@ on?](https://github.com/billbrod/spatial-frequency-preferences#whats-going-on)
 section I wrote in the readme for another project (here's the [zenodo
 doi](https://zenodo.org/record/6028263) in case that disappears).
 
-# Requirements
+## What if I want to do more than recreate the figures?
 
-This has only been tested on Linux. It will probably work with minimal to no
-changes on OSX, but there's no guarantee, and I have no idea about Windows.
+I have focused on enabling others to recreate the figures, but you should be
+able to use this repo to do everything in the paper. In particular, you might
+want to:
+
+### ... examine the metamers synthesized for this project
+
+We've put together a
+[website](https://users.flatironinstitute.org/~wbroderick/metamers/) where you
+can browse all the metamers synthesized for this project, filtering and sorting
+by their metadata.
+
+If you'd like to bulk download all of them, you can do so from the [OSF
+page](https://osf.io/67tbe/files/osfstorage), see its
+[README](https://osf.io/kjf75) for how they're organized.
+
+### ... synthesize some metamers 
+
+I don't recommend using this repo to do this unless you're trying to do exactly
+what I did (and even so, see [here](#notes-on-reproducibility)). If you want to
+synthesize your own metamers, see
+[plenoptic](https://github.com/LabForComputationalVision/plenoptic/) for a
+better tested, better documented, and more general implementation of metamer
+synthesis (plus more!).
+
+But if you still want to try to synthesize some metamers using the code in this
+repo, download the `figure_input` data set and look at the path of the
+downloaded metamers. You can use snakemake to create metamers like that, and
+most parts of the path are options related to metamer synthesis, see
+`METAMER_TEMPLATE_PATH` in `config.yml`, as well as the `create_metamers` rule
+in `Snakefile` to get a sense for what these are.
+
+To recreate any of my metamers, you'll also need to download the
+`synthesis_input` data set, which includes the target images we used, as well as
+statistics used for normalizing the models' representation.
+
+You should also be aware that the pooling windows are very large once you get
+below `scaling=0.1`, so I would start with a larger window size. It is also strongly recommended to use a GPU, which will greatly speed up synthesis.
+
+### ... see what the experiment was like
+
+The OSF project contains a video of [a single training
+run](https://osf.io/7vm43) shown to participants before performing the energy
+model original vs. synthesized comparison task. In it, participants view the
+metamers for two target images (`tiles` and `azulejos`) at the smallest and
+largest scaling values for this comparison (`.063` and `.27`), comparing them
+against the original image. Participants receive feedback in the training (the
+central dot turns green when they answer correctly) and are told their
+performance at the end of the run; no feedback was given in the actual
+experiment. It was expected that participants would get close to 100% on the
+easy trials (large scaling) and close to 50% on the hard trials (small scaling).
+
+If you wish to try the experiment yourself, set up your environment for the
+[experiment](#experiment-environment) and download the experiment training
+tarball: `python download_data.py experiment_training`. You can then follow the
+instructions in the [Training](#training) section of this readme (note that you
+won't be able to use the `example_images.py` script; if you're interested in
+this, open an issue and I'll rework it).
+
+### ... run the full experiment
+
+First, Set up your environment for the [experiment](#experiment-environment) and
+download the stimuli: `python download_data.py stimuli`. 
+
+You may also want to download the files used in the training and [try that
+out](#...-see-what-the-experiment-was-like).
+
+For a given model and comparison, the full expeirment consists of 3 sessions,
+with 5 runs each. A single session lasts about an hour, with small breaks built
+in between runs, each of which lasts about 10 minutes. Each session contains 5
+target images, so that each subject sees 15 of the total 20. All subjects see
+the first 10, then the final 10 are split into two groups, with even-numbered
+subjects seeing the first group, odd-numbered the second.
+
+You'll need to generate presentation indices (which define what order the images
+are presented in; the ones for the training task are included in their tarball).
+To do so, use snakemake: `snakemake -prk
+{DATA_DIR}/stimuli/{model_name}/task-split_comp-{comp}/{subj_name}/{subj_name}_task-split_comp-{comp}_idx_sess-{sess_num}_run-{run_num}.npy`,
+where:
+
+
+- `{DATA_DIR}`: the `DATA_DIR` field from the `config.yml` file 
+- `{model_name}`: either `RGC_norm_gaussian` (for the luminance model) or
+  `V1_norm_s6_gaussian` (energy)
+- `{comp}`: one of `met`, `ref`, `met-natural`, `ref-natural` or
+  `ref-downsample-2`. This should match the `{comp}` wildcard from the stimulus
+  file you downloaded.
+- `{subj_name}`: has the form `sub-##`, where `##` a 0-padded integer. If this
+  integer lies between 0 and 7 (inclusive), this will be the same presentation
+  order as used in our experiment.
+- `{sess_num}`: 0-padded itneger between 0 and 2 (inclusive). The session
+  determines which set of 5 target images are included.
+- `{run_num}`: 0-padded integer between 0 and 4 (inclusive). Each run contains 3
+  target images, so that `run-01` contains target images `{A,B,C}`, `run-02`
+  contains `{B,C,D}`, `run-03` contains `{C,D,E}`, `run-04` contains `{D,E,A}`,
+  and `run-05` contains `{E,A,B}`.
+  
+You'll probably want to generate all the indices for a subject for a given model
+and comparison at once. You can do that by generating the dummy file: `snakemake
+-prk
+{DATA_DIR}/stimuli/{model_name}/task-split_comp-{comp}/{subj_name}/{subj_name}_task-split_comp-{comp}_idx_tmp.txt`.
+
+Then read the [Run experiment](#run-experiment) section of this readme.
+
+### ... refit the psychophysical curves
+
+# Setup
+
+The analyses were all run on Linux (Ubuntu, Fedora, and CentOS, several
+different releases). Everything should work on Macs. For Windows, I would
+suggest looking into the [Windows Subsystem for
+Linux](https://docs.microsoft.com/en-us/windows/wsl/about), as Windows is very
+different from the others.
+
+## Software requirements
 
 Need to make sure you have ffmpeg on your path when creating the metamers, so
 make sure it's installed and on your path. I have had a lot of trouble using
@@ -134,13 +249,6 @@ make sure it's installed and on your path. I have had a lot of trouble using
 [a static build](https://www.johnvansickle.com/ffmpeg/faq/) and using that
 directly (note that I have not had this problem with NYU greene or Flatiron
 Institute's rusty, so it appears to be cluster-specific).
-
-For demosaicing the raw images we use as inputs, you'll need to
-install [dcraw](https://www.dechifro.org/dcraw/). If you're on Linux,
-you can probably install it directly from your package manager. See
-these [instructions](http://macappstore.org/dcraw/) for OSX. If you're
-fine using the demosaiced `.tiff` files we provide, then you won't
-need it.
 
 Both provided conda environment files pin the versions of all the
 python packages required to those used for the experiment. That's
@@ -241,6 +349,8 @@ important; not sure if the specific version of wxPython matters) and
 install it with `pip install path/to/your/wxpython.whl`.
 
 Everything should then hopefully work.
+
+# Data
 
 # Directory structure
 
@@ -606,9 +716,9 @@ Once the metamers have all been generated, they'll need to be combined
 into a numpy array for the displaying during the experiment, and the
 presentation indices will need to generated for each subject.
 
-For the experiment we performed, we had XX subjects, with 6 sessions per model
-(2 image blocks, with 4 reference images each, by 3 presentation orders). In
-order to re-generate the indices we used, you can simply run `snakemake -prk
+For the experiment we performed, we had 8 subjects, with 3 sessions per model
+per comparison, each containing 5 original images and lasting an hour. In order
+to re-generate the indices we used, you can simply run `snakemake -prk
 gen_all_idx`. This will generate the indices for each subject, each session,
 each model, as well as the stimuli array (we actually use the same index for
 each model for a given subject and session number; they're generated using the
@@ -629,7 +739,7 @@ contains information about the metamers and their optimization. It's used to
 generate the presentation indices as well as to analyze the data.
 
 You can generate your own, novel presentation indices by running `snakemake -prk
-~/Desktop/metamers/stimuli/{model_name}/task-split_comp-{comp}/{subj_name}/{subj_name}_task-split_comp-{comp}_idx_sess-{sess_num}_im-{im_num}.npy`,
+~/Desktop/metamers/stimuli/{model_name}/task-split_comp-{comp}/{subj_name}/{subj_name}_task-split_comp-{comp}_idx_sess-{sess_num}_run-{run_num}.npy`,
 replacing `{model_name}` with one of `'RGC_norm_gaussian',
 'V1_norm_s6_gaussian'`, `{subj_name}` must be of the format `sub-##`, where `##`
 is some integer (ideally zero-padded, but this isn't required), `{sess_num}`
@@ -638,7 +748,7 @@ and session number to determine the seed for randomizing the presentation order;
 if you'd like to change this, see the snakemake rule `generate_experiment_idx`,
 and how the parameter `seed` is determined; as long as you modify this so that
 each subject/session combination gets a unique seed, everything should be fine),
-`{im_num}` is `00` or `01` (determines which set of 4 reference images are
+`{run_num}` is `00` or `01` (determines which set of 4 reference images are
 shown), and `comp` take one of the values explained above.
 
 ### Demo / test experiment
@@ -646,9 +756,9 @@ shown), and `comp` take one of the values explained above.
 For teaching the subjects about the task, we have two brief training runs: one
 with noise images and one with a small number of metamers. To put them together,
 run `snakemake -prk
-~/Desktop/metamers/stimuli/training_noise/task-split_comp-met/sub-training/sub-training_task-split_comp-met_idx_sess-00_im-00.npy
-~/Desktop/metamers/stimuli/training_RGC_norm_gaussian/task-split_comp-met/sub-training/sub-training_task-split_comp-met_idx_sess-00_im-00.npy
-~/Desktop/metamers/stimuli/training_V1_norm_s6_gaussian/task-split_comp-met/sub-training/sub-training_task-split_comp-met_idx_sess-00_im-00.npy`.
+~/Desktop/metamers/stimuli/training_noise/task-split_comp-met/sub-training/sub-training_task-split_comp-met_idx_sess-00_run-00.npy
+~/Desktop/metamers/stimuli/training_RGC_norm_gaussian/task-split_comp-met/sub-training/sub-training_task-split_comp-met_idx_sess-00_run-00.npy
+~/Desktop/metamers/stimuli/training_V1_norm_s6_gaussian/task-split_comp-met/sub-training/sub-training_task-split_comp-met_idx_sess-00_run-00.npy`.
 This will make sure the stimuli and index files are created. Then run the
 [training](#training) section below.
 
@@ -950,14 +1060,36 @@ couple things you should be aware of:
   
 For all the above reasons, I am sharing the synthesized metamers used in this
 experiment and recommend you use them directly if you need the exact images I
-used (to replicate my results, for example). If you wish to synthesize new
-metamers, whether using your own model or even using the ones from this paper, I
-strongly recommend you use the metamer synthesis code found in
-[plenoptic](https://github.com/LabForComputationalVision/plenoptic/), which is
-actively maintained and tested, though it is not identical to the procedure used
-here. Most important, it does not include a SWA implementation and probably will
-never include one, but I would be happy to help come up with how to add it in an
-extension or a fork.
+used (to replicate my behavioral results, for example). If you wish to
+synthesize new metamers, whether using your own model or even using the ones
+from this paper, I strongly recommend you use the metamer synthesis code found
+in [plenoptic](https://github.com/LabForComputationalVision/plenoptic/), which
+is actively maintained and tested, though it is not identical to the procedure
+used here. Most important, it does not include a SWA implementation and probably
+will never include one, but I would be happy to help come up with how to add it
+in an extension or a fork.
+   
+# Related repos
+
+If you would like to generate your own metamers, see
+[plenoptic](https://github.com/LabForComputationalVision/plenoptic/), a python
+library for image synthesis, including metamers, MAD Competition,
+eigendistortions, and geodesics.
+
+If you would like to use the pooling windows, see
+[pooling-windows](https://github.com/LabForComputationalVision/pooling-windows).
+This includes pytorch implementations of the Gaussian windows from this project,
+as well as the raised-cosine windows from Freeman and Simoncelli, 2011. The
+README describes how to use them for creating a version of the pooled luminance
+and energy models used in this project. Feel free to use the versions in this
+repo, but the simpler version from that README may better suit your needs. The
+version in this repo includes a bunch of helper code, including for creating
+plots and the starts of paths not taken. The only important thing missing from
+the `pooling-windows` repo is normalization -- look for the `normalize_dict`
+attribute in `extra_packages/plenoptic_part/simulate/ventral_stream.py` to see
+how I implemented that.
+
+jeremy's code, Wallis code
    
 # Citation
 
