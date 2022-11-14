@@ -1,15 +1,21 @@
-DATA_DIR: "/home/billbrod/Desktop/metamers/"
-TEXTURE_DIR: "/home/billbrod/Desktop/textures/cropped512-gray-jpg"
-RCS_DIR: "/mnt/rcs/foveated_metamers"
+# Note that, unless stated otherwise, you cannot use ~ in any of the paths in
+# this file (you must write out the full path to your home directory, e.g.,
+# /home/billbrod or /Users/billbrod). Also, the paths should probably not have
+# capital letters -- there's a discrepancy between how Mac and Linux handle
+# capital letters in paths, which might create problems.
+
+# Only the paths in this first section should be modified, and only the first
+# one (DATA_DIR) must be modified.
+
+# The root of the data directory. Recommended you place this in a new directory,
+# such as Desktop/metamers.
+DATA_DIR: "/home/billbrod/Desktop/metamers"
 
 # required for making some of the figures. this can contain ~ (for home
 # directory) and is probably correct on Linux or Macs. On Windows, it's
-# probably: %userprofile\Application\Data\Inkscape\, but you should double check
+# probably: %userprofile\Application\Data\Inkscape\, but you should double
+# check.
 INKSCAPE_PREF_FILE: "~/.config/inkscape/preferences.xml"
-
-REF_IMAGE_TEMPLATE_PATH: "{DATA_DIR}/ref_images/{image_name}.png"
-METAMER_TEMPLATE_PATH: "{DATA_DIR}/metamers/{model_name}/{image_name}/scaling-{scaling}/opt-{optimizer}_loss-{loss}/fr-{fract_removed}_lc-{loss_fract}_lt-{loss_change_thresh}_li-{loss_change_iter}_cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}/seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc:.03f}_em-{max_ecc:.03f}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}{save_all}_metamer.png"
-MAD_TEMPLATE_PATH: "{DATA_DIR}/mad_images/{model_name}_{synth_target}/{met_model_name}_comp-{comp}_scaling-{scaling}_ref-{image_name}_synth-{synth_init_type}/opt-{optimizer}_tradeoff-{tradeoff_lambda:.0e}_penalty-{range_lambda:.1e}_stop-iters-{stop_iters}/seed-{seed}_lr-{learning_rate}_iter-{max_iter}_stop-crit-{stop_criterion:.0e}_gpu-{gpu}_mad.png"
 
 # if you want to run the checks against the original Freeman and Simoncelli
 # (rule freeman_check in Snakefile), 2011 windows, download these two matlab
@@ -20,6 +26,36 @@ MAD_TEMPLATE_PATH: "{DATA_DIR}/mad_images/{model_name}_{synth_target}/{met_model
 FREEMAN_METAMER_PATH: "~/Documents/freeman_metamers"
 MATLABPYRTOOLS_PATH: "~/Documents/matlab_toolboxes/matlabPyrTools"
 
+# ------------------------------------------
+# The following paths should not be modified
+
+# The following templates define how snakemake will find the original images,
+# model metamers, and MAD competition images. They should not be modified.
+REF_IMAGE_TEMPLATE_PATH: "{DATA_DIR}/ref_images/{image_name}.png"
+METAMER_TEMPLATE_PATH: "{DATA_DIR}/metamers/{model_name}/{image_name}/scaling-{scaling}/opt-{optimizer}_loss-{loss}/fr-{fract_removed}_lc-{loss_fract}_lt-{loss_change_thresh}_li-{loss_change_iter}_cf-{coarse_to_fine}_{clamp}-{clamp_each_iter}/seed-{seed}_init-{init_type}_lr-{learning_rate}_e0-{min_ecc:.03f}_em-{max_ecc:.03f}_iter-{max_iter}_thresh-{loss_thresh}_gpu-{gpu}{save_all}_metamer.png"
+MAD_TEMPLATE_PATH: "{DATA_DIR}/mad_images/{model_name}_{synth_target}/{met_model_name}_comp-{comp}_scaling-{scaling}_ref-{image_name}_synth-{synth_init_type}/opt-{optimizer}_tradeoff-{tradeoff_lambda:.0e}_penalty-{range_lambda:.1e}_stop-iters-{stop_iters}/seed-{seed}_lr-{learning_rate}_iter-{max_iter}_stop-crit-{stop_criterion:.0e}_gpu-{gpu}_mad.png"
+
+# Path containing the texture images used to generate the statistics for
+# normalizing model representations. You probably don't need this, given that we
+# provide an array with these values. If you wish to generate your own, the path
+# should either contain the string "textures-subset-for-testing" or this
+# directory should contain at least 800 images, or line 101 in the Snakefile
+# will generate an exception
+TEXTURE_DIR: "/mnt/prince_scratch/textures/cropped512-gray-jpg"
+
+# Directory where the NYU research compute share has been mounted, for staging
+# files to upload to the Faculty Digital Archive.
+RCS_DIR: "/mnt/rcs/foveated_metamers"
+
+# ------------------------------------------
+# Metamer-related options, do not modify
+
+# The following options define the metamers we synthesized: the names of the
+# original images (here called ref images), the RNG seeds used, the scaling
+# values used for each comparison, etc.
+
+# The path for the images whose model representation match should follow the
+# given template and have the following components
 IMAGE_NAME:
   template: "{ref_image}_{preproc}_size-{size}"
   ref_image:
@@ -46,6 +82,13 @@ IMAGE_NAME:
   preproc: 'range-.05,.95'
   size: '2048,2600'
 
+
+# At the beginning of this project, I was seeding all model metamers with the
+# same three seeds. There's nothing *definitely* wrong with this, but it's
+# probably not the right way to do it, so we switched so each model metamer has
+# a unique seed (based on its target image and scaling value). But metamer
+# synthesis takes a long time, so the following defines the model metamers that
+# were generated using these seeds:
 OLD_SEEDS:
   seeds:
     - 0
@@ -136,6 +179,9 @@ FIXED_SCALING_IDX:
 # above will use 1
 GPU_SPLIT: .09
 
+# This gives the default options for all model metamers. The keys here (e.g.,
+# optimizer, loss) are inserted into the METAMER_TEMPLATE_PATH defined at the
+# top of this file.
 DEFAULT_METAMERS:
   image_name:
     - 'azulejos_range-.05,.95_size-2048,2600'
@@ -176,6 +222,7 @@ DEFAULT_METAMERS:
   max_iter: 15000
   save_all: ''
 
+# specifies the options specific for the luminance model
 RGC:
   model_name: 'RGC_norm_gaussian'
   scaling:
@@ -197,6 +244,7 @@ RGC:
     - 1.5
   max_iter: 5000
 
+# specifies the options specific for the energy model
 V1:
   model_name: 'V1_norm_s6_gaussian'
   scaling:
@@ -221,6 +269,12 @@ V1:
   coarse_to_fine: 'together'
   clamp_each_iter: False
 
+# ---------------------------------------------
+# psychophysics-related options, do not modify.
+#
+# These define the subject numbers, how many sessions do they each do, how many
+# runs in each session, and how do we break up the images across subjects
+
 PSYCHOPHYSICS:
   SESSIONS:
     - 0
@@ -232,6 +286,8 @@ PSYCHOPHYSICS:
     - 2
     - 3
     - 4
+  # all subjects see the images in IMAGE_SET all, the even-numbered ones see the
+  # images in set A, the odd-numbered ones see those in set B
   IMAGE_SETS:
     all:
       - 'tiles_range-.05,.95_size-2048,2600'

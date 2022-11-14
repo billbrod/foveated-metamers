@@ -98,7 +98,7 @@ CONTINUE_LOG_PATH = CONTINUE_TEMPLATE_PATH.replace('metamers_continue/{model_nam
 TEXTURE_DIR = config['TEXTURE_DIR']
 if TEXTURE_DIR.endswith(os.sep) or TEXTURE_DIR.endswith('/'):
     TEXTURE_DIR = TEXTURE_DIR[:-1]
-if len(os.listdir(TEXTURE_DIR)) <= 800 and 'textures-subset-for-testing' not in TEXTURE_DIR:
+if op.exists(TEXTURE_DIR) and len(os.listdir(TEXTURE_DIR)) <= 800 and 'textures-subset-for-testing' not in TEXTURE_DIR:
     raise Exception(f"TEXTURE_DIR {TEXTURE_DIR} is incomplete!")
 
 BEHAVIORAL_DATA_DATES = {

@@ -351,6 +351,15 @@ optional:
     - We also need to know the location of your inkscape preference file. The
       default is probably correct, but see section [config.yml](#configyml) for
       more details.
+  - Appendix 3 contains a small comparison between the pooling windows used in
+    this project and those found in Freeman and Simoncelli, 2011. If you wish to
+    generate these windows yourself, you will need MATLAB along with [Jeremy
+    Freeman's metamer code](https://github.com/freeman-lab/metamers/) and the
+    [matlabPyrTools](https://github.com/LabForComputationalVision/matlabPyrTools)
+    toolbox. You may also download the windows from the OSF (`python
+    download_data freeman2011_check_output`). See
+    [below](#check-against-freeman-and-simoncelli-2011-windows) for more
+    details.
 
 There's a [separate python environment](#experiment-environment) for running the
 environment, so install that if you're planning on running the experiment.
@@ -426,22 +435,26 @@ We use images from the authors' personal collection and the [UPenn Natural Image
 Database](http://tofu.psych.upenn.edu/~upennidb/) as the targets for our metamer
 generation. This is because we need images that are large, linear (i.e., their
 pixel intensities are proportional to photon count, as you get from an image
-that has not been processed in any way), and openly-licensed. See the
-[Setup](#setup) section for details on how to obtain the images from the Open
-Science Foundation website for this project, along with the statistics used to
-normalize the V1 model and a small image of Albert Einstein for testing the
-setup.
+that has not been processed in any way), and openly-licensed.
 
-Authors' personal collection: 
-- WFB: azulejos, tiles, bike, graffiti, llama, terraces
-- EPS: ivy, nyc, rocks, boats, gnarled, lettuce
+- Authors' personal collection: 
+    - WFB: azulejos, tiles, bike, graffiti, llama, terraces
+    - EPS: ivy, nyc, rocks, boats, gnarled, lettuce
+- UPenn Natural Image Database: treetop (cd01A/DSC_0033), grooming
+  (cd02A/DSC_0011), palm (cd02A/DSC_0043), leaves (cd12A/DSC_0030), portrait
+  (cd58A/DSC_0001), troop (cd58A/DSC_0008).
+- Unpublished photos from David Brainard: quad (EXPOSURE_ASC/DSC_0014), highway
+  (SNAPSHOTS/DSC_0200).
 
-UPenn Natural Image Database: treetop (cd01A/DSC_0033), grooming
-(cd02A/DSC_0011), palm (cd02A/DSC_0043), leaves (cd12A/DSC_0030), portrait
-(cd58A/DSC_0001), troop (cd58A/DSC_0008).
-
-Unpublished photos from David Brainard: quad (EXPOSURE_ASC/DSC_0014), highway
-(SNAPSHOTS/DSC_0200).
+`.tiff` files of all these images can be downloaded from the [OSF
+page](https://osf.io/e2y4v/). They have been demosaiced (using DCRAW) but
+otherwise untouched from the raw files. For image synthesis they were converted
+to 16-bit grayscale png files, cropped / expanded to 2048 by 2600 pixels (Prof.
+Brainard's photos and those from the UPenn Natural Image Database were 2014
+pixels tall and so a small amount of reflection padding was used on these
+photos), and rescaled so all pixel values lay between .05 and .95. These png
+files are found in the `synthesis_input` tarball on the [OSF
+page](https://osf.io/sw4tb).
 
 ### Download data
 
@@ -489,7 +502,18 @@ using `download_data.py`. These are made available because they might be useful
 for others, but I do not expect them to be used by anyone with this repo,
 because they are not necessary for reproducing the figures.
 
-### config.yml
+## config.yml
+
+This is configuration file containing options used by `snakemake`. You need to
+modify the first one, `DATA_DIR`, and might need to modify the other paths in
+that first section. All the other options should be left unmodified. The file is
+commented explaining what each of the options are.
+
+Note that, unless stated otherwise, you cannot use ~ in any of the paths in this
+file (you must write out the full path to your home directory, e.g.,
+`/home/billbrod` or `/Users/billbrod`). Also, the paths should probably not have
+capital letters -- there's a discrepancy between how Mac and Linux handle
+capital letters in paths, which might create problems.
 
 # Directory structure
 
@@ -555,9 +579,10 @@ because they are not necessary for reproducing the figures.
       [below](#check-against-freeman-and-simoncelli-2011-windows) for more
       details.
   - `examples_images.py`: script to open up some example images to show
-    participants before the experiment (example usage elsewhere in this readme).
+    participants before the experiment (see [Training](#training) section for
+    how to use).
   - `download_data.py`: script to download and arrange data for reproducing
-    results and figures. See explanation elsewhere in this readme.
+    results and figures. See [Download data](#download-data) for how to use.
   - `matlab/`: two matlab scripts using external matlab libraries. Neither are
     necessary: one is used to generate the windows from the Freeman and
     Simoncelli, 2011 paper (the output of which can be downloaded using
@@ -583,22 +608,29 @@ because they are not necessary for reproducing the figures.
        metamer figures).
      - `paper_figures/`: these are the actual figures used in the paper, as
        created by the `snakemake` file. There are none in the github repo, see
-       main repo README for details on how to create them.
+       [Usage](#usage) section for details on how to create them.
      - `figure_rules.txt`: this is a list of snakemake rules that create figures
        (rather than analyze the data). It can be used to limit snakemake's
-       search of possible analysis paths. See main github README for more
-       details.
+       search of possible analysis paths. See [Usage](#usage) for details on how
+       to use.
+     - `pip_freeze_laptop.txt`, `pip_freeze_hpc.txt`: the outputs of `pip
+       freeze` on two different machines, showing working environments as of
+       fall 2022.
   - `tests/test_models.py`: contains a small number of tests of the pooling
     models, ran weekly and on every push (alongside other tests).
   - `environment-psychopy.yml`, `environment.yml`: yml files defining conda
     environment for the experiment (using `psychopy`) and for everything. See
-    elsewhere in this readme for details.
+    [Setup](#setup) section for how to use.
   - `greene.json`, `rusty.json`: json files defining how snakemake should
     communicate with NYU's and Flatiron's SLURM clusters, respectively (works
     with the [snakemake-slurm](https://github.com/billbrod/snakemake-slurm)
-    profile). See elsewhere in this readme for details.
-  - `config.yml`: yml configuration file, defining paths, metmaer structure, and
-    some info on experiment structure.
+    profile). I have written a section on how to use snakemake with a SLURM
+    cluster in a readme [for a different
+    project](https://github.com/billbrod/spatial-frequency-preferences#cluster-usage),
+    and may write something in more detail at some point. Reach out if you have
+    questions.
+  - `config.yml`: yml configuration file, defining paths, metamer path template,
+    and some configuration for experiment structure.
 
 # Usage details
 
