@@ -269,6 +269,19 @@ distance of 40cm, 48.5 pixels per degree), you'll need to use the `-p` and
 `-d` flags when calling `experiment.py` to specify the size of your screen in
 pixels and degrees.
 
+And note that the above options allow you to run the experiment on a setup that
+has a different screen size (both in pixels and in degrees) than the intended
+one, the metamers were created with this specific set up in mind. Things should
+be approximately correct on a different setup (in particular, double-check that
+images are cropped, not stretched, when presented on a smaller monitor), but
+there's no guarantee. If you run this experiment, with these stimuli, on a
+different setup, my guess is that the psychophysical curves will look different,
+but that their critical scaling values should approximately match; that is,
+there's no guarantee that all scaling values will give images that will be
+equally confusable on different setups, but the maximum scaling value that leads
+to 50% accuracy should be about the same. The more different the viewing
+conditions, the less likely that this will hold.
+
 Also note that your monitor should be gamma-corrected to have a linear
 relationship between luminance and pixel value.
 
@@ -402,6 +415,39 @@ what package versions are compatible. (I'm not testing figure creation, because
 I couldn't come up with a way to do that didn't require more storage than is
 available for free from Github runners --- if you have a solution for this, I'd
 love to hear it).
+
+### Jupyter
+
+This repo includes [one
+notebook](#check-against-freeman-and-simoncelli-2011-windows), for examining the
+differences between this project and Freeman and Simoncelli, 2011. You can view the cached output of the notebook online, or you can install jupyter locally and run the notebook.
+
+There are two main ways of installing jupyter locally:
+
+1. Install jupyter in this `metamers` environment: 
+
+``` sh
+conda activate metamers
+mamba install -c conda-forge jupyterlab
+```
+
+   This is easy but, if you have multiple conda environments and want to use
+   Jupyter notebooks in each of them, it will take up a lot of space.
+   
+2. Use [nb_conda_kernels](https://github.com/Anaconda-Platform/nb_conda_kernels):
+
+``` sh
+# activate your 'base' environment, the default one created by miniconda
+conda activate 
+# install jupyter lab and nb_conda_kernels in your base environment
+mamba install -c conda-forge jupyterlab
+mamba install nb_conda_kernels
+# install ipykernel in the calibration environment
+mamba install -n metamers ipykernel
+```
+
+   This is a bit more complicated, but means you only have one installation of
+   jupyter lab on your machine.
 
 ### Experiment environment
 
@@ -634,85 +680,7 @@ capital letters in paths, which might create problems.
 
 # Usage details
 
-The general structure of the research project this repo describes is
-as follows:
-
-1. Develop models of the early visual system
-2. Generate metamers for these models
-3. Use psychophysics to set model parameters
-
-The code for the models and general metamer synthesis are contained in the
-[plenoptic library](https://github.com/LabForComputationalVision/plenoptic/);
-this repo has four main components: generate metamers (2), prepare for the
-experiment (3), run the experiment (3), and analyze the data from the experiment
-(3). How to use this repo for each of those tasks is described below.
-
-I use the [Snakemake](https://snakemake.readthedocs.io/en/stable/)
-workflow management tool to handle most of the work involved in
-generating the metamers, preparing for the experiment, and analyzing
-the experiment output, so for everything except running the experiment
-itself, you won't call the python scripts directly; instead you'll
-tell `snakemake` the outputs you want, and it will figure out the
-calls necessary, including all dependencies. This simplifies things
-considerably, and means that (assuming you only want to run things,
-not to change anything) you can focus on the arguments to `snakemake`,
-which specify how to submit the jobs rather than making sure you get
-all the arguments and everything correct.
-
-## Setup
-
-Make sure you've set up the software environment as described in the
-[requirements](#requirements) section and activate the `metamers`
-environment: `conda activate metamers`.
-
-In order to generate these metamers in a reasonable time, you'll need
-to have GPUs availabe. Without it, the code will not work; it could be
-modified trivially by replacing the `gpu=1` with `gpu=0` in the
-`get_all_metamers` function at the top of `Snakefile`, but generating
-all the metamers would take far too much time to be
-realistic. Additionally, PyTorch [does not
-guarantee](https://pytorch.org/docs/stable/notes/randomness.html)
-reproducible results between CPU and GPU executions, even with the
-same seed, so you generating metamers on the CPU will not result in an
-identical set of images, though (assuming the loss gets low enough),
-they should still be valid metamers.
-
-Decide where you want to place the metamers and data for this
-project. For this README, it will be
-`/home/billbrod/Desktop/metamers`. Edit the first line of the
-`config.yml` file in this repo to contain this value (don't use the
-tilde `~` for your home directory, python does not understand it, so
-write out the full path).
-
-Create that directory, download the tarball containing the reference
-images and normalizing statistics, and unzip it into that directory:
-
-```
-mkdir /home/billbrod/Desktop/metamers
-cd /home/billbrod/Desktop/metamers
-wget -O- https://osf.io/td3ea/download | tar xvz -C .
-```
-
-You should now have three directories here: `raw_images`, `ref_images` and
-`norm_stats`. `raw_images` should contain four `.NEF` (Nikon's raw format)
-images: `azulejos`, `flower`, `tiles`, and `market`. `norm_stats` should contain
-a single `.pt` (pytorch) file: `V1_texture_degamma_norm_stats.pt`. `ref_images`
-should contain `einstein_size-256,256.png`, which we'll use for testing the
-setup, as well as `.tiff` versions of the four raw images (the raw images are
-provided in case you want to try a different demosaicing algorithm than the one
-I did; if you're fine with that step, you can ignore them and everything further
-will use the `.tiff` files found in `ref_images`).
-
-## Test setup
-
-A quick snakemake rule is provided to test whether your setup is
-working: `snakemake -j 4 -prk test_setup_all`. This will create a small number
-of metamers, without running the optimization to completion. If this
-runs without throwing any exceptions, your environment should be set
-up correctly and you should have gpus available.
-
-The output will end up in `~/Desktop/metamers/test_setup` and you can
-delete this folder after you've finished.
+The following sections contain some extra details that may be useful.
 
 ## Check against Freeman and Simoncelli, 2011 windows
 
@@ -729,211 +697,26 @@ well as some snakemake rules.
 We check two things: that our windows' scaling parameter has the same meaning as
 that in the original paper, and that our V1 metamers look approximately the
 same. You can view this by looking at the `Freeman_Check` notebook and its
-cached outputs directly. If you wish to run the notebook or investigate the
-objects in more detail, you can run either the `freeman_check` or
-`download_freeman_check` snakemake rules (`freeman_check` will run the analyses
-and so requires matlab and a GPU, while `download_freeman_check` will just
-download the outputs of this from the [OSF](https://osf.io/67tbe/)):
+cached outputs directly. If you wish to run the notebook locally, you'll need to
+download the input files (`python download_data.py freeman2011_check_input`) and
+then either download the files required (`python download_data.py
+freeman2011_check_output`) or generate them yourself (`snakemake -prk
+freeman_check`). Note that generating them yourself will require MATLAB with the
+[Freeman metamer](https://github.com/freeman-lab/metamers/) and
+[matlabPyrTools](https://github.com/LabForComputationalVision/matlabPyrTools)
+toolboxes (set their paths correctly in `config.yml`)
 
-``` sh
-conda activate metamers
-snakemake -prk download_freeman_check
-# OR
-snakemake -prk freeman_check
-```
-
-Once you've done that, you can start up the jupyter notebook. There are two main
-ways of getting jupyter working so you can view the included notebook:
-
-1. Install jupyter in this `metamers` environment: 
-
-``` sh
-conda activate metamers
-conda install -c conda-forge jupyterlab
-```
-
-   This is easy but, if you have multiple conda environments and want to use
-   Jupyter notebooks in each of them, it will take up a lot of space.
-   
-2. Use [nb_conda_kernels](https://github.com/Anaconda-Platform/nb_conda_kernels):
-
-``` sh
-# activate your 'base' environment, the default one created by miniconda
-conda activate 
-# install jupyter lab and nb_conda_kernels in your base environment
-conda install -c conda-forge jupyterlab
-conda install nb_conda_kernels
-# install ipykernel in the calibration environment
-conda install -n metamers ipykernel
-```
-
-   This is a bit more complicated, but means you only have one installation of
-   jupyter lab on your machine.
-   
-In either case, to open the notebooks, navigate to the `notebooks/` directory on
-your terminal and activate the environment you install jupyter into (`metamers`
-for 1, `base` for 2), then run `jupyter` and open up the notebook. If you
-followed the second method, you should be prompted to select your kernel the
-first time you open a notebook: select the one named "metamers".
+Make sure you have [Jupyter](#jupyter) installed, then navigate to the
+`notebooks/` directory on your terminal and activate the environment you install
+jupyter into (`metamers` or `base`, depending on how you installed it), then run
+`jupyter` and open up the notebook. If you used the `nb_conda_kernels` method,
+you should be prompted to select your kernel the first time you open a notebook:
+select the one named "metamers".
 
 A portion of the results presented in this notebook are also found in one of the
 paper's appendices.
 
-## Generate metamers
-
-Generating the metamers is very time consuming and requires a lot of
-computing resources. We generate 108 images per model (4 reference
-images * 3 seeds * 9 scaling values), and the amount of time/resources
-required to create each image depends on the model and the scaling
-value. The smaller the scaling value, the longer it will take and the
-more memory it will require. For equivalent scaling values, V1
-metamers require more memory and time than the RGC ones, but the RGC
-metamers required for the experiment all have much smaller scaling
-values. For the smallest of these, they require too much memory to fit
-on a single GPU, and thus the length it takes increases drastically,
-up to about 8 hours. For the V1 images, the max is about three
-hours. -- TODO: UPDATE THESE ESTIMATES
-
-The more GPUs you have available, the better.
-
-If you wanted to generate all of your metamers at once, this is very
-easy: simply running
-
-```
-python -m foveated_metamers.utils RGC V1 -g | xargs snakemake -j n --resources gpu=n mem=m -prk --restart-times 3 --ri
-```
-
-will do this (where you should replace both `n` with the number of
-GPUs you have; this is how many jobs we run simultaneously; assuming
-everything is working correctly, you could increase the `n` after `-j`
-to be greater than the one after `--resources gpu=`, and snakemake
-should be able to figure everything out; you should also replace `m`
-with the GB of RAM you have available). `snakemake` will create the
-directed acyclic graph (DAG) of jobs necessary to create all metamers.
-
-However, you probably can't create all metamers at once on one machine, because
-that would take too much time. You probably want to split things up. If you've
-got a cluster system, you can configure `snakemake` to work with it in a
-[straightforward
-manner](https://snakemake.readthedocs.io/en/stable/executable.html#cluster-execution)
-(snakemake also works with cloud services like AWS, kubernetes, but I have no
-experience with that; you should google around to find info for your specific
-job scheduler, see the small repo [I put
-together](https://github.com/billbrod/snakemake-slurm) for using NYU's or the
-Flatiron Institute's SLURM system). In that case, you'll need to put together a
-`cluster.json` file within this directory to tell snakemake how to request GPUs,
-etc (see `greene.json` and `rusty.json` for the config files I use on NYU's and
-Flatiron's, respectively). Something like this should work for a SLURM system
-(the different `key: value` pairs would probably need to be changed on different
-systems, depending on how you request resources; the one that's probably the
-most variable is the final line, gpus):
-
-```
-{
-    "__default__":
-    {
-	"nodes": 1,
-	"tasks_per_node": 1,
-	"mem": "{resources.mem}GB",
-	"time": "36:00:00",
-	"job_name": "{rule}.{wildcards}",
-	"cpus_per_task": 1,
-	"output": "{log}",
-	"error": "{log}",
-	"gres": "gpu:{resources.gpus}"
-    }
-}
-```
-
-Every `create_metamers` job will use a certain number of gpus, as
-given by `resources.gpu` for that job. In the snippet above, you can
-see that we use it to determine how many gpus to request from the job
-scheduler. On a local machine, `snakemake` will similarly use it to
-make sure you don't run five jobs that require 1 gpus each if you only
-have 4 gpus total, for example. Similarly, `resources.mem` provides an
-estimate of how much memory (in GB) the job will use, which we use
-similarly when requesting resources above. This is just an estimate
-and, if you find yourself running out of RAM, you may need to increase
-it in the `get_mem_estimate` function in `Snakefile.`
-
-If you don't have a cluster available and instead have several machines with
-GPUs so you can split up the jobs, making use of the
-`foveated_metamers/utils.py` script. See it's help string for details, but
-calling it from the command line with different arguments will generate the
-paths for the corresponding metamers. For example, to print the path to all RGC
-metamers with a given scaling value, you would run
-
-```
-python -m foveated_metamers.utils RGC -g --scaling 0.01
-```
-
-The `-g` argument tells the script to include the gamma-correction step (for
-viewing on non-linear displays) and `RGC` and `--scaling 0.01` tell it to
-use that model and scaling value, respectively. While messing with this, pay
-attention to the `-j n` and `--resources gpu=n` flags, which tell snakemake how
-many jobs to run at once and how many GPUs you have available, respectively.
-
-Note that I'm using dotlockfile to handle scheduling jobs across
-different GPUs. I think this will work, but I recommend adding the
-`--restart-times 3` flag to the snakemake call, as I do above, which
-tells snakemake to try re-submitting a job up to 3 times if it
-fails. Hopefully, the second time a job is submitted, it won't have a
-similar problem. But it might require running the `snakemake` command
-a small number of times in order to get everything straightened out.
-
-## Prepare for experiment
-
-Once the metamers have all been generated, they'll need to be combined
-into a numpy array for the displaying during the experiment, and the
-presentation indices will need to generated for each subject.
-
-For the experiment we performed, we had 8 subjects, with 3 sessions per model
-per comparison, each containing 5 original images and lasting an hour. In order
-to re-generate the indices we used, you can simply run `snakemake -prk
-gen_all_idx`. This will generate the indices for each subject, each session,
-each model, as well as the stimuli array (we actually use the same index for
-each model for a given subject and session number; they're generated using the
-same seed).
-
-This can be run on your local machine, as it won't take too much time
-or memory.
-
-The stimuli arrays will be located at:
-`~/Desktop/metamers/stimuli/{model_name}/stimuli_comp-{comp}.npy` and the presentation
-indices will be at
-`~/Desktop/metamers/stimuli/{model_name}/task-split_comp-{comp}/{subj_name}/{subj_name}_task-split_comp-{comp}_idx_sess-{sess_num}_im-{im_num}.npy`,
-where `{comp}` is `met` and `ref`, for the metamer vs metamer and metamer vs
-reference image comparisons, respectively. There will also be a pandas
-DataFrame, saved as a csv, at
-`~/Desktop/metamers/stimuli/{model_name}/stimuli_description.csv`, which
-contains information about the metamers and their optimization. It's used to
-generate the presentation indices as well as to analyze the data.
-
-You can generate your own, novel presentation indices by running `snakemake -prk
-~/Desktop/metamers/stimuli/{model_name}/task-split_comp-{comp}/{subj_name}/{subj_name}_task-split_comp-{comp}_idx_sess-{sess_num}_run-{run_num}.npy`,
-replacing `{model_name}` with one of `'RGC_norm_gaussian',
-'V1_norm_s6_gaussian'`, `{subj_name}` must be of the format `sub-##`, where `##`
-is some integer (ideally zero-padded, but this isn't required), `{sess_num}`
-must also be an integer (this is because we use the number in the subject name
-and session number to determine the seed for randomizing the presentation order;
-if you'd like to change this, see the snakemake rule `generate_experiment_idx`,
-and how the parameter `seed` is determined; as long as you modify this so that
-each subject/session combination gets a unique seed, everything should be fine),
-`{run_num}` is `00` or `01` (determines which set of 4 reference images are
-shown), and `comp` take one of the values explained above.
-
-### Demo / test experiment
-
-For teaching the subjects about the task, we have two brief training runs: one
-with noise images and one with a small number of metamers. To put them together,
-run `snakemake -prk
-~/Desktop/metamers/stimuli/training_noise/task-split_comp-met/sub-training/sub-training_task-split_comp-met_idx_sess-00_run-00.npy
-~/Desktop/metamers/stimuli/training_RGC_norm_gaussian/task-split_comp-met/sub-training/sub-training_task-split_comp-met_idx_sess-00_run-00.npy
-~/Desktop/metamers/stimuli/training_V1_norm_s6_gaussian/task-split_comp-met/sub-training/sub-training_task-split_comp-met_idx_sess-00_run-00.npy`.
-This will make sure the stimuli and index files are created. Then run the
-[training](#training) section below.
-
-## Run experiment
+## Experiment notes
 
 To run the experiment, make sure that the stimuli array and presentation indices
 have been generated and are at the appropriate path. It's recommended that you
@@ -941,34 +724,33 @@ use a chin-rest or bite bar to guarantee that your subject remains fixated on
 the center of the image; the results of the experiment rely very heavily on the
 subject's and model's foveations being identical.
 
-We want 6 sessions per subject per model. Each session will contain all trials
-in the experiment for 4 of the 8 reference images, the only thing that differs
-is the presentation order (each subject gets presented a different split of 4
-reference images). 
-
 ### Training
 
 To teach the subject about the experiment, we want to introduce them to the
 structure of the task and the images used. The first one probably only needs to
-be done the first time a given subject is collecting data for each model, the
-second should be done at the beginning of each session.
+be done the first time a given subject is collecting data for each model /
+comparison, the second should be done at the beginning of each session.
 
-1. First, run a simple training run (make sure the stimuli and indices are
-   created, as described [above](#demo--test-experiment)):
+(The following paths all assume that `DATA_DIR` is `~/Desktop/metamers`, replace
+that with your actual path.)
+
+1. First, run a simple training run (if you haven't already, first run `python
+   download_data.py experiment_training` to get the required files):
     - `conda activate psypy` 
-    - `python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/training_noise/stimuli_comp-{comp}.npy sub-training 0 -s 0 -c {comp} ; python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/training_{model}/stimuli_comp-{comp}.npy sub-training 0 -s 0 -c {comp}` 
-       where `{comp}` is `met` or `ref`, depending on which version you're
-       running, and `{model}` is `RGC_norm_gaussian` or `V1_norm_s6_gaussian`,
-       depending on which you're running.
+    - `python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/training_noise/stimuli_comp-{comp}.npy sub-training 0 ; python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/training_{model}/stimuli_comp-{comp}.npy sub-training 0` 
+       where `{comp}` depends on which comparison you're running, and `{model}`
+       is `RGC_norm_gaussian` or `V1_norm_s6_gaussian`, depending on which
+       you're running.
     - Explanatory text will appear on screen, answer any questions.
     - This will run two separate training runs, both about one or two minutes,
-      each followed by feedback. 
+      with feedback between each trial (the fixation dot will turn green if they
+      answered correctly) and at the end of the run (overall performance).
     - The first one will just be comparing natural to noise images and so the
       subject should get 100%. The goal of this one is to explain the basic
       structure of the experiment.
     - The second will have two metamers, one easy and one hard, for each of two
-      reference images. They should get 100% on the easy one, and do worse on
-      the hard. The goal of this one is to show what the task is like with
+      reference images. They should get 100% on the easy one, and about chance
+      on the hard. The goal of this one is to show what the task is like with
       metamers and give them a feeling for what they may look like.
 2. Run: 
    - `conda activate metamers`
@@ -982,11 +764,15 @@ second should be done at the beginning of each session.
      the highest scaling value (all linear, not gamma-corrected).
     - Allow the participant to flip between these images at their leisure, so
       they understand what the images will look like.
+   - Note: this *will not work* unless you have the metamers for this comparison
+     at the locations where they end up after synthesis (you probably don't). If
+     you're interested in using this script, open an issue and I'll try to
+     rework it.
 
-### Split-screen Task
+### Task structure
 
-Now, using a split-screen task. Each trial lasts 1.4 seconds and is structured
-like so:
+Unlike previous experiments, we use a split-screen task. Each trial lasts 1.4
+seconds and is structured like so:
 
 ```
 |Image 1 | Blank  |Image 2 |Response|  Blank |
@@ -997,35 +783,33 @@ like so:
 Image 1 will consist of a single image divided vertically at the center by a
 gray bar. One half of image 2 will be the same as image 1, and the other half
 will have changed. The two images involved are either two metamers with the same
-scaling value (if `comp=met`) or a metamer and the reference image it is based
-on (if `comp=ref`). The subject's task is to say whether the left or the right
-half changed. They have as long as they need to respond and receive no feedback.
+scaling value (if `comp=met` or `met-natural`) or a metamer and the reference
+image it is based on (if `comp=ref` or `ref-natural`). The subject's task is to
+say whether the left or the right half changed. They have as long as they need
+to respond and receive no feedback.
 
 To run the experiment:
 
 - Activate the `psypy` environment: `conda activate psypy`
 - Start the experiment script from the command line: 
-   - `python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/{model}/stimuli_comp-{comp}.npy {subj_name} {sess_num} -c {comp}` 
+   - `python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/{model}/stimuli_comp-{comp}.npy {subj_name} {sess_num}` 
      where `{model}, {subj_name}, {sess_num}, {comp}` are as described in the
      [training](#training) section.
    - There are several other arguments the experiment script can take,
      run `python foveated_metamers/experiment.py -h` to see them, and
      see the [other arguments](#other-arguments) section for more
      information.
-- Explain the task to the subject, as seen in the "say this to subject for
-  experiment" section (similar text will also appear on screen before each run
-  for the participant to read)
+- Explain the task to the subject, as given in the example below (similar text
+  will also appear on screen before each run for the participant to read)
 - When the subject is ready, press the space bar to begin the task.
-- You can press the space bar at any point to pause it, but the pause
-  won't happen until the end of the current trial, so don't press it a
-  bunch of times because it doesn't seem to be working. However, try
-  not to pause the experiment at all.
-- You can press q/esc to quit, but don't do this unless truly
-  necessary.
-- There will be a break half-way through the block. The subject can
-  get up, walk, and stretch during this period, but remind them to
-  take no more than a minute. When they're ready to begin again,
-  press the space bar to resume.
+- You can press the space bar at any point to pause it, but the pause won't
+  happen until the end of the current trial, so don't press it a bunch of times
+  because it doesn't seem to be working. However, try not to pause the
+  experiment at all.
+- You can press q/esc to quit, but don't do this unless truly necessary.
+- There will be a break half-way through the block. The subject can get up,
+  walk, and stretch during this period, but remind them to take no more than a
+  minute. When they're ready to begin again, press the space bar to resume.
 - The data will be saved on every trial, so if you do need to quit out, all is
   not lost. If you restart from the same run, we'll pick up where we left off.
 - The above command will loop through all five runs for a given session. To do a
@@ -1094,7 +878,7 @@ equally confusable on different setups, but the maximum scaling value that leads
 to 50% accuracy should be about the same. The more different the viewing
 conditions, the less likely that this will hold.
 
-### Checklist
+### Experiment Checklist
 
 The following is a checklist for how to run the experiment. Print it out and
 keep it by the computer.
@@ -1139,7 +923,7 @@ First session only (on later sessions, ask if they need a refresher):
 
 ``` sh
 conda activate psypy
-python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/training_noise/stimuli_comp-ref.npy sub-training 0 -c ref ; python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/training_{model}/stimuli_comp-ref.npy sub-training 0 -c ref
+python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/training_noise/stimuli_comp-ref.npy sub-training 0 ; python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/training_{model}/stimuli_comp-ref.npy sub-training 0
 ```
 
 6. Answer any questions.
@@ -1172,7 +956,7 @@ python example_images.py {model} {subj_name} {sess_num}
 
 ``` sh
 conda activate psypy
-python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/{model}/stimuli_comp-ref.npy {subj_name} {sess_num} -c ref
+python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/{model}/stimuli_comp-ref.npy {subj_name} {sess_num}
 ```
 
 # Known issues
@@ -1256,8 +1040,13 @@ the `pooling-windows` repo is normalization -- look for the `normalize_dict`
 attribute in `extra_packages/plenoptic_part/simulate/ventral_stream.py` to see
 how I implemented that, and feel free to reach out if you have trouble.
 
-jeremy's code, Wallis code
-   
+You may also be interested in the code used by two other papers that this
+project references a lot, [Freeman and Simoncelli,
+2011](https://github.com/freeman-lab/metamers/) and [Wallis et al.,
+2019](https://zenodo.org/record/2582880). If you wish to use the Freeman code,
+note the bug in window creation pointed out by Wallis et al. (discussed in their
+appendix 1).
+
 # Citation
 
 If you use the data or code (including the stimuli) from this project in an
@@ -1275,6 +1064,10 @@ More to come...
   B\"urkner (2021). Rank-normalization, folding, and localization: an improved
   $R$ for assessing convergence of mcmc (with discussion). Bayesian Analysis,
   16(2), 667–718. http://dx.doi.org/10.1214/20-BA1221
+
+- Wallis, T. S., Funke, C. M., Ecker, A. S., Gatys, L. A., Wichmann, F. A., &
+  Bethge, M. (2019). Image content is more important than bouma's law for scene
+  metamers. eLife, 8(), . http://dx.doi.org/10.7554/elife.42512
 
 - Wang, Z., & Simoncelli, E. P. (2008). Maximum differentiation (MAD)
   competition: A methodology for comparing computational models of perceptual
