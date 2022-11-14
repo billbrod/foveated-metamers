@@ -32,7 +32,14 @@ run", so you can see what steps `snakemake` will take, without running anything.
 
 The following steps will walk you through downloading the fully-processed data
 and recreating the figures, read further on in this README for details:
+
 1. Clone this repo.
+    - Because we use git submodules, you'll also need to run the following two
+      lines:
+      ```sh
+      git submodule sync
+      git submodule update --init --recursive
+      ```
 2. Open `config.yml` and modify the `DATA_DIR` path to wherever you wish to
    download the data (see [config.yml](#config.yml) section for details on this
    file).
@@ -44,7 +51,10 @@ and recreating the figures, read further on in this README for details:
    - Navigate to this directory and run `mamba env create -f environment.yml` to
      install the environment.
    - Run `conda activate metamers` to activate the python environment.
-   - Additionally, install [inkscape](https://inkscape.org/).
+   - Additionally, install [inkscape](https://inkscape.org/), version equal to
+     or greater 1.0.2.
+   - Check if you have `rsync` available (you probably do) and install it if you
+     don't (probably best to do so via a package manager).
 4. Run `python download_data.py synthesis_input mcmc_fits figure_input ` to
    download the data required to create the papers in the main figure (this is
    about 20GB).
@@ -160,6 +170,17 @@ most parts of the path are options related to metamer synthesis, see
 `METAMER_TEMPLATE_PATH` in `config.yml`, as well as the `create_metamers` rule
 in `Snakefile` to get a sense for what these are.
 
+You can also use the `foveated_metamers.utils.generate_metamer_paths` function
+to generate the list of paths that I used for metamers in this experiment (it
+can also be called from the command-line: `python -m foveated_metamers.utils`).
+See the command-line's helpstring or the function's docstring for details, but
+here's an example: in order to get the path for one of the energy model metamers
+created with the llama target image for each scaling value used in the original
+vs. synth white noise comparison, run: `python -m foveated_metamers.utils V1
+--ref_image llama --seed_n 0`. Note that this prints out the files on a single
+line, so you may want to redirect the output to a file for later viewing (append
+`> mets.txt`) or split it up for easier viewing (append `| tr ' ' '\n'`).
+
 To recreate any of my metamers, you'll also need to download the
 `synthesis_input` data set, which includes the target images we used, as well as
 statistics used for normalizing the models' representation.
@@ -203,7 +224,7 @@ First, Set up your environment for the [experiment](#experiment-environment) and
 download the stimuli: `python download_data.py stimuli`. 
 
 You may also want to download the files used in the training and [try that
-out](#...-see-what-the-experiment-was-like).
+out](#see-what-the-experiment-was-like).
 
 For a given model and comparison, the full expeirment consists of 3 sessions,
 with 5 runs each. A single session lasts about an hour, with small breaks built
@@ -312,72 +333,94 @@ different from the others.
 
 ## Software requirements
 
-Need to make sure you have ffmpeg on your path when creating the metamers, so
-make sure it's installed and on your path. I have had a lot of trouble using
-`module` to load the ffmpeg present on NYU prince, and so recommend installing
-[a static build](https://www.johnvansickle.com/ffmpeg/faq/) and using that
-directly (note that I have not had this problem with NYU greene or Flatiron
-Institute's rusty, so it appears to be cluster-specific).
+The [python environment](#python) discussed below are required regardless of
+what you wish to do. There are several additional requirements that are
+optional:
+  - If you are using `download_data.py`, you'll need `rsync`, which you probably
+    already have. If not, it's probably best to grab it via your OS's package
+    manager.
+  - If you are synthesizing metamers, you'll need `ffmpeg`. This is probably
+    also already installed on your machine, but if not, [a static
+    build](https://www.johnvansickle.com/ffmpeg/faq/) is probably the easiest
+    way to go.
+  - If you're using GPUs for image synthesis, you'll need the python package
+    `dotlockfile` as well: `pip install dotlockfile`.
+  - For embedding images into our figures (the last step of figure creation for
+    about a third of the figures), you need [inkscape](https://inkscape.org),
+    version equal to or greater than 1.0.2.
+    - We also need to know the location of your inkscape preference file. The
+      default is probably correct, but see section [config.yml](#configyml) for
+      more details.
 
-Both provided conda environment files pin the versions of all the
-python packages required to those used for the experiment. That's
-probably not necessary, but is provided as a step to improve
-reproducibility.
+There's a [separate python environment](#experiment-environment) for running the
+environment, so install that if you're planning on running the experiment.
 
-If you're using GPUs to create images, you'll also need `dotlockfile`
-on your machine in order to create the lockfiles we use to prevent
-multiple jobs using the same GPU.
+### Python
 
-Other requirements:
-- inkscape, at least version 1.0.2 (used for figure creation).
+This has been run and tested with version 3.7, unsure about more recent
+versions.
 
-## Experiment environment
+1. Install [miniconda](https://docs.conda.io/en/latest/miniconda.html) with the
+   appropriate python version.
+2. Install [mamba](https://mamba.readthedocs.io/en/latest/installation.html):
+   `conda install mamba -n base -c conda-forge` (I recommend using mamba instead
+   of conda to install the environment because conda tends to hang while
+   attempting to solve the environment).
+3. After cloning this repo, run the following from this directory to grab the git submodules:
+   ```sh
+   git submodule sync
+   git submodule update --init --recursive
+   ```
+4. In this directory, run `mamba env create -f environment.yml`
+5. If everything works, type `conda activate metamers` to activate this
+   environment.
+   
+As of fall 2022, the packages that I know have version requirements are
+specified in `environment.yml`. However, in case updates to the dependencies
+break something, I've included the output of the `pip freeze` command from two
+different machines (my laptop and Flatiron's compute cluster) at
+`reports/pip_freeze_laptop.txt` and `reports/pip_freeze_hpc.txt`, so a working
+environment is cached (note that this includes more packages than specified in
+`environment.yml`, because it includes all *their* dependencies as well).
 
-For running the experiment, need to install `glfw` from your package
-manager.
+I am also running tests on [github
+actions](https://github.com/billbrod/foveated-metamers/actions) to check that
+the following parts of the workflow run: the data download script, the included
+notebook, metamer synthesis, the pooling models, and fitting the MCMC curves.
+For all of these, I'm just testing that they *can run*, not the full workflow
+completes or that I get the proper outcome, but that should be sufficient to see
+what package versions are compatible. (I'm not testing figure creation, because
+I couldn't come up with a way to do that didn't require more storage than is
+available for free from Github runners --- if you have a solution for this, I'd
+love to hear it).
 
-There are two separate python environments for this project: one for
-running the experiment, and one for everything else. To install the
-experimental environment, either follow [the minimal
-install](#minimal-experiment-install) or do the following:
+### Experiment environment
+
+Install miniconda and mamba as described [above](#python) (you probably don't
+need the submodules, but they won't hurt), then run:
 
 ```
-conda env create -f environment-psychopy.yml
+mamba env create -f environment-psychopy.yml
 ```
 
 Then, to activate, run `conda activate psypy`.
 
 PsychoPy provides multiple backends. I'm now using the `pyglet` backend, but
 I've occasionally had issues with a weird [`XF86VidModeGetGammaRamp failed`
-error](https://github.com/psychopy/psychopy/issues/2061). If you get that error
-and are unable to fix it, switching to the `glfw` backend will probably work (if
-you followed the above install instructions, you'll have the requirements for
-both on your machine). I've also had issues with `glfw` where it doesn't record
-the key presses before the pause and run end during the experiment, which means
-those trials aren't counted and may mess up how `analysis.summarize_trials`
-determines which keypress corresponds to which trial. If you switch to `glfw`,
-you should carefully check that.
+error](https://github.com/psychopy/psychopy/issues/2061). That's just something
+to be aware of.
 
-## Environment everything else
+This `environment-psychopy.yml` file pins all the package versions but I didn't
+spend a lot of time trying to figure out what exactly was necessary or worry
+about the versions overly-much. That is to say, I think as long as you can get a
+working psychopy install with the `pyglet` backend, the code should work. So you
+could try just to install `psychopy`, `pyglet`, `h5py` (used for storing
+behavioral data) and `numpy` (stimuli are saved as numpy arrays) and go from
+there.
 
-To setup the environment for everything else:
+## Data
 
-```
-git submodule sync
-git submodule update --init --recursive
-conda env create -f environment.yml
-```
-
-Then, to activate, run `conda activate metamers`.
-
-This environment contains the packages necessary to generate the
-metamers, prepare for the experiment, and analyze the data, but it
-*does not* contain the packages necessary to run the experiment. Most
-importantly, it doesn't contain Psychopy, because I've found that
-package can sometimes be a bit trickier to set up and is not necessary
-for anything outside the experiment itself.
-
-## Source images
+### Source images
 
 We use images from the authors' personal collection and the [UPenn Natural Image
 Database](http://tofu.psych.upenn.edu/~upennidb/) as the targets for our metamer
@@ -400,26 +443,53 @@ UPenn Natural Image Database: treetop (cd01A/DSC_0033), grooming
 Unpublished photos from David Brainard: quad (EXPOSURE_ASC/DSC_0014), highway
 (SNAPSHOTS/DSC_0200).
 
-## Minimal experiment install
+### Download data
 
-If you just want to run the experiment and you want to install the
-minumum number of things possible, the following should allow you to
-run this experiment. Create a new virtual environment and then:
+The data for this project is available on its [OSF page](https://osf.io/67tbe/)
+(almost everything) and NYU's [Faculty Digital
+Archive](https://archive.nyu.edu/handle/2451/63953) (the files required for
+appendix 6, which are the fits using the alternative MCMC models). The [OSF
+readme](https://osf.io/kjf75) describes its contents in detail.
 
-```
-pip install psychopy==3.1.5 pyglet==1.3.2 numpy==1.17.0 h5py==2.9.0 glfw==1.8.2
-```
+We also provide the `download_data.py` script, which downloads and arranges the
+data into the structure that `snakemake` expects. The following data sets can be
+downloaded with this script:
 
-And then if you're on Linux, fetch the wxPython wheel for you platform
-from [here](https://extras.wxpython.org/wxPython4/extras/linux/gtk3/)
-(for my setup, I used `wxPython-4.0.6-cp37-cp37m-linux_x86_64.whl`;
-the `cp37` refers to python 3.7, I'm pretty sure, so that's very
-important; not sure if the specific version of wxPython matters) and
-install it with `pip install path/to/your/wxpython.whl`.
+1. `synthesis_input`: the inputs required for synthesizing model metamers, this
+   includes the original images whose model representation our metamers match
+   and the set of statistics used to normalize model responses.
+2. `stimuli`: numpy arrays containing the model metamers used as stimuli in our
+   experiment for each model and comparison separately, along with csv files
+   with their metadata.
+3. `behavioral_data`: csv files containing participant responses, along with
+   metadata (each model and comparison separate).
+4. `mcmc_fits`: `.nc` files containing the fits of the partially pooled
+   hierarchical model to behavior, for each model and comparison separately
+5. `figure_input`: miscellaneous files not contained in the other data sets
+   required to create the figures in the paper (some of the model metamers,
+   etc.)
+6. `freeman2011_check_input`, `freeman2011_check_output`: the input and output
+   files for a brief comparison between our pooling windows and energy model
+   metamers and those presented in Freeman and Simoncelli, 2011. See
+   [below](#check-against-freeman-and-simoncelli-2011-windows) for more details.
+7. `experiment_training`: some files used to train participants, can also be
+   viewed in order to get a sense for how the experiment was structured. See
+   [above](#see-what-the-experiment-was-like) for details.
+8. `mcmc_compare`: `.nc` files containing the fits of the alternative MCMC
+   models to behavior, as well as the csv files evaluating each MCMC models
+   performance, used for appendix 6.
 
-Everything should then hopefully work.
+To download one of the above, call `python download_data.py {TARGET_DATASET}`,
+replacing `{TARGET_DATASET}` with one of the above. Make sure you have specified
+`DATA_DIR` in `config.yml` first. The script will give you an estimate of how
+large each data set is and ask if you would like to continue.
 
-# Data
+There are several components found on the OSF page that cannot be downloaded
+using `download_data.py`. These are made available because they might be useful
+for others, but I do not expect them to be used by anyone with this repo,
+because they are not necessary for reproducing the figures.
+
+### config.yml
 
 # Directory structure
 
@@ -1072,10 +1142,6 @@ python example_images.py {model} {subj_name} {sess_num}
 conda activate psypy
 python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/{model}/stimuli_comp-ref.npy {subj_name} {sess_num} -c ref
 ```
-
-## Analyze experiment output
-
-*In progress*
 
 # Known issues
 
