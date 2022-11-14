@@ -16,6 +16,39 @@ together for browsing through the synthesized images.
 If you re-use some component of this project in an academic publication, see the
 [citation](#citation) section for how to credit us.
 
+Table of Contents
+=================
+
+* [Usage](#usage)
+   * [What if I want to do more than recreate the figures?](#what-if-i-want-to-do-more-than-recreate-the-figures)
+      * [... examine the metamers synthesized for this project](#-examine-the-metamers-synthesized-for-this-project)
+      * [... synthesize some metamers](#-synthesize-some-metamers)
+      * [... see what the experiment was like](#-see-what-the-experiment-was-like)
+      * [... run the full experiment](#-run-the-full-experiment)
+      * [... refit the psychophysical curves](#-refit-the-psychophysical-curves)
+* [Setup](#setup)
+   * [Software requirements](#software-requirements)
+      * [Python](#python)
+      * [Jupyter](#jupyter)
+      * [Experiment environment](#experiment-environment)
+   * [Data](#data)
+      * [Source images](#source-images)
+      * [Download data](#download-data)
+   * [config.yml](#configyml)
+* [Directory structure](#directory-structure)
+* [Usage details](#usage-details)
+   * [Check against Freeman and Simoncelli, 2011 windows](#check-against-freeman-and-simoncelli-2011-windows)
+   * [Experiment notes](#experiment-notes)
+      * [Training](#training)
+      * [Task structure](#task-structure)
+      * [Other arguments](#other-arguments)
+      * [Experiment Checklist](#experiment-checklist)
+* [Known issues](#known-issues)
+* [Notes on reproducibility](#notes-on-reproducibility)
+* [Related repos](#related-repos)
+* [Citation](#citation)
+* [References](#references)
+
 # Usage
 
 The data and code for this project are shared with the primary goal of enabling
@@ -555,7 +588,7 @@ modify the first one, `DATA_DIR`, and might need to modify the other paths in
 that first section. All the other options should be left unmodified. The file is
 commented explaining what each of the options are.
 
-Note that, unless stated otherwise, you cannot use ~ in any of the paths in this
+Note that, unless stated otherwise, you cannot use `~` in any of the paths in this
 file (you must write out the full path to your home directory, e.g.,
 `/home/billbrod` or `/Users/billbrod`). Also, the paths should probably not have
 capital letters -- there's a discrepancy between how Mac and Linux handle
@@ -635,14 +668,12 @@ capital letters in paths, which might create problems.
     `download_data.py`) and the other generates some LGN-like image statistics
     that we didn't end up using.
   - `data/`: contains some data files.
-    - `Dacey1992_RGC.csv`: csv containing data from figure 2B of Dennis M. Dacey
-      and Michael R. Petersen (1992), "Dendritic field size and morphology of
-      midget and parasol ganglion cells of the human retina", PNAS 89,
-      9666-9670, extracted using
+    - `Dacey1992_RGC.csv`: csv containing data from figure 2B of Dacey and
+      Petersen, 1992, extracted using
       [WebPlotDigitizer](https://apps.automeris.io/wpd/) on July 15, 2021. To
-      recreate that figure, using the snakemake rule `dacey_figure`. Note that
-      we did not separate the data into nasal field and temporal, upper, and
-      lower fields, as the paper does.
+      recreate that figure, use the snakemake rule `dacey_figure`. Note that we
+      did not separate the data into nasal field and temporal, upper, and lower
+      fields, as the paper does.
     - `checksums.json`: json file containing BLAKE2b hashes for the files
       downloadable via `download_data.py`, so we can check they downloaded
       corectly.
@@ -676,7 +707,8 @@ capital letters in paths, which might create problems.
     and may write something in more detail at some point. Reach out if you have
     questions.
   - `config.yml`: yml configuration file, defining paths, metamer path template,
-    and some configuration for experiment structure.
+    and some configuration for experiment structure, see [here](#configyml) for
+    details.
 
 # Usage details
 
@@ -717,6 +749,9 @@ A portion of the results presented in this notebook are also found in one of the
 paper's appendices.
 
 ## Experiment notes
+
+These are the notes I wrote for myself so I remembered how to run the experiment
+and could teach others.
 
 To run the experiment, make sure that the stimuli array and presentation indices
 have been generated and are at the appropriate path. It's recommended that you
@@ -1055,6 +1090,11 @@ academic publication, please cite the [poster](https://osf.io/aketq/).
 More to come...
 
 # References
+
+- Dacey, D. M., & Petersen, M. R. (1992). Dendritic field size and morphology of
+  midget and parasol ganglion cells of the human retina. Proceedings of the
+  National Academy of Sciences, 89(20), 9666–9670.
+  http://dx.doi.org/10.1073/pnas.89.20.9666
 
 - Freeman, J., & Simoncelli, E. P. (2011). Metamers of the ventral
   stream. Nature Neuroscience, 14(9),
