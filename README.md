@@ -78,7 +78,7 @@ Some notes about the above:
    is easy, I split up the process into many small jobs. Therefore, there's ~100
    jobs for each of the above `main_paper_figures` and `appendix_figures`. Don't
    worry! They generally don't take that much time.
-2. The overall workflow is very long (going back to preparing the images for
+2. The complete workflow is very long (going back to preparing the images for
    metamer synthesis), and so sometimes `snakemake` can take a long time to
    determine what to run. This problem can get exacerbated if the file
    modification timestamps get thrown off, so that `snakemake` thinks it needs
@@ -88,7 +88,7 @@ Some notes about the above:
    reports/figure_rules.txt | xargs snakemake -prk main_paper_figures
    --allowed-rules`. You can pass any argument to `snakemake`, as long as the
    command ends with `--allowed-rules`.
-2. Several of the figures in the paper (e.g., figure 4) include example metamers
+3. Several of the figures in the paper (e.g., figure 4) include example metamers
    or other large images. We link these images into the figure, rather than
    embed them, until the very end, in order to reduce file size. Embedding them
    requires `inkscape` and an attached display (so it cannot be run on e.g., a
@@ -104,8 +104,8 @@ Some notes about the above:
       then finish up on e.g., your laptop. However, the paths used to link
       images will almost certainly *not work* when moving to a different
       machine, so if you view `fig-04_no_embed.svg`, you will see empty red
-      squares where the images should go. When embedding the images in, we
-      correct the paths, so this is not a problem.
+      squares where the images should go. When embedding the images, we correct
+      the paths, so this is not a problem.
     - It is possible that `snakemake` will get confused when you switch machines
       and decide that it wants to re-run steps because the file modification
       timestamps appear out of order (this might happen, in particular, because
@@ -113,7 +113,8 @@ Some notes about the above:
       point it to something old or non-existant to avoid this!). To prevent
       this, use the same trick as above: append `--allowed-rules
       embed_bitmaps_into_figures main_figures appendix_figures` to any
-      `snakemake` command to ensure that it will only run the embedding rule.
+      `snakemake` command to ensure that it will only run the embedding rule
+      (and the `main_figures` / `appendix_figures` rules).
    
 Reproducing someone else's research code is hard and, in all likelihood, you'll
 run into some problem. If that happens, please [open an
@@ -164,7 +165,8 @@ To recreate any of my metamers, you'll also need to download the
 statistics used for normalizing the models' representation.
 
 You should also be aware that the pooling windows are very large once you get
-below `scaling=0.1`, so I would start with a larger window size. It is also strongly recommended to use a GPU, which will greatly speed up synthesis.
+below `scaling=0.1`, so I would start with a larger window size. It is also
+strongly recommended to use a GPU, which will greatly speed up synthesis.
 
 ### ... see what the experiment was like
 
@@ -185,6 +187,15 @@ tarball: `python download_data.py experiment_training`. You can then follow the
 instructions in the [Training](#training) section of this readme (note that you
 won't be able to use the `example_images.py` script; if you're interested in
 this, open an issue and I'll rework it).
+
+Note that the stimuli won't be rescaled by default: unless you have the exact
+same experimental set up as me (screen size 3840 by 2160 pixels, viewing
+distance of 40cm, 48.5 pixels per degree), you'll need to use the `-p` and
+`-d` flags when calling `experiment.py` to specify the size of your screen in
+pixels and degrees.
+
+Also note that your monitor should be gamma-corrected to have a linear
+relationship between luminance and pixel value.
 
 ### ... run the full experiment
 
@@ -231,7 +242,65 @@ and comparison at once. You can do that by generating the dummy file: `snakemake
 
 Then read the [Run experiment](#run-experiment) section of this readme.
 
+Note that the stimuli won't be rescaled by default: unless you have the exact
+same experimental set up as me (screen size 3840 by 2160 pixels, viewing
+distance of 40cm, 48.5 pixels per degree), you'll need to use the `-p` and
+`-d` flags when calling `experiment.py` to specify the size of your screen in
+pixels and degrees.
+
+Also note that your monitor should be gamma-corrected to have a linear
+relationship between luminance and pixel value.
+
 ### ... refit the psychophysical curves
+
+Follow the first three steps in the [usage](#usage) section, so that you have
+setup your environment and specified `DATA_DIR`. Then, download the behavioral
+data: `python download_data.py behavioral_data`.
+
+From here, it's up to you. If you'd like to use your own procedure, the [OSF
+readme](https://osf.io/kjf75) describes the most relevant columns of the
+behavioral `.csv` files.
+
+If you'd like to use my procedure (using MCMC to fit a hierarchical Bayesian
+model, fitting all images and subjects simultaneously but each metamer model and
+comparison separately), you can do so using `snakemake`: `snakemake -prk
+{DATA_DIR}/mcmc/{model_name}/task-split_comp-{comp}/task-split_comp-{comp}_mcmc_{mcmc_model}_step-{step_size}_prob-{accept_prob}_depth-{tree_depth}_c-{num_chains}_d-{num_draws}_w-{num_warmup}_s-{seed}.nc`,
+where:
+
+- `{DATA_DIR}`: the `DATA_DIR` field from the `config.yml` file 
+- `{model_name}`: either `RGC_norm_gaussian` (for the luminance model) or
+  `V1_norm_s6_gaussian` (energy)
+- `{comp}`: one of `met`, `ref`, `met-natural`, `ref-natural` or
+  `ref-downsample-2`, depending on which comparison you wish to fit.
+- `{mcmc_model}`: which hierarchical model to fit to the data.
+  `partially-pooled` is used in the main body of the paper, see the Methods
+  section for details on it and appendix 6 for details on the other two. Only
+  the `met` and `ref` comparisons have more than one subject, so the models are
+  interchangeable for the rest.
+  - `partially-pooled`: fit image-level and subject-level effects, no
+    interaction between them.
+  - `unpooled`: fit each psychophysical curve separately, no group effects.
+  - `partially-pooled-interactions`: fit image-level and subject-level effects,
+    plus an interation term.
+- `{seed}`: computational seed for reproducibility, must be an integer.
+- the rest are all hyperparameters for MCMC, see numpyro
+  [documentation](https://num.pyro.ai/en/latest/mcmc.html#nuts) and
+  [examples](https://num.pyro.ai/en/latest/examples/baseball.html) for more
+  details.
+
+Note that I've had issues guaranteeing exact reproducibility, even with the same
+seed. I have not been able to track down why this is.
+
+If you refit the curves using MCMC, you'll want to check the diagnostics,
+effective sample size (ESS) and $\hat{R}$. You can create a plot summarizing
+these for each variable with snakemake (just replace `.nc` with
+`_diagnostics.png`). [Vethari et al., 2021](https://doi.org/10.1214/20-BA1221)
+recommend that you look for $\hat{R} < 1.01$ for all variables.
+
+You can download my fits to the data (`python download_data.py mcmc_fits` for
+the partially pooled model, `python download_data.py mcmc_compare` for the other
+two) or use `foveated_metamers.utils.get_mcmc_hyperparams` to see what
+hyper-parameters I used to fit each comparison.
 
 # Setup
 
@@ -1041,8 +1110,8 @@ couple things you should be aware of:
 - Results will not be identical on CPUs and GPUs. See PyTorch's
   [notes](https://pytorch.org/docs/stable/notes/randomness.html) on this.
 - I used stochastic weight averaging (SWA) for the energy model metamers. SWA
-  seems to reduce the final loss by averaging pixel values as we get near
-  convergence (see
+  seems to reduce the final loss by averaging metamer pixel values as we get
+  near convergence (see
   [here](https://pytorch.org/blog/pytorch-1.6-now-includes-stochastic-weight-averaging/)
   for more details). However, the version of SWA I used to generated the
   metamers for the experiment was from `torchcontrib`, which was archived in
@@ -1081,13 +1150,13 @@ If you would like to use the pooling windows, see
 This includes pytorch implementations of the Gaussian windows from this project,
 as well as the raised-cosine windows from Freeman and Simoncelli, 2011. The
 README describes how to use them for creating a version of the pooled luminance
-and energy models used in this project. Feel free to use the versions in this
+and energy models used in this project. Feel free to use the models in this
 repo, but the simpler version from that README may better suit your needs. The
 version in this repo includes a bunch of helper code, including for creating
 plots and the starts of paths not taken. The only important thing missing from
 the `pooling-windows` repo is normalization -- look for the `normalize_dict`
 attribute in `extra_packages/plenoptic_part/simulate/ventral_stream.py` to see
-how I implemented that.
+how I implemented that, and feel free to reach out if you have trouble.
 
 jeremy's code, Wallis code
    
@@ -1103,6 +1172,11 @@ More to come...
 - Freeman, J., & Simoncelli, E. P. (2011). Metamers of the ventral
   stream. Nature Neuroscience, 14(9),
   1195–1201. http://dx.doi.org/10.1038/nn.2889
+
+- Vehtari, A., Gelman, A., Simpson, D., Carpenter, B., & Paul-Christian
+  B\"urkner (2021). Rank-normalization, folding, and localization: an improved
+  $R$ for assessing convergence of mcmc (with discussion). Bayesian Analysis,
+  16(2), 667–718. http://dx.doi.org/10.1214/20-BA1221
 
 - Wang, Z., & Simoncelli, E. P. (2008). Maximum differentiation (MAD)
   competition: A methodology for comparing computational models of perceptual
