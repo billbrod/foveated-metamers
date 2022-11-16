@@ -29,7 +29,9 @@ dependencies:
   - dill
   - pip:
       - pyrtools>=1.0
-      - git+https://github.com/LabForComputationalVision/plenoptic.git@main
+      # we specify the commit for plenoptic because this project uses an older
+      # version of MAD competition, and plenoptic will change moving forward.
+      - git+https://github.com/LabForComputationalVision/plenoptic.git@0ab63c855761720368e6021aba89121b1723f924
       - flatten_dict
       - blume >= 0.2.2
       - funsor>=0.4.0
