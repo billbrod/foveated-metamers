@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <svg
-   xmlns:dc="http://purl.org/dc/elements/1.1/"
-   xmlns:cc="http://creativecommons.org/ns#"
-   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-   xmlns:svg="http://www.w3.org/2000/svg"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:xlink="http://www.w3.org/1999/xlink"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    width="5.5980101in"
    height="1.4328082in"
    viewBox="0 0 537.40892 137.54953"
    version="1.1"
    id="svg8"
-   inkscape:version="1.0.2 (1.0.2+r75+1)"
-   sodipodi:docname="image_space_human.svg">
+   inkscape:version="1.2.1 (9c6d41e410, 2022-07-14)"
+   sodipodi:docname="image_space_human.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
   <defs
      id="defs2">
     <g
@@ -14072,18 +14072,21 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="2.0000003"
-     inkscape:cx="328.44827"
-     inkscape:cy="147.79431"
+     inkscape:cx="268.74996"
+     inkscape:cy="147.99998"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
      units="in"
      inkscape:window-width="1898"
-     inkscape:window-height="1039"
-     inkscape:window-x="1932"
-     inkscape:window-y="50"
+     inkscape:window-height="1252"
+     inkscape:window-x="4806"
+     inkscape:window-y="892"
      inkscape:window-maximized="1"
-     inkscape:document-rotation="0" />
+     inkscape:document-rotation="0"
+     inkscape:showpageshadow="2"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1" />
   <metadata
      id="metadata5">
     <rdf:RDF>
@@ -14092,7 +14095,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -14110,11 +14113,11 @@
        x="336.30225"
        y="-226.11674"
        clip-path="url(#clipPath15712)"
-       transform="matrix(1.2976655,0,0,1.2976655,55.912633,325.78613)"
+       transform="matrix(1.2976655,0,0,-1.2976655,55.912633,-92.331811)"
        style="stroke-width:0.770615;stroke-linecap:butt;stroke-linejoin:round" />
     <g
        id="g135460"
-       transform="matrix(1.1007964,0,0,1.1007964,30.250922,-75.777942)"
+       transform="matrix(1.1007964,0,0,-1.1007964,30.250922,309.23226)"
        style="stroke-width:0.908433">
       <g
          id="g133224"
@@ -14128,7 +14131,7 @@
     </g>
     <g
        id="g15636-2"
-       transform="matrix(1.1007964,0,0,1.1007964,180.08918,204.04985)"
+       transform="matrix(1.1007964,0,0,-1.1007964,180.08918,29.404469)"
        style="stroke-width:0.908433">
       <g
          id="axes_2-2-9"
@@ -14471,7 +14474,7 @@
     </g>
     <g
        id="g15636-9"
-       transform="matrix(1.1007964,0,0,1.1007964,-184.56042,204.04985)"
+       transform="matrix(1.1007964,0,0,-1.1007964,-184.56042,29.404469)"
        style="stroke-width:0.908433">
       <g
          id="axes_2-2-7"
@@ -14811,10 +14814,11 @@
        width="170.44435"
        height="135.23445"
        x="9.5122108"
-       y="49.10994" />
+       y="49.10994"
+       transform="matrix(1,0,0,-1,0,233.45432)" />
     <g
        inkscape:label=""
-       transform="matrix(0.8381759,0,0,0.8381759,174.08921,30.802203)"
+       transform="matrix(0.8381759,0,0,0.8381759,174.08921,70.470734)"
        id="g15801-1"
        style="fill:#999999;fill-opacity:1;stroke:#999999;stroke-width:1.19307">
       <g
@@ -14848,7 +14852,7 @@
     </g>
     <g
        inkscape:label=""
-       transform="matrix(0.8381759,0,0,0.8381759,151.05102,27.899307)"
+       transform="matrix(0.8381759,0,0,0.8381759,151.05102,73.373624)"
        id="g15956-2"
        style="fill:#666666;fill-opacity:1;stroke:#0044aa;stroke-width:1.19307">
       <g
@@ -14884,15 +14888,17 @@
        style="font-variation-settings:normal;opacity:1;vector-effect:none;fill:none;fill-opacity:1;stroke:#666666;stroke-width:0.75;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:2.25, 0.75;stroke-dashoffset:0;stroke-opacity:1;stop-color:#000000;stop-opacity:1"
        d="m 222.92764,96.919907 7.05426,-8.905364 34.43694,3.890933 4.1347,7.691846 -31.03702,14.057638 -4.95723,-0.26448 z"
        id="path16957"
-       sodipodi:nodetypes="ccccccc" />
+       sodipodi:nodetypes="ccccccc"
+       transform="matrix(1,0,0,-1,0,233.45432)" />
     <path
        style="font-variation-settings:normal;opacity:1;vector-effect:none;fill:none;fill-opacity:1;stroke:#999999;stroke-width:0.75;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:2.25, 0.75;stroke-dashoffset:0;stroke-opacity:1;stop-color:#000000;stop-opacity:1"
        d="m 266.89362,99.189686 -29.60732,13.428694 -3.95591,-0.29463 -4.74462,-8.31265 23.00265,-12.242111 11.65912,0.794833 z"
        id="path16976"
-       sodipodi:nodetypes="ccccccc" />
+       sodipodi:nodetypes="ccccccc"
+       transform="matrix(1,0,0,-1,0,233.45432)" />
     <g
        id="g15636"
-       transform="matrix(1.1007964,0,0,1.1007964,-2.2356253,204.04985)"
+       transform="matrix(1.1007964,0,0,-1.1007964,-2.2356253,29.404469)"
        style="stroke-width:0.908433">
       <g
          id="axes_2-2"
