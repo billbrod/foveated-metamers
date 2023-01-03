@@ -398,7 +398,7 @@ class ObserverModel(nn.Module):
             else:
                 lomask = self.complex_steerable_pyramid._lomasks[i-1]
             freqs = (lomask * self.complex_steerable_pyramid._himasks[i]).squeeze()
-            rbin = pt.synthetic_images.polar_radius(freqs.shape).astype(np.int)
+            rbin = pt.synthetic_images.polar_radius(freqs.shape).astype(int)
             frq_1d = scipy.ndimage.mean(freqs, labels=rbin, index=np.arange(rbin.max()))
             self.modal_freqs_cpd.append(frq_1d.argmax() / (2*self.max_eccentricity))
         self.modal_freqs_cpd = torch.tensor(self.modal_freqs_cpd, dtype=torch.float32,
