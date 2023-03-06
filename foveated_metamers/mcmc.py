@@ -905,7 +905,7 @@ def run_inference(dataset, mcmc_model_type='partially-pooled', step_size=.1,
     suggested `numpyro.set_host_device_count(n)` -- I think the solution is to
     set the proper environmental variable yourself: `export
     XLA_FLAGS=--xla_force_host_platform_device_count=n`. Check
-    `jax.lib.xla_bridge.device_count()` to see if it worked.
+    `jax.device_count()` to see if it worked.
 
     Parameters
     ----------

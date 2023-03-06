@@ -1408,7 +1408,7 @@ rule mcmc:
         import jax
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
-                print(f"Running on {jax.lib.xla_bridge.device_count()} cpus!")
+                print(f"Running on {jax.device_count()} cpus!")
                 dataset = fov.mcmc.assemble_dataset_from_expt_df(pd.read_csv(input[0]))
                 mcmc_model = wildcards.mcmc_model
                 interact_sd = None
