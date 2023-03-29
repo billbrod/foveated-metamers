@@ -127,7 +127,8 @@ def model_schematic(schematic_fig, contour_fig_large, contour_figs_small,
         strs, in which case we'll use each of those separately.
     fig_size : {'full', 'half'}, optional
         We have two different versions of this figure, one full-width, one half.
-        This specifies which we're making.
+        This specifies which we're making. Note that half-width refers to the
+        *individual schematics* are half-width, not that the overall figure is.
     context : {'paper', 'poster'}, optional
         plotting context that's being used for this figure (as in
         seaborn's set_context function). if poster, will scale things up. Note
@@ -140,7 +141,7 @@ def model_schematic(schematic_fig, contour_fig_large, contour_figs_small,
 
     """
     text_params, figure_width = style.plotting_style(context, 'svgutils',
-                                                     fig_size)
+                                                     'full')
     figure_width = _convert_to_pix(figure_width)
     schematic_fig = SVG(schematic_fig, 'inkscape')
     if fig_size == 'full':
@@ -149,8 +150,8 @@ def model_schematic(schematic_fig, contour_fig_large, contour_figs_small,
                      (388+8, 362-15), (388, 362)]
     elif fig_size == 'half':
         scales = [.0395, .0151]
-        positions = [(160, 17), (245.5+5.5, 172.5-8.5), (245.5, 172.5),
-                     (228+5.5, 209-8.5), (228, 209)]
+        positions = [(128, 41), (509+5.5, 47-8.5), (509, 47),
+                     (491.5+5.5, 83.5-8.5), (491.5, 83.5)]
     if isinstance(contour_figs_small, str):
         contour_figs_small = [contour_figs_small] * 4
     return compose.Figure(

@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <svg
-   xmlns:dc="http://purl.org/dc/elements/1.1/"
-   xmlns:cc="http://creativecommons.org/ns#"
-   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-   xmlns:svg="http://www.w3.org/2000/svg"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:xlink="http://www.w3.org/1999/xlink"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="307.53339"
-   height="282.83746"
-   viewBox="0 0 307.53339 282.83743"
+   width="588.72229"
+   height="146.93878"
+   viewBox="0 0 588.72231 146.93877"
    version="1.1"
    id="svg8"
-   inkscape:version="1.0.2 (1.0.2+r75+1)"
-   sodipodi:docname="model_schematic_halfwidth.svg">
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   sodipodi:docname="model_schematic_halfwidth.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
   <defs
      id="defs2">
     <clipPath
@@ -17506,23 +17506,26 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="2.8284271"
-     inkscape:cx="181.3348"
-     inkscape:cy="180.56891"
+     inkscape:cx="277.89297"
+     inkscape:cy="180.31223"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
      units="px"
-     inkscape:window-width="1898"
-     inkscape:window-height="2094"
-     inkscape:window-x="1932"
-     inkscape:window-y="50"
+     inkscape:window-width="2852"
+     inkscape:window-height="1720"
+     inkscape:window-x="12"
+     inkscape:window-y="64"
      inkscape:window-maximized="1"
      inkscape:document-rotation="0"
      fit-margin-top="0"
      fit-margin-left="0"
      fit-margin-right="0"
      fit-margin-bottom="0"
-     scale-x="0.26458" />
+     scale-x="0.26458"
+     inkscape:showpageshadow="2"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1" />
   <metadata
      id="metadata5">
     <rdf:RDF>
@@ -17531,7 +17534,6 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -17539,7 +17541,7 @@
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1"
-     transform="translate(-14.567089,-20.125249)">
+     transform="translate(-48.428511,-20.122124)">
     <text
        id="text22995-0"
        y="30.255432"
@@ -17556,46 +17558,16 @@
        style="font-style:normal;font-weight:normal;font-size:13.3333px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.297623;stroke-linecap:butt;stroke-linejoin:round"
        x="168.30124"
        y="164.50993"
-       id="text22995-0-4"><tspan
+       id="text22995-0-4"
+       transform="translate(315.05027,-134.2545)"><tspan
          sodipodi:role="line"
          x="168.30124"
          y="164.50993"
          style="font-size:13.3333px;text-align:center;text-anchor:middle;stroke-width:0.297623"
          id="tspan21065">Local spectral energy model</tspan></text>
-    <path
-       inkscape:connector-curvature="0"
-       style="fill:none;stroke:#000000;stroke-width:2.30671;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker22772)"
-       d="m 153.70453,78.938271 h 26.29276"
-       id="path22706" />
-    <g
-       id="g38290"
-       transform="matrix(3.3002007,0,0,3.3002007,11.650302,-462.60943)">
-      <rect
-         style="fill:none;stroke:#000000;stroke-width:0.176389;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
-         id="rect7"
-         width="30.991785"
-         height="24.240349"
-         x="11.232429"
-         y="151.97519" />
-      <image
-         xlink:href="IMAGE1"
-         y="151.79881"
-         x="11.144237"
-         id="image1608"
-         preserveAspectRatio="none"
-         height="24.593126"
-         width="31.344563" />
-    </g>
-    <rect
-       style="fill:#ffffff;stroke:#000000;stroke-width:0.582119;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
-       id="rect7-9"
-       width="102.27911"
-       height="79.998016"
-       x="185.6689"
-       y="38.939232" />
     <g
        id="g9985"
-       transform="matrix(1.0288167,0,0,1.0288167,-0.97003219,-26.889951)">
+       transform="matrix(1.0288167,0,0,1.0288167,314.08024,-161.14445)">
       <rect
          y="205.10493"
          x="163.98283"
@@ -18897,23 +18869,58 @@
            style="stroke-width:0.349043">...</tspan></text>
     </g>
     <g
-       id="g3683"
-       transform="matrix(2.4146758,0,0,2.4146758,79.48963,73.48309)">
+       id="g32607"
+       transform="translate(0,25.127995)">
+      <path
+         inkscape:connector-curvature="0"
+         style="fill:none;stroke:#000000;stroke-width:2.30671;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker22772)"
+         d="m 153.70453,78.938271 h 26.29276"
+         id="path22706" />
+      <g
+         id="g38290"
+         transform="matrix(3.3002007,0,0,3.3002007,11.650302,-462.60943)">
+        <rect
+           style="fill:none;stroke:#000000;stroke-width:0.176389;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
+           id="rect7"
+           width="30.991785"
+           height="24.240349"
+           x="11.232429"
+           y="151.97519" />
+        <image
+           xlink:href="IMAGE1"
+           y="151.79881"
+           x="11.144237"
+           id="image1608"
+           preserveAspectRatio="none"
+           height="24.593126"
+           width="31.344563" />
+      </g>
       <rect
-         style="fill:#ff0000;stroke:none;stroke-width:0.0604983;stroke-linejoin:round"
-         id="rect3659"
-         width="0.39973098"
-         height="3.1178331"
-         x="8.3563805"
-         y="0.70024437" />
-      <rect
-         style="fill:#ff0000;stroke:none;stroke-width:0.0604983;stroke-linejoin:round"
-         id="rect3659-3"
-         width="0.39973098"
-         height="3.1178331"
-         x="2.0592954"
-         y="-10.115163"
-         transform="rotate(90)" />
+         style="fill:#ffffff;stroke:#000000;stroke-width:0.582119;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
+         id="rect7-9"
+         width="102.27911"
+         height="79.998016"
+         x="185.6689"
+         y="38.939232" />
+      <g
+         id="g3683"
+         transform="matrix(2.4146758,0,0,2.4146758,79.48963,73.48309)">
+        <rect
+           style="fill:#ff0000;stroke:none;stroke-width:0.0604983;stroke-linejoin:round"
+           id="rect3659"
+           width="0.39973098"
+           height="3.1178331"
+           x="8.3563805"
+           y="0.70024437" />
+        <rect
+           style="fill:#ff0000;stroke:none;stroke-width:0.0604983;stroke-linejoin:round"
+           id="rect3659-3"
+           width="0.39973098"
+           height="3.1178331"
+           x="2.0592954"
+           y="-10.115163"
+           transform="rotate(90)" />
+      </g>
     </g>
   </g>
 </svg>
