@@ -1927,7 +1927,14 @@ def _get_image_for_window_example(wildcards):
         # if we set image_name when calling generate_metamer_paths, it will
         # ignore comp-met-downsample, so we need to manually update it
         wildcards.image_name = wildcards.image_name.replace('_range', '_' + wildcards.comp.replace('met-', '') + '_range')
-    return utils.generate_metamer_paths(gamma_corrected=True, **wildcards)
+    try:
+        return utils.generate_metamer_paths(gamma_corrected=True, **wildcards)
+    except Exception as e:
+        if 'please specify seed the seed argument' not in str(e):
+            raise e
+        else:
+            wildcards['seed'] = wildcards.pop('seed_n')
+            return utils.generate_metamer_paths(gamma_corrected=True, **wildcards)
 
 
 def _get_single_window(wildcards):
