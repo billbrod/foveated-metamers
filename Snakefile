@@ -662,55 +662,56 @@ def get_norm_dict(wildcards):
 def get_windows(wildcards):
     r"""determine the cached window path for the specified model
     """
+    wildcards = dict(wildcards)
     window_template = op.join(config["DATA_DIR"], 'windows_cache', 'scaling-{scaling}_size-{size}'
                               '_e0-{min_ecc:.03f}_em-{max_ecc:.01f}_w-{t_width}_{window_type}.pt')
     try:
-        if 'size-' in wildcards.image_name:
-            im_shape = wildcards.image_name[wildcards.image_name.index('size-') + len('size-'):]
+        if 'size-' in wildcards['image_name']:
+            im_shape = wildcards['image_name'][wildcards['image_name'].index('size-') + len('size-'):]
             im_shape = im_shape.replace('.png', '')
             im_shape = [int(i) for i in im_shape.split(',')]
         else:
             try:
-                im = imageio.imread(REF_IMAGE_TEMPLATE_PATH.format(image_name=wildcards.image_name))
+                im = imageio.imread(REF_IMAGE_TEMPLATE_PATH.format(image_name=wildcards['image_name']))
                 im_shape = im.shape
             except FileNotFoundError:
                 raise Exception("Can't find input image %s or infer its shape, so don't know what "
                                 "windows to cache!" %
-                                REF_IMAGE_TEMPLATE_PATH.format(image_name=wildcards.image_name))
-    except AttributeError:
-        # then there was no wildcards.image_name, so grab the first one from
+                                REF_IMAGE_TEMPLATE_PATH.format(image_name=wildcards['image_name']))
+    except KeyError:
+        # then there was no wildcards['image_name'], so grab the first one from
         # the DEFAULT_METAMERS list
         default_im = IMAGES[0]
         im_shape = default_im[default_im.index('size-') + len('size-'):]
         im_shape = im_shape.replace('.png', '')
         im_shape = [int(i) for i in im_shape.split(',')]
     try:
-        max_ecc=float(wildcards.max_ecc)
-        min_ecc=float(wildcards.min_ecc)
-    except AttributeError:
-        # then there was no wildcards.max/min_ecc, so grab the default values
+        max_ecc=float(wildcards['max_ecc'])
+        min_ecc=float(wildcards['min_ecc'])
+    except KeyError:
+        # then there was no wildcards['max / min_ecc'], so grab the default values
         min_ecc = config['DEFAULT_METAMERS']['min_ecc']
         max_ecc = config['DEFAULT_METAMERS']['max_ecc']
     t_width = 1.0
-    if 'cosine' in wildcards.model_name:
+    if 'cosine' in wildcards['model_name']:
         window_type = 'cosine'
-    elif 'gaussian' in wildcards.model_name or wildcards.model_name.startswith('Obs'):
+    elif 'gaussian' in wildcards['model_name'] or wildcards['model_name'].startswith('Obs'):
         window_type = 'gaussian'
-    scaling = wildcards.scaling
+    scaling = wildcards['scaling']
     # make sure that scaling is 0-padded, if appropriate. e.g., 0.01, not .01
     if isinstance(scaling, str) and scaling[0] == '.':
         scaling = '0' + scaling
-    if wildcards.model_name.startswith("RGC"):
+    if wildcards['model_name'].startswith("RGC"):
         # RGC model only needs a single scale of PoolingWindows.
         size = ','.join([str(i) for i in im_shape])
         return window_template.format(scaling=scaling, size=size,
                                       max_ecc=max_ecc, t_width=t_width,
                                       min_ecc=min_ecc, window_type=window_type,)
-    elif wildcards.model_name.startswith('V1') or wildcards.model_name.startswith('Obs'):
+    elif wildcards['model_name'].startswith('V1') or wildcards['model_name'].startswith('Obs'):
         windows = []
         # need them for every scale
         try:
-            num_scales = int(re.findall('s([0-9]+)', wildcards.model_name)[0])
+            num_scales = int(re.findall('s([0-9]+)', wildcards['model_name'])[0])
         except (IndexError, ValueError):
             num_scales = 4
         for i in range(num_scales):
@@ -1930,14 +1931,21 @@ def _get_image_for_window_example(wildcards):
     try:
         return utils.generate_metamer_paths(gamma_corrected=True, **wildcards)
     except Exception as e:
-        if 'please specify seed the seed argument' not in str(e):
+        if 'please specify the seed argument' not in str(e):
             raise e
         else:
+            wildcards = dict(wildcards)
             wildcards['seed'] = wildcards.pop('seed_n')
             return utils.generate_metamer_paths(gamma_corrected=True, **wildcards)
 
 
 def _get_single_window(wildcards):
+    default_img_size = utils._find_img_size(config['DEFAULT_METAMERS']['image_name'][0])
+    pix_to_deg = float(config['DEFAULT_METAMERS']['max_ecc']) / default_img_size.max()
+    img_size = utils._find_img_size(wildcards.image_name)
+    wildcards = dict(wildcards)
+    wildcards['max_ecc'] = img_size.max() * pix_to_deg
+    wildcards['min_ecc'] = config['DEFAULT_METAMERS']['min_ecc']
     window = get_windows(wildcards)
     if isinstance(window, list):
         return window[0].replace('.pt', '_single.pt')
