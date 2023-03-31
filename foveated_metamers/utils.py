@@ -777,15 +777,16 @@ def get_mcmc_hyperparams(wildcards, **kwargs):
     return hyper_str.format(1, '.8', 10, 4, 10000, 10000, 0)
 
 
-def grab_single_window(windows, target_eccentricity=24, windows_scale=0):
+def grab_single_window(windows, target_eccentricity=None, windows_scale=0):
     """Return single specified window.
 
     Parameters
     ----------
     windows : pooling.PoolingWindows
         The PoolingWindows object to grab the window from.
-    target_eccentricity : float, optional
-        The approximate central eccentricity of the window to grab
+    target_eccentricity : float or None, optional
+        The approximate central eccentricity of the window to grab. If None, we
+        aim for 89.6% of the way out.
     windows_scale : int, optional
         The scale of the windows to grab.
 
@@ -795,6 +796,8 @@ def grab_single_window(windows, target_eccentricity=24, windows_scale=0):
         2d tensor containing the single window
 
     """
+    if target_eccentricity is None:
+        target_eccentricity = .896 * windows.max_eccentricity
     target_ecc_idx = abs(windows.central_eccentricity_degrees -
                          target_eccentricity).argmin()
     ecc_windows = (windows.ecc_windows[windows_scale] /
