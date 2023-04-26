@@ -39,8 +39,10 @@ wildcard_constraints:
     size="[0-9,]+",
     bits="[0-9]+",
     img_preproc="full|degamma|range-[,.0-9]+|downsample-[0-9.]+_range-[,.0-9]+",
-    # einstein for testing setup, fountain for comparing with Freeman and Simoncelli, 2011 metamers
-    preproc_image_name="|".join([im+'_?[a-z]*' for im in config['IMAGE_NAME']['ref_image']])+"|einstein|fountain",
+    # einstein for testing setup, fountain for comparing with Freeman and
+    # Simoncelli, 2011 metamers, sherlock for example with text, for
+    # presentations
+    preproc_image_name="|".join([im+'_?[a-z]*' for im in config['IMAGE_NAME']['ref_image']])+"|einstein|fountain|sherlock_[0-9]",
     preproc="|_degamma|degamma",
     gpu="0|1",
     sess_num="|".join([f'{i:02d}' for i in config['PSYCHOPHYSICS']['SESSIONS']]),
