@@ -4124,6 +4124,7 @@ rule cutout_figures:
         get_cutout_figures_input,
     output:
         op.join(config['DATA_DIR'], 'figures', '{context}', '{image_name}_with_cutout_{fixation_cross}.png'),
+        op.join(config['DATA_DIR'], 'figures', '{context}', '{image_name}_with_peripheral_cutout_{fixation_cross}.png'),
         op.join(config['DATA_DIR'], 'figures', '{context}', '{image_name}_foveal_cutout_{fixation_cross}.png'),
         op.join(config['DATA_DIR'], 'figures', '{context}', '{image_name}_peripheral_cutout_{fixation_cross}.png'),
     log:
@@ -4169,14 +4170,15 @@ rule cutout_figures:
                                 vrange=(0, 1))
                 # we do the periphery and fovea separately, so we can plot them
                 # in separate colors
-                fov.figures.add_cutout_box(fig.axes[0], plot_periphery=False,
-                                           window_size=window_size,
-                                           periphery_offset=offset)
+                if wildcards.fixation_cross == 'cross':
+                    fov.figures.add_fixation_cross(fig.axes[0], cross_size=cross_size)
                 fov.figures.add_cutout_box(fig.axes[0], plot_fovea=False, colors='b',
                                            window_size=window_size,
                                            periphery_offset=offset)
-                if wildcards.fixation_cross == 'cross':
-                    fov.figures.add_fixation_cross(fig.axes[0], cross_size=cross_size)
+                fig.savefig(output[1])
+                fov.figures.add_cutout_box(fig.axes[0], plot_periphery=False,
+                                           window_size=window_size,
+                                           periphery_offset=offset)
                 # we add an extra bit to the window size here so that the
                 # addition of the cutout box doesn't cause the axes to resize
                 # (and the full width of the lines are visible)
@@ -4195,8 +4197,8 @@ rule cutout_figures:
                 if wildcards.fixation_cross == 'cross':
                     fov.figures.add_fixation_cross(fovea_fig.axes[0], cross_size=cross_size)
                 fig.savefig(output[0])
-                fovea_fig.savefig(output[1])
-                periphery_fig.savefig(output[2])
+                fovea_fig.savefig(output[2])
+                periphery_fig.savefig(output[3])
 
 
 def get_all_windows(wildcards):
