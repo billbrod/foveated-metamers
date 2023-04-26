@@ -550,9 +550,9 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
     """
     if not isinstance(model_name, list):
         model_name = [model_name]
-    if comp not in ['ref', 'met', 'met-downsample-2', 'met-natural', 'ref-natural']:
+    if comp not in ['ref', 'met', 'met-downsample-2', 'met-natural', 'ref-natural', 'met-pink']:
         raise Exception("comp must be one of {'ref', 'met', 'met-downsample-2',"
-                        " 'met-natural', 'ref-natural'}!")
+                        " 'met-natural', 'ref-natural', 'met-pink'}!")
     with open(op.join(op.dirname(op.realpath(__file__)), '..', 'config.yml')) as f:
         defaults = yaml.safe_load(f)
     default_img_size = _find_img_size(defaults['DEFAULT_METAMERS']['image_name'][0])
@@ -612,7 +612,9 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
                     scaling = [float(sc) for sc in kwargs['scaling']]
             if 'init' not in kwargs.keys():
                 if 'natural' in comp:
-                    args['init_type'] = 'natural'
+                    args['init_type'] = 'natural'                    
+                elif 'pink' in comp:
+                    args['init_type'] = 'pink'
                 else:
                     args['init_type'] = 'white'
             # by putting this last, we'll over-write the defaults

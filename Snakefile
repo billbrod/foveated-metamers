@@ -45,7 +45,7 @@ wildcard_constraints:
     gpu="0|1",
     sess_num="|".join([f'{i:02d}' for i in config['PSYCHOPHYSICS']['SESSIONS']]),
     run_num="|".join([f'{i:02d}' for i in config['PSYCHOPHYSICS']['RUNS']]),
-    comp='met|ref|met-downsample-2|met-natural|ref-natural',
+    comp='met|ref|met-downsample-2|met-natural|ref-natural|met-pink',
     save_all='|_saveall',
     gammacorrected='|_gamma-corrected',
     plot_focus='|_focus-subject|_focus-image',
