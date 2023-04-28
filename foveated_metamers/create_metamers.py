@@ -67,13 +67,18 @@ def setup_image(image, n_channels=1):
     if image.dtype == np.uint8:
         warnings.warn("Image is int8, with range (0, 255)")
         image = convert_im_to_float(image)
-    elif image.dtype == np.uint16:
+    # There's a change with how imageio handles 16bit grayscale pngs, where it
+    # loads them as int32: https://github.com/imageio/imageio/issues/931
+    elif image.dtype == np.uint16 or image.dtype == np.int32:
         warnings.warn("Image is int16 , with range (0, 65535)")
+        if image.dtype == np.int32:
+            assert (image.astype(np.uint16) == image).all(), "Expected converting to int16 not to change anything!"
+            image = image.astype(np.uint16)
         image = convert_im_to_float(image)
     else:
         warnings.warn("Image is float 32, so we assume image range is (0, 1)")
         if image.max() > 1:
-            raise Exception("Image is neither int8 nor int16, but its max is greater than 1!")
+            raise Exception(f"Image is neither int8 nor int16 (its dtype is {image.dtype}), but its max is {image.max()}!")
     # we use skimage.color.rgb2gray in order to handle rgb
     # correctly. this uses the ITU-R 601-2 luma transform, same as
     # matlab. we do this after the above, because it changes the image
