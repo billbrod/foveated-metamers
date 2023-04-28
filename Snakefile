@@ -4419,7 +4419,7 @@ rule critical_scaling_pointplot:
 
 
 def get_all_metamers(wildcards, comp=['energy_ref', 'energy_met', 'energy_ref-nat', 'energy_met-nat',
-                                      'luminance_ref', 'luminance_met', 'energy_ref_downsample'],
+                                      'luminance_ref', 'luminance_met', 'energy_met_downsample'],
                      include_gamma=True):
     from foveated_metamers import stimuli
     mets = {}
@@ -4435,12 +4435,11 @@ def get_all_metamers(wildcards, comp=['energy_ref', 'energy_met', 'energy_ref-na
         mets['luminance_ref'] = utils.generate_metamer_paths('RGC_norm_gaussian')
     if 'luminance_met' in comp:
         mets['luminance_met'] = utils.generate_metamer_paths('RGC_norm_gaussian', comp='met')
-
-    if 'energy_ref_downsample' in comp:
+    if 'energy_met_downsample' in comp:
         imgs = []
         for i in range(3):
             imgs.extend(stimuli.get_images_for_session('sub-00', i, True))
-        mets['energy_ref_downsample'] = utils.generate_metamer_paths('V1_norm_s6_gaussian',
+        mets['energy_met_downsample'] = utils.generate_metamer_paths('V1_norm_s6_gaussian',
                                                                      comp='met-downsample-2',
                                                                      image_name=imgs)
     if include_gamma:
