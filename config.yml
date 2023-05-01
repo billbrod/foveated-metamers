@@ -7,9 +7,9 @@
 # Only the paths in this first section should be modified, and only the first
 # one (DATA_DIR) must be modified.
 
-# The root of the data directory. Recommended you place this in a new directory,
-# such as Desktop/metamers.
 DATA_DIR: "/home/billbrod/Desktop/metamers"
+# The root of the data directory. Recommended you place this in a new, empty
+# directory, such as $HOME/Desktop/metamers.
 
 # required for making some of the figures. this can contain ~ (for home
 # directory) and is probably correct on Linux or Macs. On Windows, it's
@@ -41,7 +41,7 @@ MAD_TEMPLATE_PATH: "{DATA_DIR}/mad_images/{model_name}_{synth_target}/{met_model
 # should either contain the string "textures-subset-for-testing" or this
 # directory should contain at least 800 images, or line 101 in the Snakefile
 # will generate an exception
-TEXTURE_DIR: "/mnt/prince_scratch/textures/cropped512-gray-jpg"
+TEXTURE_DIR: "/home/billbrod/Desktop/metamers/textures-subset-for-testing"
 
 # Directory where the NYU research compute share has been mounted, for staging
 # files to upload to the Faculty Digital Archive.
