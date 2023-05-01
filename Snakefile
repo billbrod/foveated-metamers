@@ -4360,11 +4360,11 @@ rule critical_scaling_pointplot:
                            for m in MODELS
                            for c in {'V1_norm_s6_gaussian': ['met', 'ref'], 'RGC_norm_gaussian': ['ref']}[m]],
     output:
-        op.join(config['DATA_DIR'], 'figures', '{context}', 'critical_scaling_norm-{norm}.svg'),
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'critical_scaling_norm-{norm}_scale-{logscale}.svg'),
     log:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'critical_scaling_norm-{norm}.log'),
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'critical_scaling_norm-{norm}_scale-{logscale}.log'),
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'critical_scaling_norm-{norm}_benchmark.txt'),
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'critical_scaling_norm-{norm}_scale-{logscale}_benchmark.txt'),
     run:
         import foveated_metamers as fov
         import contextlib
@@ -4400,6 +4400,7 @@ rule critical_scaling_pointplot:
                 tmp['trial_type']  = 'metamer_vs_metamer'
                 if wildcards.norm == 'True':
                     tmp['critical_scaling'] = 8*tmp.critical_scaling
+                    assert wildcards.logscale == 'log', "if normalized, scale must be log!"
                 else:
                     tmp['critical_scaling'] = 24*tmp.critical_scaling
                 crit_scaling = pd.concat([crit_scaling, tmp])
@@ -4409,11 +4410,15 @@ rule critical_scaling_pointplot:
                 ylabel = 'Critical scaling'
                 # bool('False') == True, so we do this to avoid that
                 # situation
-                if wildcards.norm == 'True':
-                    ylabel += '\n(proportion of Original vs. Synth)'
-                    g.ax.set_yscale('log', base=2)
-                    g.ax.yaxis.set_minor_locator(mpl.ticker.LogLocator(2, subs=(.5, )))
-                    g.ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:.0f}'))
+                if wildcards.logscale == 'log':
+                    if wildcards.norm == 'True':
+                        ylabel += '\n(proportion of Original vs. Synth)'
+                        g.ax.set_yscale('log', base=2)
+                        g.ax.yaxis.set_minor_locator(mpl.ticker.LogLocator(2, subs=(.5, )))
+                        g.ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:.0f}'))
+                    else:
+                        g.ax.set_yscale('log', base=10)
+                        g.ax.set(ylim=(.01, 1))
                 g.set(xlabel='Pooling model', ylabel=ylabel, xlim=[-.5, 2.5])
                 g.savefig(output[0])
 
