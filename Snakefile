@@ -4418,7 +4418,7 @@ rule critical_scaling_pointplot:
                         g.ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:.0f}'))
                     else:
                         g.ax.set_yscale('log', base=10)
-                        g.ax.set(ylim=(.01, 1))
+                        g.ax.set(ylim=(.01, .5))
                 g.set(xlabel='Pooling model', ylabel=ylabel, xlim=[-.5, 2.5])
                 g.savefig(output[0])
 
@@ -4936,7 +4936,7 @@ def figure_paper_input(wildcards):
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_portrait_symmetric_scaling-.27,.27,.27,.27,.27_cutout_V1_natural-seed_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_ideal.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "metamer_asymmetry.svg"),
-        op.join(config['DATA_DIR'], 'figures', 'paper', "critical_scaling_norm-False.svg"),
+        op.join(config['DATA_DIR'], 'figures', 'paper', "critical_scaling_norm-False_scale-log.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_results.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_lum.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', 'psychophys_expt2_with_table.svg'),
