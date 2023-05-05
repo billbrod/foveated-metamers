@@ -2542,16 +2542,23 @@ rule mcmc_performance_comparison_figure:
                         sc = re.findall('line-scaling-([.0-9]+)', wildcards.focus)[0]
                         g.ax.axvline(float(sc), color='k')
                 elif 'params' in wildcards.mcmc_plot_type:
+                    kwargs = {}
                     mean_line = {'none': False, 'lines': 'lines-only', 'ci': True}[wildcards.mcmc_plot_type.split('-')[-1]]
                     warnings.warn("Removing luminance model, metamer_vs_metamer for params plot (it's not informative)")
                     df = df.query("trial_type != 'metamer_vs_metamer' or model != 'Luminance model'")
+                    if wildcards.focus.startswith('sub'):
+                        df = df.query("level != 'subject_name'")
+                        kwargs['fill_whole_xaxis'] = True
+                        kwargs['aspect'] = 3.2
+                        x_order = None
                     df['trial_type'] = df['trial_type'].map(fov.plotting.TRIAL_TYPE_PLOT)
                     fig = fov.figures.psychophysical_grouplevel_means(df,
                                                                       height=fig_width/4,
                                                                       mean_line=mean_line,
                                                                       x_order=x_order,
                                                                       increase_size=False,
-                                                                      row_order=['s0', 'a0'])
+                                                                      row_order=['s0', 'a0'],
+                                                                      **kwargs)
                     for i, ax in enumerate(fig.axes):
                         if 'linear' in wildcards.mcmc_plot_type:
                             if 'a0' in ax.get_title():
@@ -2581,7 +2588,10 @@ rule mcmc_performance_comparison_figure:
                         # remove title
                         ax.set_title('')
                         ax.set_xlabel(ax.get_xlabel().split('_')[0].capitalize())
-                        if i % 2 == 0:
+                        # we only have 2 axes, then both need ylabel. If
+                        # there's more than that, then we only do this for the
+                        # even ones
+                        if len(fig.axes) == 2 or i % 2 == 0:
                             ax.set_ylabel(title)
                     if wildcards.context == 'paper':
                         warnings.warn("Removing legend, because other panel will have it.")

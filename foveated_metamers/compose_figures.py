@@ -348,8 +348,8 @@ def performance_comparison(performance_fig, param_fig, context='paper'):
     # little bit of extra space for the borders
     return compose.Figure(
         figure_width+10, figure_width+30,
-        SVG(performance_fig).move(0, 25),
-        SVG(param_fig).move(0, figure_width/2),
+        SVG(performance_fig).move(2, 25),
+        SVG(param_fig).move(-5, figure_width/2),
         compose.Text('A', 0, 25, **text_params),
         compose.Text('B', 0, figure_width/2+15, **text_params),
     )

@@ -1857,6 +1857,7 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
                                     tabular_trial_type_legend=False,
                                     mean_line=True,
                                     increase_size=True,
+                                    fill_whole_xaxis=False,
                                     **kwargs):
     """Show psychophysical group-level means, with HDI error bars.
 
@@ -1913,6 +1914,10 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
         Whether to create a tabular legend for trial_type. See the
         `tabular_legend` function for details. If 'under', we call
         `tabular_legend` with `place_under_fig=True`
+    fill_whole_xaxis : bool, optional
+        If True, make sure x values fill the whole horizontal space. If False,
+        leave blanks where there's missing data. I liked that, but apparently
+        others found it confusing...
     kwargs :
         passed to plt.subplots
 
@@ -1923,7 +1928,7 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
 
     """
     if rotate_xticklabels is True:
-        rotate_xticklabels = 25
+        rotate_xticklabels = 35
     kwargs.setdefault('sharey', 'row')
     kwargs.setdefault('sharex', 'col')
     if not isinstance(inf_data, pd.DataFrame):
@@ -1952,11 +1957,17 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
     x_order = kwargs.pop('x_order', None)
     overall_means = df.query("level=='all'")
     df = df.query("level!='all'")
+    if df[col].nunique() == 2:
+        width_ratios = [2, 1]
+    elif df[col].nunique() == 1:
+        width_ratios = [2]
+    else:
+        raise ValueError(f"Unsure how to handle {col} with {df[col].nunique()} unique values!")
     fig, axes, cols, rows = plotting._setup_facet_figure(df, col, row,
                                                          height=height, aspect=aspect,
                                                          rotate_xticklabels=rotate_xticklabels,
                                                          gridspec_kw={'wspace': .05, 'hspace': .12,
-                                                                      'width_ratios': [2, 1]},
+                                                                      'width_ratios': width_ratios},
                                                          **kwargs)
     final_markers = {}
     label, all_labels = plotting._prep_labels(df, hue, style, col, row)
@@ -1984,6 +1995,8 @@ def psychophysical_grouplevel_means(inf_data, x='dependent_var', y='value',
             elif row == 'level':
                 query_str = query_str.split('&')[0]
             means = overall_means.query(query_str)
+            if fill_whole_xaxis and x_ord is not None:
+                x_ord = [i for i in x_ord if i in d[x].unique()]
             markers_tmp = plotting._facetted_scatter_ci_dist(d, x, y, hue,
                                                              style, x_ord,
                                                              label, all_labels,
