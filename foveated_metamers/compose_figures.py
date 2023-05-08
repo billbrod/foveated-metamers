@@ -362,7 +362,6 @@ def performance_comparison(performance_fig, param_fig, subject_n=None, context='
         compose.Text('A', 0, 25, size=label_font_size, **text_params),
         compose.Text(subject_n, 80, 50, size=n_font_size, **text_params),
         compose.Text('B', 0, figure_width/2+15, size=label_font_size, **text_params),
-        compose.Grid(20,20)
     )
 
 
