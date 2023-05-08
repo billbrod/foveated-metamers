@@ -325,13 +325,15 @@ def combine_one_ax_figs(figs, context='paper'):
     )
 
 
-def performance_comparison(performance_fig, param_fig, context='paper'):
+def performance_comparison(performance_fig, param_fig, subject_n=None, context='paper'):
     """Combine performance figure with parameter one for comparison.
 
     Parameters
     ----------
     performance_fig, param_fig : str
         Paths to the performance and parameter figures, respectively.
+    subject_n : int or None, optional
+        If not None, add text saying "n=subject_n" on the performance_fig.
     context : {'paper', 'poster'}, optional
         plotting context that's being used for this figure (as in
         seaborn's set_context function). if poster, will scale things up. Note
@@ -346,12 +348,21 @@ def performance_comparison(performance_fig, param_fig, context='paper'):
     text_params, figure_width = style.plotting_style(context, 'svgutils', 'full')
     figure_width = _convert_to_pix(figure_width)
     # little bit of extra space for the borders
+    if subject_n is not None:
+        subject_n = f'n={subject_n}'
+    else:
+        subject_n = ''
+    # font_size is for panel labels and so too large for the the subject_n text
+    label_font_size = text_params.pop('size')
+    n_font_size = float(label_font_size.replace('pt', ''))
     return compose.Figure(
         figure_width+10, figure_width+30,
         SVG(performance_fig).move(2, 25),
         SVG(param_fig).move(-5, figure_width/2),
-        compose.Text('A', 0, 25, **text_params),
-        compose.Text('B', 0, figure_width/2+15, **text_params),
+        compose.Text('A', 0, 25, size=label_font_size, **text_params),
+        compose.Text(subject_n, 80, 50, size=n_font_size, **text_params),
+        compose.Text('B', 0, figure_width/2+15, size=label_font_size, **text_params),
+        compose.Grid(20,20)
     )
 
 
