@@ -44,7 +44,7 @@ def calc_scale(created_in='matplotlib'):
     scale : float
 
     """
-    dpi = {'matplotlib': 72, 'svgutils': 72, 'inkscape': 96}[created_in]
+    dpi = {'matplotlib': 72, 'svgutils': 90, 'inkscape': 96}[created_in]
     return 90/dpi
 
 
@@ -362,6 +362,55 @@ def performance_comparison(performance_fig, param_fig, subject_n=None, context='
         compose.Text('A', 0, 25, size=label_font_size, **text_params),
         compose.Text(subject_n, 80, 50, size=n_font_size, **text_params),
         compose.Text('B', 0, figure_width/2+15, size=label_font_size, **text_params),
+    )
+
+
+def performance_comparison_natural(performance_fig, metamer_fig, subject_n=1,
+                                   context='paper'):
+    """Combine sub-00_comp-natural performance with example metamers
+
+    Parameters
+    ----------
+    performance_fig, metamer_fig : str
+        Paths to the performance and metamer figures, respectively. Note we
+        assume the "compose_figures" version of the metamer_fig (so that text
+        has been added).
+    subject_n : int or None, optional
+        If not None, add text saying "n=subject_n" on the performance_fig.
+    context : {'paper', 'poster'}, optional
+        plotting context that's being used for this figure (as in
+        seaborn's set_context function). if poster, will scale things up. Note
+        that, for this figure, only paper has really been checked
+
+    Returns
+    -------
+    fig : svgutils.compose.Figure
+        Figure containing composed plots
+
+    """
+    text_params, figure_width = style.plotting_style(context, 'svgutils', 'full')
+    figure_width = _convert_to_pix(figure_width)
+    figure_height = 1.3*figure_width+30
+    if subject_n is not None:
+        subject_n = f'n={subject_n}'
+    else:
+        subject_n = ''
+    # font_size is for panel labels and so too large for the the subject_n text
+    label_font_size = text_params.pop('size')
+    n_font_size = float(label_font_size.replace('pt', ''))
+    return compose.Figure(
+        figure_width+10, figure_height,
+        SVG(performance_fig).move(2, 20),
+        SVG(metamer_fig, 'svgutils').move(10, figure_height*3/8-22),
+        compose.Text('A', 0, 25, size=label_font_size, **text_params),
+        compose.Text('1', 305, 55, size=n_font_size, **text_params),
+        compose.Text('2', 305, 115, size=n_font_size, **text_params),
+        compose.Text('3', 305, 200, size=n_font_size, **text_params),
+        compose.Text(subject_n, 80, 50, size=n_font_size, **text_params),
+        compose.Text('B', 0, figure_width/2, size=label_font_size, **text_params),
+        compose.Text('1', 0, figure_width/2+80, size=n_font_size, **text_params),
+        compose.Text('2', 0, figure_width/2+80+170, size=n_font_size, **text_params),
+        compose.Text('3', 0, figure_width/2+80+2*170, size=n_font_size, **text_params),
     )
 
 

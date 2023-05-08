@@ -3910,6 +3910,12 @@ def get_compose_figures_input(wildcards):
                 mcmc_model=mcmc_model, focus=focus, model=model, comp=comp)
             for model in ['RGC_norm_gaussian', 'V1_norm_s6_gaussian'] for comp in ['ref', 'met']
         ]
+    if 'performance_natural' in wildcards.fig_name:
+        mcmc_model, details, image, comp, extra = re.findall('performance_natural_([a-z-_]+)_([a-z-]+)_image-([a-z_]+)_((?:sub-[0-9]+_)?comp-[a-z-]+)([_a-z0-9.-]+)?', wildcards.fig_name)[0]
+        # this is hacked together to just work for this one figure.
+        assert 'sub-00' in comp and '0.27' in extra, "Wrong image!"
+        paths = [path_template.format(f'mcmc_{mcmc_model}_performance_{comp}{extra}'),
+                 path_template.replace('figures', 'compose_figures').format(f'metamer_comparison_{image}_scaling-.27,.27,.27,.27,.27_cutout_V1_natural-seed')]
     if 'performance_comparison' in wildcards.fig_name:
         mcmc_model, details, comp, extra = re.findall('performance_comparison_([a-z-_]+)_([a-z-]+)_((?:sub-[0-9]+_)?comp-[a-z-]+)([_a-z0-9.-]+)?', wildcards.fig_name)[0]
         paths = [path_template.format(f'mcmc_{mcmc_model}_performance_{comp}{extra}'),
@@ -3981,6 +3987,12 @@ rule compose_figures:
                                                                      False, wildcards.context)
                 elif "all_comps_summary" in wildcards.fig_name:
                     fig = fov.compose_figures.combine_one_ax_figs(input, wildcards.context)
+                elif "performance_natural" in wildcards.fig_name:
+                    if 'sub-00' in wildcards.fig_name:
+                        n = 1
+                    else:
+                        n = None
+                    fig = fov.compose_figures.performance_comparison_natural(*input, n, wildcards.context)
                 elif "performance_comparison" in wildcards.fig_name:
                     if 'sub-00' in wildcards.fig_name:
                         n = 1
