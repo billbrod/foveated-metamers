@@ -3986,7 +3986,7 @@ rule compose_figures:
                         n = 1
                     else:
                         n = None
-                    fig = fov.compose_figures.performance_comparison(*input, subject_n=n, wildcards.context)
+                    fig = fov.compose_figures.performance_comparison(*input, n, wildcards.context)
                 elif "radial_se" in wildcards.fig_name:
                     fig = fov.compose_figures.radial_squared_error(*input, wildcards.context)
                 elif "performance-all" in wildcards.fig_name:
