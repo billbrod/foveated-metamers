@@ -74,7 +74,7 @@ wildcard_constraints:
     t_width='[0-9.]+',
     window_type='cosine|gaussian',
 ruleorder:
-    collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > mcmc_compare_plot > mcmc_plots > embed_bitmaps_into_figure > compose_figures > copy_schematic
+    collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > mcmc_compare_plot > mcmc_plots > mcmc_performance_comparison_figure > embed_bitmaps_into_figure > compose_figures > copy_schematic
 
 config['INKSCAPE_PREF_FILE'] = op.expanduser(config['INKSCAPE_PREF_FILE'])
 config['FREEMAN_METAMER_PATH'] = op.expanduser(config['FREEMAN_METAMER_PATH'])
