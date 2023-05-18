@@ -256,9 +256,15 @@ class ObserverModel(nn.Module):
         self.num_scales = num_scales
         self.order = order
         # in order to match PooledV1, tight_frame=True
-        self.complex_steerable_pyramid = po.simul.Steerable_Pyramid_Freq(
-            img_res, self.num_scales, self.order, is_complex=True,
-            downsample=True, tight_frame=True)
+        try:
+            self.complex_steerable_pyramid = po.simul.Steerable_Pyramid_Freq(
+                img_res, self.num_scales, self.order, is_complex=True,
+                downsample=True, tight_frame=True)
+        except AttributeError:
+            # at a certain point (May 17, 2023), plenoptic removed the underscores here
+            self.complex_steerable_pyramid = po.simul.SteerablePyramidFreq(
+                img_res, self.num_scales, self.order, is_complex=True,
+                downsample=True, tight_frame=True)
         self.scales = ['mean_luminance'] + list(range(num_scales))[::-1]
         self._n_windows = {}
         for i in range(num_scales):

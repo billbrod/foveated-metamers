@@ -1482,9 +1482,15 @@ class PooledV1(PooledVentralStream):
         self.order = order
         # before the change in how complex tensors were handled, the default
         # was tight_frame=True. set that so it's comparable.
-        self.complex_steerable_pyramid = po.simul.Steerable_Pyramid_Freq(img_res, self.num_scales,
-                                                                         self.order, is_complex=True,
-                                                                         tight_frame=True)
+        try:
+            self.complex_steerable_pyramid = po.simul.Steerable_Pyramid_Freq(img_res, self.num_scales,
+                                                                             self.order, is_complex=True,
+                                                                             tight_frame=True)
+        except AttributeError:
+            # at a certain point (May 17, 2023), plenoptic removed the underscores here
+            self.complex_steerable_pyramid = po.simul.SteerablePyramidFreq(img_res, self.num_scales,
+                                                                           self.order, is_complex=True,
+                                                                           tight_frame=True)
         self.scales = ['mean_luminance'] + list(range(num_scales))[::-1]
         self.image = None
         self.pyr_coeffs = None
