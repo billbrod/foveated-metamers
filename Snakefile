@@ -4878,7 +4878,7 @@ rule rearrange_metamers_for_browser:
 
 rule rearrange_natural_imgs_for_browser:
     input:
-        lambda wildcards: [utils.get_ref_image_full_path(img) for img in IMAGES + 'sherlock_1_range-.05,.95_size-2048,2600'],
+        lambda wildcards: [utils.get_ref_image_full_path(img) for img in IMAGES + ['sherlock_1_range-.05,.95_size-2048,2600']],
         lambda wildcards: [utils.get_ref_image_full_path(utils.get_gamma_corrected_ref_image(img))
                            for img in IMAGES],
     output:
