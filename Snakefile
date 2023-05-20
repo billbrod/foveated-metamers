@@ -4450,7 +4450,8 @@ rule critical_scaling_pointplot:
 
 
 def get_all_metamers(wildcards, comp=['energy_ref', 'energy_met', 'energy_ref-nat', 'energy_met-nat',
-                                      'luminance_ref', 'luminance_met', 'energy_met_downsample'],
+                                      'luminance_ref', 'luminance_met', 'energy_met_downsample',
+                                      'sherlock'],
                      include_gamma=True):
     from foveated_metamers import stimuli
     mets = {}
@@ -4473,6 +4474,12 @@ def get_all_metamers(wildcards, comp=['energy_ref', 'energy_met', 'energy_ref-na
         mets['energy_met_downsample'] = utils.generate_metamer_paths('V1_norm_s6_gaussian',
                                                                      comp='met-downsample-2',
                                                                      image_name=imgs)
+    if 'sherlock' in comp:
+        img = 'sherlock_1_range-.05,.95_size-2048,2600'
+        mets['sherlock'] = utils.generate_metamer_paths('RGC_norm_gaussian', image_name=img, scaling=[.01, .058],
+                                                        seed=0, init='white')
+        mets['sherlock'] += utils.generate_metamer_paths('V1_norm_s6_gaussian', image_name=img, scaling=[.063, .27],
+                                                         seed=0, init='white')
     if include_gamma:
         gamma_mets = {}
         for k, v in mets.items():
@@ -4871,7 +4878,7 @@ rule rearrange_metamers_for_browser:
 
 rule rearrange_natural_imgs_for_browser:
     input:
-        lambda wildcards: [utils.get_ref_image_full_path(img) for img in IMAGES],
+        lambda wildcards: [utils.get_ref_image_full_path(img) for img in IMAGES + 'sherlock_1_range-.05,.95_size-2048,2600'],
         lambda wildcards: [utils.get_ref_image_full_path(utils.get_gamma_corrected_ref_image(img))
                            for img in IMAGES],
     output:
@@ -4896,6 +4903,7 @@ rule rearrange_natural_imgs_for_browser:
         '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/boats_gamma-False.png',
         '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/gnarled_gamma-False.png',
         '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/lettuce_gamma-False.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/sherlock.png',
         '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/azulejos_gamma-True.png',
         '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/tiles_gamma-True.png',
         '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/bike_gamma-True.png',
