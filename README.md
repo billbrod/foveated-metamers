@@ -85,7 +85,9 @@ and recreating the figures, read further on in this README for details:
      install the environment.
    - Run `conda activate metamers` to activate the python environment.
    - Additionally, install [inkscape](https://inkscape.org/), version equal to
-     or greater 1.0.2.
+     or greater 1.0.2. It seems like that, with inkscape version 1.2.2, all
+     images are embedded at full resolution, leading to a massive increase in
+     file size. I'm not sure what change causes this.
    - Check if you have `rsync` available (you probably do) and install it if you
      don't (probably best to do so via a package manager).
 4. Run `python download_data.py synthesis_input mcmc_fits figure_input ` to
