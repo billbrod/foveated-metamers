@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <svg
-   xmlns:dc="http://purl.org/dc/elements/1.1/"
-   xmlns:cc="http://creativecommons.org/ns#"
-   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-   xmlns:svg="http://www.w3.org/2000/svg"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:xlink="http://www.w3.org/1999/xlink"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    width="6.4144039in"
    height="4.7410069in"
    viewBox="0 0 162.92586 120.42158"
    version="1.1"
    id="svg8"
-   inkscape:version="1.0.2 (1.0.2+r75+1)"
-   sodipodi:docname="ref_images.svg">
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   sodipodi:docname="ref_images.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
   <defs
      id="defs2" />
   <sodipodi:namedview
@@ -25,22 +25,25 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="2.0000001"
-     inkscape:cx="358.99509"
-     inkscape:cy="222.47618"
+     inkscape:cx="344.74998"
+     inkscape:cy="222.49999"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="false"
      units="in"
-     inkscape:window-width="3812"
-     inkscape:window-height="2094"
-     inkscape:window-x="1932"
-     inkscape:window-y="50"
+     inkscape:window-width="3840"
+     inkscape:window-height="2108"
+     inkscape:window-x="2880"
+     inkscape:window-y="52"
      inkscape:window-maximized="1"
      inkscape:document-rotation="0"
      fit-margin-top="0"
      fit-margin-left="0"
      fit-margin-right="0"
-     fit-margin-bottom="0" />
+     fit-margin-bottom="0"
+     inkscape:showpageshadow="2"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1" />
   <metadata
      id="metadata5">
     <rdf:RDF>
@@ -49,7 +52,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -96,7 +99,7 @@
          id="tspan83-4"
          x="55.090042"
          y="14.466321"
-         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">highway</tspan></text>
+         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">2. highway</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.52778px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.282569"
@@ -107,7 +110,7 @@
          id="tspan83-20"
          x="55.240936"
          y="43.985062"
-         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">quad</tspan></text>
+         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">7. quad</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.52778px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.282569"
@@ -118,7 +121,7 @@
          id="tspan83-69"
          x="55.090042"
          y="73.914101"
-         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">boats</tspan></text>
+         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">12. boats</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.52778px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.282569"
@@ -129,7 +132,7 @@
          id="tspan83-68"
          x="55.24094"
          y="102.61223"
-         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">graffiti</tspan></text>
+         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">17. graffiti</tspan></text>
     <rect
        style="fill:none;stroke:#000000;stroke-width:0.176389;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
        id="rect7-6"
@@ -168,7 +171,7 @@
          id="tspan83-45"
          x="86.971016"
          y="14.466321"
-         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">ivy</tspan></text>
+         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">3. ivy</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.52778px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.282569"
@@ -179,7 +182,7 @@
          id="tspan83-1"
          x="86.985489"
          y="44.39537"
-         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">rocks</tspan></text>
+         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">8. rocks</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.52778px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.282569"
@@ -190,7 +193,7 @@
          id="tspan83-452"
          x="87.136383"
          y="73.503792"
-         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">grooming</tspan></text>
+         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">13. grooming</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.52778px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.282569"
@@ -201,7 +204,7 @@
          id="tspan83-31"
          x="86.971024"
          y="103.02254"
-         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">lettuce</tspan></text>
+         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">18. lettuce</tspan></text>
     <rect
        style="fill:none;stroke:#000000;stroke-width:0.176389;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
        id="rect7-7"
@@ -240,7 +243,7 @@
          id="tspan83-36"
          x="118.86649"
          y="14.876632"
-         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">llama</tspan></text>
+         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">4. llama</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.52778px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.282569"
@@ -251,7 +254,7 @@
          id="tspan83-5"
          x="119.15173"
          y="44.39537"
-         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">tiles</tspan></text>
+         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">9. tiles</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.52778px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.282569"
@@ -262,7 +265,7 @@
          id="tspan83-74"
          x="118.86647"
          y="73.914101"
-         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">leaves</tspan></text>
+         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">14. leaves</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.52778px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.282569"
@@ -273,7 +276,7 @@
          id="tspan83-206"
          x="118.88097"
          y="102.18951"
-         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">nyc</tspan></text>
+         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">19. nyc</tspan></text>
     <rect
        style="fill:none;stroke:#000000;stroke-width:0.176389;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
        id="rect7-5"
@@ -312,7 +315,7 @@
          id="tspan83-6"
          x="150.77641"
          y="14.466321"
-         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">palm</tspan></text>
+         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">5. palm</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.52778px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.282569"
@@ -323,7 +326,7 @@
          id="tspan83-7"
          x="151.0472"
          y="43.863106"
-         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">treetop</tspan></text>
+         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">10. treetop</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.52778px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.282569"
@@ -334,7 +337,7 @@
          id="tspan83-07"
          x="151.0472"
          y="73.792145"
-         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">terraces</tspan></text>
+         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">15. terraces</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.52778px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.282569"
@@ -345,7 +348,7 @@
          id="tspan83-26"
          x="151.0472"
          y="102.49027"
-         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">troop</tspan></text>
+         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">20. troop</tspan></text>
     <rect
        style="fill:none;stroke:#000000;stroke-width:0.176389;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
        id="rect7-35"
@@ -363,7 +366,7 @@
          id="tspan83-2"
          x="23.194595"
          y="43.985062"
-         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">portrait</tspan><tspan
+         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">6. portrait</tspan><tspan
          sodipodi:role="line"
          x="23.194595"
          y="45.396175"
@@ -386,7 +389,7 @@
          id="tspan83-0"
          x="23.32482"
          y="73.503792"
-         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">azulejos</tspan></text>
+         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">11. azulejos</tspan></text>
     <rect
        style="fill:none;stroke:#000000;stroke-width:0.176389;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
        id="rect7-9"
@@ -404,7 +407,7 @@
          id="tspan83-3"
          x="23.194595"
          y="103.02254"
-         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">bike</tspan><tspan
+         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">16. bike</tspan><tspan
          sodipodi:role="line"
          x="23.194595"
          y="104.43365"
@@ -562,36 +565,35 @@
        preserveAspectRatio="none"
        height="24.593126"
        width="31.344563" />
-    <g
-       id="g2588"
-       transform="translate(1.0583337,4.6743065)">
-      <rect
-         style="fill:none;stroke:#000000;stroke-width:0.176389;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
-         id="rect7"
-         width="30.991785"
-         height="24.240349"
-         x="7.0248375"
-         y="11.175129" />
-      <text
-         xml:space="preserve"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.52778px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.282569"
+    <rect
+       style="fill:none;stroke:#000000;stroke-width:0.176389;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect7"
+       width="30.991785"
+       height="24.240349"
+       x="7.0248375"
+       y="11.175129"
+       transform="translate(1.0583337,4.6743065)" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.52778px;line-height:0.4;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;text-align:center;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.282569"
+       x="22.287157"
+       y="9.7038202"
+       id="text85"
+       transform="translate(1.346511,4.6743065)"><tspan
+         sodipodi:role="line"
+         id="tspan83"
          x="22.287157"
          y="9.7038202"
-         id="text85"><tspan
-           sodipodi:role="line"
-           id="tspan83"
-           x="22.287157"
-           y="9.7038202"
-           style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">gnarled</tspan></text>
-      <image
-         xlink:href="IMAGE1"
-         width="31.344563"
-         height="24.593126"
-         preserveAspectRatio="none"
-         id="image1608"
-         x="6.9366426"
-         y="10.99874" />
-    </g>
+         style="font-size:3.52778px;text-align:center;text-anchor:middle;stroke-width:0.282569">1. gnarled</tspan></text>
+    <image
+       xlink:href="IMAGE1"
+       width="31.344563"
+       height="24.593126"
+       preserveAspectRatio="none"
+       id="image1608"
+       x="6.9366426"
+       y="10.99874"
+       transform="translate(1.0583337,4.6743065)" />
     <g
        id="g2582"
        transform="translate(1.1624629,93.027267)">
