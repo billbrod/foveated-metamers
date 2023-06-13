@@ -4476,9 +4476,9 @@ def get_all_metamers(wildcards, comp=['energy_ref', 'energy_met', 'energy_ref-na
                                                                      image_name=imgs)
     if 'sherlock' in comp:
         img = 'sherlock_1_range-.05,.95_size-2048,2600'
-        mets['sherlock'] = utils.generate_metamer_paths('RGC_norm_gaussian', image_name=img, scaling=[.01, .058],
+        mets['sherlock_ref'] = utils.generate_metamer_paths('RGC_norm_gaussian', image_name=img, scaling=[.01, .058],
                                                         seed=0, init='white')
-        mets['sherlock'] += utils.generate_metamer_paths('V1_norm_s6_gaussian', image_name=img, scaling=[.063, .27],
+        mets['sherlock_ref'] += utils.generate_metamer_paths('V1_norm_s6_gaussian', image_name=img, scaling=[.063, .27],
                                                          seed=0, init='white')
     if include_gamma:
         gamma_mets = {}
@@ -4903,7 +4903,7 @@ rule rearrange_natural_imgs_for_browser:
         '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/boats_gamma-False.png',
         '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/gnarled_gamma-False.png',
         '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/lettuce_gamma-False.png',
-        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/sherlock.png',
+        '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/sherlock_gamma-False.png',
         '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/azulejos_gamma-True.png',
         '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/tiles_gamma-True.png',
         '/mnt/ceph/users/wbroderick/foveated_metamers_to_share/natural_images/bike_gamma-True.png',
@@ -4929,7 +4929,7 @@ rule rearrange_natural_imgs_for_browser:
         import os
         import json
         metadata = []
-        for inp, outp in zip(input, output):
+        for inp, outp in zip(input, output[:-1]):
             os.link(inp, outp)
             tgt_img, gamma = re.findall('([a-z]+)_gamma-([A-Za-z]+).png', outp)[0]
             ln_path = outp.replace('/mnt/ceph/users/wbroderick/foveated_metamers_to_share/', '')
