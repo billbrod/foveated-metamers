@@ -16,7 +16,9 @@ interested in the
 [website](https://users.flatironinstitute.org/~wbroderick/metamers/) we put
 together for browsing through the synthesized images, and the
 [OSF](https://osf.io/67tbe/) for bulk downloading the images or the behavioral
-data.
+data. Finally, you may be interested in
+[plenoptic](https://plenoptic.readthedocs.io/en/latest/), a software package for
+generating metamers (and more!) for your own models.
 
 If you re-use some component of this project in an academic publication, see the
 [citation](#citation) section for how to credit us.
