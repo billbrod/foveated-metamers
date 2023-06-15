@@ -1,5 +1,7 @@
 # foveated-metamers
 
+[![DOI](https://zenodo.org/badge/195451020.svg)](https://zenodo.org/badge/latestdoi/195451020)
+
 This repo contains the code for a vision science experiment investigating how
 human perception changes across the visual field using behavioral experiments
 and computational models inspired by the earlys tages of visual processing. We
@@ -8,10 +10,13 @@ long history of vision science. If we know what information people are
 insensitive to, we can discard it or randomize it, and the resulting image
 should appear unchanged from the original.
 
-See the [VSS 2020 poster](https://osf.io/aketq/) for scientific details. You may
-also be interested in the
+See the [preprint](https://doi.org/10.1101/2023.05.18.541306) or the [VSS 2023
+poster](https://osf.io/8hdaz/) for scientific details. You may also be
+interested in the
 [website](https://users.flatironinstitute.org/~wbroderick/metamers/) we put
-together for browsing through the synthesized images.
+together for browsing through the synthesized images, and the
+[OSF](https://osf.io/67tbe/) for bulk downloading the images or the behavioral
+data.
 
 If you re-use some component of this project in an academic publication, see the
 [citation](#citation) section for how to credit us.
@@ -87,7 +92,8 @@ and recreating the figures, read further on in this README for details:
    - Additionally, install [inkscape](https://inkscape.org/), version equal to
      or greater 1.0.2. It seems like that, with inkscape version 1.2.2, all
      images are embedded at full resolution, leading to a massive increase in
-     file size. I'm not sure what change causes this.
+     file size. I'm not sure what change causes this. It works as intended with
+     inkscape 1.1
    - Check if you have `rsync` available (you probably do) and install it if you
      don't (probably best to do so via a package manager).
 4. Run `python download_data.py synthesis_input mcmc_fits figure_input ` to
@@ -1018,6 +1024,13 @@ python foveated_metamers/experiment.py ~/Desktop/metamers/stimuli/{model}/stimul
    adding the `--vfs-cache-mode writes` flag to the `rclone mount` command
    worked (though I also had to give myself full permissions on the rclone cache
    folder: `sudo chmod -R 777 ~/.cache/rclone`).
+3. As of June 2023, there appears to be some issue with svgutils and inkscape,
+   where any svg file that is the output of my `compose_figures` rule cannot be
+   opened by inkscape (attempting to do so leads inkscape to immediately crash).
+   This means that none of the files in the `compose_figures` directory can be
+   used as inputs to the `embed_bitmaps_into_figures` rule (but those
+   in`figures` can be). I'm unclear why this is happening now, but have been
+   unable to track it down.
    
 # Notes on reproducibility
 
@@ -1086,10 +1099,13 @@ appendix 1).
 
 # Citation
 
-If you use the data or code (including the stimuli) from this project in an
-academic publication, please cite the [poster](https://osf.io/aketq/).
-
-More to come...
+If you use the data, code, or stimuli from this project in an academic
+publication, please cite the
+[preprint](https://doi.org/10.1101/2023.05.18.541306). If you use the code,
+please additionally cite the [zenodo
+doi](https://zenodo.org/badge/latestdoi/195451020) for the corresponding release
+(e.g., `v1.0-biorxiv` corresponds to the DOI
+`https://doi.org/10.5281/zenodo.7948552`).
 
 # References
 
