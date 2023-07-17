@@ -56,6 +56,7 @@ wildcard_constraints:
     mcmc_model="partially-pooled|unpooled|partially-pooled-interactions-[.0-9]+|partially-pooled-interactions",
     fixation_cross="cross|nocross",
     cutout="cutout|nocutout|cutout_V1_natural-seed|cutout_RGC_natural-seed|nocutout_small|cutout_downsample",
+    compressed="|_compressed",
     context="paper|poster",
     mcmc_plot_type="performance|params-(linear|log)-(none|lines|ci)",
     # don't capture experiment-mse for x, but capture anything else, because
@@ -3799,6 +3800,49 @@ rule embed_bitmaps_into_figure:
                 fov.figures.write_create_bitmap_resolution(input[0], orig_dpi)
 
 
+# variety of pngs too big, so make them smaller for paper
+rule compress_pngs_for_paper:
+    input:
+        op.join(config['DATA_DIR'], '{folder}', '{figure_name}.png')
+    output:
+        op.join(config['DATA_DIR'], '{folder}', '{figure_name}_compressed.jpg')
+    log:
+        op.join(config['DATA_DIR'], 'logs', '{folder}', '{figure_name}_compressed.log')
+    benchmark:
+        op.join(config['DATA_DIR'], 'logs', '{folder}', '{figure_name}_compressed_benchmark.txt')
+    run:
+        import contextlib
+        import plenoptic as po
+        import torch
+        from PIL import Image
+        with open(log[0], 'w', buffering=1) as log_file:
+            with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
+                img = Image.open(input[0])
+                try:
+                    # jpgs can't be RGBA, so drop the alpha layer, if present
+                    # (we're not using it anyway)
+                    r, g, b, a = img.split()
+                    img = Image.merge('RGB', (r, g, b))
+                except ValueError:
+                    # then this was either RGB or grayscale, so our current
+                    # image is fine
+                    pass
+                img.save(output[0], optimize=True)
+                # just for kicks, compute some metrics between the two images
+                img = po.load_images(input, as_gray=False)
+                # again, drop alpha channel
+                if img.shape[1] == 4:
+                    img = img[:, :3]
+                imgs = torch.stack([img, po.load_images(output, as_gray=False)])
+                msssim = po.metric.ms_ssim(*imgs)
+                ssim = po.metric.ssim(*imgs)
+                mse = po.metric.mse(*imgs)
+                print("Metrics on difference between compressed and uncompressed images:")
+                print(f"MSE: {mse}")
+                print(f"SSIM: {ssim}")
+                print(f"MS-SSIM: {msssim}")
+
+
 def get_window_contour_figure_input(wildcards):
     if wildcards.fill.startswith('random') or wildcards.fill == 'none':
         return []
@@ -3912,10 +3956,16 @@ def get_compose_figures_input(wildcards):
         ]
     if 'performance_natural' in wildcards.fig_name:
         mcmc_model, details, image, comp, extra = re.findall('performance_natural_([a-z-_]+)_([a-z-]+)_image-([a-z_]+)_((?:sub-[0-9]+_)?comp-[a-z-]+)([_a-z0-9.-]+)?', wildcards.fig_name)[0]
+        # remove _compressed from extra, put in own variable
+        if '_compressed' in extra:
+            extra = extra.replace('_compressed', '')
+            compressed = '_compressed'
+        else:
+            compressed = ''
         # this is hacked together to just work for this one figure.
         assert 'sub-00' in comp and '0.27' in extra, "Wrong image!"
         paths = [path_template.format(f'mcmc_{mcmc_model}_performance_{comp}{extra}'),
-                 path_template.replace('figures', 'compose_figures').format(f'metamer_comparison_{image}_scaling-.27,.27,.27,.27,.27_cutout_V1_natural-seed')]
+                 path_template.replace('figures', 'compose_figures').format(f'metamer_comparison_{image}_scaling-.27,.27,.27,.27,.27_cutout_V1_natural-seed{compressed}')]
     if 'performance_comparison' in wildcards.fig_name:
         mcmc_model, details, comp, extra = re.findall('performance_comparison_([a-z-_]+)_([a-z-]+)_((?:sub-[0-9]+_)?comp-[a-z-]+)([_a-z0-9.-]+)?', wildcards.fig_name)[0]
         paths = [path_template.format(f'mcmc_{mcmc_model}_performance_{comp}{extra}'),
@@ -4063,19 +4113,25 @@ def get_metamer_comparison_figure_inputs(wildcards):
             raise Exception(f"When generating {wildcards.cutout} metamer_comparison figure, need 4 scaling values!")
         image_name = image_name * len(scaling)
         comps = ['ref'] * len(scaling)
+    if wildcards.compressed == '_compressed':
+        ext = '_compressed.jpg'
+    else:
+        ext = '.png'
     paths = [
         op.join('reports', 'figures', 'metamer_comparison_{cutout}.svg'),
-        *[op.join(config['DATA_DIR'], 'ref_images_preproc', '{image_name}_gamma-corrected_range-.05,.95_size-2048,2600.png').format(image_name=im)
+        *[op.join(config['DATA_DIR'], 'ref_images_preproc', '{image_name}_gamma-corrected_range-.05,.95_size-2048,2600{ext}').format(image_name=im, ext=ext)
           for im in uniq_imgs],
         *[op.join(config['DATA_DIR'], 'figures', '{{context}}', '{model_name}',
-                  '{image_name}_range-.05,.95_size-2048,2600_scaling-{scaling}_seed-{seed}_comp-{comp}_gpu-{gpu}_linewidth-15_window.png').format(
-                      model_name=m, scaling=sc, gpu=0 if float(sc) < config['GPU_SPLIT'] else 1, seed=s, image_name=im, comp=comp)
+                  '{image_name}_range-.05,.95_size-2048,2600_scaling-{scaling}_seed-{seed}_comp-{comp}_gpu-{gpu}_linewidth-15_window{ext}').format(
+                      model_name=m, scaling=sc, gpu=0 if float(sc) < config['GPU_SPLIT'] else 1, seed=s, image_name=im, comp=comp, ext=ext)
           for m, im, sc, s, comp in zip(models, image_name, scaling, seeds, comps)]
     ]
     if 'nocutout' not in wildcards.cutout:
         cuts = ['with_cutout_cross', 'foveal_cutout_cross', 'peripheral_cutout_cross']
-        paths[len(uniq_imgs):] = [p.replace('.png', f'_{c}.png').replace('ref_images_preproc', f'figures{os.sep}{{context}}')
-                                  for p in paths[len(uniq_imgs):] for c in cuts]
+        # if we're using the compressed images, want the compressed
+        # with_cutout_cross image, but the others should be uncompressed
+        paths[len(uniq_imgs):] = [p.replace(ext, f'_{c}{new_ext}').replace('ref_images_preproc', f'figures{os.sep}{{context}}')
+                                  for p in paths[len(uniq_imgs):] for c, new_ext in zip(cuts, [ext, '.png', '.png'])]
     return paths
 
 
@@ -4083,11 +4139,11 @@ rule metamer_comparison_figure:
     input:
         get_metamer_comparison_figure_inputs,
     output:
-        op.join(config['DATA_DIR'], 'figures', '{context}', 'metamer_comparison_{image_name}_scaling-{scaling}_{cutout}.svg')
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'metamer_comparison_{image_name}_scaling-{scaling}_{cutout}{compressed}.svg')
     log:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'metamer_comparison_{image_name}_scaling-{scaling}_{cutout}.log')
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'metamer_comparison_{image_name}_scaling-{scaling}_{cutout}{compressed}.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'metamer_comparison_{image_name}_scaling-{scaling}_{cutout}_benchmark.txt')
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'metamer_comparison_{image_name}_scaling-{scaling}_{cutout}{compressed}_benchmark.txt')
     run:
         import subprocess
         import shutil
@@ -4961,26 +5017,25 @@ def figure_paper_input(wildcards):
         op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_human.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_models.svg"),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'model_schematic_halfwidth_ivy_dpi-300.svg'),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_ivy_scaling-.01,.058,.063,.27_cutout_dpi-300.svg'),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_ivy_scaling-.01,.058,.063,.27_cutout_compressed.svg'),
         op.join(config['DATA_DIR'], 'figures', 'paper', "ref_images_dpi-300.svg"),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_scaling-extended_partially-pooled_log-ci_comp-base.svg"),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_gnarled_scaling-1.5,1.5,1.5,1.5_cutout_dpi-300.svg'),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_gnarled_scaling-1.5,1.5,1.5,1.5_cutout_compressed.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'performance_scaling-extended_metamer_comparison_nyc,llama_scaling-.063,.27_nocutout_small_dpi-300.svg'),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_natural_scaling-extended_partially-pooled_log-ci_image-portrait_symmetric_sub-00_comp-natural_line-scaling-0.27_dpi-300.svg"),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "mcmc_scaling-extended_partially-pooled_params-log-ci_sub-00_comp-natural.svg"),
-        op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_ideal.svg"),
-        op.join(config['DATA_DIR'], 'figures', 'paper', "metamer_asymmetry.svg"),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_natural_scaling-extended_partially-pooled_log-ci_image-portrait_symmetric_sub-00_comp-natural_line-scaling-0.27_compressed.svg"),
+        op.join(config['DATA_DIR'], 'figures', 'paper', "mcmc_scaling-extended_partially-pooled_params-log-ci_sub-00_comp-natural.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "critical_scaling_norm-False_scale-log.svg"),
-        op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_results.svg"),
+        op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_ideal.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_lum.svg"),
+        op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_results.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', 'psychophys_expt2_with_table.svg'),
         op.join(config['DATA_DIR'], 'figures', 'paper', "max_dprime_asymp_perf.svg"),
         # appendix figures
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_llama_scaling-.23,.23,.23,.23,.23_cutout_RGC_natural-seed_dpi-300.svg'),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_llama_scaling-.23,.23,.23,.23,.23_cutout_RGC_natural-seed_compressed.svg'),
         op.join(config['DATA_DIR'], 'figures', 'paper', 'Dacey1992_mcmc_line-nooffset_linear.svg'),
         op.join(config['DATA_DIR'], 'figures', 'paper', "freeman_windows_comparison.svg"),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_scaling-extended_partially-pooled_log-ci_sub-00_comp-downsample.svg"),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_tiles_scaling-1.5,1.5,1.5,1.5_cutout_downsample_dpi-300.svg'),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_tiles_scaling-1.5,1.5,1.5,1.5_cutout_downsample_compressed.svg'),
         op.join(config['DATA_DIR'], 'figures', 'paper', 'mse_comparison_bike_scaling-0.01_nocutout_with_target_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "radial_se_comp-ref_ecc-None.svg"),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'all_comps_summary_scaling-extended_partially-pooled_focus-outlier.svg'),
@@ -4996,9 +5051,9 @@ def figure_paper_input(wildcards):
         op.join(config['DATA_DIR'], 'statistics', 'critical_scaling.txt'),
         op.join(config['DATA_DIR'], 'statistics', 'number_of_stats.txt'),
     ]
-    appendix_n_figs = {3: 3, 4: 2, 5: 2, 6: 7}
-    outputs = (['fig-{:02d}.svg'.format(i) for i in range(1, 18)] +
-               ['fig-A{:01d}-{:02d}.svg'.format(i, j) for i in range(1, 7)
+    appendix_n_figs = {4: 2, 5: 2, 6: 2, 7: 7}
+    outputs = (['fig-{:02d}.svg'.format(i) for i in range(1, 17)] +
+               ['fig-A{:01d}-{:02d}.svg'.format(i, j) for i in range(1, 8)
                 for j in range(1, appendix_n_figs.get(i, 1)+1)] +
                ['critical_scaling.txt', 'number_of_stats.txt'])
     mapping = dict(zip(outputs, inputs))
@@ -5019,33 +5074,33 @@ rule figure_paper:
 
 rule main_paper_figures_no_embed:
     input:
-        [op.join('reports', 'paper_figures', 'fig-{:02d}{}.svg').format(i, '_no_embed' if i in [3, 4, 5, 7, 8, 10] else '')
-         for i in range(1, 18)],
+        [op.join('reports', 'paper_figures', 'fig-{:02d}{}.svg').format(i, '_no_embed' if i in [3, 4, 5, 7, 8, 9] else '')
+         for i in range(1, 17)],
         op.join('reports', 'paper_figures', 'critical_scaling.txt'),
         op.join('reports', 'paper_figures', 'number_of_stats.txt'),
 
 
 rule appendix_figures_no_embed:
     input:
-        [op.join('reports', 'paper_figures', 'fig-A{:01d}-{:02d}{}.svg').format(i, j, '_no_embed' if (i, j) in [(1, 1), (3, 3), (4, 1)] else '')
-         for i in range(1, 6)
-         for j in range(1, {3: 3, 4: 2, 5: 2}.get(i, 1)+1)]
+        [op.join('reports', 'paper_figures', 'fig-A{:01d}-{:02d}{}.svg').format(i, j, '_no_embed' if (i, j) in [(1, 1), (4, 2), (5, 1)] else '')
+         for i in range(1, 7)
+         for j in range(1, {4: 2, 5: 2, 6: 2}.get(i, 1)+1)]
 
 
 rule main_paper_figures:
     input:
         [op.join('reports', 'paper_figures', 'fig-{:02d}.svg').format(i)
-         for i in range(1, 18)],
+         for i in range(1, 17)],
         op.join('reports', 'paper_figures', 'critical_scaling.txt'),
         op.join('reports', 'paper_figures', 'number_of_stats.txt'),
 
 
 rule appendix_figures:
     input:
-        [op.join('reports', 'paper_figures', f'fig-A{i:01d}-{j:02d}.svg') for i in range(1, 6)
-         for j in range(1, {3: 3, 4: 2, 5: 2}.get(i, 1)+1)]
+        [op.join('reports', 'paper_figures', f'fig-A{i:01d}-{j:02d}.svg') for i in range(1, 7)
+         for j in range(1, {4: 2, 5: 2, 6: 2}.get(i, 1)+1)]
 
 
 rule appendix_figures_mcmc_compare:
     input:
-        [op.join('reports', 'paper_figures', f'fig-A6-{j:02d}.svg') for j in range(1, 8)]
+        [op.join('reports', 'paper_figures', f'fig-A7-{j:02d}.svg') for j in range(1, 8)]
