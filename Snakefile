@@ -74,6 +74,7 @@ wildcard_constraints:
     yaxis_dbl='single|double',
     t_width='[0-9.]+',
     window_type='cosine|gaussian',
+    width='fullwidth|halfwidth',
 ruleorder:
     collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > mcmc_compare_plot > mcmc_plots > mcmc_performance_comparison_figure > embed_bitmaps_into_figure > compose_figures > copy_schematic
 
@@ -3815,6 +3816,7 @@ rule compress_pngs_for_paper:
         import plenoptic as po
         import torch
         from PIL import Image
+        import imageio
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 img = Image.open(input[0])
@@ -3827,7 +3829,17 @@ rule compress_pngs_for_paper:
                     # then this was either RGB or grayscale, so our current
                     # image is fine
                     pass
-                img.save(output[0], optimize=True)
+                try:
+                    img.save(output[0], optimize=True)
+                except OSError:
+                    # in this case, our input was a grayscale 16 bit integer,
+                    # which we can't write as JPEG. so convert it to 8 bit
+                    # grayscale
+                    img = imageio.imread(input[0])
+                    img = img / np.iinfo(np.uint16).max
+                    img = Image.fromarray((img * np.iinfo(np.uint8).max).astype(np.uint8),
+                                          mode='L')
+                    img.save(output[0], optimize=True)
                 # just for kicks, compute some metrics between the two images
                 img = po.load_images(input, as_gray=False)
                 # again, drop alpha channel
@@ -3913,7 +3925,7 @@ rule window_contours_figure:
 rule model_schematic_figure:
     input:
         op.join('reports', 'figures', 'model_schematic_{width}.svg'),
-        op.join(config['DATA_DIR'], 'ref_images_preproc', '{image_name}_gamma-corrected_range-.05,.95_size-2048,2600.png'),
+        lambda wildcards: utils.get_ref_image_full_path(f'{wildcards.image_name}_gamma-corrected_range-.05,.95_size-2048,2600'),
     output:
         op.join(config['DATA_DIR'], 'figures', '{context}', 'model_schematic_{width}_{image_name}.svg')
     log:
@@ -5017,6 +5029,7 @@ def figure_paper_input(wildcards):
         op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_human.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_models.svg"),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'model_schematic_halfwidth_ivy_dpi-300.svg'),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'model_schematic_halfwidth_ivy_compressed.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_ivy_scaling-.01,.058,.063,.27_cutout_compressed.svg'),
         op.join(config['DATA_DIR'], 'figures', 'paper', "ref_images_dpi-300.svg"),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_scaling-extended_partially-pooled_log-ci_comp-base.svg"),
