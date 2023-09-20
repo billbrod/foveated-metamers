@@ -4677,6 +4677,33 @@ rule rearrange_stimuli_for_osf:
         shutil.rmtree(output_dir)
 
 
+# this is the png files, rather than the tiffs
+rule rearrange_target_images_for_osf:
+    input:
+        lambda wildcards: [utils.get_ref_image_full_path(img) for img in IMAGES],
+    output:
+        op.join(config['DATA_DIR'], 'to_share', 'target_images.tar.gz')
+    run:
+        import shutil
+        import tarfile
+        import os
+        # this is just a temporary directory that we'll delete once we've
+        # created the .tar.gz file
+        output_dir = output[0].replace('.tar.gz', '') + os.sep
+        os.makedirs(output_dir)
+        for inp in input:
+            outp = inp.replace(config["DATA_DIR"], output_dir)
+            # clean up the name a bit
+            outp_dir, outp = op.split(outp)
+            outp_dir = op.join(op.sep, *outp_dir.split(op.sep)[:-1])
+            outp = outp.split('_')[0] + op.splitext(outp)[-1]
+            outp = op.join(outp_dir, outp)
+            os.link(inp, outp)
+        with tarfile.open(output[0], 'w:gz') as tar:
+            tar.add(output_dir, arcname=op.split(output_dir)[-1])
+        shutil.rmtree(output_dir)
+
+
 rule rearrange_expt_training_for_osf:
     input:
         [[op.join(config['DATA_DIR'], 'stimuli', 'training_{model}', 'stimuli_comp-{comp}.npy').format(model=m, comp=c),
