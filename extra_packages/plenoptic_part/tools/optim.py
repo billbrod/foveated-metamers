@@ -267,7 +267,7 @@ def generate_norm_stats(model, input_dir, save_path=None, img_shape=None, as_gra
         paths = paths[index[0]:index[1]]
     for p in paths:
         try:
-            im = imageio.imread(p)
+            im = imageio.imread(p, 'PNG-PIL')
         except ValueError:
             warnings.warn("Unable to load in file %s, it's probably not an image, skipping..." %
                           p)

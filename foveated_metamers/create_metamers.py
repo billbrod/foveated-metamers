@@ -63,7 +63,7 @@ def setup_image(image, n_channels=1):
     """
     if isinstance(image, str):
         print("Loading in reference image from %s" % image)
-        image = imageio.imread(image)
+        image = imageio.imread(image, 'PNG-PIL')
     if image.dtype == np.uint8:
         warnings.warn("Image is int8, with range (0, 255)")
         image = convert_im_to_float(image)
