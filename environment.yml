@@ -18,6 +18,10 @@ dependencies:
   - h5py>=2.10
   - matplotlib>=3.3
   - pytorch>=1.9
+  # in Feb 2024, started having this issue:
+  # https://github.com/pytorch/vision/issues/8101#issuecomment-1918065977.
+  # making sure torchvision installed via conda (like torch) fixes this issue.
+  - torchvision
   - numpyro>=0.5.0
   - arviz>=0.12
   - tabulate>=0.8.9
