@@ -51,6 +51,8 @@ jobs:
         conda install -n base mamba
         conda clean --all -y
         mamba env create -f environment.yml
+    - name: Setup FFmpeg
+      uses: FedericoCarboni/setup-ffmpeg@v3.1
     - name: Download data
       run: |
         mkdir -p data/metamers/ref_images/
