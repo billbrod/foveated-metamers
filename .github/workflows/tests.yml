@@ -13,126 +13,126 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - name: Setup conda
-        uses: s-weigand/setup-conda@v1.1.1
-        with:
-          update-conda: true
-          python-version: 3.7
-          conda-channels: anaconda, conda-forge, bioconda
-      - name: Create environment
-        run: |
-          conda install -n base mamba -c conda-forge
-          conda clean --all -y
-          mamba env create -f environment.yml
-      - name: Run tests with pytest
-        run: |
-          source activate metamers
-          pytest tests/test_models.py
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: Setup conda
+      uses: s-weigand/setup-conda@678f22c807cb6fde6a290be6f3546877c98ec66f # v1.2.2
+      with:
+        update-conda: true
+        python-version: 3.7
+        conda-channels: anaconda, conda-forge, bioconda
+    - name: Create environment
+      run: |
+        conda install -n base mamba -c conda-forge
+        conda clean --all -y
+        mamba env create -f environment.yml
+    - name: Run tests with pytest
+      run: |
+        source activate metamers
+        pytest tests/test_models.py
 
   test_snakefile:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
     steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - name: Setup conda
-        uses: s-weigand/setup-conda@v1.1.1
-        with:
-          update-conda: true
-          python-version: 3.7
-          conda-channels: anaconda, conda-forge, bioconda
-      - name: Create environment
-        run: |
-          conda install -n base mamba
-          conda clean --all -y
-          mamba env create -f environment.yml
-      - name: Download data
-        run: |
-          mkdir -p data/metamers/ref_images/
-          curl -O -J -L https://osf.io/4wyg3/download
-          tar xf textures-subset-for-testing.tar.gz -C data
-          rm textures-subset-for-testing.tar.gz
-      - name: modify config.yml
-        run: |
-          sed -i 's|DATA_DIR:.*|DATA_DIR: "data/metamers"|g' config.yml
-          sed -i 's|TEXTURE_DIR:.*|TEXTURE_DIR: "data/textures-subset-for-testing"|g' config.yml
-      - name: run snakemake test
-        run: |
-          source activate metamers
-          cp extra_packages/data/einstein.pgm data/metamers/ref_images/einstein_size-256,256.png
-          snakemake -j 5 -prk data/metamers/test_setup/RGC_norm_gaussian_gpu-0/einstein data/metamers/test_setup/V1_norm_s6_gaussian_gpu-0/einstein
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: Setup conda
+      uses: s-weigand/setup-conda@678f22c807cb6fde6a290be6f3546877c98ec66f # v1.2.2
+      with:
+        update-conda: true
+        python-version: 3.7
+        conda-channels: anaconda, conda-forge, bioconda
+    - name: Create environment
+      run: |
+        conda install -n base mamba
+        conda clean --all -y
+        mamba env create -f environment.yml
+    - name: Download data
+      run: |
+        mkdir -p data/metamers/ref_images/
+        curl -O -J -L https://osf.io/4wyg3/download
+        tar xf textures-subset-for-testing.tar.gz -C data
+        rm textures-subset-for-testing.tar.gz
+    - name: modify config.yml
+      run: |
+        sed -i 's|DATA_DIR:.*|DATA_DIR: "data/metamers"|g' config.yml
+        sed -i 's|TEXTURE_DIR:.*|TEXTURE_DIR: "data/textures-subset-for-testing"|g' config.yml
+    - name: run snakemake test
+      run: |
+        source activate metamers
+        cp extra_packages/data/einstein.pgm data/metamers/ref_images/einstein_size-256,256.png
+        snakemake -j 5 -prk data/metamers/test_setup/RGC_norm_gaussian_gpu-0/einstein data/metamers/test_setup/V1_norm_s6_gaussian_gpu-0/einstein
 
   run_Freeman_check_notebook:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - name: Setup conda
-        uses: s-weigand/setup-conda@v1.1.1
-        with:
-          update-conda: true
-          python-version: 3.7
-          conda-channels: anaconda, conda-forge, bioconda
-      - name: Create environment
-        run: |
-          conda install -n base mamba
-          conda clean --all -y
-          mamba env create -f environment.yml
-          source activate metamers
-          mamba install jupyter nbclient>=0.5.5
-      - name: modify config.yml
-        run: |
-          sed -i 's|DATA_DIR:.*|DATA_DIR: "data/metamers"|g' config.yml
-          sed -i 's|TEXTURE_DIR:.*|TEXTURE_DIR: "data/textures-subset-for-testing"|g' config.yml
-          mkdir -p data/metamers
-          mkdir -p data/textures-subset-for-testing
-      - name: Download data
-        run : |
-          source activate metamers
-          python download_data.py freeman2011_check_output -s
-          python download_data.py freeman2011_check_input -s
-      - name: run nbconvert
-        run: |
-          source activate metamers
-          jupyter execute notebooks/Freeman_Check.ipynb --kernel_name=python3
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: Setup conda
+      uses: s-weigand/setup-conda@678f22c807cb6fde6a290be6f3546877c98ec66f # v1.2.2
+      with:
+        update-conda: true
+        python-version: 3.7
+        conda-channels: anaconda, conda-forge, bioconda
+    - name: Create environment
+      run: |
+        conda install -n base mamba
+        conda clean --all -y
+        mamba env create -f environment.yml
+        source activate metamers
+        mamba install jupyter nbclient>=0.5.5
+    - name: modify config.yml
+      run: |
+        sed -i 's|DATA_DIR:.*|DATA_DIR: "data/metamers"|g' config.yml
+        sed -i 's|TEXTURE_DIR:.*|TEXTURE_DIR: "data/textures-subset-for-testing"|g' config.yml
+        mkdir -p data/metamers
+        mkdir -p data/textures-subset-for-testing
+    - name: Download data
+      run: |
+        source activate metamers
+        python download_data.py freeman2011_check_output -s
+        python download_data.py freeman2011_check_input -s
+    - name: run nbconvert
+      run: |
+        source activate metamers
+        jupyter execute notebooks/Freeman_Check.ipynb --kernel_name=python3
 
   test_mcmc:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
     steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - name: Setup conda
-        uses: s-weigand/setup-conda@v1.1.1
-        with:
-          update-conda: true
-          python-version: 3.7
-          conda-channels: anaconda, conda-forge, bioconda
-      - name: Create environment
-        run: |
-          conda install -n base mamba
-          conda clean --all -y
-          mamba env create -f environment.yml
-      - name: modify config.yml
-        run: |
-          sed -i 's|DATA_DIR:.*|DATA_DIR: "data/metamers"|g' config.yml
-          sed -i 's|TEXTURE_DIR:.*|TEXTURE_DIR: "data/textures-subset-for-testing"|g' config.yml
-          mkdir -p data/metamers
-          mkdir -p data/textures-subset-for-testing
-      - name: Download data
-        run: |
-          source activate metamers
-          python download_data.py behavioral_data -s
-      - name: run mcmc test
-        run: |
-          source activate metamers
-          # test one that has a single subject, one with multiple
-          snakemake -j 5 -prk data/metamers/mcmc/V1_norm_s6_gaussian/task-split_comp-ref/task-split_comp-ref_mcmc_partially-pooled_step-1_prob-.8_depth-10_c-2_d-10_w-10_s-0.nc data/metamers/mcmc/V1_norm_s6_gaussian/task-split_comp-ref-natural/task-split_comp-ref-natural_mcmc_partially-pooled_step-1_prob-.8_depth-10_c-2_d-10_w-10_s-0.nc
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: Setup conda
+      uses: s-weigand/setup-conda@678f22c807cb6fde6a290be6f3546877c98ec66f # v1.2.2
+      with:
+        update-conda: true
+        python-version: 3.7
+        conda-channels: anaconda, conda-forge, bioconda
+    - name: Create environment
+      run: |
+        conda install -n base mamba
+        conda clean --all -y
+        mamba env create -f environment.yml
+    - name: modify config.yml
+      run: |
+        sed -i 's|DATA_DIR:.*|DATA_DIR: "data/metamers"|g' config.yml
+        sed -i 's|TEXTURE_DIR:.*|TEXTURE_DIR: "data/textures-subset-for-testing"|g' config.yml
+        mkdir -p data/metamers
+        mkdir -p data/textures-subset-for-testing
+    - name: Download data
+      run: |
+        source activate metamers
+        python download_data.py behavioral_data -s
+    - name: run mcmc test
+      run: |
+        source activate metamers
+        # test one that has a single subject, one with multiple
+        snakemake -j 5 -prk data/metamers/mcmc/V1_norm_s6_gaussian/task-split_comp-ref/task-split_comp-ref_mcmc_partially-pooled_step-1_prob-.8_depth-10_c-2_d-10_w-10_s-0.nc data/metamers/mcmc/V1_norm_s6_gaussian/task-split_comp-ref-natural/task-split_comp-ref-natural_mcmc_partially-pooled_step-1_prob-.8_depth-10_c-2_d-10_w-10_s-0.nc
