@@ -164,7 +164,9 @@ def model_schematic(schematic_fig, contour_fig_large, contour_figs_small,
 
 
 def metamer_comparison(metamer_fig, labels, cutout_fig=False,
-                       natural_seed_fig=False, context='paper'):
+                       natural_seed_fig=False,
+                       with_initialization=False,
+                       context='paper'):
     """Add text labeling model metamer scaling values.
 
     Parameters
@@ -181,6 +183,9 @@ def metamer_comparison(metamer_fig, labels, cutout_fig=False,
     natural_seed_fig : bool, optional
         Whether this is the natural-seed version of this fig or not, which
         changes how we place the labels.
+    with_initialization : bool, optional
+        Whether this includes insets for the initial images used in metamer synthesis,
+        which results in a wider image and shifts label placement.
     context : {'paper', 'poster'}, optional
         plotting context that's being used for this figure (as in
         seaborn's set_context function). if poster, will scale things up. Note
@@ -192,7 +197,10 @@ def metamer_comparison(metamer_fig, labels, cutout_fig=False,
         Figure containing composed plots
 
     """
-    text_params, figure_width = style.plotting_style(context, 'svgutils', 'full')
+    if with_initialization:
+        text_params, figure_width = style.plotting_style(context, 'svgutils', 'extra-wide')
+    else:
+        text_params, figure_width = style.plotting_style(context, 'svgutils', 'full')
     figure_width = _convert_to_pix(figure_width)
     metamer_fig = SVG(metamer_fig, 'inkscape')
     metamer_move = [0, 0]
@@ -210,6 +218,7 @@ def metamer_comparison(metamer_fig, labels, cutout_fig=False,
         font_size = _convert_to_pix(f'{font_size*5/9}pt')
         txt_move = [[100, 168], [375, 168], [100, 338], [375, 338],
                     [100, 508], [375, 508]]
+    print(txt_move)
     # this has 6 subplots, and we want a label above each of them
     if natural_seed_fig:
         # want to shift the metamer figure down a little bit so there's room
@@ -219,9 +228,15 @@ def metamer_comparison(metamer_fig, labels, cutout_fig=False,
         # +20 to account for the extra 20px added above, -170 because we want
         # to move everything up a row.
         txt_move = [[mv[0], mv[1]+20-170] for mv in txt_move]
+        print(txt_move)
         # change the x value because they're longer than the scaling labels
         txt_move = [[mv[0]-offset, mv[1]] for mv, offset
                     in zip(txt_move, [10]+[63]*5)]
+        print(txt_move)
+    if with_initialization:
+        txt_move = [[mv[0]+1.5*offset, mv[1]] for mv, offset
+                    in zip(txt_move, [63]*6)]
+    print(txt_move)
     return compose.Figure(
         figure_width, figure_height,
         metamer_fig.move(*metamer_move),
@@ -366,6 +381,7 @@ def performance_comparison(performance_fig, param_fig, subject_n=None, context='
 
 
 def performance_comparison_natural(performance_fig, metamer_fig, subject_n=1,
+                                   with_initialization=False,
                                    context='paper'):
     """Combine sub-00_comp-natural performance with example metamers
 
@@ -377,6 +393,9 @@ def performance_comparison_natural(performance_fig, metamer_fig, subject_n=1,
         has been added).
     subject_n : int or None, optional
         If not None, add text saying "n=subject_n" on the performance_fig.
+    with_initialization : bool, optional
+        Whether this includes insets for the initial images used in metamer synthesis,
+        which results in a wider image and shifts label placement.
     context : {'paper', 'poster'}, optional
         plotting context that's being used for this figure (as in
         seaborn's set_context function). if poster, will scale things up. Note
@@ -388,7 +407,10 @@ def performance_comparison_natural(performance_fig, metamer_fig, subject_n=1,
         Figure containing composed plots
 
     """
-    text_params, figure_width = style.plotting_style(context, 'svgutils', 'full')
+    if with_initialization:
+        text_params, figure_width = style.plotting_style(context, 'svgutils', 'extra-wide')
+    else:
+        text_params, figure_width = style.plotting_style(context, 'svgutils', 'full')
     figure_width = _convert_to_pix(figure_width)
     figure_height = 1.3*figure_width+30
     if subject_n is not None:

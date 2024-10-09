@@ -114,6 +114,8 @@ def plotting_style(context='paper', for_package='matplotlib', figsize='full'):
     elif for_package == 'svgutils':
         if context == 'paper':
             params = {'font': 'Helvetica', 'size': '18pt'}
+            if figsize == 'extra-wide':
+                figure_width = '9in'
             if figsize == 'full':
                 figure_width = '6.5in'
             elif figsize == 'half':

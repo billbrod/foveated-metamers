@@ -55,7 +55,7 @@ wildcard_constraints:
     logscale="log|linear",
     mcmc_model="partially-pooled|unpooled|partially-pooled-interactions-[.0-9]+|partially-pooled-interactions",
     fixation_cross="cross|nocross",
-    cutout="cutout|nocutout|cutout_V1_natural-seed|cutout_RGC_natural-seed|nocutout_small|cutout_downsample",
+    cutout="cutout|nocutout|cutout_V1_natural-seed|cutout_RGC_natural-seed|nocutout_small|cutout_downsample|cutout_V1_natural-seed_init",
     compressed="|_compressed",
     context="paper|poster",
     mcmc_plot_type="performance|params-(linear|log)-(none|lines|ci)",
@@ -3968,6 +3968,12 @@ def get_compose_figures_input(wildcards):
         ]
     if 'performance_natural' in wildcards.fig_name:
         mcmc_model, details, image, comp, extra = re.findall('performance_natural_([a-z-_]+)_([a-z-]+)_image-([a-z_]+)_((?:sub-[0-9]+_)?comp-[a-z-]+)([_a-z0-9.-]+)?', wildcards.fig_name)[0]
+        # remove _init from extra, put in own variable
+        if '_init' in extra:
+            extra = extra.replace('_init', '')
+            init = '_init'
+        else:
+            init = ''
         # remove _compressed from extra, put in own variable
         if '_compressed' in extra:
             extra = extra.replace('_compressed', '')
@@ -3977,7 +3983,7 @@ def get_compose_figures_input(wildcards):
         # this is hacked together to just work for this one figure.
         assert 'sub-00' in comp and '0.27' in extra, "Wrong image!"
         paths = [path_template.format(f'mcmc_{mcmc_model}_performance_{comp}{extra}'),
-                 path_template.replace('figures', 'compose_figures').format(f'metamer_comparison_{image}_scaling-.27,.27,.27,.27,.27_cutout_V1_natural-seed{compressed}')]
+                 path_template.replace('figures', 'compose_figures').format(f'metamer_comparison_{image}_scaling-.27,.27,.27,.27,.27_cutout_V1_natural-seed{init}{compressed}')]
     if 'performance_comparison' in wildcards.fig_name:
         mcmc_model, details, comp, extra = re.findall('performance_comparison_([a-z-_]+)_([a-z-]+)_((?:sub-[0-9]+_)?comp-[a-z-]+)([_a-z0-9.-]+)?', wildcards.fig_name)[0]
         paths = [path_template.format(f'mcmc_{mcmc_model}_performance_{comp}{extra}'),
@@ -4042,7 +4048,8 @@ rule compose_figures:
                                       'Luminance metamer init with white noise 2']
                         fig = fov.compose_figures.metamer_comparison(*input, labels,
                                                                      'nocutout' not in wildcards.fig_name,
-                                                                     True, wildcards.context)
+                                                                     True, 'init' in wildcards.fig_name,
+                                                                     wildcards.context)
                     else:
                         fig = fov.compose_figures.metamer_comparison(*input, scaling,
                                                                      'nocutout' not in wildcards.fig_name,
@@ -4054,7 +4061,9 @@ rule compose_figures:
                         n = 1
                     else:
                         n = None
-                    fig = fov.compose_figures.performance_comparison_natural(*input, n, wildcards.context)
+                    fig = fov.compose_figures.performance_comparison_natural(*input, n,
+                                                                             'init' in wildcards.fig_name,
+                                                                             wildcards.context)
                 elif "performance_comparison" in wildcards.fig_name:
                     if 'sub-00' in wildcards.fig_name:
                         n = 1
@@ -4066,6 +4075,26 @@ rule compose_figures:
                 elif "performance-all" in wildcards.fig_name:
                     fig = fov.compose_figures.performance_all(*input, context=wildcards.context)
                 fig.save(output[0])
+
+
+rule create_init_noise_img:
+    output:
+        op.join(config["DATA_DIR"], "initial_images", "seed-{seed}_size-{size}_white.{ext}")
+    log:
+        op.join(config["DATA_DIR"], "logs", "initial_images", "seed-{seed}_size-{size}_white_{ext}.log")
+    benchmark:
+        op.join(config["DATA_DIR"], "logs", "initial_images", "seed-{seed}_size-{size}_white_{ext}_benchmark.txt")
+    run:
+        import torch
+        import numpy
+        import foveated_metamers as fov
+        import plenoptic as po
+        seed = int(wildcards.seed)
+        torch.manual_seed(seed)
+        np.random.seed(seed)
+        size = [int(s) for s in wildcards.size.split(',')]
+        initial_image = po.to_numpy(torch.rand(size, dtype=torch.float32)).squeeze()
+        imageio.imwrite(output[0], fov.utils.convert_im_to_int(initial_image))
 
 
 def get_metamer_comparison_figure_inputs(wildcards):
@@ -4138,12 +4167,29 @@ def get_metamer_comparison_figure_inputs(wildcards):
                       model_name=m, scaling=sc, gpu=0 if float(sc) < config['GPU_SPLIT'] else 1, seed=s, image_name=im, comp=comp, ext=ext)
           for m, im, sc, s, comp in zip(models, image_name, scaling, seeds, comps)]
     ]
+    init_ims = []
+    if 'init' in wildcards.cutout:
+        for m, im, sc, s, comp in zip(models, image_name, scaling, seeds, comps):
+            mets = utils.generate_metamer_paths(gamma_corrected=True, model_name=m, scaling=sc,
+                                                gpu=0 if float(sc) < config['GPU_SPLIT'] else 1, seed_n=s,
+                                                image_name=f'{im}_range-.05,.95_size-2048,2600',
+                                                comp=comp)
+            assert len(mets) == 1
+            if 'init-white' in mets[0]:
+                seed = re.findall('seed-([0-9]+)_init-white', mets[0])[0]
+                p = op.join(config['DATA_DIR'], 'initial_images', f'seed-{seed}_size-2048,2600_white{ext}')
+            else:
+                init = re.findall("seed-[0-9]+_init-(.+)_range-", mets[0])[0]
+                p = op.join(config['DATA_DIR'], 'ref_images_preproc', f'{init}_gamma-corrected_range-.05,.95_size-2048,2600{ext}')
+            init_ims.append(p)
     if 'nocutout' not in wildcards.cutout:
         cuts = ['with_cutout_cross', 'foveal_cutout_cross', 'peripheral_cutout_cross']
         # if we're using the compressed images, want the compressed
         # with_cutout_cross image, but the others should be uncompressed
         paths[len(uniq_imgs):] = [p.replace(ext, f'_{c}{new_ext}').replace('ref_images_preproc', f'figures{os.sep}{{context}}')
                                   for p in paths[len(uniq_imgs):] for c, new_ext in zip(cuts, [ext, '.png', '.png'])]
+    if 'init' in wildcards.cutout:
+        paths.extend(init_ims)
     return paths
 
 
@@ -5062,7 +5108,7 @@ def figure_paper_input(wildcards):
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_scaling-extended_partially-pooled_log-ci_comp-base.svg"),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_gnarled_scaling-1.5,1.5,1.5,1.5_cutout_compressed.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'performance_scaling-extended_metamer_comparison_nyc,llama_scaling-.063,.27_nocutout_small_dpi-300.svg'),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_natural_scaling-extended_partially-pooled_log-ci_image-portrait_symmetric_sub-00_comp-natural_line-scaling-0.27_compressed.svg"),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_natural_scaling-extended_partially-pooled_log-ci_image-portrait_symmetric_sub-00_comp-natural_line-scaling-0.27_init_compressed.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "mcmc_scaling-extended_partially-pooled_params-log-ci_sub-00_comp-natural.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "critical_scaling_norm-False_scale-log.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_ideal.svg"),
