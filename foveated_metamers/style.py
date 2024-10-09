@@ -115,7 +115,7 @@ def plotting_style(context='paper', for_package='matplotlib', figsize='full'):
         if context == 'paper':
             params = {'font': 'Helvetica', 'size': '18pt'}
             if figsize == 'extra-wide':
-                figure_width = '9in'
+                figure_width = '8.7in'
             if figsize == 'full':
                 figure_width = '6.5in'
             elif figsize == 'half':

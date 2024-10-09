@@ -409,10 +409,15 @@ def performance_comparison_natural(performance_fig, metamer_fig, subject_n=1,
     """
     if with_initialization:
         text_params, figure_width = style.plotting_style(context, 'svgutils', 'extra-wide')
+        figure_width = _convert_to_pix(figure_width)
+        figure_height = figure_width+10
     else:
         text_params, figure_width = style.plotting_style(context, 'svgutils', 'full')
-    figure_width = _convert_to_pix(figure_width)
-    figure_height = 1.3*figure_width+30
+        figure_width = _convert_to_pix(figure_width)
+        figure_height = 1.3*figure_width+30
+    # originally figured out how much to shift the text for panel B using the
+    # figure_width without initialization, so hopefully this works more generally
+    b_shift_val = (figure_height - 30) / 1.3
     if subject_n is not None:
         subject_n = f'n={subject_n}'
     else:
@@ -429,10 +434,10 @@ def performance_comparison_natural(performance_fig, metamer_fig, subject_n=1,
         compose.Text('2', 305, 115, size=n_font_size, **text_params),
         compose.Text('3', 305, 200, size=n_font_size, **text_params),
         compose.Text(subject_n, 80, 50, size=n_font_size, **text_params),
-        compose.Text('B', 0, figure_width/2, size=label_font_size, **text_params),
-        compose.Text('1', 0, figure_width/2+80, size=n_font_size, **text_params),
-        compose.Text('2', 0, figure_width/2+80+170, size=n_font_size, **text_params),
-        compose.Text('3', 0, figure_width/2+80+2*170, size=n_font_size, **text_params),
+        compose.Text('B', 0, b_shift_val/2, size=label_font_size, **text_params),
+        compose.Text('1', 0, b_shift_val/2+80, size=n_font_size, **text_params),
+        compose.Text('2', 0, b_shift_val/2+80+170, size=n_font_size, **text_params),
+        compose.Text('3', 0, b_shift_val/2+80+2*170, size=n_font_size, **text_params),
     )
 
 
