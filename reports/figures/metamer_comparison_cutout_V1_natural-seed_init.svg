@@ -24,17 +24,17 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="1.0769362"
-     inkscape:cx="295.74641"
-     inkscape:cy="223.31872"
+     inkscape:zoom="2.1538724"
+     inkscape:cx="560.15389"
+     inkscape:cy="190.12268"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
      units="px"
-     inkscape:window-width="2880"
-     inkscape:window-height="1748"
-     inkscape:window-x="0"
-     inkscape:window-y="52"
+     inkscape:window-width="2852"
+     inkscape:window-height="1720"
+     inkscape:window-x="12"
+     inkscape:window-y="64"
      inkscape:window-maximized="1"
      inkscape:document-rotation="0"
      fit-margin-top="0"
@@ -60,6 +60,14 @@
      inkscape:groupmode="layer"
      id="layer1"
      transform="translate(62.587311,-11.249963)">
+    <rect
+       style="fill:none;stroke:#000000;stroke-width:2.317;stroke-miterlimit:11.5"
+       id="rect1"
+       width="123.0135"
+       height="65.481911"
+       x="267.84302"
+       y="-99.619453"
+       transform="matrix(0.82612112,0,0,1.1981999,438.96498,132.00212)" />
     <g
        id="g198267"
        transform="translate(81.61669)">
@@ -171,7 +179,8 @@
        preserveAspectRatio="none"
        height="162.4733"
        width="207.07634"
-       transform="matrix(0.5,0,0,0.5,629.08533,5.6249949)" />
+       transform="matrix(0.5,0,0,0.5,629.08533,5.6249949)"
+       style="fill:#1a1a1a" />
     <image
        xlink:href="IMAGE23"
        y="11.24998"
