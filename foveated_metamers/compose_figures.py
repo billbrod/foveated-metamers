@@ -165,7 +165,7 @@ def model_schematic(schematic_fig, contour_fig_large, contour_figs_small,
 
 def metamer_comparison(metamer_fig, labels, cutout_fig=False,
                        natural_seed_fig=False,
-                       with_initialization=False,
+                       with_offset_images=False,
                        context='paper'):
     """Add text labeling model metamer scaling values.
 
@@ -183,7 +183,7 @@ def metamer_comparison(metamer_fig, labels, cutout_fig=False,
     natural_seed_fig : bool, optional
         Whether this is the natural-seed version of this fig or not, which
         changes how we place the labels.
-    with_initialization : bool, optional
+    with_offset_images : bool, optional
         Whether this includes insets for the initial images used in metamer synthesis,
         which results in a wider image and shifts label placement.
     context : {'paper', 'poster'}, optional
@@ -197,10 +197,11 @@ def metamer_comparison(metamer_fig, labels, cutout_fig=False,
         Figure containing composed plots
 
     """
-    if with_initialization:
-        text_params, figure_width = style.plotting_style(context, 'svgutils', 'extra-wide')
+    if with_offset_images:
+        width = 'extra-wide'
     else:
-        text_params, figure_width = style.plotting_style(context, 'svgutils', 'full')
+        width = 'full'
+    text_params, figure_width = style.plotting_style(context, 'svgutils', width)
     figure_width = _convert_to_pix(figure_width)
     metamer_fig = SVG(metamer_fig, 'inkscape')
     metamer_move = [0, 0]
@@ -233,7 +234,7 @@ def metamer_comparison(metamer_fig, labels, cutout_fig=False,
         txt_move = [[mv[0]-offset, mv[1]] for mv, offset
                     in zip(txt_move, [10]+[63]*5)]
         print(txt_move)
-    if with_initialization:
+    if width == 'extra-wide':
         txt_move = [[mv[0]+1.5*offset, mv[1]] for mv, offset
                     in zip(txt_move, [63]*6)]
     print(txt_move)
@@ -381,7 +382,7 @@ def performance_comparison(performance_fig, param_fig, subject_n=None, context='
 
 
 def performance_comparison_natural(performance_fig, metamer_fig, subject_n=1,
-                                   with_initialization=False,
+                                   with_offset_images=False,
                                    context='paper'):
     """Combine sub-00_comp-natural performance with example metamers
 
@@ -393,7 +394,7 @@ def performance_comparison_natural(performance_fig, metamer_fig, subject_n=1,
         has been added).
     subject_n : int or None, optional
         If not None, add text saying "n=subject_n" on the performance_fig.
-    with_initialization : bool, optional
+    with_offset_images : bool, optional
         Whether this includes insets for the initial images used in metamer synthesis,
         which results in a wider image and shifts label placement.
     context : {'paper', 'poster'}, optional
@@ -407,7 +408,7 @@ def performance_comparison_natural(performance_fig, metamer_fig, subject_n=1,
         Figure containing composed plots
 
     """
-    if with_initialization:
+    if with_offset_images:
         text_params, figure_width = style.plotting_style(context, 'svgutils', 'extra-wide')
         figure_width = _convert_to_pix(figure_width)
         figure_height = figure_width+10

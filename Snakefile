@@ -55,7 +55,7 @@ wildcard_constraints:
     logscale="log|linear",
     mcmc_model="partially-pooled|unpooled|partially-pooled-interactions-[.0-9]+|partially-pooled-interactions",
     fixation_cross="cross|nocross",
-    cutout="cutout|nocutout|cutout_V1_natural-seed|cutout_RGC_natural-seed|nocutout_small|cutout_downsample|cutout_V1_natural-seed_init",
+    cutout="cutout|nocutout|cutout_V1_natural-seed|cutout_RGC_natural-seed|nocutout_small|cutout_downsample|cutout_V1_natural-seed_init|cutout_RGC_natural-seed_init",
     compressed="|_compressed",
     context="paper|poster",
     mcmc_plot_type="performance|params-(linear|log)-(none|lines|ci)",
@@ -4048,7 +4048,8 @@ rule compose_figures:
                                       'Luminance metamer init with white noise 2']
                         fig = fov.compose_figures.metamer_comparison(*input, labels,
                                                                      'nocutout' not in wildcards.fig_name,
-                                                                     True, 'init' in wildcards.fig_name,
+                                                                     True,
+                                                                     'init' in wildcards.fig_name and 'V1' in wildcards.fig_name,
                                                                      wildcards.context)
                     else:
                         fig = fov.compose_figures.metamer_comparison(*input, scaling,
@@ -5117,7 +5118,7 @@ def figure_paper_input(wildcards):
         op.join(config['DATA_DIR'], 'figures', 'paper', 'psychophys_expt2_with_table.svg'),
         op.join(config['DATA_DIR'], 'figures', 'paper', "max_dprime_asymp_perf.svg"),
         # appendix figures
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_llama_scaling-.23,.23,.23,.23,.23_cutout_RGC_natural-seed_compressed.svg'),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_llama_scaling-.23,.23,.23,.23,.23_cutout_RGC_natural-seed_init_compressed.svg'),
         op.join(config['DATA_DIR'], 'figures', 'paper', 'Dacey1992_mcmc_line-nooffset_linear.svg'),
         op.join(config['DATA_DIR'], 'figures', 'paper', "freeman_windows_comparison.svg"),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_scaling-extended_partially-pooled_log-ci_sub-00_comp-downsample.svg"),
