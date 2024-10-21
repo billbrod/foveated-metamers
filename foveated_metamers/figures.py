@@ -2906,6 +2906,28 @@ def mcmc_arviz_compare(df, row='trial_type', col='model', aspect=2, height=2,
     return g
 
 
+def freeman_critical_scaling():
+    """Return df with critical scaling values from Freeman and Simoncelli, 2011.
+
+    These are values for the texture and energy models, for the metamer_vs_metamer
+    comparison.
+
+    Numbers come from Freeman and Simoncelli, 2011, figure 5, extracted with
+    WebPlotDigitizer.
+
+    Returns
+    -------
+    df : pd.DataFrame
+        df with critical scaling values.
+
+    """
+    crit_scaling = [0.255, 0.483]
+    model = ['Energy model\n(Freeman)', 'Texture model\n(Freeman)']
+    return pd.DataFrame({'critical_scaling': crit_scaling,
+                         'model': model,
+                         'trial_type': 'metamer_vs_metamer'})
+
+
 def wallis_critical_scaling():
     """Return df with critical scaling values from Wallis et al., 2019.
 
@@ -2929,7 +2951,7 @@ def wallis_critical_scaling():
             'metamer_vs_metamer', 'metamer_vs_metamer']
     images = ['texture', 'scene', 'texture', 'scene']
     return pd.DataFrame({'critical_scaling': crit_scaling,
-                         'model': 'Texture model',
+                         'model': 'Texture model\n(Wallis)',
                          'trial_type': comp, 'image_type': images})
 
 

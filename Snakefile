@@ -4530,15 +4530,9 @@ rule critical_scaling_pointplot:
                     crit_scaling.append(tmp)
                 crit_scaling = pd.concat(crit_scaling)
                 crit_scaling['model'] = crit_scaling['model'].map(fov.plotting.MODEL_PLOT)
-                crit_scaling = pd.concat([crit_scaling, fov.figures.wallis_critical_scaling()])
-                pal = fov.plotting.get_palette('model', fov.plotting.MODEL_PLOT.values())
-                crit_scaling.model = crit_scaling.model.apply(lambda x: x.replace(' model', ''))
-                pal = {k.replace(' model', ''): v for k, v in pal.items()}
-                # color copied from Freeman and Simoncelli, 2011's V2 purple
-                pal['Texture'] = (165/255, 109/255, 189/255)
                 # put dummy data in for this Luminance met vs met, since we
                 # can't actually fit
-                tmp = crit_scaling.query("model=='Luminance' & trial_type == 'metamer_vs_reference'")
+                tmp = crit_scaling.query("model=='Luminance model' & trial_type == 'metamer_vs_reference'")
                 tmp['trial_type']  = 'metamer_vs_metamer'
                 if wildcards.norm == 'True':
                     tmp['critical_scaling'] = 8*tmp.critical_scaling
@@ -4546,7 +4540,18 @@ rule critical_scaling_pointplot:
                 else:
                     tmp['critical_scaling'] = 24*tmp.critical_scaling
                 crit_scaling = pd.concat([crit_scaling, tmp])
-                g = sns.FacetGrid(crit_scaling, hue='model', palette=pal, height=fig_width)
+                crit_scaling.model = crit_scaling.model.apply(lambda x: f"{x}\n(this study)")
+                crit_scaling = pd.concat([crit_scaling, fov.figures.wallis_critical_scaling(),
+                                          fov.figures.freeman_critical_scaling()])
+                pal = fov.plotting.get_palette('model', fov.plotting.MODEL_PLOT.values())
+                crit_scaling.model = crit_scaling.model.apply(lambda x: x.replace(' model', ''))
+                pal = {k.replace(' model', ''): v for k, v in pal.items()}
+                # color copied from Freeman and Simoncelli, 2011's V2 purple
+                pal['Texture'] = (165/255, 109/255, 189/255)
+                pal = {k: pal[k.split()[0]] for k in crit_scaling.model.unique()}
+                print(crit_scaling)
+                g = sns.FacetGrid(crit_scaling, hue='model', palette=pal,
+                                  height=fig_width, aspect=1.5)
                 g.map_dataframe(fov.plotting.vertical_pointplot, x='model', y='critical_scaling',
                                 norm_y=wildcards.norm=='True')
                 ylabel = 'Critical scaling'

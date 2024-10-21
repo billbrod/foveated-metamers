@@ -2127,7 +2127,7 @@ def vertical_pointplot(data, x, y, norm_y=False, **kwargs):
     - If there's more than two points contained in data, we groupby model and
       trial_type and take the mean.
 
-    - If the label == 'Luminance', we'll plot the point corresponding to
+    - If the label == 'Luminance\n(this study)', we'll plot the point corresponding to
       'metamer_vs_reference' as 'o' and the one corresponding to
       'metamer_vs_metamer' as '$\bigwedge$' (which looks like an up arrow) For
       all others, both points will be plotted as 'o'.
@@ -2167,7 +2167,7 @@ def vertical_pointplot(data, x, y, norm_y=False, **kwargs):
         data[y] = data[y] / data[y].min()
     # want the line to be under the points, so set zorder=0
     ax.plot(data[x].values, data[y].values, linewidth=lw, zorder=0, **kwargs)
-    if kwargs['label'] == 'Luminance':
+    if kwargs['label'] == 'Luminance\n(this study)':
         marker = {'metamer_vs_reference': 'o', 'metamer_vs_metamer': r'$\bigwedge$'}
     else:
         marker = {'metamer_vs_reference': 'o', 'metamer_vs_metamer': 'o'}
