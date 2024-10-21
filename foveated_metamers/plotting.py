@@ -1373,7 +1373,9 @@ def lineplot_like_pointplot(data, x, y, col=None, row=None, hue=None, ci=95,
     # used in pointplot (which uses scatter). I also added an extra factor of
     # sqrt(2) (by changing the 2 to a 4 in the sqrt below), which looks
     # necessary
-    ms = kwargs.pop('markersize', np.sqrt(np.pi * np.square(lw) * 4))
+    ms = kwargs.pop('markersize', None)
+    if ms is None:
+        ms = np.sqrt(np.pi * np.square(lw) * 4)
     if ax is None:
         if col is not None:
             col_order = kwargs.pop('col_order', sorted(data[col].unique()))
