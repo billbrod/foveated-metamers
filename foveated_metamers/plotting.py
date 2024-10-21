@@ -2162,7 +2162,7 @@ def vertical_pointplot(data, x, y, norm_y=False, **kwargs):
     ax = plt.gca()
     if len(data) > 2:
         # collapse across the other differences (i.e., the image type from the Wallis paper)
-        data = data.groupby(['model', 'trial_type']).mean().reset_index()
+        data = data.groupby(['model', 'trial_type']).critical_scaling.mean().reset_index()
     if norm_y:
         data[y] = data[y] / data[y].min()
     # want the line to be under the points, so set zorder=0

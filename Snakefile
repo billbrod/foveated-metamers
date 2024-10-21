@@ -4541,15 +4541,16 @@ rule critical_scaling_pointplot:
                     tmp['critical_scaling'] = 24*tmp.critical_scaling
                 crit_scaling = pd.concat([crit_scaling, tmp])
                 crit_scaling.model = crit_scaling.model.apply(lambda x: f"{x}\n(this study)")
-                crit_scaling = pd.concat([crit_scaling, fov.figures.wallis_critical_scaling(),
-                                          fov.figures.freeman_critical_scaling()])
+                crit_scaling = pd.concat([crit_scaling, fov.figures.freeman_critical_scaling(),
+                                          fov.figures.wallis_critical_scaling()])
                 pal = fov.plotting.get_palette('model', fov.plotting.MODEL_PLOT.values())
                 crit_scaling.model = crit_scaling.model.apply(lambda x: x.replace(' model', ''))
                 pal = {k.replace(' model', ''): v for k, v in pal.items()}
                 # color copied from Freeman and Simoncelli, 2011's V2 purple
                 pal['Texture'] = (165/255, 109/255, 189/255)
                 pal = {k: pal[k.split()[0]] for k in crit_scaling.model.unique()}
-                print(crit_scaling)
+                # small change to the ordering
+                crit_scaling = crit_scaling.iloc[[0, 1, 2, 3, 4, 6, 7, 8, 9, 5]]
                 g = sns.FacetGrid(crit_scaling, hue='model', palette=pal,
                                   height=fig_width, aspect=1.5)
                 g.map_dataframe(fov.plotting.vertical_pointplot, x='model', y='critical_scaling',
@@ -4565,8 +4566,8 @@ rule critical_scaling_pointplot:
                         g.ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:.0f}'))
                     else:
                         g.ax.set_yscale('log', base=10)
-                        g.ax.set(ylim=(.01, .5))
-                g.set(xlabel='Pooling model', ylabel=ylabel, xlim=[-.5, 2.5])
+                        g.ax.set(ylim=(.01, .6))
+                g.set(xlabel='Pooling model', ylabel=ylabel, xlim=[-.5, 4.5])
                 g.savefig(output[0])
 
 
