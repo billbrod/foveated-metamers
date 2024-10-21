@@ -51,6 +51,7 @@ wildcard_constraints:
     save_all='|_saveall',
     gammacorrected='|_gamma-corrected',
     plot_focus='|_focus-subject|_focus-image',
+    physio='|_physio-bars',
     ecc_mask="|_eccmask-[0-9]+",
     logscale="log|linear",
     mcmc_model="partially-pooled|unpooled|partially-pooled-interactions-[.0-9]+|partially-pooled-interactions",
@@ -2435,13 +2436,13 @@ rule mcmc_performance_comparison_figure:
         op.join(config['DATA_DIR'], 'dacey_data',
                 'Dacey1992_mcmc_line-nooffset_step-.1_prob-.8_depth-10_c-4_d-1000_w-1000_s-10.nc'),
     output:
-        op.join(config['DATA_DIR'], 'figures', '{context}', 'mcmc{scaling_extended}_{mcmc_model}_{mcmc_plot_type}_{focus}.{ext}'),
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'mcmc{scaling_extended}_{mcmc_model}_{mcmc_plot_type}_{focus}{physio}.{ext}'),
     log:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}',
-                'mcmc{scaling_extended}_{mcmc_model}_{mcmc_plot_type}_{focus}_{ext}.log')
+                'mcmc{scaling_extended}_{mcmc_model}_{mcmc_plot_type}_{focus}{physio}_{ext}.log')
     benchmark:
         op.join(config['DATA_DIR'], 'logs', 'figures', '{context}',
-                'mcmc{scaling_extended}_{mcmc_model}_{mcmc_plot_type}_{focus}_{ext}_benchmark.txt')
+                'mcmc{scaling_extended}_{mcmc_model}_{mcmc_plot_type}_{focus}{physio}_{ext}_benchmark.txt')
     run:
         import foveated_metamers as fov
         import contextlib
@@ -2538,7 +2539,8 @@ rule mcmc_performance_comparison_figure:
                                                                logscale_xaxis=True,
                                                                increase_size=False)
                     g.fig.canvas.draw()
-                    fov.plotting.add_physiological_scaling_bars(g.ax, az.from_netcdf(input[-1]))
+                    if 'bars' in wildcards.physio:
+                        fov.plotting.add_physiological_scaling_bars(g.ax, az.from_netcdf(input[-1]))
                     fig = g.fig
                     if 'line' in wildcards.focus:
                         sc = re.findall('line-scaling-([.0-9]+)', wildcards.focus)[0]
@@ -2658,11 +2660,11 @@ rule performance_comparison_figure:
         op.join(config['DATA_DIR'], 'dacey_data',
                 'Dacey1992_mcmc_line-offset_step-.1_prob-.8_depth-10_c-4_d-1000_w-1000_s-10.nc'),
     output:
-        op.join(config['DATA_DIR'], 'figures', '{context}', 'performance_{focus}.svg')
+        op.join(config['DATA_DIR'], 'figures', '{context}', 'performance_{focus}{physio}.svg')
     log:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'performance_{focus}.log')
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'performance_{focus}{physio}.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'performance_{focus}_benchmark.txt')
+        op.join(config['DATA_DIR'], 'logs', 'figures', '{context}', 'performance_{focus}{physio}_benchmark.txt')
     run:
         import foveated_metamers as fov
         import pandas as pd
@@ -2716,7 +2718,7 @@ rule performance_comparison_figure:
                                                  style='trial_type',
                                                  aspect=2 if col is None else 1,
                                                  logscale_xaxis=logscale_xaxis)
-                if col is None:
+                if col is None and 'bars' in wildcards.physio:
                     # need to draw so that the following code can check text size
                     g.fig.canvas.draw()
                     fov.plotting.add_physiological_scaling_bars(g.ax, az.from_netcdf(input[-1]))
@@ -5102,7 +5104,6 @@ def figure_paper_input(wildcards):
         # main figures
         op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_human.svg"),
         op.join(config['DATA_DIR'], 'figures', 'paper', "image_space_models.svg"),
-        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'model_schematic_halfwidth_ivy_dpi-300.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'model_schematic_halfwidth_ivy_compressed.svg'),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_ivy_scaling-.01,.058,.063,.27_cutout_compressed.svg'),
         op.join(config['DATA_DIR'], 'figures', 'paper', "ref_images_dpi-300.svg"),
