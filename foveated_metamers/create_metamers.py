@@ -124,7 +124,7 @@ def find_figsizes(model_name, model, image_shape):
         images by in the plots we'll create
 
     """
-    if model_name.startswith('RGC'):
+    if model_name.startswith('RGC') or model_name.startswith('Moments'):
         animate_figsize = ((3+(image_shape[-1] / image_shape[-2])) * 5 + 2, 5.5)
         # these values were selected at 72 dpi, so will need to be adjusted if
         # ours is different
@@ -298,6 +298,24 @@ def setup_model(model_name, scaling, image, min_ecc, max_ecc, cache_dir, normali
                               cache_dir=cache_dir,
                               std_dev=std_dev,
                               normalize_dict=normalize_dict)
+    elif model_name.startswith('Moments'):
+        if 'norm' not in model_name:
+            if normalize_dict:
+                raise Exception("Cannot normalize Moments model (must be Moments-#_norm)!")
+            normalize_dict = {}
+        if not normalize_dict and 'norm' in model_name:
+            raise Exception("If model_name is Moments-#_norm, normalize_dict must be set!")
+        moments = int(re.findall('Moments-([0-9]+)_', model_name)[0])
+        moments = list(range(2, moments+1))
+        model = pop.PooledMoments(scaling, image.shape[-2:],
+                                  min_eccentricity=min_ecc,
+                                  max_eccentricity=max_ecc,
+                                  window_type=window_type,
+                                  transition_region_width=t_width,
+                                  cache_dir=cache_dir,
+                                  std_dev=std_dev,
+                                  normalize_dict=normalize_dict,
+                                  moments=moments)
     elif model_name.startswith('V1'):
         if 'norm' not in model_name:
             if normalize_dict:

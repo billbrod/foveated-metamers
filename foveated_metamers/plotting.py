@@ -2175,7 +2175,8 @@ def vertical_pointplot(data, x, y, norm_y=False, **kwargs):
     color = {'metamer_vs_reference': c, 'metamer_vs_metamer': 'w'}
     for n, g in data.groupby('trial_type'):
         ax.scatter(g[x].values, g[y].values, s=ms, marker=marker[n],
-                   color=color[n], edgecolors=c, linewidths=lw, **kwargs)
+                   color=color[n], edgecolors=c, linewidths=lw, zorder=2,
+                   **kwargs)
 
 
 def image_heatmap_schematic():
