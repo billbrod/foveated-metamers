@@ -2165,8 +2165,8 @@ def vertical_pointplot(data, x, y, norm_y=False, **kwargs):
         data = data.groupby(['model', 'trial_type']).critical_scaling.mean().reset_index()
     if norm_y:
         data[y] = data[y] / data[y].min()
-    # want the line to be under the points, so set zorder=0
-    ax.plot(data[x].values, data[y].values, linewidth=lw, zorder=0, **kwargs)
+    # want the line to be under the points but above the gridlines
+    ax.plot(data[x].values, data[y].values, linewidth=lw, zorder=1, **kwargs)
     if kwargs['label'] == 'Luminance\n(this study)':
         marker = {'metamer_vs_reference': 'o', 'metamer_vs_metamer': r'$\bigwedge$'}
     else:

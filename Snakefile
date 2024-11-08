@@ -4518,6 +4518,11 @@ rule critical_scaling_pointplot:
         with open(log[0], 'w', buffering=1) as log_file:
             with contextlib.redirect_stdout(log_file), contextlib.redirect_stderr(log_file):
                 style, fig_width = fov.style.plotting_style(wildcards.context, figsize='half')
+                # some modifications to the style, because we want the gridlines
+                mpl.rcParams['axes.grid'] = True
+                mpl.rcParams['axes.grid.axis'] = 'y'
+                mpl.rcParams['axes.grid.which'] = 'both'
+                mpl.rcParams['axes.axisbelow'] = True
                 crit_scaling = []
                 for f in input:
                     tmp = az.from_netcdf(f)
