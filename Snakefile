@@ -5125,7 +5125,6 @@ def figure_paper_input(wildcards):
         op.join(config['DATA_DIR'], 'figures', 'paper', "max_dprime_asymp_perf.svg"),
         # appendix figures
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_llama_scaling-.23,.23,.23,.23,.23_cutout_RGC_natural-seed_init_compressed.svg'),
-        op.join(config['DATA_DIR'], 'figures', 'paper', 'Dacey1992_mcmc_line-nooffset_linear.svg'),
         op.join(config['DATA_DIR'], 'figures', 'paper', "freeman_windows_comparison.svg"),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_scaling-extended_partially-pooled_log-ci_sub-00_comp-downsample.svg"),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_tiles_scaling-1.5,1.5,1.5,1.5_cutout_downsample_compressed.svg'),
