@@ -2189,6 +2189,7 @@ rule mcmc_figure:
                             inf_data['subject_name'] = 'all subjects'
                             kwargs['palette'] = pal
                             kwargs['hue_kws'] = {'zorder': zorder}
+                            kwargs["partial_legend"] = "hue"
                         elif 'focus-subject' in wildcards.plot_type:
                             col = None
                             if 'one-ax' in wildcards.plot_type:
@@ -2223,8 +2224,16 @@ rule mcmc_figure:
                     raise Exception(f"Don't know how to handle plot type {wildcards.plot_type}!")
                 if 'focus-outlier' in wildcards.plot_type or 'one-ax' in wildcards.plot_type:
                     # don't need the legend here, it's not doing much
-                    warnings.warn("Removing legend, because it's not doing much.")
-                    fig.legends[0].remove()
+                    if 'focus-outlier-legend' in wildcards.plot_type:
+                        # in this plot, we end up with three images labeled: the
+                        # outliers plus gnarled. want to replace the text of the gnarled
+                        # legend with "other images"
+                        gnarled_text = [txt for txt in fig.legends[0].texts
+                                        if txt.get_text() == "gnarled"]
+                        gnarled_text[0].set_text("other images")
+                    else:
+                        warnings.warn("Removing legend, because it's not doing much.")
+                        fig.legends[0].remove()
                     if 'V1' in wildcards.model_name:
                         warnings.warn("Removing ylabel so we don't have redundant labels when composing figure")
                         fig.axes[0].set_ylabel('')
@@ -3957,7 +3966,7 @@ def get_compose_figures_input(wildcards):
         paths = [path_template.format(wildcards.fig_name.replace('performance_', '').replace('scaling-extended_', ''))]
         if 'performance' in wildcards.fig_name:
             if 'scaling-extended' in wildcards.fig_name:
-                paths.append(path_template.format('V1_norm_s6_gaussian/task-split_comp-ref_mcmc_scaling-extended_partially-pooled_performance_focus-outlier'))
+                paths.append(path_template.format('V1_norm_s6_gaussian/task-split_comp-ref_mcmc_scaling-extended_partially-pooled_performance_focus-outlier-legend'))
             else:
                 paths.append(path_template.format('V1_norm_s6_gaussian/task-split_comp-ref_mcmc_partially-pooled_performance_focus-outlier'))
     if 'all_comps_summary' in wildcards.fig_name:

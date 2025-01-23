@@ -908,7 +908,8 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
                                style=None, col_wrap=5, comparison='ref',
                                logscale_xaxis=False, hdi=.95, query_str=None,
                                tabular_trial_type_legend=False,
-                               increase_size=True, markersize=None, **kwargs):
+                               increase_size=True, markersize=None,
+                               partial_legend=False, **kwargs):
     """Plot posterior predictive check.
 
     In order to make sure that our MCMC gave us a reasonable fit, we plot the
@@ -945,6 +946,10 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
         pointplot. Else, use lines.linewidth.
     markersize : float or None, optional
         size of data points.
+    partial_legend: False, "hue", or "style", optional
+        By default (partial_legend=False), the legend we create reflects hue and style,
+        if not None. By setting partial_legend="hue", we only include hue in the legend,
+        and correspondingly for "style".
     kwargs :
         passed to sns.FacetGrid
 
@@ -1035,6 +1040,10 @@ def posterior_predictive_check(inf_data, col=None, row=None, hue=None,
                                          kwargs.get('height', 5),
                                          col)
     # create the legend
+    if partial_legend == "hue":
+        style = None
+    elif partial_legend == "style":
+        hue = None
     plotting._add_legend(df, g.fig, hue, style,
                          kwargs.get('palette', {}),
                          final_markers, dashes_dict,
