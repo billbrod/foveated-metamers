@@ -4570,8 +4570,9 @@ rule critical_scaling_pointplot:
                         g.ax.yaxis.set_minor_locator(mpl.ticker.LogLocator(2, subs=(.5, )))
                         g.ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:.0f}'))
                     else:
-                        g.ax.set_yscale('log', base=10)
+                        g.ax.set_yscale('log', base=2)
                         g.ax.set(ylim=(.01, .6))
+                        g.ax.yaxis.set_major_formatter(fov.plotting.myLogFormat)
                 g.set(xlabel='Pooling model', ylabel=ylabel, xlim=[-.5, 4.5])
                 g.savefig(output[0])
 
