@@ -16,12 +16,14 @@ jobs:
     - name: Setup Miniconda
       uses: conda-incubator/setup-miniconda@v3.1.1
       with:
+        miniforge-version: latest
+        conda-remove-defaults: "true"
         mamba-version: "*"
         python-version: 3.7
-        channels: conda-forge, bioconda
         channel-priority: true
         environment-file: environment.yml
     - name: Run tests with pytest
+      shell: bash -el {0}
       run: |
         pytest tests/test_models.py
 
@@ -36,9 +38,10 @@ jobs:
     - name: Setup Miniconda
       uses: conda-incubator/setup-miniconda@v3.1.1
       with:
+        miniforge-version: latest
+        conda-remove-defaults: "true"
         mamba-version: "*"
         python-version: 3.7
-        channels: conda-forge, bioconda
         channel-priority: true
         environment-file: environment.yml
     - name: Setup FFmpeg
@@ -54,6 +57,7 @@ jobs:
         sed -i 's|DATA_DIR:.*|DATA_DIR: "data/metamers"|g' config.yml
         sed -i 's|TEXTURE_DIR:.*|TEXTURE_DIR: "data/textures-subset-for-testing"|g' config.yml
     - name: run snakemake test
+      shell: bash -el {0}
       run: |
         cp extra_packages/data/einstein.pgm data/metamers/ref_images/einstein_size-256,256.png
         snakemake -j 5 -prk data/metamers/test_setup/RGC_norm_gaussian_gpu-0/einstein data/metamers/test_setup/V1_norm_s6_gaussian_gpu-0/einstein
@@ -67,12 +71,14 @@ jobs:
     - name: Setup Miniconda
       uses: conda-incubator/setup-miniconda@v3.1.1
       with:
+        miniforge-version: latest
+        conda-remove-defaults: "true"
         mamba-version: "*"
         python-version: 3.7
-        channels: conda-forge, bioconda
         channel-priority: true
         environment-file: environment.yml
     - name: Create environment
+      shell: bash -el {0}
       run: |
         mamba install jupyter nbclient>=0.5.5
     - name: modify config.yml
@@ -82,10 +88,12 @@ jobs:
         mkdir -p data/metamers
         mkdir -p data/textures-subset-for-testing
     - name: Download data
+      shell: bash -el {0}
       run: |
         python download_data.py freeman2011_check_output -s
         python download_data.py freeman2011_check_input -s
-    - name: run nbconvert
+    - name: run notebook
+      shell: bash -el {0}
       run: |
         jupyter execute notebooks/Freeman_Check.ipynb --kernel_name=python3
 
@@ -100,9 +108,10 @@ jobs:
     - name: Setup Miniconda
       uses: conda-incubator/setup-miniconda@v3.1.1
       with:
+        miniforge-version: latest
+        conda-remove-defaults: "true"
         mamba-version: "*"
         python-version: 3.7
-        channels: conda-forge, bioconda
         channel-priority: true
         environment-file: environment.yml
     - name: modify config.yml
@@ -112,9 +121,11 @@ jobs:
         mkdir -p data/metamers
         mkdir -p data/textures-subset-for-testing
     - name: Download data
+      shell: bash -el {0}
       run: |
         python download_data.py behavioral_data -s
     - name: run mcmc test
+      shell: bash -el {0}
       run: |
         # test one that has a single subject, one with multiple
         snakemake -j 5 -prk data/metamers/mcmc/V1_norm_s6_gaussian/task-split_comp-ref/task-split_comp-ref_mcmc_partially-pooled_step-1_prob-.8_depth-10_c-2_d-10_w-10_s-0.nc data/metamers/mcmc/V1_norm_s6_gaussian/task-split_comp-ref-natural/task-split_comp-ref-natural_mcmc_partially-pooled_step-1_prob-.8_depth-10_c-2_d-10_w-10_s-0.nc
