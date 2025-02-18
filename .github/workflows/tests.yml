@@ -17,7 +17,7 @@ jobs:
       with:
         submodules: recursive
     - name: Setup conda
-      uses: s-weigand/setup-conda@678f22c807cb6fde6a290be6f3546877c98ec66f # v1.2.2
+      uses: s-weigand/setup-conda@v1.2.3
       with:
         update-conda: true
         python-version: 3.7
@@ -41,7 +41,7 @@ jobs:
       with:
         submodules: recursive
     - name: Setup conda
-      uses: s-weigand/setup-conda@678f22c807cb6fde6a290be6f3546877c98ec66f # v1.2.2
+      uses: s-weigand/setup-conda@v1.2.3
       with:
         update-conda: true
         python-version: 3.7
@@ -76,7 +76,7 @@ jobs:
       with:
         submodules: recursive
     - name: Setup conda
-      uses: s-weigand/setup-conda@678f22c807cb6fde6a290be6f3546877c98ec66f # v1.2.2
+      uses: s-weigand/setup-conda@v1.2.3
       with:
         update-conda: true
         python-version: 3.7
@@ -113,7 +113,7 @@ jobs:
       with:
         submodules: recursive
     - name: Setup conda
-      uses: s-weigand/setup-conda@678f22c807cb6fde6a290be6f3546877c98ec66f # v1.2.2
+      uses: s-weigand/setup-conda@v1.2.3
       with:
         update-conda: true
         python-version: 3.7
