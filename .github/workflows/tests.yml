@@ -19,7 +19,7 @@ jobs:
         miniforge-version: latest
         conda-remove-defaults: "true"
         mamba-version: "*"
-        python-version: 3.11
+        python-version: 3.8
         channel-priority: true
         environment-file: environment.yml
     - name: Run tests with pytest
@@ -41,7 +41,7 @@ jobs:
         miniforge-version: latest
         conda-remove-defaults: "true"
         mamba-version: "*"
-        python-version: 3.11
+        python-version: 3.8
         channel-priority: true
         environment-file: environment.yml
     - name: Setup FFmpeg
@@ -74,7 +74,7 @@ jobs:
         miniforge-version: latest
         conda-remove-defaults: "true"
         mamba-version: "*"
-        python-version: 3.11
+        python-version: 3.8
         channel-priority: true
         environment-file: environment.yml
     - name: Create environment
@@ -111,7 +111,7 @@ jobs:
         miniforge-version: latest
         conda-remove-defaults: "true"
         mamba-version: "*"
-        python-version: 3.11
+        python-version: 3.8
         channel-priority: true
         environment-file: environment.yml
     - name: modify config.yml
