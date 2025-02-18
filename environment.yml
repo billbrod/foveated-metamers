@@ -1,7 +1,6 @@
 name: metamers
 channels:
   - bioconda
-  - pytorch
   - conda-forge
 dependencies:
   - python>=3.7
