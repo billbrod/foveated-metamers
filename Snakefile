@@ -4552,7 +4552,7 @@ rule critical_scaling_pointplot:
                     tmp['critical_scaling'] = 8*tmp.critical_scaling
                     assert wildcards.logscale == 'log', "if normalized, scale must be log!"
                 else:
-                    tmp['critical_scaling'] = 24*tmp.critical_scaling
+                    tmp['critical_scaling'] = 36*tmp.critical_scaling
                 crit_scaling = pd.concat([crit_scaling, tmp])
                 crit_scaling.model = crit_scaling.model.apply(lambda x: f"{x}\n(this study)")
                 crit_scaling = pd.concat([crit_scaling, fov.figures.freeman_critical_scaling(),
@@ -4580,7 +4580,7 @@ rule critical_scaling_pointplot:
                         g.ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:.0f}'))
                     else:
                         g.ax.set_yscale('log', base=2)
-                        g.ax.set(ylim=(.01, .6))
+                        g.ax.set(ylim=(.01, .75))
                         g.ax.yaxis.set_major_formatter(fov.plotting.myLogFormat)
                 g.set(xlabel='Pooling model', ylabel=ylabel, xlim=[-.5, 4.5])
                 g.savefig(output[0])
