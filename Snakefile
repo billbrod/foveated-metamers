@@ -79,6 +79,7 @@ ruleorder:
     collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > mcmc_compare_plot > mcmc_plots > mcmc_performance_comparison_figure > embed_bitmaps_into_figure > compose_figures > copy_schematic
 
 config['INKSCAPE_PREF_FILE'] = op.expanduser(config['INKSCAPE_PREF_FILE'])
+config['INKSCAPE_COMMAND'] = op.expanduser(config['INKSCAPE_COMMAND'])
 config['FREEMAN_METAMER_PATH'] = op.expanduser(config['FREEMAN_METAMER_PATH'])
 config['MATLABPYRTOOLS_PATH'] = op.expanduser(config['MATLABPYRTOOLS_PATH'])
 LINEAR_IMAGES = config['IMAGE_NAME']['ref_image']
@@ -3794,7 +3795,7 @@ rule embed_bitmaps_into_figure:
                 action_str = select_ids + "SelectionCreateBitmap;select-clear;" + select_ids + "EditDelete;"
                 action_str += "FileSave;"
                 print(f"inkscape action string:\n{action_str}")
-                subprocess.call(['inkscape', '--batch-process', f'--actions={action_str}', output[0]])
+                subprocess.call([config["INKSCAPE_COMMAND"], '--batch-process', f'--actions={action_str}', output[0]])
                 # the inkscape call above embeds the bitmaps but also
                 # apparently creates a separate png file containing the
                 # embedded bitmaps, which we want to remove. commas get
