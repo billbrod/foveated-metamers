@@ -786,6 +786,8 @@ def setup_initial_image(initial_image_type, model, image):
     else:
         raise Exception("Don't know how to handle initial_image_type %s! Must be one of {'white',"
                         " 'gray', 'pink', 'blue'}" % initial_image_type)
+    initial_image = initial_image.to(image.device)
+    print("Adding center to image...")
     initial_image = add_center_to_image(model, initial_image, image)
     return torch.nn.Parameter(initial_image)
 
@@ -1045,8 +1047,9 @@ def main(model_name, scaling, image, seed=0, min_ecc=.5, max_ecc=15, learning_ra
                                                                 min_ecc, max_ecc, cache_dir,
                                                                 normalize_dict)
     print("Using model %s from %.02f degrees to %.02f degrees" % (model_name, min_ecc, max_ecc))
+    print("Moving image, model to device...")
+    image, model = setup_device(image, model, gpu_id=gpu_id)
     initial_image = setup_initial_image(initial_image_type, model, image)
-    image, initial_image, model = setup_device(image, initial_image, model, gpu_id=gpu_id)
     if clamper_name == 'clamp':
         clamper = pop.clamps.RangeClamper((0, 1))
     elif clamper_name.startswith('clamp.'):
