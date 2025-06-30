@@ -3817,11 +3817,11 @@ rule compress_pngs_for_paper:
     input:
         op.join(config['DATA_DIR'], '{folder}', '{figure_name}.png')
     output:
-        op.join(config['DATA_DIR'], '{folder}', '{figure_name}_compressed.jpg')
+        op.join(config['DATA_DIR'], '{folder}', '{figure_name}_compressed-{compress_lvl}.jpg')
     log:
-        op.join(config['DATA_DIR'], 'logs', '{folder}', '{figure_name}_compressed.log')
+        op.join(config['DATA_DIR'], 'logs', '{folder}', '{figure_name}_compressed-{compress_lvl}.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', '{folder}', '{figure_name}_compressed_benchmark.txt')
+        op.join(config['DATA_DIR'], 'logs', '{folder}', '{figure_name}_compressed-{compress_lvl}_benchmark.txt')
     run:
         import contextlib
         import plenoptic as po
@@ -3841,7 +3841,7 @@ rule compress_pngs_for_paper:
                     # image is fine
                     pass
                 try:
-                    img.save(output[0], optimize=True)
+                    img.save(output[0], quality=int(wildcards.compress_lvl), optimize=True)
                 except OSError:
                     # in this case, our input was a grayscale 16 bit integer,
                     # which we can't write as JPEG. so convert it to 8 bit
@@ -3850,7 +3850,7 @@ rule compress_pngs_for_paper:
                     img = img / np.iinfo(np.uint16).max
                     img = Image.fromarray((img * np.iinfo(np.uint8).max).astype(np.uint8),
                                           mode='L')
-                    img.save(output[0], optimize=True)
+                    img.save(output[0], quality=int(wildcards.compress_lvl), optimize=True)
                 # just for kicks, compute some metrics between the two images
                 img = po.load_images(input, as_gray=False)
                 # again, drop alpha channel
@@ -4167,7 +4167,7 @@ def get_metamer_comparison_figure_inputs(wildcards):
         image_name = image_name * len(scaling)
         comps = ['ref'] * len(scaling)
     if wildcards.compressed == '_compressed':
-        ext = '_compressed.jpg'
+        ext = '_compressed-50.jpg'
     else:
         ext = '.png'
     paths = [
@@ -4198,8 +4198,8 @@ def get_metamer_comparison_figure_inputs(wildcards):
         cuts = ['with_cutout_cross', 'foveal_cutout_cross', 'peripheral_cutout_cross']
         # if we're using the compressed images, want the compressed
         # with_cutout_cross image, but the others should be uncompressed
-        paths[len(uniq_imgs):] = [p.replace(ext, f'_{c}{new_ext}').replace('ref_images_preproc', f'figures{os.sep}{{context}}')
-                                  for p in paths[len(uniq_imgs):] for c, new_ext in zip(cuts, [ext, '.png', '.png'])]
+        paths[len(uniq_imgs):] = [p.replace(ext, f'_{c}{ext}').replace('ref_images_preproc', f'figures{os.sep}{{context}}')
+                                  for p in paths[len(uniq_imgs):] for c in cuts]
     if 'init' in wildcards.cutout:
         paths.extend(init_ims)
     return paths
