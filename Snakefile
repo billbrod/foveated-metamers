@@ -4065,7 +4065,7 @@ rule compose_figures:
                     else:
                         fig = fov.compose_figures.metamer_comparison(*input, scaling,
                                                                      'nocutout' not in wildcards.fig_name,
-                                                                     False, wildcards.context)
+                                                                     False, context=wildcards.context)
                 elif "all_comps_summary" in wildcards.fig_name:
                     fig = fov.compose_figures.combine_one_ax_figs(input, wildcards.context)
                 elif "performance_natural" in wildcards.fig_name:
