@@ -542,7 +542,7 @@ def get_mem_estimate(wildcards, partition=None):
                         mem = 128
                     else:
                         mem = 64
-                elif 'RGC' in wildcards.model_name:
+                elif 'RGC' in wildcards.model_name or "Moments" in wildcards.model_name:
                     # this is an approximation of the size of their windows,
                     # and if you have at least 3 times this memory, you're
                     # good. double-check this value -- the 1.36 is for
@@ -553,7 +553,7 @@ def get_mem_estimate(wildcards, partition=None):
                     # running out of memory for larger scaling values, so let's
                     # never request less than 32 GB
                     mem = max(mem, 32)
-            elif 'cosine' in wildcards.model_name:
+            elif 'cosine' in wildcards.model_name or "Moments" in wildcards.model_name:
                 if 'V1' in wildcards.model_name:
                     # most it will need is 32 GB
                     mem = 32
@@ -705,7 +705,7 @@ def get_windows(wildcards):
     # make sure that scaling is 0-padded, if appropriate. e.g., 0.01, not .01
     if isinstance(scaling, str) and scaling[0] == '.':
         scaling = '0' + scaling
-    if wildcards['model_name'].startswith("RGC"):
+    if wildcards['model_name'].startswith("RGC") or wildcards['model_name'].startswith('Moments'):
         # RGC model only needs a single scale of PoolingWindows.
         size = ','.join([str(i) for i in im_shape])
         return window_template.format(scaling=scaling, size=size,
