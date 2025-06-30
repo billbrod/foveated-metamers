@@ -79,6 +79,7 @@ ruleorder:
     collect_training_metamers > collect_training_noise > collect_metamers > demosaic_image > preproc_image > crop_image > generate_image > degamma_image > create_metamers > mcmc_compare_plot > mcmc_plots > mcmc_performance_comparison_figure > embed_bitmaps_into_figure > compose_figures > copy_schematic
 
 config['INKSCAPE_PREF_FILE'] = op.expanduser(config['INKSCAPE_PREF_FILE'])
+config['INKSCAPE_COMMAND'] = op.expanduser(config['INKSCAPE_COMMAND'])
 config['FREEMAN_METAMER_PATH'] = op.expanduser(config['FREEMAN_METAMER_PATH'])
 config['MATLABPYRTOOLS_PATH'] = op.expanduser(config['MATLABPYRTOOLS_PATH'])
 LINEAR_IMAGES = config['IMAGE_NAME']['ref_image']
@@ -3794,7 +3795,7 @@ rule embed_bitmaps_into_figure:
                 action_str = select_ids + "SelectionCreateBitmap;select-clear;" + select_ids + "EditDelete;"
                 action_str += "FileSave;"
                 print(f"inkscape action string:\n{action_str}")
-                subprocess.call(['inkscape', '--batch-process', f'--actions={action_str}', output[0]])
+                subprocess.call([config["INKSCAPE_COMMAND"], '--batch-process', f'--actions={action_str}', output[0]])
                 # the inkscape call above embeds the bitmaps but also
                 # apparently creates a separate png file containing the
                 # embedded bitmaps, which we want to remove. commas get
@@ -3816,11 +3817,11 @@ rule compress_pngs_for_paper:
     input:
         op.join(config['DATA_DIR'], '{folder}', '{figure_name}.png')
     output:
-        op.join(config['DATA_DIR'], '{folder}', '{figure_name}_compressed.jpg')
+        op.join(config['DATA_DIR'], '{folder}', '{figure_name}_compressed-{compress_lvl}.jpg')
     log:
-        op.join(config['DATA_DIR'], 'logs', '{folder}', '{figure_name}_compressed.log')
+        op.join(config['DATA_DIR'], 'logs', '{folder}', '{figure_name}_compressed-{compress_lvl}.log')
     benchmark:
-        op.join(config['DATA_DIR'], 'logs', '{folder}', '{figure_name}_compressed_benchmark.txt')
+        op.join(config['DATA_DIR'], 'logs', '{folder}', '{figure_name}_compressed-{compress_lvl}_benchmark.txt')
     run:
         import contextlib
         import plenoptic as po
@@ -3840,7 +3841,7 @@ rule compress_pngs_for_paper:
                     # image is fine
                     pass
                 try:
-                    img.save(output[0], optimize=True)
+                    img.save(output[0], quality=int(wildcards.compress_lvl), optimize=True)
                 except OSError:
                     # in this case, our input was a grayscale 16 bit integer,
                     # which we can't write as JPEG. so convert it to 8 bit
@@ -3849,7 +3850,7 @@ rule compress_pngs_for_paper:
                     img = img / np.iinfo(np.uint16).max
                     img = Image.fromarray((img * np.iinfo(np.uint8).max).astype(np.uint8),
                                           mode='L')
-                    img.save(output[0], optimize=True)
+                    img.save(output[0], quality=int(wildcards.compress_lvl), optimize=True)
                 # just for kicks, compute some metrics between the two images
                 img = po.load_images(input, as_gray=False)
                 # again, drop alpha channel
@@ -4166,7 +4167,7 @@ def get_metamer_comparison_figure_inputs(wildcards):
         image_name = image_name * len(scaling)
         comps = ['ref'] * len(scaling)
     if wildcards.compressed == '_compressed':
-        ext = '_compressed.jpg'
+        ext = '_compressed-50.jpg'
     else:
         ext = '.png'
     paths = [
@@ -4197,8 +4198,8 @@ def get_metamer_comparison_figure_inputs(wildcards):
         cuts = ['with_cutout_cross', 'foveal_cutout_cross', 'peripheral_cutout_cross']
         # if we're using the compressed images, want the compressed
         # with_cutout_cross image, but the others should be uncompressed
-        paths[len(uniq_imgs):] = [p.replace(ext, f'_{c}{new_ext}').replace('ref_images_preproc', f'figures{os.sep}{{context}}')
-                                  for p in paths[len(uniq_imgs):] for c, new_ext in zip(cuts, [ext, '.png', '.png'])]
+        paths[len(uniq_imgs):] = [p.replace(ext, f'_{c}{ext}').replace('ref_images_preproc', f'figures{os.sep}{{context}}')
+                                  for p in paths[len(uniq_imgs):] for c in cuts]
     if 'init' in wildcards.cutout:
         paths.extend(init_ims)
     return paths
@@ -4552,7 +4553,7 @@ rule critical_scaling_pointplot:
                     tmp['critical_scaling'] = 8*tmp.critical_scaling
                     assert wildcards.logscale == 'log', "if normalized, scale must be log!"
                 else:
-                    tmp['critical_scaling'] = 24*tmp.critical_scaling
+                    tmp['critical_scaling'] = 36*tmp.critical_scaling
                 crit_scaling = pd.concat([crit_scaling, tmp])
                 crit_scaling.model = crit_scaling.model.apply(lambda x: f"{x}\n(this study)")
                 crit_scaling = pd.concat([crit_scaling, fov.figures.freeman_critical_scaling(),
@@ -4580,7 +4581,7 @@ rule critical_scaling_pointplot:
                         g.ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:.0f}'))
                     else:
                         g.ax.set_yscale('log', base=2)
-                        g.ax.set(ylim=(.01, .6))
+                        g.ax.set(ylim=(.01, .75))
                         g.ax.yaxis.set_major_formatter(fov.plotting.myLogFormat)
                 g.set(xlabel='Pooling model', ylabel=ylabel, xlim=[-.5, 4.5])
                 g.savefig(output[0])

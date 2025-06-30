@@ -16,6 +16,9 @@ DATA_DIR: "/home/billbrod/Desktop/metamers"
 # probably: %userprofile\Application\Data\Inkscape\, but you should double
 # check.
 INKSCAPE_PREF_FILE: "~/.config/inkscape/preferences.xml"
+# command for running inkscape. may be different if you're e.g., using an
+# AppImage
+INKSCAPE_COMMAND: "inkscape"
 
 # if you want to run the checks against the original Freeman and Simoncelli
 # (rule freeman_check in Snakefile), 2011 windows, download these two matlab

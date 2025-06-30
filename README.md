@@ -459,6 +459,9 @@ I couldn't come up with a way to do that didn't require more storage than is
 available for free from Github runners --- if you have a solution for this, I'd
 love to hear it).
 
+> [!WARNING]
+> As of Feb, 2025, I switched `environment.yml` to remove the `pytorch` channel, as I was getting [this issue](https://github.com/conda/conda/issues/13812) in my automated tests (thus, torch is now installed from the `conda-forge` channel). If you have issues with the torch installation, you could try installing it from the pytorch channel directly or with pip. See [pytorch docs](https://pytorch.org/) docs for more details.
+
 ### Jupyter
 
 This repo includes [one
