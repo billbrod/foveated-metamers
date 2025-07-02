@@ -4198,8 +4198,8 @@ def get_metamer_comparison_figure_inputs(wildcards):
         cuts = ['with_cutout_cross', 'foveal_cutout_cross', 'peripheral_cutout_cross']
         # if we're using the compressed images, want the compressed
         # with_cutout_cross image, but the others should be uncompressed
-        paths[len(uniq_imgs):] = [p.replace(ext, f'_{c}{ext}').replace('ref_images_preproc', f'figures{os.sep}{{context}}')
-                                  for p in paths[len(uniq_imgs):] for c in cuts]
+        paths[len(uniq_imgs):] = [p.replace(ext, f'_{c}{new_ext}').replace('ref_images_preproc', f'figures{os.sep}{{context}}')
+                                  for p in paths[len(uniq_imgs):] for c, new_ext in zip(cuts, [ext, ".png", ".png"])]
     if 'init' in wildcards.cutout:
         paths.extend(init_ims)
     return paths
