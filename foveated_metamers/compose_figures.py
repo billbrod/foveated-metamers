@@ -373,7 +373,7 @@ def performance_comparison(performance_fig, param_fig, subject_n=None, context='
     label_font_size = text_params.pop('size')
     n_font_size = float(label_font_size.replace('pt', ''))
     return compose.Figure(
-        figure_width+10, figure_width+30,
+        figure_width+10, figure_width+40,
         SVG(performance_fig).move(2, 25),
         SVG(param_fig).move(-5, figure_width/2),
         compose.Text('A', 0, 25, size=label_font_size, **text_params),
