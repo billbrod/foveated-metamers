@@ -217,8 +217,8 @@ def metamer_comparison(metamer_fig, labels, cutout_fig=False,
         txt_move = [[120, 240], [380, 240], [120, 485], [395, 485]]
     else:
         font_size = _convert_to_pix(f'{font_size*5/9}pt')
-        txt_move = [[100, 168], [375, 168], [100, 338], [375, 338],
-                    [100, 508], [375, 508]]
+        txt_move = [[100, 168], [450, 168], [100, 338], [450, 338],
+                    [100, 508], [450, 508]]
     print(txt_move)
     # this has 6 subplots, and we want a label above each of them
     if natural_seed_fig:
@@ -236,8 +236,9 @@ def metamer_comparison(metamer_fig, labels, cutout_fig=False,
         print(txt_move)
     if width == 'extra-wide':
         txt_move = [[mv[0]+1.5*offset, mv[1]] for mv, offset
-                    in zip(txt_move, [63]*6)]
+                    in zip(txt_move, [63, 15]*3)]
     print(txt_move)
+    print(labels)
     return compose.Figure(
         figure_width, figure_height,
         metamer_fig.move(*metamer_move),

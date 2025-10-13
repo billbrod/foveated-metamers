@@ -281,7 +281,7 @@ def get_ref_image_full_path(image_name,
         else:
             image_name += f'_downsample-{downsample}'
     if '_compressed' in image_name:
-        template = template.replace('.png', '_compressed.jpg')
+        template = template.replace('.png', '_compressed-50.jpg')
         image_name = image_name.replace('_compressed', '')
     template = template.format(image_name=image_name, DATA_DIR=DATA_DIR)
     # the next bit will remove all slashes from the string, so we need to
