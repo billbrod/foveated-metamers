@@ -49,7 +49,7 @@ jobs:
     - name: Download data
       run: |
         mkdir -p data/metamers/ref_images/
-        curl -O -J -L https://osf.io/4wyg3/download
+        curl -O -J -L https://osf.io/download/4wyg3
         tar xf textures-subset-for-testing.tar.gz -C data
         rm textures-subset-for-testing.tar.gz
     - name: modify config.yml
