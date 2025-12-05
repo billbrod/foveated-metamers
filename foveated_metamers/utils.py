@@ -518,7 +518,7 @@ def generate_metamer_paths(model_name, increment=False, extra_iter=None,
     gamma_corrected : bool, optional
         If True, return the path to the gamma-corrected version. If False, the
         non-gamma-corrected
-    comp : {'ref', 'met', 'met-downsample-2', 'met-natural', 'ref-natural'}, optional
+    comp : {'ref', 'met', 'met-downsample-2', 'met-natural', 'ref-natural', 'met-pink'}, optional
         If 'scaling' is not included in kwargs, this determines which range of
         default scaling values we use. If 'ref' (the defualt), we use those
         under the model:scaling key in the config file. If 'met' or
