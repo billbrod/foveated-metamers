@@ -43,6 +43,7 @@ wildcard_constraints:
     # Simoncelli, 2011 metamers, sherlock for example with text, for
     # presentations
     preproc_image_name="|".join([im+'_?[a-z]*' for im in config['IMAGE_NAME']['ref_image']])+"|einstein|fountain|sherlock_[0-9]",
+    noise="pink|white",
     preproc="|_degamma|degamma",
     gpu="0|1",
     sess_num="|".join([f'{i:02d}' for i in config['PSYCHOPHYSICS']['SESSIONS']]),
@@ -55,7 +56,7 @@ wildcard_constraints:
     logscale="log|linear",
     mcmc_model="partially-pooled|unpooled|partially-pooled-interactions-[.0-9]+|partially-pooled-interactions",
     fixation_cross="cross|nocross",
-    cutout="cutout|nocutout|cutout_V1_natural-seed|cutout_RGC_natural-seed|nocutout_small|cutout_downsample|cutout_V1_natural-seed_init|cutout_RGC_natural-seed_init",
+    cutout="cutout|nocutout|cutout_V1_natural-seed|cutout_RGC_natural-seed|nocutout_small|cutout_downsample|cutout_V1_natural-seed_init|cutout_RGC_natural-seed_init|cutout_RGC_compare-seed_init",
     compressed="|_compressed",
     context="paper|poster",
     mcmc_plot_type="performance|params-(linear|log)-(none|lines|ci)",
@@ -4062,6 +4063,17 @@ rule compose_figures:
                                                                      True,
                                                                      'init' in wildcards.fig_name and 'V1' in wildcards.fig_name,
                                                                      wildcards.context)
+                    elif 'compare-seed' in wildcards.fig_name:
+                        if 'RGC' in wildcards.fig_name:
+                            labels = ['Target image',
+                                      'Luminance metamer init with natural image',
+                                      'Luminance metamer init with white noise',
+                                      'Luminance metamer init with pink noise']
+                        fig = fov.compose_figures.metamer_comparison(*input, labels,
+                                                                     'nocutout' not in wildcards.fig_name,
+                                                                     True,
+                                                                     'init' in wildcards.fig_name and 'V1' in wildcards.fig_name,
+                                                                     wildcards.context)
                     else:
                         fig = fov.compose_figures.metamer_comparison(*input, scaling,
                                                                      'nocutout' not in wildcards.fig_name,
@@ -4091,21 +4103,29 @@ rule compose_figures:
 
 rule create_init_noise_img:
     output:
-        op.join(config["DATA_DIR"], "initial_images", "seed-{seed}_size-{size}_white.{ext}")
+        op.join(config["DATA_DIR"], "initial_images", "seed-{seed}_size-{size}_{noise}.{ext}")
     log:
-        op.join(config["DATA_DIR"], "logs", "initial_images", "seed-{seed}_size-{size}_white_{ext}.log")
+        op.join(config["DATA_DIR"], "logs", "initial_images", "seed-{seed}_size-{size}_{noise}_{ext}.log")
     benchmark:
-        op.join(config["DATA_DIR"], "logs", "initial_images", "seed-{seed}_size-{size}_white_{ext}_benchmark.txt")
+        op.join(config["DATA_DIR"], "logs", "initial_images", "seed-{seed}_size-{size}_{noise}_{ext}_benchmark.txt")
     run:
         import torch
         import numpy
         import foveated_metamers as fov
         import plenoptic as po
+        import pyrtools as pt
         seed = int(wildcards.seed)
         torch.manual_seed(seed)
         np.random.seed(seed)
         size = [int(s) for s in wildcards.size.split(',')]
-        initial_image = po.to_numpy(torch.rand(size, dtype=torch.float32)).squeeze()
+        if wildcards.noise == "white":
+            initial_image = po.to_numpy(torch.rand(size, dtype=torch.float32)).squeeze()
+        elif wildcards.noise == "pink":
+            # this `.astype` probably isn't necessary, but just in case
+            initial_image = pt.synthetic_images.pink_noise(size).astype(np.float32)
+            # need to rescale this so it lies between 0 and 1
+            initial_image += np.abs(initial_image.min())
+            initial_image /= initial_image.max()
         imageio.imwrite(output[0], fov.utils.convert_im_to_int(initial_image))
 
 
@@ -4120,7 +4140,7 @@ def get_metamer_comparison_figure_inputs(wildcards):
     models = ['RGC_norm_gaussian', 'RGC_norm_gaussian', 'V1_norm_s6_gaussian', 'V1_norm_s6_gaussian']
     if scaling[0] == scaling[1]:
         seeds[1] = 1
-    if len(scaling) > 2 and scaling[2] == scaling[3]:
+    if len(scaling) > 3 and scaling[2] == scaling[3]:
         seeds[3] = 1
     if len(scaling) > 5 and scaling[4] == scaling[5]:
         seeds[5] = 1
@@ -4161,6 +4181,16 @@ def get_metamer_comparison_figure_inputs(wildcards):
         # values. this makes sure they're in the proper order
         scaling = sorted(scaling)
         comps = ['met'] * 2 +['met-downsample-2'] * 2
+    elif 'compare-seed' in wildcards.cutout:
+        if len(scaling) != 3:
+            raise Exception(f"When generating {wildcards.cutout} metamer_comparison figure, need 3 scaling values!")
+        if 'V1' in wildcards.cutout:
+            models = ['V1_norm_s6_gaussian'] * len(scaling)
+        elif 'RGC' in wildcards.cutout:
+            models = ['RGC_norm_gaussian'] * len(scaling)
+        seeds = [0, 0, 0]
+        image_name = image_name * len(scaling)
+        comps = ['ref-natural', 'ref', 'met-pink']
     else:
         if len(scaling) != 4:
             raise Exception(f"When generating {wildcards.cutout} metamer_comparison figure, need 4 scaling values!")
@@ -4170,13 +4200,23 @@ def get_metamer_comparison_figure_inputs(wildcards):
         ext = '_compressed-50.jpg'
     else:
         ext = '.png'
+    def use_gpu(sc, comp):
+        if comp == "met-pink":
+            return 1
+        elif float(sc) > config["GPU_SPLIT"]:
+            return 1
+        # this specific case was generated on GPU
+        elif sc == ".045" and comp == "ref-natural":
+            return 1
+        else:
+            return 0
     paths = [
         op.join('reports', 'figures', 'metamer_comparison_{cutout}.svg'),
         *[op.join(config['DATA_DIR'], 'ref_images_preproc', '{image_name}_gamma-corrected_range-.05,.95_size-2048,2600{ext}').format(image_name=im, ext=ext)
           for im in uniq_imgs],
         *[op.join(config['DATA_DIR'], 'figures', '{{context}}', '{model_name}',
                   '{image_name}_range-.05,.95_size-2048,2600_scaling-{scaling}_seed-{seed}_comp-{comp}_gpu-{gpu}_linewidth-15_window{ext}').format(
-                      model_name=m, scaling=sc, gpu=0 if float(sc) < config['GPU_SPLIT'] else 1, seed=s, image_name=im, comp=comp, ext=ext)
+                      model_name=m, scaling=sc, gpu=use_gpu(sc, comp), seed=s, image_name=im, comp=comp, ext=ext)
           for m, im, sc, s, comp in zip(models, image_name, scaling, seeds, comps)]
     ]
     init_ims = []
@@ -4190,6 +4230,9 @@ def get_metamer_comparison_figure_inputs(wildcards):
             if 'init-white' in mets[0]:
                 seed = re.findall('seed-([0-9]+)_init-white', mets[0])[0]
                 p = op.join(config['DATA_DIR'], 'initial_images', f'seed-{seed}_size-2048,2600_white{ext}')
+            elif 'init-pink' in mets[0]:
+                seed = re.findall('seed-([0-9]+)_init-pink', mets[0])[0]
+                p = op.join(config['DATA_DIR'], 'initial_images', f'seed-{seed}_size-2048,2600_pink{ext}')
             else:
                 init = re.findall("seed-[0-9]+_init-(.+)_range-", mets[0])[0]
                 p = op.join(config['DATA_DIR'], 'ref_images_preproc', f'{init}_gamma-corrected_range-.05,.95_size-2048,2600{ext}')
@@ -5141,6 +5184,7 @@ def figure_paper_input(wildcards):
         op.join(config['DATA_DIR'], 'figures', 'paper', "max_dprime_asymp_perf.svg"),
         # appendix figures
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_llama_scaling-.23,.23,.23,.23,.23_cutout_RGC_natural-seed_init_compressed.svg'),
+        op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_nyc_scaling-.045,.045,.045_cutout_RGC_compare-seed_init_compressed.svg'),
         op.join(config['DATA_DIR'], 'figures', 'paper', "freeman_windows_comparison.svg"),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', "performance_comparison_scaling-extended_partially-pooled_log-ci_sub-00_comp-downsample.svg"),
         op.join(config['DATA_DIR'], 'compose_figures', 'paper', 'metamer_comparison_tiles_scaling-1.5,1.5,1.5,1.5_cutout_downsample_compressed.svg'),
@@ -5205,8 +5249,8 @@ rule main_paper_figures:
 
 rule appendix_figures:
     input:
-        [op.join('reports', 'paper_figures', f'fig-A{i:01d}-{j:02d}.svg') for i in range(1, 6)
-         for j in range(1, {3: 2, 4: 2, 5: 2}.get(i, 1)+1)]
+        [op.join('reports', 'paper_figures', f'fig-A{i:01d}-{j:02d}.svg') for i in range(1, 7)
+         for j in range(1, {4: 2, 5: 2, 6: 2}.get(i, 1)+1)]
 
 
 rule appendix_figures_mcmc_compare:
