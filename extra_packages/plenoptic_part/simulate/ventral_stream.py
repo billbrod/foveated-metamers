@@ -1930,7 +1930,7 @@ class PooledV1(PooledVentralStream):
             titles.append(self._get_title(title_list, len(self.scales)+i-1, k))
             imgs.append(data[k])
             zooms.append(zoom)
-        vrange, cmap = pt.tools.display.colormap_range([po.to_numpy(imgs)], vrange)
+        vrange, cmap = pt.tools.display.colormap_range([po.to_numpy(i) for i in imgs], vrange)
         for ax, img, t, vr, z in zip(axes, imgs, titles, vrange, zooms):
             po.imshow(img, ax=ax, vrange=vr, cmap=cmap, title=t, zoom=z)
         return fig, axes
