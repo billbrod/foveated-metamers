@@ -10,14 +10,14 @@ long history of vision science. If we know what information people are
 insensitive to, we can discard it or randomize it, and the resulting image
 should appear unchanged from the original.
 
-See the [preprint](https://doi.org/10.1101/2023.05.18.541306) or the [VSS 2023
+See the [paper](https://doi.org/10.7554/eLife.90554.3) or the [VSS 2023
 poster](https://osf.io/8hdaz/) for scientific details. You may also be
 interested in the
 [website](https://users.flatironinstitute.org/~wbroderick/metamers/) we put
 together for browsing through the synthesized images, and the
 [OSF](https://osf.io/67tbe/) for bulk downloading the images or the behavioral
 data. Finally, you may be interested in
-[plenoptic](https://plenoptic.readthedocs.io/en/latest/), a software package for
+[plenoptic](https://docs.plenoptic.org), a software package for
 generating metamers (and more!) for your own models.
 
 If you re-use some component of this project in an academic publication, see the
