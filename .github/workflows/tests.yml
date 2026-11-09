@@ -60,7 +60,7 @@ jobs:
       shell: bash -el {0}
       run: |
         cp extra_packages/data/einstein.pgm data/metamers/ref_images/einstein_size-256,256.png
-        snakemake -j 5 -prk data/metamers/test_setup/RGC_norm_gaussian_gpu-0/einstein data/metamers/test_setup/V1_norm_s6_gaussian_gpu-0/einstein
+        snakemake -j 5 -pk data/metamers/test_setup/RGC_norm_gaussian_gpu-0/einstein data/metamers/test_setup/V1_norm_s6_gaussian_gpu-0/einstein
 
   run_Freeman_check_notebook:
     runs-on: ubuntu-latest
@@ -128,4 +128,4 @@ jobs:
       shell: bash -el {0}
       run: |
         # test one that has a single subject, one with multiple
-        snakemake -j 5 -prk data/metamers/mcmc/V1_norm_s6_gaussian/task-split_comp-ref/task-split_comp-ref_mcmc_partially-pooled_step-1_prob-.8_depth-10_c-2_d-10_w-10_s-0.nc data/metamers/mcmc/V1_norm_s6_gaussian/task-split_comp-ref-natural/task-split_comp-ref-natural_mcmc_partially-pooled_step-1_prob-.8_depth-10_c-2_d-10_w-10_s-0.nc
+        snakemake -j 5 -pk data/metamers/mcmc/V1_norm_s6_gaussian/task-split_comp-ref/task-split_comp-ref_mcmc_partially-pooled_step-1_prob-.8_depth-10_c-2_d-10_w-10_s-0.nc data/metamers/mcmc/V1_norm_s6_gaussian/task-split_comp-ref-natural/task-split_comp-ref-natural_mcmc_partially-pooled_step-1_prob-.8_depth-10_c-2_d-10_w-10_s-0.nc
